@@ -3,8 +3,8 @@
 # Vespi
 
 <p align="center">
-  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
-  <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E0C170?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
+  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-ADAA84?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
+  <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-C0866C?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
 </p>
 
 [Read in English](./README.md)
@@ -48,7 +48,7 @@ Vespi no debería aparecer después con un relato de origen perfecto. Lo que sob
 **Andrés Peña Mellado**\
 Digital Art Director & Creative Developer trabajando entre agentes de IA, Web3, diseño e investigación.
 
-[<img src="./assets/icons/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="./assets/icons/x-dark.svg"><img src="./assets/icons/x.svg" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/) &nbsp;&nbsp; <img src="./assets/icons/discord.svg" width="28" alt="Discord">
+[<img src="./assets/icons/v2/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="./assets/icons/v2/x-dark.svg"><img src="./assets/icons/v2/x.svg" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/v2/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/) &nbsp;&nbsp; <img src="./assets/icons/v2/discord.svg" width="28" alt="Discord">
 
 ---
 
