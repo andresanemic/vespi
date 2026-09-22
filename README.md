@@ -46,7 +46,7 @@ Vespi should not arrive later with a polished origin story. What survives, what 
 **Andrés Peña Mellado**\
 Digital Art Director & Creative Developer working across AI agents, Web3, design and research.
 
-[<img src="https://cdn.simpleicons.org/telegram/8AB17D" width="22" alt="Telegram">](https://t.me/andresanemic) &nbsp; [<img src="https://cdn.simpleicons.org/x/8AB17D" width="22" alt="X">](https://x.com/andresanemic) &nbsp; [<img src="https://cdn.simpleicons.org/linkedin/8AB17D" width="22" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/) &nbsp; <img src="https://cdn.simpleicons.org/discord/8AB17D" width="22" alt="Discord"> `andresanemic`
+[<img src="https://cdn.simpleicons.org/telegram/26A5E4" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="https://cdn.simpleicons.org/x/FFFFFF"><img src="https://cdn.simpleicons.org/x/000000" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="https://cdn.simpleicons.org/linkedin/0A66C2" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/) &nbsp;&nbsp; <img src="https://cdn.simpleicons.org/discord/5865F2" width="28" alt="Discord"> `andresanemic`
 
 ---
 
