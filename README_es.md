@@ -1,3 +1,5 @@
+[![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
+
 # Vespi
 
 <p align="center">
@@ -6,8 +8,6 @@
 </p>
 
 [Read in English](./README.md)
-
-![Vespiqueen genesis](./assets/vespiqueen-genesis.png)
 
 Vespi es un pequeño experimento público sobre cómo personas, modelos y servicios pueden trabajar juntos sin compartir automáticamente el mismo contexto ni los mismos permisos.
 
