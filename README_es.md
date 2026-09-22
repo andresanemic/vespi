@@ -1,8 +1,8 @@
 # Vespi
 
 <p align="center">
-  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-FF7C6B?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
-  <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-FF7C6B?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
+  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-8AB17D?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
+  <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E9C46A?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
 </p>
 
 [Read in English](./README.md)
@@ -46,7 +46,7 @@ Vespi no debería aparecer después con un relato de origen perfecto. Lo que sob
 **Andrés Peña Mellado**\
 Digital Art Director & Creative Developer trabajando entre agentes de IA, Web3, diseño e investigación.
 
-[Telegram](https://t.me/andresanemic) · Discord: `andresanemic` · [X](https://x.com/andresanemic) · [LinkedIn](https://www.linkedin.com/in/andresanemic/)
+[![Telegram](https://img.shields.io/badge/Telegram-@andresanemic-26A5E4?style=flat-square&logo=telegram&logoColor=white)](https://t.me/andresanemic) [![X](https://img.shields.io/badge/X-@andresanemic-000000?style=flat-square&logo=x&logoColor=white)](https://x.com/andresanemic) [![LinkedIn](https://img.shields.io/badge/LinkedIn-andresanemic-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/andresanemic/) · Discord: `andresanemic`
 
 ---
 
