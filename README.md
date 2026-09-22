@@ -3,7 +3,7 @@
 # Vespi
 
 <p align="center">
-  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-74BD96?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
+  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-8D6B49?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
   <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E0C170?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
 </p>
 
