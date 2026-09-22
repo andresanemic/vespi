@@ -1,36 +1,48 @@
-<h1 align="center">Vespi</h1>
+# Vespi
 
-<p align="center">
-  <a href="#status"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-FF7C6B?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
-  <a href="#status"><img src="https://img.shields.io/badge/status-experimental-FF7C6B?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
-</p>
+[Leer en español](./README_es.md)
 
-<p align="center"><b>Vespi lets different intelligences work together without giving any of them more authority than they need.</b></p>
+Vespi is a small public experiment in how people, models and services can work together without automatically sharing the same context or permissions.
 
-## English
+It is being built in public by **Andrés Peña Mellado**.
 
-Agent systems collapse several things into one permission: having a capability, seeing data, spending money, executing an action. Vespi treats them as separate. A body may know something without being allowed to change it, or recommend an action without being allowed to execute it.
+This repository starts early on purpose. Vespi is not a finished runtime or a stable protocol. What exists today is a public genesis: a question, a provisional way of thinking about operations, and a place where experiments, mistakes and changes of direction can remain visible as they happen.
 
-**Status.** Experimental (`v0.0.1-genesis`). No runtime, no stable protocol, no wallet, no RC yet.
+## What exists today
 
-**What exists today.** A public genesis (`docs/GENESIS.md`), a changelog, an empty first experiment slot (`experiments/000-genesis-hive/`), and one live direction: a Stellar flow where an authorized payment unlocks a capability for a single operation.
+- [`v0.0.1-genesis`](https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis), the first public snapshot.
+- [`docs/GENESIS.md`](./docs/GENESIS.md), the current problem statement, working theses and non-claims.
+- [`experiments/`](./experiments/), the public place for runs. The first scaffold exists, but no completed run is claimed yet.
+- A first direction on Stellar testnet, still under development and not presented as a shipped capability.
 
-**Working thesis (provisional, not a law).** The unit is not the agent. The unit is the operation.
+> **The unit is not the agent. The unit is the operation.**\
+> *Working thesis.*
 
-**Lineage.** LUS and Lore Plugin are methodology and provenance; they do not validate Vespi. RUC-D and Web3 Trust Native are out of scope.
+## Where it comes from
 
-**History:** [GENESIS](./docs/GENESIS.md) · [CHANGELOG](./CHANGELOG.md) · [experiments](./experiments/) — MIT, see [LICENSE](./LICENSE).
+Vespi grows out of **Andrés Peña Mellado's** work on **LUS** and **Lore Plugin**, but it is a separate project with its own history.
 
-## Español
+**LUS** studies how shared human–AI work can become reusable judgment that shapes later decisions.
 
-Los sistemas de agentes colapsan varias cosas en un solo permiso: tener una capability, ver datos, gastar, ejecutar. Vespi las trata por separado. Un cuerpo puede saber algo sin poder modificarlo, o recomendar una acción sin poder ejecutarla.
+**Lore Plugin** makes that accumulated judgment usable across projects, bots and models.
 
-**Estado.** Experimental (`v0.0.1-genesis`). Sin runtime, sin protocolo estable, sin wallet, sin RC todavía.
+Vespi asks a different question: what happens when distinct participants need to coordinate without automatically sharing the same context, permissions or history?
 
-**Qué existe hoy.** Una génesis pública (`docs/GENESIS.md`), un changelog, un primer slot de experimento vacío (`experiments/000-genesis-hive/`) y una dirección viva: un flujo en Stellar donde un pago autorizado desbloquea una capability para una sola operación.
+The relationship matters, but so do the boundaries. Work from collaborators or neighboring projects does not become Vespi input by proximity. The current provenance boundary is recorded in [`GENESIS.md`](./docs/GENESIS.md).
 
-**Tesis de trabajo (provisional, no es ley).** La unidad no es el agente. La unidad es la operación.
+## Why publish this early?
 
-**Genealogía.** LUS y Lore Plugin son metodología y procedencia; no validan a Vespi. RUC-D y Web3 Trust Native quedan fuera.
+Because the history is part of the evidence.
 
-**Historia:** [GENESIS](./docs/GENESIS.md) · [CHANGELOG](./CHANGELOG.md) · [experiments](./experiments/) — MIT, ver [LICENSE](./LICENSE).
+Vespi should not arrive later with a polished origin story. What survives, what fails, what changes and what gets rejected should remain inspectable while the project is still becoming itself.
+
+## Author
+
+**Andrés Peña Mellado**\
+Digital Art Director & Creative Developer working across AI agents, Web3, design and research.
+
+[Telegram](https://t.me/andresanemic) · Discord: `andresanemic` · [X](https://x.com/andresanemic) · [LinkedIn](https://www.linkedin.com/in/andresanemic/)
+
+---
+
+[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experiments](./experiments/) · [Release v0.0.1-genesis](https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis) · [MIT License](./LICENSE)
