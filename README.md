@@ -1,5 +1,10 @@
 # Vespi
 
+<p align="center">
+  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-FF7C6B?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
+  <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-FF7C6B?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
+</p>
+
 [Leer en español](./README_es.md)
 
 Vespi is a small public experiment in how people, models and services can work together without automatically sharing the same context or permissions.
