@@ -320,13 +320,16 @@ Researcher and builder working across AI agents, Web3, design, software and inst
   <a href="https://github.com/andresanemic"><img src="https://img.shields.io/badge/GitHub-andresanemic-07111A?style=for-the-badge&logo=github&logoColor=F3E8D0" alt="GitHub"></a>
   <a href="https://x.com/andresanemic"><img src="https://img.shields.io/badge/X-@andresanemic-FF7C6B?style=for-the-badge&logo=x&logoColor=07111A&labelColor=07111A" alt="X"></a>
   <a href="https://www.linkedin.com/in/andresanemic/"><img src="https://img.shields.io/badge/LinkedIn-Andr%C3%A9s%20Pe%C3%B1a%20Mellado-36D9E6?style=for-the-badge&logo=linkedin&logoColor=07111A&labelColor=07111A" alt="LinkedIn"></a>
+  <a href="https://t.me/andresanemic"><img src="https://img.shields.io/badge/Telegram-@andresanemic-22D9EE?style=for-the-badge&logo=telegram&logoColor=07111A&labelColor=07111A" alt="Telegram"></a>
+  <img src="https://img.shields.io/badge/Discord-andresanemic-F94F79?style=for-the-badge&logo=discord&logoColor=07111A&labelColor=07111A" alt="Discord">
+  <a href="mailto:andres@healthproof.cl"><img src="https://img.shields.io/badge/Email-andres@healthproof.cl-35E5F5?style=for-the-badge&logo=gmail&logoColor=07111A&labelColor=07111A" alt="Email"></a>
 </p>
 
 ---
 
 ## License
 
-To be defined before the first public release.
+MIT — see [LICENSE](./LICENSE).
 
 </details>
 
@@ -635,12 +638,15 @@ Investigador y builder trabajando en la intersección entre agentes de IA, Web3,
   <a href="https://github.com/andresanemic"><img src="https://img.shields.io/badge/GitHub-andresanemic-07111A?style=for-the-badge&logo=github&logoColor=F3E8D0" alt="GitHub"></a>
   <a href="https://x.com/andresanemic"><img src="https://img.shields.io/badge/X-@andresanemic-FF7C6B?style=for-the-badge&logo=x&logoColor=07111A&labelColor=07111A" alt="X"></a>
   <a href="https://www.linkedin.com/in/andresanemic/"><img src="https://img.shields.io/badge/LinkedIn-Andr%C3%A9s%20Pe%C3%B1a%20Mellado-36D9E6?style=for-the-badge&logo=linkedin&logoColor=07111A&labelColor=07111A" alt="LinkedIn"></a>
+  <a href="https://t.me/andresanemic"><img src="https://img.shields.io/badge/Telegram-@andresanemic-22D9EE?style=for-the-badge&logo=telegram&logoColor=07111A&labelColor=07111A" alt="Telegram"></a>
+  <img src="https://img.shields.io/badge/Discord-andresanemic-F94F79?style=for-the-badge&logo=discord&logoColor=07111A&labelColor=07111A" alt="Discord">
+  <a href="mailto:andres@healthproof.cl"><img src="https://img.shields.io/badge/Email-andres@healthproof.cl-35E5F5?style=for-the-badge&logo=gmail&logoColor=07111A&labelColor=07111A" alt="Email"></a>
 </p>
 
 ---
 
 ## Licencia
 
-Se definirá antes del primer release público.
+MIT — ver [LICENSE](./LICENSE).
 
 </details>
