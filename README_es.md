@@ -46,7 +46,7 @@ Vespi no debería aparecer después con un relato de origen perfecto. Lo que sob
 **Andrés Peña Mellado**\
 Digital Art Director & Creative Developer trabajando entre agentes de IA, Web3, diseño e investigación.
 
-[<img src="./assets/icons/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/x.svg" width="28" alt="X">](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/) &nbsp;&nbsp; <img src="./assets/icons/discord.svg" width="28" alt="Discord"> `andresanemic`
+[<img src="./assets/icons/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/x.svg" width="28" alt="X">](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/) &nbsp;&nbsp; <img src="./assets/icons/discord.svg" width="28" alt="Discord">
 
 ---
 
