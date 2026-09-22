@@ -32,6 +32,9 @@ These are provisional. They may change.
 - Different bodies do not need a shared global mind to collaborate.
 - Evidence should be sufficient for the operation, not an excuse for total capture.
 - A body may matter because of expertise — or because it changes the space of possible decisions.
+- Vespiqueen returns time; it does not claim it.
+
+Vespiqueen is not a hyperproductivity system. Its purpose is not to fill every recovered minute with more output, but to return time and agency to people. A capability is not judged only by additional output, but also by whether it reduces unnecessary load and preserves time and agency for the person to decide.
 
 ## What Vespi is not claiming yet
 
