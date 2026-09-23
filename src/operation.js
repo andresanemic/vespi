@@ -69,7 +69,7 @@ async function runOperation(op, capability, io) {
     const receipt = buildReceipt({
       operation: op,
       capabilityId: capability.id,
-      authority: op.authority,
+      authority: { ...op.authority, approval },
       outcome: { status: 'failed', exercised: [], detail: String((err && err.message) || err) },
       evidence: null,
       verification: null,
@@ -82,7 +82,7 @@ async function runOperation(op, capability, io) {
     const receipt = buildReceipt({
       operation: op,
       capabilityId: capability.id,
-      authority: op.authority,
+      authority: { ...op.authority, approval },
       outcome: { status: 'failed', exercised: [], detail: (result && result.error) || 'capability failed' },
       evidence: (result && result.evidence) || null,
       verification: null,

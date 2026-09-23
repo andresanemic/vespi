@@ -115,7 +115,8 @@ test('F2: split requirements on same grant cannot exceed its max', async () => {
   assert.equal(res.status, STATES.NEEDS_DECISION);
 });
 
-test('F2: same totals to different destinations stay separate groups', async () => {
+test('F2b: wildcard grant is not renewed per destination (400+400 vs 500 → insufficient)', async () => {
+  let calls = 0;
   const cap = {
     id: 'split-cap-2',
     required: () => ({
@@ -124,11 +125,85 @@ test('F2: same totals to different destinations stay separate groups', async () 
         { asset: 'USDC:test', amount: '400000', to: 'BBB' },
       ],
     }),
+    perform: async () => {
+      calls++;
+      return { ok: true, evidence: {} };
+    },
+  };
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const res = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  assert.equal(calls, 0);
+  assert.equal(res.status, STATES.NEEDS_DECISION);
+});
+
+test('F2c: two destination-specific grants keep separate budgets', async () => {
+  const cap = {
+    id: 'split-cap-3',
+    required: () => ({
+      spend: [
+        { asset: 'USDC:test', amount: '400000', to: 'AAA' },
+        { asset: 'USDC:test', amount: '400000', to: 'BBB' },
+      ],
+    }),
+    perform: async () => ({ ok: true, evidence: {} }),
+  };
+  const op = createOperation({
+    goal: 'demo',
+    authority: {
+      spend: [
+        { asset: 'USDC:test', maxAmount: '500000', to: 'AAA' },
+        { asset: 'USDC:test', maxAmount: '500000', to: 'BBB' },
+      ],
+    },
+  });
+  const res = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  assert.equal(res.status, STATES.SUCCEEDED);
+});
+
+test('F2d: exact boundary total == max stays sufficient', async () => {
+  const cap = {
+    id: 'split-cap-4',
+    required: () => ({
+      spend: [
+        { asset: 'USDC:test', amount: '250000', to: 'AAA' },
+        { asset: 'USDC:test', amount: '250000', to: 'BBB' },
+      ],
+    }),
     perform: async () => ({ ok: true, evidence: {} }),
   };
   const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
   const res = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
   assert.equal(res.status, STATES.SUCCEEDED);
+});
+
+test('F3b: approval survives capability failure and throw', async () => {
+  const pre = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const r1 = await runOperation(pre, fakeCapability({ ok: false, error: 'broke' }), { verify: verifierOk, ask: silentAsk });
+  assert.equal(r1.status, STATES.FAILED);
+  assert.equal(r1.receipt.authority.approval, 'preauthorized');
+
+  const gate = createOperation({ goal: 'demo', authority: { spend: [] } });
+  const r2 = await runOperation(gate, fakeCapability({ ok: false, error: 'broke' }), {
+    verify: verifierOk,
+    ask: async () => ({ approved: true }),
+  });
+  assert.equal(r2.status, STATES.FAILED);
+  assert.equal(r2.receipt.authority.approval, 'human_gate_approved');
+
+  const throwing = {
+    id: 'throw-cap',
+    required: () => ({ spend: [{ asset: 'USDC:test', amount: '100', to: 'T' }] }),
+    perform: async () => {
+      throw new Error('capability exploded');
+    },
+  };
+  const gate2 = createOperation({ goal: 'demo', authority: { spend: [] } });
+  const r3 = await runOperation(gate2, throwing, {
+    verify: verifierOk,
+    ask: async () => ({ approved: true }),
+  });
+  assert.equal(r3.status, STATES.FAILED);
+  assert.equal(r3.receipt.authority.approval, 'human_gate_approved');
 });
 
 test('F3: receipt distinguishes preauthorized vs gate-approved vs gate-rejected', async () => {
@@ -147,6 +222,64 @@ test('F3: receipt distinguishes preauthorized vs gate-approved vs gate-rejected'
   const r3 = await runOperation(rej, fakeCapability({ ok: true, evidence: {} }), { verify: verifierOk, ask: silentAsk });
   assert.equal(r3.status, STATES.NEEDS_DECISION);
   assert.equal(r3.receipt.authority.approval, 'human_gate_rejected');
+});
+
+test('adversarial mix: zero-amount, three-way split, wildcard+specific interplay', async () => {
+  // Zero-amount against a zero-max grant: covered (0 <= 0). Against NO grant at all: gate.
+  const zero = {
+    id: 'zero-cap',
+    required: () => ({ spend: [{ asset: 'USDC:test', amount: '0', to: 'T' }] }),
+    perform: async () => ({ ok: true, evidence: {} }),
+  };
+  const r0 = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '0') }), zero, { verify: verifierOk, ask: silentAsk });
+  assert.equal(r0.status, STATES.SUCCEEDED);
+  const r0b = await runOperation(createOperation({ goal: 'demo', authority: { spend: [] } }), zero, { verify: verifierOk, ask: silentAsk });
+  assert.equal(r0b.status, STATES.NEEDS_DECISION);
+
+  // Three-way split 200+200+200 against wildcard 500 → insufficient (600 > 500).
+  let calls = 0;
+  const three = {
+    id: 'three-cap',
+    required: () => ({
+      spend: [
+        { asset: 'USDC:test', amount: '200', to: 'A' },
+        { asset: 'USDC:test', amount: '200', to: 'B' },
+        { asset: 'USDC:test', amount: '200', to: 'C' },
+      ],
+    }),
+    perform: async () => {
+      calls++;
+      return { ok: true, evidence: {} };
+    },
+  };
+  const r3 = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500') }), three, {
+    verify: verifierOk,
+    ask: silentAsk,
+  });
+  assert.equal(calls, 0);
+  assert.equal(r3.status, STATES.NEEDS_DECISION);
+
+  // Wildcard 500 + specific-to-A 500, requirements A400 + B400:
+  // A400 assigns to the specific grant, B400 to the wildcard — both covered.
+  const mixed = {
+    id: 'mixed-cap',
+    required: () => ({
+      spend: [
+        { asset: 'USDC:test', amount: '400', to: 'A' },
+        { asset: 'USDC:test', amount: '400', to: 'B' },
+      ],
+    }),
+    perform: async () => ({ ok: true, evidence: {} }),
+  };
+  const rm = await runOperation(
+    createOperation({
+      goal: 'demo',
+      authority: { spend: [{ asset: 'USDC:test', maxAmount: '500' }, { asset: 'USDC:test', maxAmount: '500', to: 'A' }] },
+    }),
+    mixed,
+    { verify: verifierOk, ask: silentAsk }
+  );
+  assert.equal(rm.status, STATES.SUCCEEDED);
 });
 
 test('kernel needs no specific capability to load', () => {

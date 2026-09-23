@@ -22,6 +22,26 @@ Este repositorio empieza temprano a propósito. Vespi todavía no es un runtime 
 - [`docs/GENESIS.md`](./docs/GENESIS.md), con el problema actual, las tesis de trabajo y aquello que todavía no afirmamos.
 - [`experiments/`](./experiments/), el lugar público para las corridas. Primeras corridas completadas: [`001-operator-professor-loop`](./experiments/001-operator-professor-loop/RUN.md) (dos cuerpos, cero intervenciones humanas) y [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) (capability pagada en Stellar testnet, con recibos y un fallo real conservado).
 - [`src/`](./src/), kernel de operación ejecutable mínimo (cero dependencias, tests en verde — corre `node --test test/` con Node 24): goal → requirements → chequeo de authority → gate humano solo si falta → ejecutar → verificar → recibo. Ejercido contra x402/Stellar testnet vía [`demo/x402`](./demo/x402/README.md) — el único lugar que conoce x402. La misma operación frena sin authority y continúa con ella.
+
+## Dirección de trabajo — no todo esto está implementado todavía
+
+La supervisión humana gobierna los bordes de la operación, no cada acción adentro.
+
+Usa la inteligencia suficiente más barata. La escalación debe ganarse.
+
+Autonomía no es cuánto tiempo Vespi puede operar sin un humano. Es cuánto trabajo legítimo puede completar sin consumir atención humana innecesaria.
+
+Cómo se separa la dirección:
+
+- Lore → qué cuenta como buen trabajo acá.
+- Perfil operativo del usuario → cómo prefiere trabajar esta persona.
+- Authority → qué puede hacer el sistema sin preguntar.
+- Política de modelos → cuánta inteligencia y costo puede gastar la operación.
+- Vespi → continúa la operación dentro de esos bordes.
+
+Implementado hoy: operación, authority acotada, gate humano, frontera de capability, verificación, recibo.
+
+Sigue como dirección de diseño: perfiles operativos de usuario, economía y escalación de modelos, trabajo autónomo delegado más largo, batching del tipo "déjame cinco borradores y pregúntame solo donde mi criterio haga falta". Nada de eso se afirma como capability actual.
 - Una primera dirección sobre Stellar testnet, todavía en desarrollo y no presentada como una capability ya publicada.
 
 > **La unidad no es el agente. La unidad es la operación.**\

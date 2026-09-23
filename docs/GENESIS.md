@@ -100,6 +100,26 @@ Building toward RC1.
 Architecture still being arbitrated.  
 History intentionally preserved.
 
+## Working direction: bounded autonomy (not implemented yet — do not read as capability)
+
+Human oversight governs the boundaries of the operation, not every action inside it.
+
+Use the least expensive sufficient intelligence. Escalation must be earned.
+
+Autonomy is not how long Vespi can operate without a human. It is how much legitimate work it can complete without consuming unnecessary human attention.
+
+The direction separates five things that must not collapse into each other:
+
+- Lore → what counts as good work here.
+- User operating profile → how this person prefers to work.
+- Authority → what the system may do without asking.
+- Model policy → how much intelligence and cost the operation may spend.
+- Vespi → continues the operation within those bounds.
+
+Implemented today: operation, bounded authority, human gate, capability boundary, verification, receipt.
+
+Still design direction: user operating profiles, model economy and escalation, longer delegated autonomous work, batching like "leave me five drafts and ask only where my judgment is actually needed".
+
 ## Provenance boundary
 
 Vespi does not absorb collaborators' research by proximity.

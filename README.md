@@ -22,6 +22,26 @@ This repository starts early on purpose. Vespi is not a finished runtime or a st
 - [`docs/GENESIS.md`](./docs/GENESIS.md), the current problem statement, working theses and non-claims.
 - [`experiments/`](./experiments/), the public place for runs. First completed runs: [`001-operator-professor-loop`](./experiments/001-operator-professor-loop/RUN.md) (two bodies, zero human interventions) and [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) (paid capability on Stellar testnet, with receipts and one kept failure).
 - [`src/`](./src/), a minimal executable operation kernel (zero dependencies, tests green — run `node --test test/` with Node 24): goal → requirements → authority check → human gate only when insufficient → execute → verify → receipt. Exercised against x402/Stellar testnet via [`demo/x402`](./demo/x402/README.md) — the only place that knows x402. Same operation gates without authority and continues with it.
+
+## Working direction — not all of this is implemented yet
+
+Human oversight governs the boundaries of the operation, not every action inside it.
+
+Use the least expensive sufficient intelligence. Escalation must be earned.
+
+Autonomy is not how long Vespi can operate without a human. It is how much legitimate work it can complete without consuming unnecessary human attention.
+
+How the direction separates:
+
+- Lore → what counts as good work here.
+- User operating profile → how this person prefers to work.
+- Authority → what the system may do without asking.
+- Model policy → how much intelligence and cost the operation may spend.
+- Vespi → continues the operation within those bounds.
+
+Implemented today: operation, bounded authority, human gate, capability boundary, verification, receipt.
+
+Still design direction: user operating profiles, model economy and escalation, longer delegated autonomous work, batching like "leave me five drafts and ask only where my judgment is actually needed". None of that is claimed as current capability.
 - A first direction on Stellar testnet, still under development and not presented as a shipped capability.
 
 > **The unit is not the agent. The unit is the operation.**\
