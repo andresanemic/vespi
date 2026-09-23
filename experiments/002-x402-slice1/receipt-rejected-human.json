@@ -1,0 +1,43 @@
+{
+  "runId": "run-muealhgo",
+  "createdAt": "2026-09-23T16:03:25.224Z",
+  "status": "rejected_human",
+  "operation": {
+    "id": "compose-launch-brief",
+    "requestDigest": "f1bcf98584d82e3442e116a1848b6a5b719f8315e4c94a8c0ae5f3bcbcc8eb1a",
+    "loreBody": "bora-lore",
+    "loreDigest": null
+  },
+  "capability": {
+    "id": "marketing-plan",
+    "resource": "http://localhost:3777/api/agent-service?service=marketing-plan"
+  },
+  "paymentRequirements": {
+    "accepts": [
+      {
+        "scheme": "exact",
+        "network": "stellar:testnet",
+        "amount": "100000",
+        "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        "payTo": "GDQX74MG4TVG7BBZCLDCOEOQX2PADCTRUIDAWG5KLIQ64LYURC5XC7CN",
+        "maxTimeoutSeconds": 300,
+        "extra": {}
+      }
+    ]
+  },
+  "policy": {
+    "id": "vespi-slice1-v1",
+    "accepted": true,
+    "remainingBefore": "100000",
+    "remainingAfter": null,
+    "reason": "exact match"
+  },
+  "human": {
+    "decision": "rejected",
+    "decidedAt": "2026-09-23T16:03:28.260Z"
+  },
+  "settlement": null,
+  "capabilityResult": null,
+  "output": null,
+  "verification": null
+}

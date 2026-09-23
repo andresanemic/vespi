@@ -4,6 +4,17 @@ All notable public changes to Vespi will be recorded here.
 
 This project is experimental. Before `v1.0.0`, version numbers describe public snapshots of a system still under active arbitration.
 
+## [Unreleased]
+
+### Added
+
+- `experiments/001-operator-professor-loop`: first live Operator↔Professor run (evidence + independent arbitration, 0 human interventions).
+- `experiments/002-x402-slice1`: paid capability run on Stellar testnet (0.01 USDC settlement, verified receipt + brief) with all three paths recorded (success, rejected_policy, rejected_human) and one real verification failure kept as evidence.
+
+### Not yet
+
+- Production receiver and deploy still pending; demo accounts are temporary and labeled as such.
+
 ## [v0.0.1-genesis] — 2026-09-22
 
 ### Added

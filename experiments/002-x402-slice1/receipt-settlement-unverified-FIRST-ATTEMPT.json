@@ -1,0 +1,63 @@
+{
+  "runId": "run-mueb4vtu",
+  "createdAt": "2026-09-23T16:18:30.307Z",
+  "status": "settlement_unverified",
+  "operation": {
+    "id": "compose-launch-brief",
+    "requestDigest": "f1bcf98584d82e3442e116a1848b6a5b719f8315e4c94a8c0ae5f3bcbcc8eb1a",
+    "loreBody": "bora-lore",
+    "loreDigest": null
+  },
+  "capability": {
+    "id": "marketing-plan",
+    "resource": "http://localhost:3777/api/agent-service?service=marketing-plan"
+  },
+  "paymentRequirements": {
+    "accepts": [
+      {
+        "scheme": "exact",
+        "network": "stellar:testnet",
+        "amount": "100000",
+        "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        "payTo": "GBE7ISMYA7VH2F7OEYIVQ5Y7B5ZLJBDUOYVZEWSWKR2BJVJPPKQH3NAC",
+        "maxTimeoutSeconds": 300,
+        "extra": {
+          "areFeesSponsored": true
+        }
+      }
+    ]
+  },
+  "policy": {
+    "id": "vespi-slice1-v1",
+    "accepted": true,
+    "remainingBefore": "100000",
+    "remainingAfter": null,
+    "reason": "exact match"
+  },
+  "human": {
+    "decision": "approved",
+    "decidedAt": "2026-09-23T16:18:30.687Z"
+  },
+  "settlement": {
+    "success": true,
+    "transaction": "191e07f7c7329e3131cc8ce029ce63b346ff4ce4825afad88bb31aeb5da92ca6",
+    "network": "stellar:testnet",
+    "payer": "GB4DUICUZHOZHAF2Q5UESVSXZQIPCK5S54APCIQUWS3DUF3TDV2ESRRY"
+  },
+  "capabilityResult": {
+    "digest": "0fa99ce62d2003bbc4a6be5a507faee4699a53431daa81c42af9a916634a945c",
+    "receivedAt": "2026-09-23T16:18:37.537Z"
+  },
+  "output": null,
+  "verification": {
+    "verified": false,
+    "verifiedAt": "2026-09-23T16:18:38.229Z",
+    "transaction": "191e07f7c7329e3131cc8ce029ce63b346ff4ce4825afad88bb31aeb5da92ca6",
+    "checks": {
+      "successful": true,
+      "paymentOpFound": false,
+      "opsSeen": 0
+    },
+    "reason": "no matching 0.01 USDC payer->payTo payment op"
+  }
+}

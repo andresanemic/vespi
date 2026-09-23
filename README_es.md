@@ -19,7 +19,7 @@ Este repositorio empieza temprano a propósito. Vespi todavía no es un runtime 
 
 - [`v0.0.1-genesis`](https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis), el primer corte público.
 - [`docs/GENESIS.md`](./docs/GENESIS.md), con el problema actual, las tesis de trabajo y aquello que todavía no afirmamos.
-- [`experiments/`](./experiments/), el lugar público para las corridas. El primer andamiaje existe, pero todavía no se afirma ninguna corrida completada.
+- [`experiments/`](./experiments/), el lugar público para las corridas. Primeras corridas completadas: [`001-operator-professor-loop`](./experiments/001-operator-professor-loop/RUN.md) (dos cuerpos, cero intervenciones humanas) y [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) (capability pagada en Stellar testnet, con recibos y un fallo real conservado).
 - Una primera dirección sobre Stellar testnet, todavía en desarrollo y no presentada como una capability ya publicada.
 
 > **La unidad no es el agente. La unidad es la operación.**\

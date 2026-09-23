@@ -19,7 +19,7 @@ This repository starts early on purpose. Vespi is not a finished runtime or a st
 
 - [`v0.0.1-genesis`](https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis), the first public snapshot.
 - [`docs/GENESIS.md`](./docs/GENESIS.md), the current problem statement, working theses and non-claims.
-- [`experiments/`](./experiments/), the public place for runs. The first scaffold exists, but no completed run is claimed yet.
+- [`experiments/`](./experiments/), the public place for runs. First completed runs: [`001-operator-professor-loop`](./experiments/001-operator-professor-loop/RUN.md) (two bodies, zero human interventions) and [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) (paid capability on Stellar testnet, with receipts and one kept failure).
 - A first direction on Stellar testnet, still under development and not presented as a shipped capability.
 
 > **The unit is not the agent. The unit is the operation.**\

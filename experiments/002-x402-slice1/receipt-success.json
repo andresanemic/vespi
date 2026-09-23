@@ -1,0 +1,71 @@
+{
+  "runId": "run-mueb673n",
+  "createdAt": "2026-09-23T16:19:31.571Z",
+  "status": "verified",
+  "operation": {
+    "id": "compose-launch-brief",
+    "requestDigest": "f1bcf98584d82e3442e116a1848b6a5b719f8315e4c94a8c0ae5f3bcbcc8eb1a",
+    "loreBody": "bora-lore",
+    "loreDigest": null
+  },
+  "capability": {
+    "id": "marketing-plan",
+    "resource": "http://localhost:3777/api/agent-service?service=marketing-plan"
+  },
+  "paymentRequirements": {
+    "accepts": [
+      {
+        "scheme": "exact",
+        "network": "stellar:testnet",
+        "amount": "100000",
+        "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        "payTo": "GBE7ISMYA7VH2F7OEYIVQ5Y7B5ZLJBDUOYVZEWSWKR2BJVJPPKQH3NAC",
+        "maxTimeoutSeconds": 300,
+        "extra": {
+          "areFeesSponsored": true
+        }
+      }
+    ]
+  },
+  "policy": {
+    "id": "vespi-slice1-v1",
+    "accepted": true,
+    "remainingBefore": "100000",
+    "remainingAfter": "0",
+    "reason": "exact match"
+  },
+  "human": {
+    "decision": "approved",
+    "decidedAt": "2026-09-23T16:19:31.914Z"
+  },
+  "settlement": {
+    "success": true,
+    "transaction": "eac01a02a316480702117a3a9ae90e9b8e1b77554088c004bda919a7f4d95198",
+    "network": "stellar:testnet",
+    "payer": "GB4DUICUZHOZHAF2Q5UESVSXZQIPCK5S54APCIQUWS3DUF3TDV2ESRRY"
+  },
+  "capabilityResult": {
+    "digest": "d6f2a4c302de47f3acd60b90b3df4266af0675c514cbf8388d483234ed87ac69",
+    "receivedAt": "2026-09-23T16:19:37.359Z"
+  },
+  "output": {
+    "path": "C:\\Claude\\plugins\\proyectos\\bora-lore\\ai\\runs\\run-mueb673n.brief.md",
+    "digest": "111dd6c873f146e7b1e20082b34b03aa9b7080dced1dcbaad2be6434a22f1173",
+    "consumedPlanItems": [
+      "deliverables: Landing page A/B test variants (hero copy + CTA)",
+      "nextSteps: Launch week 1 campaign"
+    ],
+    "briefGenerator": "runner-template-v1 (deterministic; Codex/Sol synthesis pending)"
+  },
+  "verification": {
+    "verified": true,
+    "verifiedAt": "2026-09-23T16:19:38.187Z",
+    "transaction": "eac01a02a316480702117a3a9ae90e9b8e1b77554088c004bda919a7f4d95198",
+    "checks": {
+      "successful": true,
+      "usdcTransferFound": true,
+      "balanceChangesSeen": 1
+    },
+    "reason": "settlement matches receipt"
+  }
+}
