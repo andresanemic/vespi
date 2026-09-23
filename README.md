@@ -21,7 +21,7 @@ This repository starts early on purpose. Vespi is not a finished runtime or a st
 - [`v0.1.0-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.0-kernel), first executable code: minimal kernel + x402 testnet demo.
 - [`docs/GENESIS.md`](./docs/GENESIS.md), the current problem statement, working theses and non-claims.
 - [`experiments/`](./experiments/), the public place for runs. First completed runs: [`001-operator-professor-loop`](./experiments/001-operator-professor-loop/RUN.md) (two bodies, zero human interventions) and [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) (paid capability on Stellar testnet, with receipts and one kept failure).
-- [`src/`](./src/), a minimal executable operation kernel (zero dependencies, tests green — run `node --test test/` with Node 24): goal → requirements → authority check → human gate only when insufficient → execute → verify → receipt. Exercised against x402/Stellar testnet via [`demo/x402`](./demo/x402/README.md) — the only place that knows x402. Same operation gates without authority and continues with it.
+- [`src/`](./src/), a minimal executable operation kernel (zero dependencies, tests green — run `node --test` with Node 24): goal → requirements → authority check → human gate only when insufficient → execute → verify → receipt. Exercised against x402/Stellar testnet via [`demo/x402`](./demo/x402/README.md) — the only place that knows x402. Same operation gates without authority and continues with it.
 
 ## Working direction — not all of this is implemented yet
 
