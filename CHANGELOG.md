@@ -13,13 +13,7 @@ This project is experimental. Before `v1.0.0`, version numbers describe public s
 
 ### Added — first executable code
 
-- `src/` (operation, authority, receipt — zero deps, 8/8 `node:test` green): same operation gates without authority (`needs_human_decision`, zero side effect) and continues with it (verified receipt), including counterparty-bound grants.
-- `demo/x402/` (adapter + runner, own deps): official x402 v2 round-trip behind the kernel boundary; kernel imports nothing x402/Stellar.
-- Live settlements on testnet with independent verification (see `experiments/002`).
-
-### Added
-
-- `src/` (operation, authority, receipt — zero deps, 8/8 `node:test` green): same operation gates without authority (`needs_human_decision`, zero side effect) and continues with it (verified receipt), including counterparty-bound grants.
+- `src/` (operation, authority, receipt — zero deps, 12/12 `node:test` green): same operation gates without authority (`needs_human_decision`, zero side effect) and continues with it (verified receipt), including counterparty-bound grants; grouped spend limits; verifier-exception receipts; gate provenance (`preauthorized` / `human_gate_approved` / `human_gate_rejected`).
 - `demo/x402/` (adapter + runner, own deps): official x402 v2 round-trip behind the kernel boundary; kernel imports nothing x402/Stellar.
 - Live settlements on testnet with independent verification (see `experiments/002`).
 

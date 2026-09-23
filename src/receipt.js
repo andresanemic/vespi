@@ -9,6 +9,9 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
     authority: {
       grants: ((authority && authority.spend) || []).map((g) => ({ ...g })),
       exercised: outcome.exercised || [],
+      // How authority was obtained: 'preauthorized' | 'human_gate_approved' | 'human_gate_rejected'.
+      // Answers: was this delegated, or did it need a human during this operation?
+      ...(authority && authority.approval ? { approval: authority.approval } : {}),
     },
     outcome: outcome.status,
     evidence: evidence || null,

@@ -38,6 +38,7 @@ async function runOperation(op, capability, io) {
   const requirements = capability.required(op).spend || [];
   let check = sufficient(requirements, op.authority);
 
+  let approval = 'preauthorized';
   if (!check.ok) {
     const gate = io && io.ask ? await io.ask(requirements) : { approved: false };
     if (!gate.approved) {
@@ -45,7 +46,7 @@ async function runOperation(op, capability, io) {
       const receipt = buildReceipt({
         operation: op,
         capabilityId: capability.id,
-        authority: op.authority,
+        authority: { ...op.authority, approval: 'human_gate_rejected' },
         outcome: { status: 'needs_human_decision', exercised: [] },
         evidence: null,
         verification: null,
@@ -56,6 +57,7 @@ async function runOperation(op, capability, io) {
     // destination included — a grant without counterparty is blind.
     op.authority = { spend: requirements.map((r) => ({ asset: r.asset, maxAmount: r.amount, to: r.to })) };
     check = sufficient(requirements, op.authority);
+    approval = 'human_gate_approved';
   }
 
   op.state = STATES.RUNNING;
@@ -89,12 +91,20 @@ async function runOperation(op, capability, io) {
   }
 
   const exercised = requirements.map((r) => ({ ...r }));
-  const verification = io && io.verify ? await io.verify(result.evidence) : { verified: false, checks: {}, reason: 'no verifier' };
+  // A verifier exception after a side effect must never leave the operation
+  // without a durable receipt. The side effect may have happened: keep evidence,
+  // do NOT rerun, do NOT claim verified.
+  let verification;
+  try {
+    verification = io && io.verify ? await io.verify(result.evidence) : { verified: false, checks: {}, reason: 'no verifier' };
+  } catch (err) {
+    verification = { verified: false, checks: {}, reason: `verifier error: ${String((err && err.message) || err)}` };
+  }
   op.state = verification.verified ? STATES.SUCCEEDED : STATES.NOT_VERIFIED;
   const receipt = buildReceipt({
     operation: op,
     capabilityId: capability.id,
-    authority: op.authority,
+    authority: { ...op.authority, approval },
     outcome: { status: verification.verified ? 'verified' : 'not_verified', exercised },
     evidence: result.evidence,
     verification,
