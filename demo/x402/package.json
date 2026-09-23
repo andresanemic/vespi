@@ -5,12 +5,15 @@
   "description": "Demo adapter: official x402 v2 capability behind the Vespi kernel boundary. Not product.",
   "type": "module",
   "scripts": {
-    "demo": "node run.js"
+    "demo": "node run.js",
+    "server": "node server.js"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^12.3.0",
     "@x402/core": "^2.27.0",
+    "@x402/express": "^2.27.0",
     "@x402/fetch": "^2.27.0",
-    "@x402/stellar": "^2.27.0"
+    "@x402/stellar": "^2.27.0",
+    "express": "^5.2.1"
   }
 }

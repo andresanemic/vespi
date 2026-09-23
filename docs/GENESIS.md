@@ -79,9 +79,11 @@ The first Stellar flagship explores a causal capability acquisition flow:
 
 `intent → missing capability → price → policy/budget → human gate → payment → capability unlocked → work continues → verification → receipt`
 
-The intended demonstration is simple:
+The intended demonstration is the full flow the experiment seeks to exercise.
 
 > **Without the authorized payment, the capability does not exist for the operation. After settlement, the operation can do something it could not do before.**
+
+Current evidence distinguishes the locally/offline-verified pre-signature x402 boundary from the live stages: after the RUN 05 repairs, a fresh live 402 response, real signing, facilitator, settlement and Horizon verification remain **CURRENT LIVE NOT VERIFIED**; historical testnet evidence remains historical.
 
 ## The uncomfortable requirement
 
@@ -95,10 +97,9 @@ So one of the open questions of this repository is:
 
 ## Status
 
-Experimental.  
-Building toward RC1.  
-Architecture still being arbitrated.  
-History intentionally preserved.
+**Current repository state:** Experimental. RUN 05 is closed within its declared evaluation scope; it is not a released first-party `vespi` skill and not a closed general continuity runtime.
+
+**Historical state:** An earlier RC1-oriented phase remains in the history. It is not the current release state. Architecture is still being arbitrated, and history is intentionally preserved.
 
 ## Working direction: bounded autonomy (not implemented yet — do not read as capability)
 
@@ -116,9 +117,9 @@ The direction separates five things that must not collapse into each other:
 - Model policy → how much intelligence and cost the operation may spend.
 - Vespi → continues the operation within those bounds.
 
-Implemented today: operation, bounded authority, human gate, capability boundary, verification, receipt.
+Implemented today in the local kernel: bounded operation execution, authority checking, a human decision surface, capability boundaries, separate local verification hooks and structured receipts.
 
-Still design direction: user operating profiles, model economy and escalation, longer delegated autonomous work, batching like "leave me five drafts and ask only where my judgment is actually needed".
+Still design direction: automatic durable persistence, user operating profiles, model economy and escalation, longer delegated autonomous work, batching like "leave me five drafts and ask only where my judgment is actually needed".
 
 ## Provenance boundary
 

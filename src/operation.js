@@ -40,13 +40,13 @@ async function runOperation(op, capability, io) {
 
   let approval = 'preauthorized';
   if (!check.ok) {
-    const gate = io && io.ask ? await io.ask(requirements) : { approved: false };
-    if (!gate.approved) {
+    const gate = io && typeof io.ask === 'function' ? await io.ask(requirements) : null;
+    if (!gate || gate.approved !== true) {
       op.state = STATES.NEEDS_DECISION;
       const receipt = buildReceipt({
         operation: op,
         capabilityId: capability.id,
-        authority: { ...op.authority, approval: 'human_gate_rejected' },
+        authority: { ...op.authority, approval: gate && gate.approved === false ? 'human_gate_rejected' : 'human_gate_no_decision' },
         outcome: { status: 'needs_human_decision', exercised: [] },
         evidence: null,
         verification: null,
@@ -91,8 +91,8 @@ async function runOperation(op, capability, io) {
   }
 
   const exercised = requirements.map((r) => ({ ...r }));
-  // A verifier exception after a side effect must never leave the operation
-  // without a durable receipt. The side effect may have happened: keep evidence,
+  // A verifier exception after a side effect is caught in the returned receipt.
+  // The side effect may have happened: keep evidence,
   // do NOT rerun, do NOT claim verified.
   let verification;
   try {

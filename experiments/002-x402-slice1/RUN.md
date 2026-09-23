@@ -11,6 +11,13 @@ how settlement actually works.
 - `receipt-success.json` (status `verified`), `brief.md` (deterministic template, declared).
 - Independent `verify` re-check: tx successful + 0.01 USDC payer→payTo transfer found.
 
+## Provenance note (added post-seal, file untouched)
+
+`receipt-success.json` carries the original local path where the brief was written
+(`output.path`, a `C:\...` Windows path). That path is provenance — where the bytes
+were — not a portable reference. Future receipts avoid absolute local paths; this
+file stays byte-identical as evidence of what occurred.
+
 ## Honest boundaries
 
 - Accounts are **temporary demo accounts on testnet**, not BORA's. Production `payTo`

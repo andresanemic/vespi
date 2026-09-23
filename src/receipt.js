@@ -1,6 +1,6 @@
 'use strict';
 
-// Receipt: durable answer to what happened. No secrets, no user context dump.
+// Receipt: structured answer returned to the caller; the caller owns persistence. No secrets, no user context dump.
 function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification }) {
   return {
     status: outcome.status,
@@ -9,7 +9,7 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
     authority: {
       grants: ((authority && authority.spend) || []).map((g) => ({ ...g })),
       exercised: outcome.exercised || [],
-      // How authority was obtained: 'preauthorized' | 'human_gate_approved' | 'human_gate_rejected'.
+      // How authority was obtained: 'preauthorized' | 'human_gate_approved' | 'human_gate_rejected' | 'human_gate_no_decision'.
       // Answers: was this delegated, or did it need a human during this operation?
       ...(authority && authority.approval ? { approval: authority.approval } : {}),
     },

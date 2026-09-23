@@ -304,3 +304,48 @@ test('insufficient grant asks once, then stops without paying', async () => {
   assert.equal(cap.calls(), 0);
   assert.equal(res.status, STATES.NEEDS_DECISION);
 });
+
+test('provenance: missing human decider records no human decision', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const op = createOperation({ goal: 'demo', authority: { spend: [] } });
+  const res = await runOperation(op, cap, { verify: verifierOk });
+  assert.equal(res.status, STATES.NEEDS_DECISION);
+  assert.equal(res.receipt.authority.approval, 'human_gate_no_decision');
+  const undecided = await runOperation(createOperation({ goal: 'demo', authority: { spend: [] } }), cap, { ask: async () => ({}) });
+  assert.equal(undecided.receipt.authority.approval, 'human_gate_no_decision');
+  assert.notEqual(res.receipt.authority.approval, 'human_gate_rejected');
+  assert.equal(cap.calls(), 0);
+});
+
+test('provenance: explicit human rejection remains a rejection', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const op = createOperation({ goal: 'demo', authority: { spend: [] } });
+  let asks = 0;
+  const res = await runOperation(op, cap, {
+    ask: async () => {
+      asks++;
+      return { approved: false };
+    },
+  });
+  assert.equal(asks, 1);
+  assert.equal(res.status, STATES.NEEDS_DECISION);
+  assert.equal(res.receipt.authority.approval, 'human_gate_rejected');
+  assert.equal(cap.calls(), 0);
+});
+
+test('provenance: explicit human approval survives final verification outcome', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const op = createOperation({ goal: 'demo', authority: { spend: [] } });
+  let asks = 0;
+  const res = await runOperation(op, cap, {
+    ask: async () => {
+      asks++;
+      return { approved: true };
+    },
+    verify: verifierNo,
+  });
+  assert.equal(asks, 1);
+  assert.equal(cap.calls(), 1);
+  assert.equal(res.status, STATES.NOT_VERIFIED);
+  assert.equal(res.receipt.authority.approval, 'human_gate_approved');
+});

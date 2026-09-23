@@ -4,11 +4,19 @@ All notable public changes to Vespi will be recorded here.
 
 This project is experimental. Before `v1.0.0`, version numbers describe public snapshots of a system still under active arbitration.
 
-## [Unreleased] — v0.1.1-kernel candidate
+## [Unreleased]
+
+### RUN 05 — public evaluation surface (local, not released)
+
+- Judge quickstart in both READMEs; reference x402 endpoint and explicit live prerequisites.
+- RUN 05 repair: x402 adapter checks effective 402 terms against its declared fixed effect and the operation grant before payment payload creation; offline adversarial test covers amount, token, recipient, network, scheme and signing-window divergence.
+- RUN 05 kernel correction after v0.1.1: absent or nondecisive human gate records human_gate_no_decision; explicit rejection and approval retain their provenance. The kernel returns structured receipts; callers own persistence.
+
+## [v0.1.1-kernel] — 2026-09-23 (16/16 tests at release)
 
 ### Fixed — authority integrity (external review findings, TDD)
 
-- Verifier exception after side effect now returns a durable `not_verified` receipt (evidence kept, no rerun, never `running`, never `verified`).
+- Verifier exception after side effect now returns a `not_verified` receipt (evidence kept, no rerun, never `running`, never `verified`).
 - Grant consumption is per-grant, not per destination group: split requirements against one grant share its single `maxAmount`; destination-specific grants keep separate budgets.
 - Gate provenance survives terminal outcomes: receipts record `preauthorized` / `human_gate_approved` / `human_gate_rejected` including failed runs.
 

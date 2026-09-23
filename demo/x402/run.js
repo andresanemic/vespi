@@ -42,7 +42,7 @@ async function verify(evidence) {
 async function main() {
   if (!PAY_TO || !SECRET) throw new Error('Need BORA_PAY_TO_EXPECTED + CLIENT_SECRET env (never committed).');
   const authority = { spend: [{ asset: `USDC:${USDC_CONTRACT}`, maxAmount: atomic(MAX_USDC) }] };
-  const op = createOperation({ goal: 'compose-launch-brief (demo)', authority });
+  const op = createOperation({ goal: 'obtain-marketing-plan (demo)', authority });
   const cap = x402Capability({ serviceUrl: SERVICE_URL, payTo: PAY_TO, secret: SECRET });
   const res = await runOperation(op, cap, {
     verify,
