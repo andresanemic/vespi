@@ -15,6 +15,18 @@ This project is experimental. Before `v1.0.0`, version numbers describe public s
 
 - Production receiver and deploy still pending; demo accounts are temporary and labeled as such.
 
+## [Unreleased] — kernel
+
+### Added
+
+- `src/` (operation, authority, receipt — zero deps, 8/8 `node:test` green): same operation gates without authority (`needs_human_decision`, zero side effect) and continues with it (verified receipt), including counterparty-bound grants.
+- `demo/x402/` (adapter + runner, own deps): official x402 v2 round-trip behind the kernel boundary; kernel imports nothing x402/Stellar.
+- Live settlements on testnet with independent verification (see `experiments/002`).
+
+### Not claimed
+
+- General orchestration, arbitrary capabilities, production payments, swarms, brief generation (deterministic template, declared), multi-run budgeting.
+
 ## [v0.0.1-genesis] — 2026-09-22
 
 ### Added

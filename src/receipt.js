@@ -1,0 +1,21 @@
+'use strict';
+
+// Receipt: durable answer to what happened. No secrets, no user context dump.
+function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification }) {
+  return {
+    status: outcome.status,
+    operation: { id: operation.id, goal: operation.goal },
+    capability: capabilityId,
+    authority: {
+      grants: ((authority && authority.spend) || []).map((g) => ({ ...g })),
+      exercised: outcome.exercised || [],
+    },
+    outcome: outcome.status,
+    evidence: evidence || null,
+    verification: verification || null,
+    detail: outcome.detail || null,
+    at: new Date().toISOString(),
+  };
+}
+
+module.exports = { buildReceipt };
