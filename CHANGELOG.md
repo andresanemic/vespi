@@ -4,18 +4,18 @@ All notable public changes to Vespi will be recorded here.
 
 This project is experimental. Before `v1.0.0`, version numbers describe public snapshots of a system still under active arbitration.
 
-## [Unreleased]
+## [v0.1.0-kernel] — 2026-09-23
 
-### Added
+### Added — experiments
 
 - `experiments/001-operator-professor-loop`: first live Operator↔Professor run (evidence + independent arbitration, 0 human interventions).
 - `experiments/002-x402-slice1`: paid capability run on Stellar testnet (0.01 USDC settlement, verified receipt + brief) with all three paths recorded (success, rejected_policy, rejected_human) and one real verification failure kept as evidence.
 
-### Not yet
+### Added — first executable code
 
-- Production receiver and deploy still pending; demo accounts are temporary and labeled as such.
-
-## [Unreleased] — kernel
+- `src/` (operation, authority, receipt — zero deps, 8/8 `node:test` green): same operation gates without authority (`needs_human_decision`, zero side effect) and continues with it (verified receipt), including counterparty-bound grants.
+- `demo/x402/` (adapter + runner, own deps): official x402 v2 round-trip behind the kernel boundary; kernel imports nothing x402/Stellar.
+- Live settlements on testnet with independent verification (see `experiments/002`).
 
 ### Added
 

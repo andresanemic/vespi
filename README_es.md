@@ -3,7 +3,7 @@
 # Vespi
 
 <p align="center">
-  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis"><img src="https://img.shields.io/badge/version-v0.0.1--genesis-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.0.1-genesis"></a>
+  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.1.0-kernel"><img src="https://img.shields.io/badge/version-v0.1.0--kernel-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.0-kernel"></a>
   <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E0C170?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
 </p>
 
@@ -18,6 +18,7 @@ Este repositorio empieza temprano a propósito. Vespi todavía no es un runtime 
 ## Qué existe hoy
 
 - [`v0.0.1-genesis`](https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis), el primer corte público.
+- [`v0.1.0-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.0-kernel), primer código ejecutable: kernel mínimo + demo x402 en testnet.
 - [`docs/GENESIS.md`](./docs/GENESIS.md), con el problema actual, las tesis de trabajo y aquello que todavía no afirmamos.
 - [`experiments/`](./experiments/), el lugar público para las corridas. Primeras corridas completadas: [`001-operator-professor-loop`](./experiments/001-operator-professor-loop/RUN.md) (dos cuerpos, cero intervenciones humanas) y [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) (capability pagada en Stellar testnet, con recibos y un fallo real conservado).
 - [`src/`](./src/), kernel de operación ejecutable mínimo (cero dependencias, tests en verde): goal → requirements → chequeo de authority → gate humano solo si falta → ejecutar → verificar → recibo. Ejercido contra x402/Stellar testnet vía [`demo/x402`](./demo/x402/README.md) — el único lugar que conoce x402. La misma operación frena sin authority y continúa con ella.
@@ -28,7 +29,7 @@ Este repositorio empieza temprano a propósito. Vespi todavía no es un runtime 
 
 ## De dónde viene
 
-Vespi nace del trabajo de **Andrés Peña Mellado** en **LUS** y **Lore Plugin**, pero es un proyecto separado, con su propia historia.
+Vespi nace del trabajo de **Andrés Peña Mellado** en **[LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md)** y **[Lore Plugin](https://github.com/andresanemic/lore-plugin)**, pero es un proyecto separado, con su propia historia.
 
 **LUS** estudia cómo el trabajo compartido entre humano e IA puede convertirse en criterio reutilizable que modifica decisiones posteriores.
 
@@ -53,4 +54,4 @@ Digital Art Director & Creative Developer trabajando entre agentes de IA, Web3, 
 
 ---
 
-[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experimentos](./experiments/) · [Release v0.0.1-genesis](https://github.com/andresanemic/vespi/releases/tag/v0.0.1-genesis) · [Licencia MIT](./LICENSE)
+[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experimentos](./experiments/) · [Release v0.1.0-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.0-kernel) · [Licencia MIT](./LICENSE)
