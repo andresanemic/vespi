@@ -194,8 +194,6 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 <a id="español"></a>
 
-<p align="center"><a href="#english"><strong>English</strong></a> · <a href="#español"><strong>Español</strong></a></p>
-
 **Vespi es un experimento de continuidad operacional bajo autoridad acotada.**
 
 > **La unidad no es el agente. La unidad es la operación.**
