@@ -1,5 +1,3 @@
-[![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
-
 # Vespi
 
 <p align="center">
@@ -22,7 +20,19 @@
 
 Vespi is a small public experiment in how people, models and services can work together without automatically sharing the same context, permissions or history. It is being built in public by **Andrés Peña Mellado**. This repository is experimental: it records what exists, what fails, what changes and what remains deliberately unclaimed.
 
-## Why it exists
+## Why it exists?
+
+When you work with AI agents, there is a moment when one session ends and the next has to begin.
+
+Keeping the data is relatively easy. What I care about is preserving the criterion that made a decision valid. What survives when the model, host or session changes?
+
+Context helps, but it is not enough. We also need to preserve why an answer was acceptable, its limits and who could approve it.
+
+That problem led me to [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md) and [Lore Plugin](https://github.com/andresanemic/lore-plugin), which tries to make that criterion portable, routable and executable. The Lore Plugin repository already has 3,000+ clones.
+
+I later arrived at Tellus Cooperative and the Find Your Way hackathon. There the question became concrete: when building in public, an operation has to distinguish what I did from what an institution represents.
+
+From there, Vespi began to take shape: a layer that tries to operate within those limits and leave a verifiable record. I am also looking toward [Meridian 2026](https://meridian.stellar.org/event-details), from Stellar Development Foundation.
 
 Capability, context and authority are different things. A capability can be available without being authorized. A receipt can record a result without proving that the result was persisted. A model can be powerful without knowing which decision it is allowed to make.
 
@@ -131,11 +141,11 @@ A Vespi capability may be local, host-native, external or paid. Its economic for
 
 The bet can be strong and still falsable. We do not invent “ese Vespi” to justify the name.
 
-## Relationship to Lore Plugin
+## Relationship to [Lore Plugin](https://github.com/andresanemic/lore-plugin)
 
 > **Lore Plugin prepares the ground. Vespi operates on it.**
 
-**Today:** Vespi is a separate technical repository. LUS and Lore Plugin are part of its genealogy and criterion. There is no released first-party `vespi` skill.
+**Today:** Vespi is a separate technical repository. [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md) and [Lore Plugin](https://github.com/andresanemic/lore-plugin) are part of its genealogy and criterion. There is no released first-party `vespi` skill.
 
 In the intended division of labor, Lore Plugin is expected to provide the durable ground an operation needs: goal/state, the relevant criterion and owner, the authority boundary, and evidence/provenance. Vespi operates within those boundaries; it does not replace Lore Plugin or create a second learning or write path.
 
@@ -143,7 +153,7 @@ In the intended division of labor, Lore Plugin is expected to provide the durabl
 
 ## Origin, catalyst, pressure, horizon
 
-- **ORIGIN: LUS + Lore Plugin.** Vespi grows from work on criterion, continuity and operational authority, not from a payment protocol.
+- **ORIGIN: [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md) + [Lore Plugin](https://github.com/andresanemic/lore-plugin).** Vespi grows from work on criterion, continuity and operational authority, not from a payment protocol.
 - **CATALYST / CURRENT PUBLIC PRESSURE: Find Your Way + Tellus.** This is context and evaluation pressure only. No ownership, sponsorship, endorsement, partnership, funding or official affiliation is claimed.
 - **FIRST EXERCISED ECONOMIC PRESSURE: x402 + Stellar testnet.** Payment is a pressure that exposed real authority questions; it is not the project's origin.
 - **HORIZON: Meridian / HackMeridian 2026.** The [HackMeridian event](https://meridian.stellar.org/event-details) is context and a public horizon, not a claim of ownership, sponsorship, endorsement, partnership, funding or official affiliation.
@@ -200,7 +210,19 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 Vespi es un pequeño experimento público sobre cómo personas, modelos y servicios pueden trabajar juntos sin compartir automáticamente el mismo contexto, permisos o historia. Lo construye en público **Andrés Peña Mellado**. Este repositorio es experimental: conserva lo que existe, lo que falla, lo que cambia y lo que sigue deliberadamente sin reclamar.
 
-## Por qué existe
+## ¿Por qué existe?
+
+Cuando uno trabaja con agentes IA, hay un momento en que una sesión termina y la siguiente tiene que empezar.
+
+Lo que debería pasar con los datos es relativamente fácil. Lo que me importa es que no se pierda el criterio que hizo que una decisión valiera. ¿Qué se conserva cuando cambian el modelo, el host o la sesión?
+
+El contexto ayuda, pero no alcanza. También hace falta conservar la razón por la que una respuesta era aceptable, sus límites y quién podía aprobarla.
+
+Ese problema me llevó a [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_es.md) y [Lore Plugin](https://github.com/andresanemic/lore-plugin), que intenta convertir ese criterio en algo portable, enrutable y ejecutable. El repositorio de Lore Plugin ya supera las 3.000 clonaciones.
+
+Después llegué a Tellus Cooperative y a la hackatón de Find Your Way. Ahí la pregunta se volvió concreta: al construir en público, una operación tiene que distinguir lo que hice de lo que representa una institución.
+
+Ahí fue tomando forma Vespi: una capa que intenta operar dentro de esos límites y dejar un registro verificable. También apunto a [Meridian 2026](https://meridian.stellar.org/event-details), de Stellar Development Foundation.
 
 Capability, contexto y authority son cosas distintas. Una capability puede estar disponible sin estar autorizada. Un receipt puede registrar un resultado sin demostrar que ese resultado fue persistido. Un modelo puede ser poderoso sin saber qué decisión tiene permiso para tomar.
 
@@ -315,11 +337,11 @@ Una capability de Vespi puede ser local, host-native, external o paid. Su forma 
 
 La apuesta puede ser fuerte y seguir siendo falsable. No inventamos “ese Vespi” para justificar la marca.
 
-## Relación con Lore Plugin
+## Relación con [Lore Plugin](https://github.com/andresanemic/lore-plugin)
 
 > **Lore Plugin prepara el terreno. Vespi opera sobre él.**
 
-**Hoy:** Vespi es un repositorio técnico separado. LUS y Lore Plugin son parte de su genealogía y su criterio. Todavía no existe una skill first-party `vespi` publicada.
+**Hoy:** Vespi es un repositorio técnico separado. [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_es.md) y [Lore Plugin](https://github.com/andresanemic/lore-plugin) son parte de su genealogía y su criterio. Todavía no existe una skill first-party `vespi` publicada.
 
 En la división de trabajo prevista, Lore Plugin debe aportar el suelo durable que una operación necesita: goal/state, el criterion y owner relevantes, la frontera de authority y evidence/provenance. Vespi opera dentro de esos límites; no reemplaza Lore Plugin ni crea un segundo camino de aprendizaje o escritura.
 
@@ -327,7 +349,7 @@ En la división de trabajo prevista, Lore Plugin debe aportar el suelo durable q
 
 ## Origen, catalizador, presión y horizonte
 
-- **ORIGEN: LUS + Lore Plugin.** Vespi crece del trabajo sobre criterio, continuidad y authority operacional, no de un protocolo de pagos.
+- **ORIGEN: [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_es.md) + [Lore Plugin](https://github.com/andresanemic/lore-plugin).** Vespi crece del trabajo sobre criterio, continuidad y authority operacional, no de un protocolo de pagos.
 - **CATALIZADOR / PRESIÓN PÚBLICA ACTUAL: Find Your Way + Tellus.** Son contexto y presión de evaluación. No se reclama ownership, sponsorship, endorsement, partnership, funding ni afiliación oficial.
 - **PRIMERA PRESIÓN ECONÓMICA EJERCITADA: x402 + Stellar testnet.** El pago es una presión que expuso preguntas reales de authority; no es el origen del proyecto.
 - **HORIZONTE: Meridian / HackMeridian 2026.** El [evento HackMeridian](https://meridian.stellar.org/event-details) es contexto y horizonte público. No se reclama ownership, sponsorship, endorsement, partnership, funding ni afiliación oficial.
