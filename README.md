@@ -1,3 +1,5 @@
+[![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
+
 # Vespi
 
 <p align="center">
@@ -6,8 +8,6 @@
   <a href="./experiments/005/RUN.md"><img src="https://img.shields.io/badge/run-05--closed-E0C170?style=for-the-badge&labelColor=07111A" alt="RUN 05: closed"></a>
   <a href="#what-exists-today"><img src="https://img.shields.io/badge/authority-bounded-D7B698?style=for-the-badge&labelColor=07111A" alt="Bounded authority"></a>
 </p>
-
-<p align="center"><a href="#english"><strong>English</strong></a> · <a href="#español"><strong>Español</strong></a></p>
 
 <details open>
 <summary><strong>English</strong></summary>
