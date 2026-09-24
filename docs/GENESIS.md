@@ -1,6 +1,8 @@
 # VESPI — GENESIS
 **Draft · 2026-09-22**
 
+> Historical origin and working theses. The current local implementation and support status are maintained in `README.md` and `CHANGELOG.md`.
+
 > **Vespi is being defined in public. This repository records not only what survives, but what gets rejected.**
 
 ## Why this repository exists
@@ -36,6 +38,8 @@ These are provisional. They may change.
 
 Vespiqueen is not a hyperproductivity system. Its purpose is not to fill every recovered minute with more output, but to return time and agency to people. A capability is not judged only by additional output, but also by whether it reduces unnecessary load and preserves time and agency for the person to decide.
 
+Vespiqueen is the surrounding hive and continuity direction; Vespi is the current operation kernel. The visual identity does not represent a second runtime.
+
 ## What Vespi is not claiming yet
 
 Vespi is not currently presented as:
@@ -56,10 +60,10 @@ Anything marked RC, REPLAY, BLUEPRINT, hypothesis or research lineage should rem
 A research program about continuity of criterion and the relational space in which humans and AI accumulate it.
 
 ### Lore Plugin
-An operational system for making accumulated criterion portable, routable and executable across projects, areas, bots and hosts.
+An operational system for making accumulated criterion portable, routable and able to govern future decisions through explicit skills and thresholds across projects, areas, bots and hosts.
 
 ### Vespi
-The emerging layer concerned with composing heterogeneous bodies, bounded authority, capabilities, economic actions, verification and operations across those bodies.
+A future direction for composing heterogeneous bodies, bounded authority, capabilities, economic actions, verification and operations across those bodies.
 
 The boundaries between these three matter.
 
@@ -81,9 +85,9 @@ The first Stellar flagship explores a causal capability acquisition flow:
 
 The intended demonstration is the full flow the experiment seeks to exercise.
 
-> **Without the authorized payment, the capability does not exist for the operation. After settlement, the operation can do something it could not do before.**
+> **In the intended flow, without authorized payment the capability is unavailable to the operation; only after a verified settlement can the operation do what it could not do before.**
 
-Current evidence distinguishes the locally/offline-verified pre-signature x402 boundary from the live stages: after the RUN 05 repairs, a fresh live 402 response, real signing, facilitator, settlement and Horizon verification remain **CURRENT LIVE NOT VERIFIED**; historical testnet evidence remains historical.
+Current evidence distinguishes the locally/offline-verified pre-signature x402 boundary from the network stages: after the RUN 05 repairs, a fresh testnet 402 response, real signing, facilitator, settlement and Horizon verification remain **CURRENT TESTNET NOT VERIFIED**; historical testnet evidence remains historical.
 
 ## The uncomfortable requirement
 
@@ -117,9 +121,9 @@ The direction separates five things that must not collapse into each other:
 - Model policy → how much intelligence and cost the operation may spend.
 - Vespi → continues the operation within those bounds.
 
-Implemented today in the local kernel: bounded operation execution, authority checking, a human decision surface, capability boundaries, separate local verification hooks and structured receipts.
+Implemented today in the local kernel: bounded operation execution, authority checking, a human decision surface, declared spend requirements per capability, separate local verification hooks and structured receipts.
 
-Still design direction: automatic durable persistence, user operating profiles, model economy and escalation, longer delegated autonomous work, batching like "leave me five drafts and ask only where my judgment is actually needed".
+Still design direction: automatic durable persistence, user operating profiles, model economy and escalation, longer delegated autonomous work, batching work and asking only where judgment is actually needed.
 
 ## Provenance boundary
 

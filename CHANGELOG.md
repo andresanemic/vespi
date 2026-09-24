@@ -6,11 +6,16 @@ This project is experimental. Before `v1.0.0`, version numbers describe public s
 
 ## [Unreleased]
 
+Current working tree: **Unreleased**.
+
 ### RUN 05 — public evaluation surface (local, not released)
 
-- Judge quickstart in both READMEs; reference x402 endpoint and explicit live prerequisites.
-- RUN 05 repair: x402 adapter checks effective 402 terms against its declared fixed effect and the operation grant before payment payload creation; offline adversarial test covers amount, token, recipient, network, scheme and signing-window divergence.
-- RUN 05 kernel correction after v0.1.1: absent or nondecisive human gate records human_gate_no_decision; explicit rejection and approval retain their provenance. The kernel returns structured receipts; callers own persistence.
+- Judge quickstart in both language sections of `README.md`; reference x402 endpoint and explicit testnet prerequisites.
+- Remove the compatibility-only `README_es.md`; `README.md` is now the single bilingual public surface.
+- RUN 05 repair: x402 adapter checks effective 402 terms against its declared fixed effect and the operation grant, and prepares the exact Soroban transfer/auth digest before the paid request; offline adversarial test covers amount, token, recipient, network, scheme and signing-window divergence.
+- Current code gate after external Stellar/blockchain/x402 review: destination-bound payment authority, no redirect forwarding, bounded fetch/body deadlines, abort propagation before the paid request, post-settlement exact Soroban authorization checks, transaction hash/network binding, marketing-plan schema validation, receipt evidence allowlist, and route-level in-process payment deduplication after x402 processing.
+- Local verification: 47/47 kernel tests and 53/53 demo tests; `npm test` in `demo/x402` includes the adversarial suite.
+- Scope remains an offline-testable demo. Durable cross-process operation/idempotency storage and production payment readiness are not claimed.
 
 ## [v0.1.1-kernel] — 2026-09-23 (16/16 tests at release)
 
@@ -26,7 +31,10 @@ This project is experimental. Before `v1.0.0`, version numbers describe public s
 
 ## [v0.1.0-kernel] — 2026-09-23
 
+The entries below are historical release evidence; they do not describe the current working tree.
+
 ### Added — experiments
+
 
 - `experiments/001-operator-professor-loop`: first live Operator↔Professor run (evidence and independent arbitration, 0 human interventions).
 - `experiments/002-x402-slice1`: paid capability run on Stellar testnet (0.01 USDC settlement, verified receipt and brief) with all three paths recorded (success, rejected_policy, rejected_human) and one real verification failure kept as evidence.
