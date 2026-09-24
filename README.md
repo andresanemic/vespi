@@ -157,11 +157,11 @@ The open question is how much observed continuity comes from Vespi itself, and h
 
 ## The bet
 
-The bet is whether an operation can remain meaningful beyond the lifetime of one model, host or session while preserving enough goal, authority, evidence, provenance and human intervention to continue honestly after an interruption.
-
 <p align="center">
   <img src="./assets/vespi-A.png" alt="A Vespi field researcher observing a living hive at night" width="100%">
 </p>
+
+The bet is whether an operation can remain meaningful beyond the lifetime of one model, host or session while preserving enough goal, authority, evidence, provenance and human intervention to continue honestly after an interruption.
 
 ### Continuity
 
@@ -376,11 +376,11 @@ La pregunta abierta es cuánta continuidad observada viene de Vespi y cuánta se
 
 ## La apuesta
 
-La apuesta es si una operación puede conservar significado más allá de la vida de un solo modelo, host o sesión, preservando suficiente objetivo, autoridad, evidencia, procedencia e intervención humana para continuar honestamente después de una interrupción.
-
 <p align="center">
   <img src="./assets/vespi-A.png" alt="Una investigadora de Vespi observa una colmena viva de noche" width="100%">
 </p>
+
+La apuesta es si una operación puede conservar significado más allá de la vida de un solo modelo, host o sesión, preservando suficiente objetivo, autoridad, evidencia, procedencia e intervención humana para continuar honestamente después de una interrupción.
 
 ### Continuidad
 
