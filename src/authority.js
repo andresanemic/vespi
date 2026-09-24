@@ -5,35 +5,44 @@ function grantSpend(asset, maxAmount) {
   return { spend: [{ asset, maxAmount }] };
 }
 
-function num(s) {
-  return BigInt(String(s));
+function text(value) {
+  return typeof value === 'string' && value.length > 0;
 }
 
-// requirements: [{ asset, amount, to }] — what a capability says it needs.
-// authority: { spend: [{ asset, maxAmount }] } — what the user granted.
-// Every requirement must be covered, otherwise insufficient. No partial credit.
+function atomic(value) {
+  return typeof value === 'string' && /^\d+$/.test(value) ? BigInt(value) : null;
+}
+
 function sufficient(requirements, authority) {
-  const reqs = requirements || [];
-  if (reqs.length === 0) return { ok: true, reason: 'no side effect required' };
+  const reqs = requirements;
+  if (!Array.isArray(reqs)) return { ok: false, reason: 'requirements must be an array' };
+  if (reqs.length === 0) return { ok: false, reason: 'no spend requirement declared' };
   const grants = (authority && authority.spend) || [];
-  // Assign every requirement to exactly one grant, then cap consumption PER GRANT.
-  // A wildcard grant (no `to`) covers any destination but is NOT renewed per
-  // destination: all requirements assigned to it share its single maxAmount.
-  // Destination-specific grants keep separate budgets.
-  const consumption = new Map(); // grant index -> total assigned
-  for (const r of reqs) {
-    // Most specific matching grant first: a destination-specific grant takes
-    // precedence for its destination; the wildcard is the fallback, never renewed.
-    const gi = grants.findIndex((x) => x.asset === r.asset && x.to && r.to && x.to === r.to);
-    const wi = gi >= 0 ? gi : grants.findIndex((x) => x.asset === r.asset && !x.to);
-    const idx = gi >= 0 ? gi : wi;
-    if (idx < 0) return { ok: false, reason: `no grant for asset ${r.asset}${r.to ? ` to ${r.to}` : ''}` };
-    consumption.set(idx, (consumption.get(idx) || 0n) + num(r.amount));
+  if (!Array.isArray(grants)) return { ok: false, reason: 'authority spend must be an array' };
+
+  for (const requirement of reqs) {
+    if (!requirement || !text(requirement.asset) || !text(requirement.to) || atomic(requirement.amount) === null) {
+      return { ok: false, reason: 'invalid spend requirement' };
+    }
   }
-  for (const [gi, total] of consumption) {
-    const g = grants[gi];
-    if (total > num(g.maxAmount)) {
-      return { ok: false, reason: `requirements consume ${total} against grant max ${g.maxAmount} (${g.asset}${g.to ? ` to ${g.to}` : ''})` };
+  for (const grant of grants) {
+    if (!grant || !text(grant.asset) || atomic(grant.maxAmount) === null || (grant.to !== undefined && !text(grant.to))) {
+      return { ok: false, reason: 'invalid spend grant' };
+    }
+  }
+
+  const consumption = new Map();
+  for (const requirement of reqs) {
+    const specific = grants.findIndex((grant) => grant.asset === requirement.asset && grant.to === requirement.to);
+    const wildcard = specific >= 0 ? specific : grants.findIndex((grant) => grant.asset === requirement.asset && grant.to === undefined);
+    const index = specific >= 0 ? specific : wildcard;
+    if (index < 0) return { ok: false, reason: `no grant for asset ${requirement.asset} to ${requirement.to}` };
+    consumption.set(index, (consumption.get(index) || 0n) + atomic(requirement.amount));
+  }
+  for (const [index, total] of consumption) {
+    const grant = grants[index];
+    if (total > atomic(grant.maxAmount)) {
+      return { ok: false, reason: `requirements consume ${total} against grant max ${grant.maxAmount} (${grant.asset}${grant.to ? ` to ${grant.to}` : ''})` };
     }
   }
   return { ok: true, reason: 'covered by grant' };

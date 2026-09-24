@@ -4,12 +4,16 @@
   "version": "0.1.0",
   "description": "Demo adapter: official x402 v2 capability behind the Vespi kernel boundary. Not product.",
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
+    "test": "node --test capability.adversarial.mjs amount.test.mjs cli.test.mjs config.test.mjs endpoint.test.mjs fetch-timeout.test.mjs idempotency.test.mjs settlement-finalization.test.mjs settlement-response.test.mjs verify.test.mjs",
     "demo": "node run.js",
     "server": "node server.js"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^12.3.0",
+    "@stellar/stellar-sdk": "^16.3.0",
     "@x402/core": "^2.27.0",
     "@x402/express": "^2.27.0",
     "@x402/fetch": "^2.27.0",

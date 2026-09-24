@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Keypair } from '@stellar/stellar-sdk';
 import { x402Client } from '@x402/fetch';
-import { x402Capability, USDC_CONTRACT } from './capability.js';
+import { x402Capability, claimTransaction, USDC_CONTRACT } from './capability.js';
 
 const expectedPayTo = Keypair.random().publicKey();
 const otherPayTo = Keypair.random().publicKey();
@@ -17,7 +17,7 @@ const base = {
   maxTimeoutSeconds: 60,
   extra: { areFeesSponsored: true },
 };
-const grant = (maxAmount) => ({ spend: [{ asset, maxAmount }] });
+const grant = (maxAmount) => ({ spend: [{ asset, maxAmount, to: expectedPayTo }] });
 
 async function probe(offer, authority) {
   const originalFetch = globalThis.fetch;
@@ -80,4 +80,117 @@ test('effective 402 terms are bound before payment payload creation', async () =
   assert.equal(mixedOffers.payloadCalls, 1, 'a valid offer can be selected without exposing the higher offer');
   assert.deepEqual(mixedOffers.seenOffers.map((r) => r.amount), ['100000'], 'only authorized terms may reach the x402 selector');
   assert.match(mixedOffers.error?.message || '', /PAYLOAD_BOUNDARY/);
+});
+
+test('malformed prepared transaction is rejected before the paid request', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalCreate = x402Client.prototype.createPaymentPayload;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls++;
+    return {
+      status: 402,
+      headers: new Headers({ 'PAYMENT-REQUIRED': Buffer.from(JSON.stringify({
+        x402Version: 2,
+        resource: { url: 'http://example.test/api/agent-service' },
+        accepts: [base],
+      })).toString('base64') }),
+    };
+  };
+  x402Client.prototype.createPaymentPayload = async () => ({ payload: { transaction: 'not-xdr' } });
+  let result;
+  try {
+    result = await x402Capability({ serviceUrl: 'http://example.test/api/agent-service', payTo: expectedPayTo, secret }).perform({ authority: grant('500000') });
+  } finally {
+    globalThis.fetch = originalFetch;
+    x402Client.prototype.createPaymentPayload = originalCreate;
+  }
+  assert.equal(result.ok, false);
+  assert.match(result.error, /preflight/);
+  assert.equal(fetchCalls, 1);
+});
+
+test('transaction replay claims canonicalize surrounding whitespace', () => {
+  const hash = `tx-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  assert.equal(claimTransaction(`  ${hash}  `), true);
+  assert.equal(claimTransaction(hash), false);
+});
+
+test('wildcard authority cannot redirect a destination-bound payment', async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => { fetchCalls++; return { status: 500 }; };
+  let result;
+  try {
+    result = await x402Capability({ serviceUrl: 'http://example.test/api/agent-service', payTo: expectedPayTo, secret }).perform({
+      authority: { spend: [{ asset, maxAmount: '500000' }] },
+      signal: new AbortController().signal,
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(result.ok, false);
+  assert.match(result.error, /recipient/);
+  assert.equal(fetchCalls, 0);
+});
+
+test('aborting the kernel signal stops x402 before a paid request', async () => {
+  const originalFetch = globalThis.fetch;
+  const originalCreate = x402Client.prototype.createPaymentPayload;
+  let fetchCalls = 0;
+  const controller = new AbortController();
+  globalThis.fetch = async () => {
+    fetchCalls++;
+    return { status: 402, headers: new Headers({ 'PAYMENT-REQUIRED': Buffer.from(JSON.stringify({
+      x402Version: 2,
+      resource: { url: 'http://example.test/api/agent-service' },
+      accepts: [base],
+    })).toString('base64') }) };
+  };
+  x402Client.prototype.createPaymentPayload = async () => new Promise((resolve) => setTimeout(() => resolve({}), 50));
+  let result;
+  try {
+    const pending = x402Capability({ serviceUrl: 'http://example.test/api/agent-service', payTo: expectedPayTo, secret }).perform({
+      authority: grant('500000'),
+      signal: controller.signal,
+    });
+    setTimeout(() => controller.abort(), 5);
+    result = await pending;
+    await new Promise((resolve) => setTimeout(resolve, 60));
+  } finally {
+    globalThis.fetch = originalFetch;
+    x402Client.prototype.createPaymentPayload = originalCreate;
+  }
+  assert.equal(result.ok, false);
+  assert.equal(result.settlementUnknown, true);
+  assert.equal(fetchCalls, 1);
+});
+
+test('payment path refuses a missing secret before network access', async () => {
+  const originalFetch = globalThis.fetch;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls++;
+    return { status: 500 };
+  };
+  let result;
+  let error;
+  try {
+    result = await x402Capability({ serviceUrl: 'http://example.test/api/agent-service', payTo: expectedPayTo, secret: '' }).perform({ authority: grant('500000') });
+  } catch (e) {
+    error = e;
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(error, undefined);
+  assert.equal(result?.ok, false);
+  assert.match(result?.error || '', /CLIENT_SECRET/);
+  assert.equal(fetchCalls, 0);
+});
+
+test('recipient validation rejects secret-shaped configuration before networking', () => {
+  assert.throws(
+    () => x402Capability({ serviceUrl: 'http://example.test/api/agent-service', payTo: secret, secret: secret }),
+    (error) => error.message.includes('public key') && !error.message.includes(secret),
+  );
 });

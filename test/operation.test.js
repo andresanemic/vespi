@@ -24,7 +24,13 @@ const verifierOk = async () => ({ verified: true, checks: { mock: true }, reason
 const verifierNo = async () => ({ verified: false, checks: {}, reason: 'mock bad evidence' });
 const silentAsk = async () => ({ approved: false });
 
-test('A: without authority, no side effect, NEEDS_HUMAN_DECISION', async () => {
+test('authority predicate rejects non-array requirements', () => {
+  for (const requirements of [null, false, 0, '']) {
+    assert.equal(sufficient(requirements, { spend: [] }).ok, false);
+  }
+});
+
+test('A: without authority, perform is not called, NEEDS_HUMAN_DECISION', async () => {
   const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
   const op = createOperation({ goal: 'demo', authority: { spend: [] } });
   const res = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
@@ -43,6 +49,121 @@ test('B: sufficient authority continues to verified receipt', async () => {
   assert.equal(res.receipt.capability, 'fake-cap');
 });
 
+test('a terminal operation is not replayed', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const io = { verify: verifierOk, ask: silentAsk };
+  const first = await runOperation(op, cap, io);
+  const second = await runOperation(op, cap, io);
+  assert.equal(cap.calls(), 1);
+  assert.deepEqual(second.receipt, first.receipt);
+  assert.equal(second.status, first.status);
+});
+
+test('concurrent runs cannot double-execute one operation', async () => {
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const op = createOperation({ goal: 'demo', authority: { spend: [] } });
+  const first = runOperation(op, cap, {
+    verify: verifierOk,
+    ask: async () => {
+      await gate;
+      return { approved: true };
+    },
+  });
+  await assert.rejects(runOperation(op, cap, { verify: verifierOk, ask: silentAsk }), /already running/);
+  release();
+  const result = await first;
+  assert.equal(result.status, STATES.SUCCEEDED);
+  assert.equal(cap.calls(), 1);
+});
+
+test('settlement uncertainty keeps evidence and cannot be replayed', async () => {
+  const cap = fakeCapability({
+    ok: false,
+    error: 'payment response lost after submit',
+    settlementUnknown: true,
+    evidence: { txHash: 'tx-unknown', payer: 'PAYER' },
+  });
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const io = { verify: verifierOk, ask: silentAsk };
+  const first = await runOperation(op, cap, io);
+  assert.equal(first.status, STATES.NOT_VERIFIED);
+  assert.deepEqual(first.receipt.evidence, { txHash: 'tx-unknown', payer: 'PAYER' });
+  assert.equal(first.receipt.verification.verified, false);
+  const second = await runOperation(op, cap, io);
+  assert.deepEqual(second.receipt, first.receipt);
+  assert.equal(cap.calls(), 1);
+});
+
+test('returns capability output separately from receipt evidence', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { txHash: 'X' }, output: { plan: 'delivered' } });
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const first = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  assert.deepEqual(first.output, { plan: 'delivered' });
+  assert.equal(first.receipt.evidence.output, undefined);
+  const second = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  assert.deepEqual(second.output, first.output);
+});
+
+test('missing capability evidence cannot become verified', async () => {
+  let verified = 0;
+  const cap = fakeCapability({ ok: true, evidence: null, output: { secret: true } });
+  const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, {
+    verify: async () => { verified++; return verifierOk(); },
+    ask: silentAsk,
+  });
+  assert.equal(res.status, STATES.NOT_VERIFIED);
+  assert.equal(res.receipt.verification.verified, false);
+  assert.equal(res.output, null);
+  assert.equal(verified, 0);
+});
+
+test('capability timeout becomes terminal not_verified without replay', async () => {
+  let performs = 0;
+  const cap = {
+    id: 'timeout-cap',
+    required: () => ({ spend: [{ asset: 'USDC:test', amount: '100000', to: 'RECEIVER' }] }),
+    perform: async () => { performs++; return new Promise(() => {}); },
+  };
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const io = { performTimeoutMs: 5, verify: verifierOk, ask: silentAsk };
+  const first = await runOperation(op, cap, io);
+  const second = await runOperation(op, cap, io);
+  assert.equal(first.status, STATES.NOT_VERIFIED);
+  assert.equal(first.receipt.verification.verified, false);
+  assert.equal(second.receipt, first.receipt);
+  assert.equal(performs, 1);
+});
+
+test('verifier timeout becomes terminal not_verified without replay', async () => {
+  let performs = 0;
+  const cap = {
+    id: 'verify-timeout-cap',
+    required: () => ({ spend: [{ asset: 'USDC:test', amount: '100000', to: 'RECEIVER' }] }),
+    perform: async () => { performs++; return { ok: true, evidence: { tx: 'X' } }; },
+  };
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const io = { verifyTimeoutMs: 5, verify: async () => new Promise(() => {}), ask: silentAsk };
+  const first = await runOperation(op, cap, io);
+  const second = await runOperation(op, cap, io);
+  assert.equal(first.status, STATES.NOT_VERIFIED);
+  assert.equal(first.receipt.verification.verified, false);
+  assert.equal(second.receipt, first.receipt);
+  assert.equal(performs, 1);
+});
+
+test('does not expose capability output before verification', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' }, output: { plan: 'unverified' } });
+  const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, {
+    verify: verifierNo,
+    ask: silentAsk,
+  });
+  assert.equal(res.status, STATES.NOT_VERIFIED);
+  assert.equal(res.output, null);
+});
+
 test('capability failure never yields success receipt', async () => {
   const cap = fakeCapability({ ok: false, error: 'broke' });
   const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
@@ -56,6 +177,120 @@ test('verification failure is never presented as verified', async () => {
   const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
   const res = await runOperation(op, cap, { verify: verifierNo, ask: silentAsk });
   assert.notEqual(res.receipt.status, 'verified');
+});
+
+test('malformed verifier results fail closed and still produce a receipt', async () => {
+  for (const result of [null, {}, { verified: 'yes' }]) {
+    const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+    const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, {
+      verify: async () => result,
+      ask: silentAsk,
+    });
+    assert.equal(res.status, STATES.NOT_VERIFIED);
+    assert.equal(res.receipt.status, 'not_verified');
+    assert.equal(res.receipt.verification.verified, false);
+    assert.equal(cap.calls(), 1);
+  }
+});
+
+test('verified claims with malformed reasons fail closed', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, {
+    verify: async () => ({ verified: true, reason: { secret: 'not-a-reason' }, checks: {} }),
+    ask: silentAsk,
+  });
+  assert.equal(res.status, STATES.NOT_VERIFIED);
+  assert.equal(res.receipt.verification.verified, false);
+});
+
+test('hostile capability metadata still produces a terminal receipt and blocks replay', async () => {
+  let performs = 0;
+  const cap = {
+    get id() { throw new Error('id getter exploded'); },
+    required: () => ({ spend: [{ asset: 'USDC:test', amount: '100000', to: 'RECEIVER' }] }),
+    perform: async () => { performs++; return { ok: true, evidence: { tx: 'X' } }; },
+  };
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const first = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  const second = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  assert.equal(first.status, STATES.SUCCEEDED);
+  assert.ok(first.receipt);
+  assert.equal(second.receipt, first.receipt);
+  assert.equal(performs, 1);
+});
+
+test('receipt metadata failure cannot expose verified state or output', async () => {
+  let performs = 0;
+  const cap = {
+    id: 'metadata-cap',
+    required: () => ({ spend: [{ asset: 'USDC:test', amount: '100000', to: 'RECEIVER' }] }),
+    perform: async () => { performs++; return { ok: true, evidence: { tx: 'X' }, output: { secret: 'unverified' } }; },
+  };
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  Object.defineProperty(op, 'id', { get() { throw new Error('operation id getter exploded'); } });
+  const first = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  const second = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  assert.equal(first.status, STATES.NOT_VERIFIED);
+  assert.equal(first.receipt.verification.verified, false);
+  assert.equal(first.output, null);
+  assert.equal(second.receipt, first.receipt);
+  assert.equal(performs, 1);
+});
+
+test('hostile authority and requirement getters fail before side effects', async () => {
+  const authority = new Proxy({}, { get() { throw new Error('authority getter exploded'); } });
+  const requirement = new Proxy({}, { get() { throw new Error('requirement getter exploded'); } });
+  let performs = 0;
+  const cap = {
+    id: 'hostile-input',
+    required: () => ({ spend: [requirement] }),
+    perform: async () => { performs++; return { ok: true, evidence: {} }; },
+  };
+  const res = await runOperation(createOperation({ goal: 'demo', authority }), cap, { verify: verifierOk, ask: silentAsk });
+  assert.equal(res.status, STATES.FAILED);
+  assert.ok(res.receipt);
+  assert.equal(performs, 0);
+});
+
+test('adversarial capability results fail closed with a terminal receipt', async () => {
+  const badResult = new Proxy({}, { get() { throw new Error('result getter exploded'); } });
+  const cap = {
+    id: 'bad-result',
+    required: () => ({ spend: [{ asset: 'USDC:test', amount: '100000', to: 'RECEIVER' }] }),
+    perform: async () => badResult,
+  };
+  const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, {
+    verify: verifierOk,
+    ask: silentAsk,
+  });
+  assert.ok([STATES.FAILED, STATES.NOT_VERIFIED].includes(res.status));
+  assert.ok(res.receipt);
+  assert.match(res.receipt.detail || '', /result getter exploded|unknown error/);
+});
+
+test('hostile verifier errors do not escape receipt construction', async () => {
+  const badError = new Proxy({}, { get() { throw new Error('error getter exploded'); } });
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, {
+    verify: async () => { throw badError; },
+    ask: silentAsk,
+  });
+  assert.equal(res.status, STATES.NOT_VERIFIED);
+  assert.equal(res.receipt.verification.verified, false);
+  assert.equal(res.receipt.verification.reason, 'verifier error: unknown error');
+});
+
+test('adversarial verifier getters fail closed with a terminal receipt', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const adversarial = new Proxy({}, { get() { throw new Error('verified getter exploded'); } });
+  const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, {
+    verify: async () => adversarial,
+    ask: silentAsk,
+  });
+  assert.equal(res.status, STATES.NOT_VERIFIED);
+  assert.equal(res.receipt.status, 'not_verified');
+  assert.equal(res.receipt.verification.verified, false);
+  assert.equal(cap.calls(), 1);
 });
 
 test('gate-approved grant keeps the destination (no counterparty-blind grant)', async () => {
@@ -282,11 +517,149 @@ test('adversarial mix: zero-amount, three-way split, wildcard+specific interplay
   assert.equal(rm.status, STATES.SUCCEEDED);
 });
 
+test('malformed authority becomes a decision boundary instead of throwing', async () => {
+  const cases = [
+    { spend: [{ asset: 'USDC:test', maxAmount: '', to: 'RECEIVER' }] },
+    { spend: [{ asset: 'USDC:test', maxAmount: '-1', to: 'RECEIVER' }] },
+    { spend: [{ asset: '', maxAmount: '500000', to: 'RECEIVER' }] },
+    { spend: [{ asset: 'USDC:test', maxAmount: '500000', to: '' }] },
+  ];
+  for (const authority of cases) {
+    const cap = fakeCapability({ ok: true, evidence: {} });
+    const res = await runOperation(createOperation({ goal: 'demo', authority }), cap, { verify: verifierOk, ask: silentAsk });
+    assert.equal(res.status, STATES.NEEDS_DECISION);
+    assert.equal(cap.calls(), 0);
+  }
+});
+
+test('malformed authority shape still returns a receipt', async () => {
+  const cap = fakeCapability({ ok: true, evidence: {} });
+  const res = await runOperation(
+    createOperation({ goal: 'demo', authority: { spend: 'not-an-array' } }),
+    cap,
+    { verify: verifierOk, ask: silentAsk },
+  );
+  assert.equal(res.status, STATES.NEEDS_DECISION);
+  assert.deepEqual(res.receipt.authority.grants, []);
+  assert.equal(cap.calls(), 0);
+});
+
+test('human approval cannot authorize an invalid requirement', async () => {
+  const cap = {
+    id: 'invalid-effect',
+    required: () => ({ spend: [{ asset: 'USDC:test', amount: '-1', to: 'RECEIVER' }] }),
+    perform: async () => ({ ok: true, evidence: {} }),
+  };
+  const op = createOperation({ goal: 'demo', authority: { spend: [] } });
+  const res = await runOperation(op, cap, { verify: verifierOk, ask: async () => ({ approved: true }) });
+  assert.equal(res.status, STATES.FAILED);
+  assert.match(res.receipt.detail, /invalid spend/);
+});
+
+test('approved invalid requirements return a failed receipt without throwing', async () => {
+  let performed = 0;
+  const cap = {
+    id: 'null-requirement',
+    required: () => ({ spend: [null] }),
+    perform: async () => { performed++; return { ok: true, evidence: {} }; },
+  };
+  const res = await runOperation(createOperation({ goal: 'demo', authority: { spend: [] } }), cap, {
+    verify: verifierOk,
+    ask: async () => ({ approved: true }),
+  });
+  assert.equal(res.status, STATES.FAILED);
+  assert.equal(res.receipt.status, 'failed');
+  assert.equal(performed, 0);
+});
+
+test('adversarial human gate getters return a terminal decision receipt', async () => {
+  const cap = fakeCapability({ ok: true, evidence: {} });
+  const gate = new Proxy({}, { get() { throw new Error('approved getter exploded'); } });
+  const res = await runOperation(createOperation({ goal: 'demo', authority: { spend: [] } }), cap, {
+    verify: verifierOk,
+    ask: async () => gate,
+  });
+  assert.equal(res.status, STATES.NEEDS_DECISION);
+  assert.equal(res.receipt.status, 'needs_human_decision');
+  assert.equal(cap.calls(), 0);
+});
+
+test('async or missing required contracts fail closed', async () => {
+  for (const required of [async () => ({ spend: [] }), () => ({})]) {
+    let performed = 0;
+    const cap = { id: 'bad-required', required, perform: async () => { performed++; return { ok: true, evidence: {} }; } };
+    const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, { verify: verifierOk, ask: silentAsk });
+    assert.equal(res.status, STATES.FAILED);
+    assert.equal(performed, 0);
+    assert.match(res.receipt.detail, /spend/);
+  }
+});
+
+test('a non-array spend requirement returns a failed receipt before the gate', async () => {
+  const cap = {
+    id: 'bad-shape',
+    required: () => ({ spend: 'not-an-array' }),
+    perform: async () => ({ ok: true, evidence: {} }),
+  };
+  const op = createOperation({ goal: 'demo', authority: { spend: [] } });
+  const res = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  assert.equal(res.status, STATES.FAILED);
+  assert.match(res.receipt.detail, /spend array|requirements must be an array/);
+});
+
+test('empty spend requirements cannot execute an undeclared capability', async () => {
+  let performs = 0;
+  const cap = {
+    id: 'empty-effect',
+    required: () => ({ spend: [] }),
+    perform: async () => { performs++; return { ok: true, evidence: {} }; },
+  };
+  const res = await runOperation(createOperation({ goal: 'demo', authority: {} }), cap, { verify: verifierOk, ask: silentAsk });
+  assert.equal(res.status, STATES.NEEDS_DECISION);
+  assert.equal(performs, 0);
+});
+
+test('a capability contract error returns a failed receipt before execution', async () => {
+  const cap = {
+    id: 'broken-cap',
+    required: () => { throw new Error('invalid contract'); },
+    perform: async () => ({ ok: true, evidence: {} }),
+  };
+  const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
+  const res = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
+  assert.equal(res.status, STATES.FAILED);
+  assert.match(res.receipt.detail, /invalid contract/);
+});
+
+test('receipts drop unrecognized evidence fields', () => {
+  const receipt = buildReceipt({
+    operation: { id: 'op-1', goal: 'demo' },
+    capabilityId: 'cap',
+    authority: { spend: [] },
+    outcome: { status: 'verified', exercised: [], detail: 'ok' },
+    evidence: { secret: 'DO_NOT_PERSIST', txHash: 'tx-1' },
+    verification: { verified: true, checks: {}, reason: 'ok' },
+  });
+  assert.deepEqual(receipt.evidence, { txHash: 'tx-1' });
+});
+
 test('kernel needs no specific capability to load', () => {
   // Runs inside C:\Vespi, which has no node_modules/@x402. If src required it, this file would not even load.
   assert.ok(typeof runOperation === 'function');
   assert.ok(typeof sufficient === 'function');
   assert.ok(typeof buildReceipt === 'function');
+});
+
+test('human gate exceptions return a decision boundary receipt', async () => {
+  const cap = fakeCapability({ ok: true, evidence: { tx: 'X' } });
+  const res = await runOperation(createOperation({ goal: 'demo', authority: { spend: [] } }), cap, {
+    verify: verifierOk,
+    ask: async () => { throw new Error('gate unavailable'); },
+  });
+  assert.equal(res.status, STATES.NEEDS_DECISION);
+  assert.equal(res.receipt.status, 'needs_human_decision');
+  assert.match(res.receipt.detail, /gate unavailable/);
+  assert.equal(cap.calls(), 0);
 });
 
 test('insufficient grant asks once, then stops without paying', async () => {
