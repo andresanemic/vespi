@@ -11,9 +11,11 @@ const verifierOk = async () => ({ verified: true, checks: { mock: true }, reason
 const silentAsk = async () => ({ approved: false });
 const REQ = { asset: 'USDC:test', amount: '100000', to: 'RECEIVER' };
 
+// The receipt is built the way the kernel builds it, with the action the agreement names
+// (R1 finding A2: a fixture that invented its own shape validates a contract that does not exist).
 function receiptFor(action, status = 'verified') {
   return buildReceipt({
-    operation: { id: action, goal: action },
+    operation: { id: `op-${action}`, goal: action, action },
     capabilityId: 'cap-k4',
     authority: { spend: [] },
     outcome: { status, exercised: [], detail: 'ok' },
@@ -53,7 +55,7 @@ test('K4.2 descarta recibos alterados, lo dice y es independiente del orden', ()
   ]);
   const res = continuity.resumeFromReceipts([bad, r1], agreement);
   assert.equal(res.discarded, 1);
-  assert.match(res.reason, /descart/i);
+  assert.match(res.reason, /discard/i);
   assert.equal(res.nextAction && res.nextAction.action, 'step-2');
   assert.equal(res.needsPerson, false);
   // orden inverso da lo mismo

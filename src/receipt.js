@@ -11,7 +11,12 @@ const RECEIPT_STATUSES = new Set([
   'needs_human_decision',
 ]);
 
-const PENDING_ANCHOR = { status: 'pending', network: 'stellar-testnet' };
+// The network is named the way Stellar names it (CAIP-2): `stellar:testnet` or `stellar:pubnet`.
+// Anything else is not a network this kernel can anchor on, so nothing leaves pending.
+const DEFAULT_NETWORK = 'stellar:testnet';
+const ANCHOR_NETWORKS = new Set([DEFAULT_NETWORK, 'stellar:pubnet']);
+
+const PENDING_ANCHOR = { status: 'pending', network: DEFAULT_NETWORK };
 
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -53,6 +58,11 @@ function withExternalAnchor(list, anchored) {
   return arr;
 }
 
+// What this proves, and what it does not: the digest is an unkeyed SHA-256 over the receipt, so
+// `ok: true` means the receipt arrived intact — it was not edited after it was written. It says
+// nothing about **who** wrote it. Anyone able to rewrite the receipts file can recompute the
+// digest and this returns `ok: true`; authenticity is a property the receipt does not carry, and
+// it belongs to whoever stores and hands over the receipts (R1 finding M5).
 function verifyReceipt(receipt) {
   try {
     if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) {
@@ -72,7 +82,11 @@ function verifyReceipt(receipt) {
 function readAnchorResult(result) {
   try {
     const txHash = result && typeof result.txHash === 'string' && result.txHash.length > 0 ? result.txHash : null;
-    const network = result && typeof result.network === 'string' && result.network.length > 0 ? result.network : 'stellar-testnet';
+    const declared = result ? result.network : undefined;
+    // An adapter that says nothing is taken to mean the default network; an adapter that names
+    // one has to name a real Stellar network, and a blank name is not one.
+    const network = declared === undefined || declared === null ? DEFAULT_NETWORK : declared;
+    if (typeof network !== 'string' || !ANCHOR_NETWORKS.has(network)) return null;
     return txHash ? { txHash, network } : null;
   } catch {
     return null;
@@ -80,9 +94,12 @@ function readAnchorResult(result) {
 }
 
 // Status ladder, honest by construction (principle 7 of Vespi):
-//   pending   -> nothing reached the network (no adapter, it threw, or it returned no txHash)
+//   pending   -> nothing reached the network (no adapter, it threw, it named a network this
+//                kernel cannot anchor on, or it returned no txHash)
 //   submitted -> the adapter returned a txHash, but nobody confirmed the digest on-chain
-//   anchored  -> verifyAnchor(txHash, digest) confirmed it (e.g. MEMO_HASH of that Stellar transaction)
+//   anchored  -> verifyAnchor(txHash, digest, network) confirmed it (e.g. MEMO_HASH of that
+//                Stellar transaction). The network passphrase is part of what Stellar signs, so
+//                the verifier is told which network the anchor claims to be on.
 function finishAnchor(base, prevNotCovered, submitted, confirmed) {
   if (submitted && confirmed) {
     base.anchor = { status: 'anchored', network: submitted.network, txHash: submitted.txHash };
@@ -126,7 +143,7 @@ function anchorReceipt(receipt, anchor, verifyAnchor) {
   let confirmed = false;
   if (submitted && typeof verifyAnchor === 'function') {
     try {
-      confirmed = verifyAnchor(submitted.txHash, base.digest) === true;
+      confirmed = verifyAnchor(submitted.txHash, base.digest, submitted.network) === true;
     } catch {
       confirmed = false;
     }
@@ -147,7 +164,7 @@ async function anchorReceiptAsync(receipt, anchor, verifyAnchor) {
   let confirmed = false;
   if (submitted && typeof verifyAnchor === 'function') {
     try {
-      confirmed = (await verifyAnchor(submitted.txHash, base.digest)) === true;
+      confirmed = (await verifyAnchor(submitted.txHash, base.digest, submitted.network)) === true;
     } catch {
       confirmed = false;
     }
@@ -185,12 +202,14 @@ function sanitizeEvidence(evidence) {
   return safe;
 }
 
+// A grant names its ceiling `maxAmount`; a requirement names what it spends `amount`. The receipt
+// keeps one shape, and the exercised amount must not be lost on the way (R1 finding A1).
 function sanitizeSpend(items) {
   if (!Array.isArray(items)) return [];
   return items.filter((item) => item && typeof item === 'object').map((item) => {
     const out = {
       asset: safeScalar(item.asset),
-      maxAmount: safeScalar(item.maxAmount),
+      maxAmount: safeScalar(item.maxAmount) ?? safeScalar(item.amount),
       to: safeScalar(item.to),
     };
     const expiresAt = safeScalar(item.expiresAt);
@@ -206,6 +225,7 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
   const status = RECEIPT_STATUSES.has(rawStatus) ? rawStatus : 'failed';
   const operationId = safeText(operation && operation.id) || 'unknown';
   const goal = safeText(operation && operation.goal) || '';
+  const action = safeText(operation && operation.action);
   const receiptCapability = safeText(capabilityId) || 'unknown';
   const approval = safeText(authority && authority.approval);
   const detail = safeText(outcome && outcome.detail) ?? safeText(outcome && outcome.reason);
@@ -216,6 +236,7 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
   const receipt = {
     status,
     operation: { id: operationId, goal },
+    ...(action ? { action } : {}),
     capability: receiptCapability,
     authority: {
       grants: sanitizeSpend(grants),

@@ -139,7 +139,7 @@ function resumeFromReceipts(receipts, agreement) {
     lastState,
     nextAction,
     needsPerson: false,
-    reason: `retoma ${nextAction.action}; descartados ${discarded}`,
+    reason: `resumes ${nextAction.action}; discarded ${discarded}`,
     discarded,
     workingMode,
   };

@@ -12,7 +12,7 @@ const spec = (checks) => ({
 });
 
 test('K3-H1: a txHash without on-chain verification is "submitted", never "anchored"', () => {
-  const out = receiptMod.anchorReceipt(receiptMod.buildReceipt(spec({ a: true })), () => ({ network: 'stellar-testnet', txHash: 'tx1' }));
+  const out = receiptMod.anchorReceipt(receiptMod.buildReceipt(spec({ a: true })), () => ({ network: 'stellar:testnet', txHash: 'tx1' }));
   assert.equal(out.anchor.status, 'submitted');
   assert.ok(out.notCovered.includes('external anchor'));
   assert.equal(receiptMod.verifyReceipt(out).ok, true);
@@ -20,10 +20,10 @@ test('K3-H1: a txHash without on-chain verification is "submitted", never "ancho
 
 test('K3-H2: "anchored" only when the verifier confirms the digest in that transaction', () => {
   const r = receiptMod.buildReceipt(spec({ a: true }));
-  const ok = receiptMod.anchorReceipt(r, () => ({ network: 'stellar-testnet', txHash: 'tx1' }), (txHash, digest) => txHash === 'tx1' && digest === r.digest);
+  const ok = receiptMod.anchorReceipt(r, () => ({ network: 'stellar:testnet', txHash: 'tx1' }), (txHash, digest) => txHash === 'tx1' && digest === r.digest);
   assert.equal(ok.anchor.status, 'anchored');
   assert.ok(!ok.notCovered.includes('external anchor'));
-  const bad = receiptMod.anchorReceipt(r, () => ({ network: 'stellar-testnet', txHash: 'tx1' }), () => false);
+  const bad = receiptMod.anchorReceipt(r, () => ({ network: 'stellar:testnet', txHash: 'tx1' }), () => false);
   assert.equal(bad.anchor.status, 'submitted');
 });
 
@@ -35,7 +35,7 @@ test('K3-H3: failed checks are not coverage; they are listed as not covered', ()
 
 test('K3-H4: an async adapter (a real network) can anchor through anchorReceiptAsync', async () => {
   const r = receiptMod.buildReceipt(spec({ a: true }));
-  const out = await receiptMod.anchorReceiptAsync(r, async () => ({ network: 'stellar-testnet', txHash: 'tx2' }), async () => true);
+  const out = await receiptMod.anchorReceiptAsync(r, async () => ({ network: 'stellar:testnet', txHash: 'tx2' }), async () => true);
   assert.equal(out.anchor.status, 'anchored');
   const pending = await receiptMod.anchorReceiptAsync(r, async () => { throw new Error('network down'); });
   assert.equal(pending.anchor.status, 'pending');

@@ -49,7 +49,7 @@ test('K3.3 digest es canónico: orden de claves no cambia y excluye digest y anc
   const reordered = {};
   for (const k of Object.keys(r).reverse()) reordered[k] = r[k];
   assert.equal(receiptMod.verifyReceipt(reordered).ok, true);
-  const withAnchor = { ...r, anchor: { status: 'anchored', network: 'stellar-testnet', txHash: 'X' } };
+  const withAnchor = { ...r, anchor: { status: 'anchored', network: 'stellar:testnet', txHash: 'X' } };
   assert.equal(receiptMod.verifyReceipt(withAnchor).ok, true);
 });
 
@@ -64,15 +64,15 @@ test('K3.5 notCovered incluye external anchor mientras no haya anclaje', () => {
   const r = receiptMod.buildReceipt(baseSpec());
   assert.ok(r.notCovered.includes('external anchor'));
   // Orchestrator review (R42): a txHash alone is not proof; the anchor counts once verified on-chain.
-  const anchored = receiptMod.anchorReceipt(r, () => ({ network: 'stellar-testnet', txHash: 'abc' }), () => true);
+  const anchored = receiptMod.anchorReceipt(r, () => ({ network: 'stellar:testnet', txHash: 'abc' }), () => true);
   assert.ok(!anchored.notCovered.includes('external anchor'));
 });
 
-test('K3.6 anchorReceipt sin anchor deja pending en stellar-testnet, nunca anchored', () => {
+test('K3.6 anchorReceipt sin anchor deja pending en stellar:testnet, nunca anchored', () => {
   const r = receiptMod.buildReceipt(baseSpec());
   const out = receiptMod.anchorReceipt(r);
   assert.equal(out.anchor.status, 'pending');
-  assert.equal(out.anchor.network, 'stellar-testnet');
+  assert.equal(out.anchor.network, 'stellar:testnet');
   assert.notEqual(out.anchor.status, 'anchored');
 });
 
@@ -80,12 +80,12 @@ test('K3.7 anchorReceipt con anchor que lanza deja pending, nunca anchored', () 
   const r = receiptMod.buildReceipt(baseSpec());
   const out = receiptMod.anchorReceipt(r, () => { throw new Error('red caída'); });
   assert.equal(out.anchor.status, 'pending');
-  assert.equal(out.anchor.network, 'stellar-testnet');
+  assert.equal(out.anchor.network, 'stellar:testnet');
 });
 
 test('K3.8 anchorReceipt sin txHash deja pending, nunca anchored', () => {
   const r = receiptMod.buildReceipt(baseSpec());
-  for (const bad of [() => ({}), () => ({ network: 'stellar-testnet' }), () => null]) {
+  for (const bad of [() => ({}), () => ({ network: 'stellar:testnet' }), () => null]) {
     const out = receiptMod.anchorReceipt(r, bad);
     assert.equal(out.anchor.status, 'pending');
   }
@@ -96,7 +96,7 @@ test('K3.9 anchorReceipt con txHash deja anchored y conserva digest válido', ()
   let seenDigest = null;
   const out = receiptMod.anchorReceipt(r, (digest) => {
     seenDigest = digest;
-    return { network: 'stellar-testnet', txHash: 'deadbeef' };
+    return { network: 'stellar:testnet', txHash: 'deadbeef' };
   }, (txHash, digest) => txHash === 'deadbeef' && digest === r.digest);
   assert.equal(seenDigest, r.digest);
   assert.equal(out.anchor.status, 'anchored');

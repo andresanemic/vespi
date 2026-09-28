@@ -9,7 +9,10 @@
 // runOperation(op, capability, { verify(evidence)->{verified,checks,reason}, ask(requirements)->{approved} }):
 //   requirements -> authority sufficient? no -> NEEDS_HUMAN_DECISION (perform is not called; capability code is trusted in-process)
 //   yes -> perform once -> failure? FAILED -> verify evidence -> verified? SUCCEEDED : NOT_VERIFIED
-// Human gate fires only when authority is insufficient. Approved grants continue silently.
+// The gate opens when the authority on hand does not cover the requirement, and also whenever the
+// authority declares `signers`: a declared multi-person authority is always put to its people,
+// because a grant that already covers the spend still needs its named identities to be counted.
+// A grant that covers the spend and declares no `signers` runs without asking.
 
 const { sufficient } = require('./authority.js');
 const { buildReceipt } = require('./receipt.js');
@@ -175,6 +178,17 @@ function snapshotGoal(goal) {
   }
 }
 
+// The action is the name the agreement knows this step by. A goal is free text written by a
+// person; an action is the key continuity pairs a receipt with, so it travels in the receipt
+// (R1 finding A2: a receipt that never writes its action cannot be paired with any agreement).
+function snapshotAction(action) {
+  try {
+    return typeof action === 'string' && action.length > 0 ? action : null;
+  } catch {
+    return null;
+  }
+}
+
 function snapshotAuthority(authority) {
   try {
     if (!authority || typeof authority !== 'object') return { spend: [] };
@@ -267,7 +281,7 @@ function safeBuildReceipt(spec) {
   }
 }
 
-function createOperation({ goal, authority, agent, exit }) {
+function createOperation({ goal, authority, agent, exit, action }) {
   let agentId = null;
   try {
     if (typeof agent === 'string' && agent.length > 0) agentId = agent;
@@ -282,6 +296,7 @@ function createOperation({ goal, authority, agent, exit }) {
   return {
     id: `op-${Date.now().toString(36)}-${seq++}`,
     goal: snapshotGoal(goal),
+    action: snapshotAction(action),
     authority: snapshotAuthority(authority),
     agent: agentId,
     exit: exitText,
@@ -551,8 +566,12 @@ async function runOperationOnce(op, capability, io) {
     }
     const haveIds = collectSignerIds(gateSources, agentId, allowedSet);
     const have = haveIds.length;
-    const modelApproves = decidedBy && gate && typeof gate === 'object' && gate.approved === true;
-    if (gateError || explicitReject || (!modelApproves && have < signersCfg.required)) {
+    // The receipt names the identities that showed up, on an approval and on a partial one alike,
+    // so "a human gate approved" is never a claim without a subject (R1 finding M1).
+    if (haveIds.length > 0) decidedBy = haveIds.join(', ');
+    // The gate counts identities and nothing else: a decision model advises (decisions 16 and 19),
+    // so there is no path here where an approval arrives without someone being named.
+    if (gateError || explicitReject || have < signersCfg.required) {
       op.state = STATES.NEEDS_DECISION;
       let detail;
       if (gateError) {
@@ -591,7 +610,14 @@ async function runOperationOnce(op, capability, io) {
         });
         return finish(op, receipt);
       }
-      op.authority = { spend: approvedGrants, signers: { required: signersCfg.required, allowed: [...signersCfg.allowed] } };
+      // The gate replaces the granted spend and nothing else: who can pause is part of the
+      // authority the person gave, and a later approval may not take it away (R1 finding M4).
+      const pausers = readPausers(op);
+      op.authority = {
+        spend: approvedGrants,
+        signers: { required: signersCfg.required, allowed: [...signersCfg.allowed] },
+        ...(pausers.length > 0 ? { pausers } : {}),
+      };
       check = sufficient(requirements, op.authority);
       if (!check.ok) {
         op.state = STATES.FAILED;
@@ -665,6 +691,9 @@ async function runOperationOnce(op, capability, io) {
             gateRejected = true;
           }
         }
+        // The receipt names the person whose approval let this run (R1 finding M1). An approval
+        // that names nobody stays unnamed: the receipt may not invent a decider.
+        if (gateApproved && typeof byValue === 'string' && byValue.length > 0) decidedBy = byValue;
       }
     } catch (err) {
       gateError = `human gate error: ${errorText(err)}`;
@@ -719,7 +748,10 @@ async function runOperationOnce(op, capability, io) {
       });
       return finish(op, receipt);
     }
-    op.authority = { spend: approvedGrants };
+    // Same as the signers branch: the approved spend replaces the grants, the rest of the
+    // authority survives (R1 finding M4).
+    const pausers = readPausers(op);
+    op.authority = { spend: approvedGrants, ...(pausers.length > 0 ? { pausers } : {}) };
     check = sufficient(requirements, op.authority);
     approval = 'human_gate_approved';
     if (!check.ok) {

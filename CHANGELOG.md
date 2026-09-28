@@ -4,7 +4,33 @@ All notable public changes to Vespi will be recorded here.
 
 This project is experimental. Before `v1.0.0`, version numbers describe public snapshots of a system still under active arbitration.
 
-## [Unreleased]
+## 0.1.3 — candidato (sin publicar)
+
+Candidate, not a tag: the last tag here is `v0.1.2-kernel`. Everything below was read in this tree.
+
+### Added
+
+- K1: the impossible task returns `blocked` with its exit, `authority.pausers` decides who may pause, and the human gate has its four gestures.
+- K2: authority with a clock, a budget and a destination, and approval by several named people.
+- K3: receipts with a SHA-256 fingerprint, coverage that is not a claim, and an honest anchoring ladder.
+- K4: continuity by receipts with the revalidation gate, and a decision model that advises and never consents.
+- K7: work delegated to a cheaper model returns with a receipt, is reviewed by the orchestrator before anything is integrated, and leaves sparks behind.
+- Apache 2.0 with a NOTICE, and a bilingual README verified against the code.
+
+### Fixed — adversarial review of the candidate
+
+- Kernel messages are in English on every path, including the resume one.
+- The receipt keeps the amount it exercised, and carries the action the agreement names, so a real receipt pairs with a real agreement.
+- The receipt names who approved, and a gate approval no longer erases who can pause.
+- The anchor names its network in CAIP-2 (`stellar:testnet` or `stellar:pubnet`), refuses any other, and its verifier confirms the network as well as the digest.
+- `verifyReceipt` is declared, in the code and in the README, as a proof of integrity and not of authenticity.
+
+### Not in this candidate — scoped for 0.1.4
+
+- Emergency access granted in advance and exercised with an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 in live.
+- The receipt is not durable by itself: the caller owns where it lives, and nothing here makes it authentic.
+
+## 0.1.2
 
 Current working tree: **Unreleased**.
 

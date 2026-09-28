@@ -6,7 +6,7 @@ const { buildReceipt } = require('../src/receipt.js');
 const { resumeFromReceipts } = require('../src/continuity.js');
 
 const receiptFor = (goal, status) => buildReceipt({
-  operation: { id: goal, goal }, capabilityId: 'c', authority: { spend: [] },
+  operation: { id: `op-${goal}`, goal, action: goal }, capabilityId: 'c', authority: { spend: [] },
   outcome: { status, exercised: [] }, evidence: null, verification: status === 'verified' ? { verified: true, checks: { a: true } } : null,
 });
 
