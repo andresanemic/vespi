@@ -141,17 +141,40 @@ function snapshotAuthority(authority) {
       const snapshot = { spend: [], invalid: true };
       const rawPausers = authority.pausers;
       if (Array.isArray(rawPausers)) snapshot.pausers = rawPausers.filter((p) => typeof p === 'string' && p.length > 0);
+      try {
+        const rawSigners = authority.signers;
+        if (rawSigners && typeof rawSigners === 'object' && !Array.isArray(rawSigners)) {
+          const snapSigners = {};
+          if (rawSigners.required !== undefined) snapSigners.required = rawSigners.required;
+          if (Array.isArray(rawSigners.allowed)) snapSigners.allowed = rawSigners.allowed.filter((s) => typeof s === 'string' && s.length > 0);
+          snapshot.signers = snapSigners;
+        }
+      } catch {
+      }
       if (authority.approval) snapshot.approval = authority.approval;
       return snapshot;
     }
     const spend = rawSpend.map((grant) => {
       if (!grant || typeof grant !== 'object') return grant;
-      return { asset: grant.asset, maxAmount: grant.maxAmount, to: grant.to };
+      const copy = { asset: grant.asset, maxAmount: grant.maxAmount, to: grant.to };
+      if (typeof grant.expiresAt === 'string' && grant.expiresAt.length > 0) copy.expiresAt = grant.expiresAt;
+      return copy;
     });
     const snapshot = { spend };
     try {
       const rawPausers = authority.pausers;
       if (Array.isArray(rawPausers)) snapshot.pausers = rawPausers.filter((p) => typeof p === 'string' && p.length > 0);
+    } catch {
+    }
+    try {
+      const rawSigners = authority.signers;
+      if (rawSigners && typeof rawSigners === 'object' && !Array.isArray(rawSigners)) {
+        const snapSigners = {};
+        if (rawSigners.required !== undefined) snapSigners.required = rawSigners.required;
+        if (Array.isArray(rawSigners.allowed)) snapSigners.allowed = rawSigners.allowed.filter((s) => typeof s === 'string' && s.length > 0);
+        if (Array.isArray(rawSigners.approvals)) snapSigners.approvals = rawSigners.approvals.slice(0, 64);
+        snapshot.signers = snapSigners;
+      }
     } catch {
     }
     if (authority.approval) snapshot.approval = authority.approval;
@@ -238,6 +261,73 @@ function readPausers(op) {
 }
 
 const TERMINAL_STATES = new Set(['verified', 'failed', 'not_verified', 'blocked']);
+
+function readSignersConfig(authority) {
+  try {
+    const signers = authority && authority.signers;
+    if (signers === undefined || signers === null) return null;
+    if (!signers || typeof signers !== 'object' || Array.isArray(signers)) {
+      return { present: true, valid: false };
+    }
+    const required = signers.required;
+    const allowed = signers.allowed;
+    if (!Number.isInteger(required) || required < 1) return { present: true, valid: false };
+    if (!Array.isArray(allowed) || allowed.length === 0) return { present: true, valid: false };
+    const clean = allowed.filter((s) => typeof s === 'string' && s.length > 0);
+    if (clean.length === 0) return { present: true, valid: false };
+    if (required > clean.length) return { present: true, valid: false };
+    return { present: true, valid: true, required, allowed: [...new Set(clean)] };
+  } catch {
+    return { present: true, valid: false };
+  }
+}
+
+function readAgentId(op) {
+  try {
+    return typeof op?.agent === 'string' && op.agent.length > 0 ? op.agent : null;
+  } catch {
+    return null;
+  }
+}
+
+function pushSignerIds(value, out) {
+  try {
+    if (value === null || value === undefined) return;
+    if (typeof value === 'string') {
+      if (value.length > 0) out.push(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) pushSignerIds(item, out);
+      return;
+    }
+    if (typeof value === 'object') {
+      if (typeof value.by === 'string' && value.by.length > 0) out.push(value.by);
+    }
+  } catch {
+  }
+}
+
+function collectSignerIds(sources, agentId, allowedSet) {
+  const raw = [];
+  try {
+    for (const source of sources) pushSignerIds(source, raw);
+  } catch {
+  }
+  const seen = new Set();
+  for (const id of raw) {
+    if (typeof id !== 'string' || id.length === 0) continue;
+    if (agentId && id === agentId) continue;
+    if (!allowedSet.has(id)) continue;
+    seen.add(id);
+  }
+  return [...seen];
+}
+
+function missingSignersDetail(required, have) {
+  const missing = required - have;
+  return `missing ${missing} approval${missing === 1 ? '' : 's'} (${have} of ${required})`;
+}
 
 function pauseOperation(op, who) {
   const pausers = readPausers(op);
@@ -356,7 +446,120 @@ async function runOperationOnce(op, capability, io) {
   }
 
   let approval = 'preauthorized';
-  if (!check.ok) {
+  const signersCfg = readSignersConfig(op.authority);
+  if (signersCfg && signersCfg.present && !signersCfg.valid) {
+    const gateExit = operationExit(op);
+    op.state = STATES.NEEDS_DECISION;
+    const receipt = safeBuildReceipt({
+      operation: op,
+      capabilityId: capabilityId,
+      authority: { ...op.authority, approval: 'human_gate_no_decision' },
+      outcome: { status: 'needs_human_decision', exercised: [], detail: 'invalid signers config: required must be an integer >= 1 within allowed', exit: gateExit },
+      evidence: null,
+      verification: null,
+    });
+    return finish(op, receipt);
+  }
+  if (signersCfg && signersCfg.valid) {
+    const gateExit = operationExit(op);
+    const agentId = readAgentId(op);
+    const allowedSet = new Set(signersCfg.allowed);
+    // Only approvals that arrive through the human gate count (R42 review: pre-loaded approvals would bypass it).
+    const registeredHave = 0;
+    let gate = null;
+    let gateError = null;
+    let gateRejected = false;
+    if (registeredHave < signersCfg.required) {
+      try {
+        const askFn = io && typeof io.ask === 'function' ? io.ask : null;
+        const askPayload = Object.assign(requirements.map((r) => ({ ...r })), {
+          requirements: requirements.map((r) => ({ ...r })),
+          cost: requirements.map((r) => ({ ...r })),
+          publicByDefault: false,
+          exit: gateExit,
+          signers: { required: signersCfg.required, allowed: [...signersCfg.allowed] },
+        });
+        gate = askFn
+          ? await withTimeout(Promise.resolve().then(() => askFn.call(io, askPayload)), readTimeout(io, 'askTimeoutMs'), 'human gate')
+          : null;
+      } catch (err) {
+        gateError = `human gate error: ${errorText(err)}`;
+      }
+    }
+    let explicitReject = false;
+    try {
+      if (gate !== null && gate !== undefined && !Array.isArray(gate) && typeof gate === 'object' && gate.approved === false) explicitReject = true;
+    } catch {
+    }
+    gateRejected = explicitReject;
+    const gateSources = [];
+    if (gate !== null && gate !== undefined) {
+      if (Array.isArray(gate)) gateSources.push(gate);
+      else if (typeof gate === 'object') {
+        if (Array.isArray(gate.approvals)) gateSources.push(gate.approvals);
+        if (Array.isArray(gate.signers)) gateSources.push(gate.signers);
+        if (gate.approved === true && typeof gate.by === 'string') gateSources.push([gate.by]);
+        else if (gate.approved === true && gate.by === undefined && !Array.isArray(gate.approvals) && !Array.isArray(gate.signers)) {
+          // approved without identities: counts as zero distinct signers
+        }
+      }
+    }
+    const haveIds = collectSignerIds(gateSources, agentId, allowedSet);
+    const have = haveIds.length;
+    if (gateError || explicitReject || have < signersCfg.required) {
+      op.state = STATES.NEEDS_DECISION;
+      let detail;
+      if (gateError) {
+        detail = `${gateError}; ${missingSignersDetail(signersCfg.required, have)}`;
+      } else {
+        detail = missingSignersDetail(signersCfg.required, have);
+      }
+      const receipt = safeBuildReceipt({
+        operation: op,
+        capabilityId: capabilityId,
+        authority: { ...op.authority, approval: gateRejected ? 'human_gate_rejected' : 'human_gate_no_decision' },
+        outcome: { status: 'needs_human_decision', exercised: [], detail, exit: gateExit },
+        evidence: null,
+        verification: null,
+      });
+      return finish(op, receipt);
+    }
+    if (!check.ok) {
+      let approvedGrants;
+      try {
+        approvedGrants = requirements.map((requirement) => {
+          if (!requirement || typeof requirement !== 'object') throw new Error('invalid spend requirement');
+          return { asset: requirement.asset, maxAmount: requirement.amount, to: requirement.to };
+        });
+      } catch (err) {
+        op.state = STATES.FAILED;
+        const receipt = safeBuildReceipt({
+          operation: op,
+          capabilityId: capabilityId,
+          authority: { ...op.authority, approval: 'human_gate_approved' },
+          outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+          evidence: null,
+          verification: null,
+        });
+        return finish(op, receipt);
+      }
+      op.authority = { spend: approvedGrants, signers: { required: signersCfg.required, allowed: [...signersCfg.allowed] } };
+      check = sufficient(requirements, op.authority);
+      if (!check.ok) {
+        op.state = STATES.FAILED;
+        const receipt = safeBuildReceipt({
+          operation: op,
+          capabilityId: capabilityId,
+          authority: { ...op.authority, approval: 'human_gate_approved' },
+          outcome: { status: 'failed', exercised: [], detail: check.reason },
+          evidence: null,
+          verification: null,
+        });
+        return finish(op, receipt);
+      }
+    }
+    approval = 'human_gate_approved';
+  } else if (!check.ok) {
     const gateExit = operationExit(op);
     let gateApproved = false;
     let gateRejected = false;

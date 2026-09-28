@@ -32,11 +32,16 @@ function sanitizeEvidence(evidence) {
 
 function sanitizeSpend(items) {
   if (!Array.isArray(items)) return [];
-  return items.filter((item) => item && typeof item === 'object').map((item) => ({
-    asset: safeScalar(item.asset),
-    maxAmount: safeScalar(item.maxAmount),
-    to: safeScalar(item.to),
-  }));
+  return items.filter((item) => item && typeof item === 'object').map((item) => {
+    const out = {
+      asset: safeScalar(item.asset),
+      maxAmount: safeScalar(item.maxAmount),
+      to: safeScalar(item.to),
+    };
+    const expiresAt = safeScalar(item.expiresAt);
+    if (typeof expiresAt === 'string' && expiresAt.length > 0) out.expiresAt = expiresAt;
+    return out;
+  });
 }
 
 function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification }) {
