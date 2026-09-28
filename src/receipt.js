@@ -47,7 +47,9 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
   const goal = safeText(operation && operation.goal) || '';
   const receiptCapability = safeText(capabilityId) || 'unknown';
   const approval = safeText(authority && authority.approval);
-  const detail = safeText(outcome && outcome.detail);
+  const detail = safeText(outcome && outcome.detail) ?? safeText(outcome && outcome.reason);
+  const reason = safeText(outcome && outcome.reason);
+  const exit = safeText(outcome && outcome.exit);
   return {
     status,
     operation: { id: operationId, goal },
@@ -61,6 +63,8 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
     evidence: sanitizeEvidence(evidence),
     verification: verification || null,
     detail,
+    ...(reason ? { reason } : {}),
+    ...(exit ? { exit } : {}),
     at: new Date().toISOString(),
   };
 }

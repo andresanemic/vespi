@@ -20,7 +20,11 @@ const STATES = {
   SUCCEEDED: 'verified',
   FAILED: 'failed',
   NOT_VERIFIED: 'not_verified',
+  BLOCKED: 'blocked',
+  PAUSED: 'paused',
 };
+
+const DEFAULT_EXIT = 'return to the person: change the agreement or cancel';
 
 function errorText(error) {
   try {
@@ -73,22 +77,50 @@ function hasEvidence(value) {
 function readCapabilityResult(result) {
   try {
     const error = result?.error;
+    const reason = result?.reason;
+    const exit = result?.exit;
     return {
       settlementUnknown: result?.settlementUnknown === true,
+      impossible: result?.impossible === true,
       ok: result?.ok === true,
       error: typeof error === 'string' ? error : (error == null ? null : 'capability returned an invalid error'),
+      reason: typeof reason === 'string' && reason.length > 0 ? reason : null,
+      exit: typeof exit === 'string' && exit.length > 0 ? exit : null,
       evidence: result?.evidence ?? null,
       output: result?.output,
     };
   } catch (error) {
     return {
       settlementUnknown: true,
+      impossible: false,
       ok: false,
       error: `capability result invalid: ${errorText(error)}`,
+      reason: null,
+      exit: null,
       evidence: null,
       output: undefined,
     };
   }
+}
+
+function readImpossibleDeclaration(declared) {
+  try {
+    if (!declared || typeof declared !== 'object') return null;
+    if (declared.impossible !== true) return null;
+    const reason = typeof declared.reason === 'string' && declared.reason.length > 0 ? declared.reason : 'impossible';
+    const exit = typeof declared.exit === 'string' && declared.exit.length > 0 ? declared.exit : null;
+    return { reason, exit };
+  } catch {
+    return null;
+  }
+}
+
+function operationExit(op) {
+  try {
+    if (typeof op?.exit === 'string' && op.exit.length > 0) return op.exit;
+  } catch {
+  }
+  return DEFAULT_EXIT;
 }
 
 let seq = 0;
@@ -105,12 +137,23 @@ function snapshotAuthority(authority) {
   try {
     if (!authority || typeof authority !== 'object') return { spend: [] };
     const rawSpend = authority.spend;
-    if (!Array.isArray(rawSpend)) return { spend: [], invalid: true };
+    if (!Array.isArray(rawSpend)) {
+      const snapshot = { spend: [], invalid: true };
+      const rawPausers = authority.pausers;
+      if (Array.isArray(rawPausers)) snapshot.pausers = rawPausers.filter((p) => typeof p === 'string' && p.length > 0);
+      if (authority.approval) snapshot.approval = authority.approval;
+      return snapshot;
+    }
     const spend = rawSpend.map((grant) => {
       if (!grant || typeof grant !== 'object') return grant;
       return { asset: grant.asset, maxAmount: grant.maxAmount, to: grant.to };
     });
     const snapshot = { spend };
+    try {
+      const rawPausers = authority.pausers;
+      if (Array.isArray(rawPausers)) snapshot.pausers = rawPausers.filter((p) => typeof p === 'string' && p.length > 0);
+    } catch {
+    }
     if (authority.approval) snapshot.approval = authority.approval;
     return snapshot;
   } catch {
@@ -140,7 +183,7 @@ function safeBuildReceipt(spec) {
   } catch {
     let status = 'failed';
     try {
-      if (spec?.outcome?.status === 'not_verified' || spec?.outcome?.status === 'needs_human_decision' || spec?.outcome?.status === 'failed') status = spec.outcome.status;
+      if (spec?.outcome?.status === 'not_verified' || spec?.outcome?.status === 'needs_human_decision' || spec?.outcome?.status === 'failed' || spec?.outcome?.status === 'blocked') status = spec.outcome.status;
       if (spec?.outcome?.status === 'verified') status = 'not_verified';
     } catch {
       status = 'failed';
@@ -159,17 +202,71 @@ function safeBuildReceipt(spec) {
   }
 }
 
-function createOperation({ goal, authority }) {
+function createOperation({ goal, authority, agent, exit }) {
+  let agentId = null;
+  try {
+    if (typeof agent === 'string' && agent.length > 0) agentId = agent;
+  } catch {
+    agentId = null;
+  }
+  let exitText = DEFAULT_EXIT;
+  try {
+    if (typeof exit === 'string' && exit.length > 0) exitText = exit;
+  } catch {
+  }
   return {
     id: `op-${Date.now().toString(36)}-${seq++}`,
     goal: snapshotGoal(goal),
     authority: snapshotAuthority(authority),
+    agent: agentId,
+    exit: exitText,
     state: 'created',
     history: [],
     receipt: null,
     output: null,
     inFlight: false,
   };
+}
+
+function readPausers(op) {
+  try {
+    const pausers = op?.authority?.pausers;
+    return Array.isArray(pausers) ? pausers.filter((p) => typeof p === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+const TERMINAL_STATES = new Set(['verified', 'failed', 'not_verified', 'blocked']);
+
+function pauseOperation(op, who) {
+  const pausers = readPausers(op);
+  if (!pausers.includes(who)) {
+    throw new Error(`not authorized to pause: pausers are [${pausers.join(', ')}]`);
+  }
+  if (op.inFlight || op.state === STATES.RUNNING) throw new Error('operation is already running');
+  if (TERMINAL_STATES.has(op.state)) throw new Error('cannot pause a terminal operation');
+  if (op.state === STATES.PAUSED) return op;
+  op.state = STATES.PAUSED;
+  try {
+    op.history.push({ state: STATES.PAUSED, by: who, at: new Date().toISOString() });
+  } catch {
+  }
+  return op;
+}
+
+function resumeOperation(op, who) {
+  const pausers = readPausers(op);
+  if (!pausers.includes(who)) {
+    throw new Error(`not authorized to resume: pausers are [${pausers.join(', ')}]`);
+  }
+  if (op.state !== STATES.PAUSED) throw new Error('operation is not paused');
+  op.state = 'created';
+  try {
+    op.history.push({ state: 'created', by: who, at: new Date().toISOString() });
+  } catch {
+  }
+  return op;
 }
 
 function finish(op, receipt, output) {
@@ -181,6 +278,7 @@ function finish(op, receipt, output) {
 }
 
 async function runOperation(op, capability, io) {
+  if (op.state === STATES.PAUSED) return { status: STATES.PAUSED, receipt: op.receipt, output: op.output };
   if (op.inFlight || op.state === STATES.RUNNING) throw new Error('operation is already running');
   op.inFlight = true;
   try {
@@ -192,12 +290,27 @@ async function runOperation(op, capability, io) {
 
 async function runOperationOnce(op, capability, io) {
   const capabilityId = safeCapabilityId(capability);
+  if (op.state === STATES.PAUSED) return { status: STATES.PAUSED, receipt: op.receipt, output: op.output };
   if (op.state === STATES.RUNNING) throw new Error('operation is already running');
   if (op.receipt && op.state !== STATES.NEEDS_DECISION) return { status: op.state, receipt: op.receipt, output: op.output };
 
   let requirements;
   try {
     const declared = capability.required(op);
+    const impossible = readImpossibleDeclaration(declared);
+    if (impossible) {
+      const exit = impossible.exit || operationExit(op);
+      op.state = STATES.BLOCKED;
+      const receipt = safeBuildReceipt({
+        operation: op,
+        capabilityId: capabilityId,
+        authority: op.authority,
+        outcome: { status: 'blocked', exercised: [], detail: impossible.reason, reason: impossible.reason, exit },
+        evidence: null,
+        verification: null,
+      });
+      return finish(op, receipt);
+    }
     if (!declared || typeof declared.then === 'function' || !Array.isArray(declared.spend)) {
       throw new Error('capability required must return a spend array');
     }
@@ -244,28 +357,89 @@ async function runOperationOnce(op, capability, io) {
 
   let approval = 'preauthorized';
   if (!check.ok) {
+    const gateExit = operationExit(op);
     let gateApproved = false;
     let gateRejected = false;
     let gateError = null;
+    let gateBy = undefined;
+    let selfApproval = false;
+    let missingDecider = false;
     try {
       const askFn = io && typeof io.ask === 'function' ? io.ask : null;
+      // Legacy callers (demo/x402) receive an array; the four gate gestures ride on it as properties.
+      const askPayload = Object.assign(requirements.map((r) => ({ ...r })), {
+        requirements: requirements.map((r) => ({ ...r })),
+        cost: requirements.map((r) => ({ ...r })),
+        publicByDefault: false,
+        exit: gateExit,
+      });
       const gate = askFn
-        ? await withTimeout(Promise.resolve().then(() => askFn.call(io, requirements)), readTimeout(io, 'askTimeoutMs'), 'human gate')
+        ? await withTimeout(Promise.resolve().then(() => askFn.call(io, askPayload)), readTimeout(io, 'askTimeoutMs'), 'human gate')
         : null;
       if (gate !== null && gate !== undefined) {
-        gateApproved = gate.approved === true;
-        gateRejected = gate.approved === false;
+        let approvedFlag = false;
+        let rejectedFlag = false;
+        try {
+          approvedFlag = gate.approved === true;
+          rejectedFlag = gate.approved === false;
+        } catch (readErr) {
+          throw readErr;
+        }
+        let byValue;
+        try {
+          byValue = gate.by;
+        } catch (readErr) {
+          throw readErr;
+        }
+        gateApproved = approvedFlag;
+        gateRejected = rejectedFlag;
+        gateBy = byValue;
+        let agentId = null;
+        try {
+          agentId = typeof op?.agent === 'string' && op.agent.length > 0 ? op.agent : null;
+        } catch {
+          agentId = null;
+        }
+        if (approvedFlag && agentId) {
+          if (byValue === agentId) {
+            selfApproval = true;
+            gateApproved = false;
+            gateRejected = true;
+          } else if (typeof byValue !== 'string' || byValue.length === 0) {
+            missingDecider = true;
+            gateApproved = false;
+            gateRejected = true;
+          }
+        }
       }
     } catch (err) {
       gateError = `human gate error: ${errorText(err)}`;
     }
     if (gateError || !gateApproved) {
       op.state = STATES.NEEDS_DECISION;
+      let detail;
+      if (gateError) {
+        detail = gateError;
+      } else if (selfApproval) {
+        let agentLabel = '?';
+        try {
+          agentLabel = typeof op?.agent === 'string' ? op.agent : '?';
+        } catch {
+        }
+        detail = `agent cannot consent for the person: by (${String(gateBy)}) must differ from agent (${agentLabel})`;
+      } else if (missingDecider) {
+        let agentLabel = '?';
+        try {
+          agentLabel = typeof op?.agent === 'string' ? op.agent : '?';
+        } catch {
+        }
+        detail = `approval requires a human decider: by must differ from agent (${agentLabel})`;
+      }
       const receipt = safeBuildReceipt({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval: gateRejected ? 'human_gate_rejected' : 'human_gate_no_decision' },
-        outcome: { status: 'needs_human_decision', exercised: [], ...(gateError ? { detail: gateError } : {}) },
+        outcome: { status: 'needs_human_decision', exercised: [], ...(detail ? { detail } : {}), exit: gateExit },
         evidence: null,
         verification: null,
       });
@@ -338,6 +512,20 @@ async function runOperationOnce(op, capability, io) {
   }
 
   const capabilityResult = readCapabilityResult(result);
+  if (capabilityResult.impossible) {
+    const reason = capabilityResult.reason || capabilityResult.error || 'impossible';
+    const exit = capabilityResult.exit || operationExit(op);
+    op.state = STATES.BLOCKED;
+    const receipt = safeBuildReceipt({
+      operation: op,
+      capabilityId: capabilityId,
+      authority: { ...op.authority, approval },
+      outcome: { status: 'blocked', exercised: [], detail: reason, reason, exit },
+      evidence: capabilityResult.evidence,
+      verification: null,
+    });
+    return finish(op, receipt);
+  }
   if (capabilityResult.settlementUnknown) {
     op.state = STATES.NOT_VERIFIED;
     const receipt = safeBuildReceipt({
@@ -435,4 +623,4 @@ async function runOperationOnce(op, capability, io) {
   return finish(op, receipt, verified ? capabilityResult.output : undefined);
 }
 
-module.exports = { createOperation, runOperation, STATES };
+module.exports = { createOperation, runOperation, pauseOperation, resumeOperation, STATES, DEFAULT_EXIT };
