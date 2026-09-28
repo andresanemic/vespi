@@ -70,6 +70,48 @@ function withTimeout(value, timeoutMs, label, onTimeout) {
   return Promise.race([Promise.resolve(value), timeout]).finally(() => clearTimeout(timer));
 }
 
+function readDecideThreshold(io) {
+  try {
+    const value = io?.decideThreshold;
+    return Number.isFinite(value) ? value : 0.9;
+  } catch {
+    return 0.9;
+  }
+}
+
+function readDecideTimeoutMs(io) {
+  try {
+    if (Number.isFinite(io?.decideTimeoutMs) && io.decideTimeoutMs > 0) return io.decideTimeoutMs;
+  } catch {
+  }
+  return readTimeout(io, 'askTimeoutMs');
+}
+
+// Jev, Paper2Agent or any decision model: an optional connection (decision 20 of Vespi). It ADVISES:
+// a confident suggestion is shown to the person on the ask payload, and it never consents for them
+// (decisions 16 and 19; orchestrator review R42 of the 0.1.3 build).
+async function consultDecisionModel(io, question) {
+  try {
+    const decideFn = io && typeof io.decide === 'function' ? io.decide : null;
+    if (!decideFn) return null;
+    const threshold = readDecideThreshold(io);
+    let result;
+    try {
+      result = await withTimeout(Promise.resolve().then(() => decideFn.call(io, question)), readDecideTimeoutMs(io), 'decision model');
+    } catch {
+      return null;
+    }
+    if (!result || typeof result !== 'object' || Array.isArray(result)) return null;
+    const probability = result.probability;
+    if (!Number.isFinite(probability) || probability < threshold) return null;
+    const choice = result.choice;
+    if (typeof choice !== 'boolean' && typeof choice !== 'string') return null;
+    return { choice, probability, by: 'decision-model' };
+  } catch {
+    return null;
+  }
+}
+
 function hasEvidence(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -446,6 +488,7 @@ async function runOperationOnce(op, capability, io) {
   }
 
   let approval = 'preauthorized';
+  let decidedBy = null;
   const signersCfg = readSignersConfig(op.authority);
   if (signersCfg && signersCfg.present && !signersCfg.valid) {
     const gateExit = operationExit(op);
@@ -472,10 +515,12 @@ async function runOperationOnce(op, capability, io) {
     if (registeredHave < signersCfg.required) {
       try {
         const askFn = io && typeof io.ask === 'function' ? io.ask : null;
-        const askPayload = Object.assign(requirements.map((r) => ({ ...r })), {
+        const suggestion = await consultDecisionModel(io, { requirements: requirements.map((r) => ({ ...r })), goal: op.goal });
+      const askPayload = Object.assign(requirements.map((r) => ({ ...r })), {
           requirements: requirements.map((r) => ({ ...r })),
           cost: requirements.map((r) => ({ ...r })),
           publicByDefault: false,
+          ...(suggestion ? { suggestion } : {}),
           exit: gateExit,
           signers: { required: signersCfg.required, allowed: [...signersCfg.allowed] },
         });
@@ -506,7 +551,8 @@ async function runOperationOnce(op, capability, io) {
     }
     const haveIds = collectSignerIds(gateSources, agentId, allowedSet);
     const have = haveIds.length;
-    if (gateError || explicitReject || have < signersCfg.required) {
+    const modelApproves = decidedBy && gate && typeof gate === 'object' && gate.approved === true;
+    if (gateError || explicitReject || (!modelApproves && have < signersCfg.required)) {
       op.state = STATES.NEEDS_DECISION;
       let detail;
       if (gateError) {
@@ -521,6 +567,7 @@ async function runOperationOnce(op, capability, io) {
         outcome: { status: 'needs_human_decision', exercised: [], detail, exit: gateExit },
         evidence: null,
         verification: null,
+        ...(decidedBy ? { decidedBy } : {}),
       });
       return finish(op, receipt);
     }
@@ -540,6 +587,7 @@ async function runOperationOnce(op, capability, io) {
           outcome: { status: 'failed', exercised: [], detail: errorText(err) },
           evidence: null,
           verification: null,
+          ...(decidedBy ? { decidedBy } : {}),
         });
         return finish(op, receipt);
       }
@@ -554,6 +602,7 @@ async function runOperationOnce(op, capability, io) {
           outcome: { status: 'failed', exercised: [], detail: check.reason },
           evidence: null,
           verification: null,
+          ...(decidedBy ? { decidedBy } : {}),
         });
         return finish(op, receipt);
       }
@@ -570,10 +619,12 @@ async function runOperationOnce(op, capability, io) {
     try {
       const askFn = io && typeof io.ask === 'function' ? io.ask : null;
       // Legacy callers (demo/x402) receive an array; the four gate gestures ride on it as properties.
+      const suggestion = await consultDecisionModel(io, { requirements: requirements.map((r) => ({ ...r })), goal: op.goal });
       const askPayload = Object.assign(requirements.map((r) => ({ ...r })), {
         requirements: requirements.map((r) => ({ ...r })),
         cost: requirements.map((r) => ({ ...r })),
         publicByDefault: false,
+        ...(suggestion ? { suggestion } : {}),
         exit: gateExit,
       });
       const gate = askFn
@@ -645,6 +696,7 @@ async function runOperationOnce(op, capability, io) {
         outcome: { status: 'needs_human_decision', exercised: [], ...(detail ? { detail } : {}), exit: gateExit },
         evidence: null,
         verification: null,
+        ...(decidedBy ? { decidedBy } : {}),
       });
       return finish(op, receipt);
     }
@@ -663,6 +715,7 @@ async function runOperationOnce(op, capability, io) {
         outcome: { status: 'failed', exercised: [], detail: errorText(err) },
         evidence: null,
         verification: null,
+        ...(decidedBy ? { decidedBy } : {}),
       });
       return finish(op, receipt);
     }
@@ -678,6 +731,7 @@ async function runOperationOnce(op, capability, io) {
         outcome: { status: 'failed', exercised: [], detail: check.reason },
         evidence: null,
         verification: null,
+        ...(decidedBy ? { decidedBy } : {}),
       });
       return finish(op, receipt);
     }
@@ -699,6 +753,7 @@ async function runOperationOnce(op, capability, io) {
         outcome: { status: 'not_verified', exercised: requirements.map((r) => ({ ...r })), detail: errorText(err) },
         evidence: null,
         verification: { verified: false, checks: {}, reason: 'capability outcome unknown after timeout' },
+        ...(decidedBy ? { decidedBy } : {}),
       });
       return finish(op, receipt);
     }
@@ -710,6 +765,7 @@ async function runOperationOnce(op, capability, io) {
       outcome: { status: 'failed', exercised: [], detail: errorText(err) },
       evidence: null,
       verification: null,
+      ...(decidedBy ? { decidedBy } : {}),
     });
     return finish(op, receipt);
   }
@@ -726,6 +782,7 @@ async function runOperationOnce(op, capability, io) {
       outcome: { status: 'blocked', exercised: [], detail: reason, reason, exit },
       evidence: capabilityResult.evidence,
       verification: null,
+      ...(decidedBy ? { decidedBy } : {}),
     });
     return finish(op, receipt);
   }
@@ -742,6 +799,7 @@ async function runOperationOnce(op, capability, io) {
       },
       evidence: capabilityResult.evidence,
       verification: { verified: false, checks: {}, reason: 'settlement outcome unknown' },
+      ...(decidedBy ? { decidedBy } : {}),
     });
     return finish(op, receipt);
   }
@@ -755,6 +813,7 @@ async function runOperationOnce(op, capability, io) {
       outcome: { status: 'failed', exercised: [], detail: capabilityResult.error || 'capability failed' },
       evidence: capabilityResult.evidence,
       verification: null,
+      ...(decidedBy ? { decidedBy } : {}),
     });
     return finish(op, receipt);
   }
@@ -768,6 +827,7 @@ async function runOperationOnce(op, capability, io) {
       outcome: { status: 'not_verified', exercised: requirements.map((r) => ({ ...r })), detail: 'capability evidence is missing' },
       evidence: null,
       verification: { verified: false, checks: {}, reason: 'capability evidence is missing' },
+      ...(decidedBy ? { decidedBy } : {}),
     });
     return finish(op, receipt);
   }
@@ -822,6 +882,7 @@ async function runOperationOnce(op, capability, io) {
     outcome: { status: verified ? 'verified' : 'not_verified', exercised },
     evidence: capabilityResult.evidence,
     verification: normalizedVerification,
+    ...(decidedBy ? { decidedBy } : {}),
   });
   return finish(op, receipt, verified ? capabilityResult.output : undefined);
 }

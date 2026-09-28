@@ -199,7 +199,7 @@ function sanitizeSpend(items) {
   });
 }
 
-function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification }) {
+function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification, decidedBy }) {
   const grants = Array.isArray(authority && authority.spend) ? authority.spend : [];
   const exercised = Array.isArray(outcome && outcome.exercised) ? outcome.exercised : [];
   const rawStatus = safeText(outcome && outcome.status) || 'failed';
@@ -212,6 +212,7 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
   const reason = safeText(outcome && outcome.reason);
   const exit = safeText(outcome && outcome.exit);
   const { covered: coverage, failed: failedChecks } = readChecks(verification);
+  const decided = safeText(decidedBy) ?? safeText(outcome && outcome.decidedBy);
   const receipt = {
     status,
     operation: { id: operationId, goal },
@@ -230,6 +231,7 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
     detail,
     ...(reason ? { reason } : {}),
     ...(exit ? { exit } : {}),
+    ...(decided ? { decidedBy: decided } : {}),
     at: new Date().toISOString(),
   };
   receipt.digest = computeDigest(receipt);
