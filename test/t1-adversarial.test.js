@@ -199,35 +199,38 @@ test('T1-D5: a spark of more than twenty words is refused before it commits, and
 });
 
 // ---------------------------------------------------------------- los siete huecos
-// Cada uno está escrito como lo que el kernel debería hacer. Hoy no lo hace; por eso son `todo`.
-// No se arreglan aquí: cambiar el formato del recibo o el estado de una delegación es decisión
-// del acuerdo y se relee con un modelo alto antes de congelar el 0.1.3.
+// Cada uno se escribió como lo que el kernel debería hacer, y quedó como `todo` porque tocar el
+// formato del recibo o el estado de una delegación es decisión del acuerdo. La decisión se tomó
+// (T1-cierre): los siete están hoy como pruebas que el kernel pasa. Lo que sigue siendo decisión
+// pendiente son los cambios de formato que quedaron dentro — el recibo de delegación ahora lleva
+// `violations` y se queda sin cartas silenciosas — y eso se relee con un modelo alto antes de
+// congelar el 0.1.3.
 
-test.todo('T1-X1: an anchor cannot be forged without breaking the digest', () => {
+test('T1-X1: an anchor cannot be forged without breaking the digest', () => {
   const r = receipt.buildReceipt(spec());
   const forged = JSON.parse(JSON.stringify(r));
   forged.anchor = { status: 'anchored', network: 'stellar:testnet', txHash: 'tx-inventado' };
   assert.equal(receipt.verifyReceipt(forged).ok, false, 'the digest excludes `anchor`, so today this verifies');
 });
 
-test.todo('T1-X2: the receipt stores the verification object sanitized, like evidence', () => {
+test('T1-X2: the receipt stores the verification object sanitized, like evidence', () => {
   const r = receipt.buildReceipt(spec({ verification: { verified: true, checks: {}, secret: 'sk-live-123' } }));
   assert.equal(r.verification.secret, undefined, '`verification` is copied raw, bypassing the evidence allowlist');
 });
 
-test.todo('T1-X3: the revalidation gate watches every key that changes what was agreed', () => {
+test('T1-X3: the revalidation gate watches every key that changes what was agreed', () => {
   const r = receipt.buildReceipt(spec());
   const out = resumeFromReceipts([r], { approved: [{ action: 'a', changes: { to: 'OTRO' } }, { action: 'op-1' }] });
   assert.equal(out.needsPerson, true, 'only scope, amount, ceiling and status are watched today');
 });
 
-test.todo('T1-X4: continuity trusts the verification, not only the status field of the receipt', () => {
+test('T1-X4: continuity trusts the verification, not only the status field of the receipt', () => {
   const r = receipt.buildReceipt(spec({ verification: { verified: false, checks: { a: false }, reason: 'fallo' } }));
   const out = resumeFromReceipts([r], { approved: [{ action: 'op-1' }] });
   assert.equal(out.needsPerson, true, 'a receipt whose own verification says false is resumed today');
 });
 
-test.todo('T1-X5: a violation recorded once cannot be erased by a second result', () => {
+test('T1-X5: a violation recorded once cannot be erased by a second result', () => {
   const d = delegation.createDelegation({ task: 't', medium, delegate: 'bunny', orchestrator: 'vespi' });
   delegation.recordStart(d, { readTask: true });
   delegation.recordResult(d, { output: 'x', touched: ['C:/Claude/.env'] });
@@ -236,7 +239,7 @@ test.todo('T1-X5: a violation recorded once cannot be erased by a second result'
   assert.notEqual(clean.state, 'returned');
 });
 
-test.todo('T1-X6: the silent cards do not travel in the delegation receipt', () => {
+test('T1-X6: the silent cards do not travel in the delegation receipt', () => {
   const d = delegation.createDelegation({ task: 't', medium, delegate: 'bunny', orchestrator: 'vespi' });
   delegation.recordStart(d, { readTask: true });
   delegation.recordResult(d, { output: 'x' });
@@ -245,7 +248,7 @@ test.todo('T1-X6: the silent cards do not travel in the delegation receipt', () 
   assert.deepEqual(delegation.integrateDelegation(d).cards, [], 'the receipt carries the cards today');
 });
 
-test.todo('T1-X7: a touched file outside the medium is a violation even when nothing is forbidden', () => {
+test('T1-X7: a touched file outside the medium is a violation even when nothing is forbidden', () => {
   const d = delegation.createDelegation({ task: 't', medium: { cwd: 'C:/Claude', material: [], forbidden: [] }, delegate: 'bunny', orchestrator: 'vespi' });
   delegation.recordStart(d, { readTask: true });
   const out = delegation.recordResult(d, { output: 'x', touched: ['C:/Users/andre/.ssh/id_rsa'] });

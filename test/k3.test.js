@@ -49,8 +49,12 @@ test('K3.3 digest es canónico: orden de claves no cambia y excluye digest y anc
   const reordered = {};
   for (const k of Object.keys(r).reverse()) reordered[k] = r[k];
   assert.equal(receiptMod.verifyReceipt(reordered).ok, true);
-  const withAnchor = { ...r, anchor: { status: 'anchored', network: 'stellar:testnet', txHash: 'X' } };
-  assert.equal(receiptMod.verifyReceipt(withAnchor).ok, true);
+  // El digest del cuerpo excluye `anchor`, así que anclar no lo mueve: el mismo cuerpo con el ancla
+  // atada a ese digest sigue verificando. Un ancla escrita a mano, sin atar, ya no verifica (T1-X1).
+  const bound = { ...r, anchor: { status: 'anchored', network: 'stellar:testnet', txHash: 'X', digest: r.digest } };
+  assert.equal(receiptMod.verifyReceipt(bound).ok, true, 'el mismo cuerpo con el ancla atada sigue verificando');
+  const unbound = { ...r, anchor: { status: 'anchored', network: 'stellar:testnet', txHash: 'X' } };
+  assert.equal(receiptMod.verifyReceipt(unbound).ok, false, 'un ancla escrita a mano no verifica');
 });
 
 test('K3.4 coverage sale de verification.checks; sin checks es vacía', () => {

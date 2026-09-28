@@ -98,9 +98,25 @@ function within(cwd, touched, forbidden) {
   return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
 }
 
+// The other half of the question, which the forbidden list cannot answer on its own: is the file
+// inside the medium the orchestrator agreed at all? `violationsFor` used to ask only whether the file
+// was on the deny list, so an empty `forbidden` bounded nothing and a delegate could touch
+// `C:/Users/andre/.ssh/id_rsa` with a clean report. The agreed medium is the allowed side: a file
+// has to live in the area the delegation was given (`cwd`), and only then does the deny list get to
+// take it away (T1-X7).
+// A delegation created with no medium declares no area, so there is nothing it was allowed to
+// touch; every file it reports is out of the medium. `material` is carried and sealed as part of
+// what was agreed, but it does not narrow the area: K7.10 pins that a file under `cwd` and outside
+// `material` (`/repo/.env.example` with material `['src/']`) stays in bounds.
+function inMedium(d, file) {
+  const cwd = d.medium.cwd;
+  if (!cwd) return false;
+  return within(cwd, file, '.');
+}
+
 function violationsFor(d, touched) {
   const cwd = d.medium.cwd;
-  return touched.filter((file) => d.medium.forbidden.some((forbidden) => within(cwd, file, forbidden)));
+  return touched.filter((file) => !inMedium(d, file) || d.medium.forbidden.some((forbidden) => within(cwd, file, forbidden)));
 }
 
 // A spark is a short line the delegate leaves on the way out (R45). Over 20 words is not a
@@ -115,13 +131,19 @@ function readSpark(spark) {
   return spark;
 }
 
+// A violation is a fact about the delegation, not about the last delivery. `recordResult` used to
+// write the list the delegate returned with, so a second, clean result erased a violation that had
+// already been recorded and the work went back to `returned`. A violation, once recorded, stays:
+// the list only grows (never repeated), the state stays `out_of_bounds` while one is on record, and
+// the receipt carries it (T1-X5). `touched` still says what the last delivery touched — that is
+// what it means — but what was out of bounds stays on the record however many times it is answered.
 function recordResult(d, { output, touched, spark } = {}) {
   if (d.state === 'failed_to_start') {
     throw new Error(`this delegation failed to start and cannot deliver: relaunch it instead (${d.reason || 'no reason recorded'})`);
   }
   const note = readSpark(spark);
   const files = list(touched);
-  const violations = violationsFor(d, files);
+  const violations = [...new Set([...d.violations, ...violationsFor(d, files)])];
   d.outputDigest = digestOf(text(output) ? output : JSON.stringify(output === undefined ? null : output));
   d.touched = files;
   d.violations = violations;
@@ -196,10 +218,16 @@ function delegationReceipt(d) {
     respondedBy: d.respondedBy,
     outputDigest: d.outputDigest,
     touched: [...d.touched],
+    violations: [...d.violations],
     correctionRounds: d.correctionRounds,
     corrections: [...d.corrections],
     sparks: [...d.sparks],
-    cards: d.cards.map((card) => ({ ...card })),
+    // The cards are the Entre's own (R45): the receipt is what travels out of the delegation, and
+    // a card marked `silent` is by definition not for whoever receives it. They stay in the
+    // delegation's own state, where the orchestrator drew them, and no silent card is sealed into a
+    // receipt (T1-X6). A card that is not silent — a deck that ever stops marking itself so — would
+    // still travel, because the rule is about the mark and not about the deck.
+    cards: d.cards.filter((card) => card.silent !== true).map((card) => ({ ...card })),
     at: new Date().toISOString(),
   };
   receipt.digest = seal(receipt);

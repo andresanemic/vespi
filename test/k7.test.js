@@ -265,7 +265,7 @@ test('K7.21 a spark of more than 20 words is refused, and the delegate keeps the
   assert.equal(d.state, 'running', 'a refused spark does not deliver the result');
 });
 
-test('K7.22 a card is kept silent in the receipt and never in what the person is shown', () => {
+test('K7.22 a card stays silent: it is in the delegation state, in neither the receipt nor what the person is shown', () => {
   const d = running();
   recordResult(d, { output: OUTPUT, touched: [] });
   recordCard(d, { deck: 'entre', card: CARD, perturbation: 'a slow question' });
@@ -276,9 +276,11 @@ test('K7.22 a card is kept silent in the receipt and never in what the person is
 
   reviewDelegation(d, { reviewer: 'vespi', accept: true });
   const receipt = delegationReceipt(d);
-  assert.equal(receipt.cards.length, 1);
-  assert.equal(receipt.cards[0].card, CARD);
-  assert.equal(receipt.cards[0].silent, true);
+  // The receipt is what travels out of the delegation, and a silent card is by definition not for
+  // whoever receives it (R45): the card stays in the delegation's own state (T1-X6).
+  assert.deepEqual(receipt.cards, [], 'no silent card is sealed into the receipt');
+  assert.doesNotMatch(JSON.stringify(receipt), /the orchard keeps its own accounts/);
+  assert.doesNotMatch(JSON.stringify(receipt), /a slow question/);
   assert.equal(verifyReceipt(receipt).ok, true);
 
   const view = personView(d);
