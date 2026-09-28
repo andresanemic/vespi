@@ -1,0 +1,13 @@
+Vespi kernel
+Copyright 2026 andresanemic (Andrés Peña Mellado)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The commits in this repository are signed "Muse Sparks <muse-sparks@vespi.local>".
+That is the same authorship. Andrés Peña Mellado built this repository with a
+local Git configuration under that name and confirmed it on 2026-09-27, so the
+license has a single holder and could be relicensed. The history is not
+rewritten: the tags and the receipts that point at these commits must keep
+pointing at them. The agreed mechanism is a `.mailmap` joining "Muse Sparks" to
+andresanemic; GitHub does not read `.mailmap`, so the older commits keep showing
+as "Muse Sparks" in the web interface either way.

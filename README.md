@@ -3,7 +3,8 @@
 # Vespi
 
 <p align="center">
-  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.1.1-kernel"><img src="https://img.shields.io/badge/version-v0.1.1--kernel-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.1-kernel"></a>
+  <a href="#english"><img src="https://img.shields.io/badge/version-v0.1.3--candidate-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.3 candidate"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
   <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E0C170?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
   <a href="./experiments/005/RUN.md"><img src="https://img.shields.io/badge/run-05--closed-E0C170?style=for-the-badge&labelColor=07111A" alt="RUN 05: closed"></a>
   <a href="#what-exists-today"><img src="https://img.shields.io/badge/authority-bounded-D7B698?style=for-the-badge&labelColor=07111A" alt="Bounded authority"></a>
@@ -14,96 +15,104 @@
 
 <a id="english"></a>
 
-**Vespi is an experiment in operational continuity under bounded authority.**
+**Vespi keeps an operation alive when the people, the agents and the tools around it change.**
 
 > **The unit is not the agent. The unit is the operation.**
 
-Vespi is a small public experiment in how people, models and services can work together without automatically sharing the same context, permissions or history. It is being built in public by **Andrés Peña Mellado**. This repository is experimental: it records what exists, what fails, what changes and what remains deliberately unclaimed.
+Vespi is a small public experiment in operational continuity under bounded authority, built in public by **Andrés Peña Mellado**. This repository is its **kernel**: dependency-free JavaScript, no framework, no daemon, no network. It is experimental, and it records what exists, what fails, what changes and what is deliberately still unclaimed.
 
-## Why it exists?
+## In one minute
 
-When you work with AI agents, there is a moment when one session ends and the next has to begin.
+Here is the problem, in plain words.
 
-Keeping the data is relatively easy. What I care about is preserving the criterion that made a decision valid. What survives when the model, host or session changes?
+When you work with an agent, there is a moment when the session ends and the next one has to begin. What usually survives is a summary. A summary does not say **who allowed this to happen**, **how much**, **until when**, **to whom**, or **whether the thing that was supposed to happen actually happened**. Those are not details of a summary; they are the operation.
 
-Context helps, but it is not enough. We also need to preserve why an answer was acceptable, its limits and who could approve it.
+So Vespi starts from the operation instead of from the agent. An operation carries a goal, an authority that a person granted it — with a clock, a budget and a destination — a way to execute exactly once, a **separate** way to verify, and a receipt that says what was covered and what was not. When something changes, the operation is not restarted from a summary: it is read back from its receipts, and it only continues if what it is about to do is still what was agreed. If it is not, it goes back to the person.
 
-That problem led me to [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md) and [Lore Plugin](https://github.com/andresanemic/lore-plugin), which tries to make that criterion portable, routable and executable. The Lore Plugin repository already has 3,000+ clones.
+You can see the whole thing run in a minute, offline, with no wallet, no funds, no keys and no network:
 
-I later arrived at Tellus Cooperative and the Find Your Way hackathon. There the question became concrete: when building in public, an operation has to distinguish what I did from what an institution represents.
+```bash
+git clone https://github.com/andresanemic/vespi.git
+cd vespi
+node --test test/*.test.js
+```
 
-From there, Vespi began to take shape: a layer that tries to operate within those limits and leave a verifiable record. I am also looking toward [Meridian 2026](https://meridian.stellar.org/event-details), from Stellar Development Foundation.
-
-Capability, context and authority are different things. A capability can be available without being authorized. A receipt can record a result without proving that the result was persisted. A model can be powerful without knowing which decision it is allowed to make.
-
-Vespi starts from the operation rather than from the agent: what must happen, what evidence would count, who may authorize it, how it is verified and what remains when one participant disappears.
+```
+ℹ tests 100
+ℹ pass 100
+ℹ fail 0
+```
 
 <a id="what-exists-today"></a>
-## What exists today / Qué existe hoy
+## What the 0.1.3 candidate brings
 
-> **TODAY / HOY — current repository boundary.** The entries below are current public records or locally exercised behavior. The continuity runtime described later is not present today.
+`0.1.3` is a **candidate** release, not a tag: the last tag in this repository is [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Everything below was read in the code of this tree, not in a plan. The kernel suite is 100/100 green here.
 
-These are the current claims supported by the repository and RUN 05:
+- **Authority of several people.** A permission can require several approvals: `authority.signers = { required, allowed }`. The human gate returns **identities, not cryptographic signatures** — `{ approved: true, approvals: [{ by: 'ana' }, { by: 'bob' }] }` — and the kernel counts *distinct* identities drawn from `allowed`. The same identity twice counts once. An identity outside `allowed` does not count. **The operation's own agent never counts.** With fewer approvals than `required`, `perform` is not called and the receipt says how many are missing. Approvals pre-loaded into the authority do not count either: only approvals that arrive through the gate count. Nothing here signs anything; it is a named identity compared in process.
+- **Authority with clock, budget and destination.** A grant is `{ asset, maxAmount, to, expiresAt }`. A grant with `to` covers only that destination; a grant without `to` covers any destination but keeps **one** budget, and several requirements spend from that same budget — 400 + 400 against a 500 ceiling is not enough. An expired grant is refused with a reason that names the moment it expired, and `now` is injectable, so the same grant can be exercised on both sides of its own clock.
+- **Receipts with a SHA-256 fingerprint and real coverage.** Every receipt carries a `digest`: SHA-256 over the canonical form of the receipt — keys sorted, `digest` and `anchor` excluded — as 64 hex characters. `verifyReceipt` recomputes it, so changing the status, the evidence, the coverage or the detail makes verification fail. **Coverage is not a claim:** a check counts as covered only when it came back `true`; a check that came back anything else is listed in `notCovered` by name, next to `external anchor` until there is an external anchor. The receipt's status is one of six values and is the same status the operation returns. Unrecognized evidence fields are dropped.
+- **Anchoring in the Stellar testnet, as an honest interface.** `anchorReceipt(receipt, anchor, verifyAnchor)` climbs three states and skips none: `pending` when nothing reached the network (no adapter, the adapter threw, or no transaction hash came back), `submitted` when the adapter returned a transaction hash, and `anchored` **only** when `verifyAnchor(txHash, digest)` confirms it. A transaction hash on its own is not an anchor. The network is `stellar-testnet`, and the kernel does not talk to it — the adapter is the caller's. A sync and an async path exist, so a real network works, and the digest survives anchoring.
+- **The impossible task comes back blocked, with its exit.** A capability can declare `{ impossible: true, reason }` from `required()` — then `perform` is never called — or return it from `perform`. Either way the operation ends `blocked`, the reason travels in the receipt, and the receipt carries an `exit`: the way out, by default *return to the person: change the agreement or cancel*. Running again returns the same receipt without a second attempt.
+- **Who can pause is written down.** `authority.pausers` is a list of identities. `pauseOperation(op, who)` throws if `who` is not on it, and the error names who is. Pausing is refused while the operation is running and refused on a terminal one; asking again is a no-op. `resumeOperation` asks the same list. Both leave a `{ state, by, at }` line in the operation's history.
+- **The human gate and its four gestures.** The gate opens **only** when the authority on hand does not cover the requirement; an operation whose grant already covers it runs without asking. What the person receives carries the cost (`requirements` and `cost`), the exit (`exit`), and `publicByDefault: false` — publishing is opt-in. And when the operation declares an agent, an approval whose `by` is that agent is refused: the kernel records that the agent cannot consent for the person, and the operation returns to `needs_human_decision`. Every refusal carries the exit. With no `ask` there is no approval, so the operation stops and asks.
+- **Continuity by receipts.** `resumeFromReceipts(receipts, agreement)` takes receipts plus an agreement and answers three questions: what was the last verified state, what is the next action, and does a person have to get involved. Receipts that do not verify are discarded, and the count is reported. Resuming what was agreed does **not** open the gate. Three things do: a verified receipt for an action outside the agreement, a change to the scope, amount, ceiling or status of the next action, and a last receipt for the next action that was `blocked`, `paused` or `needs_human_decision`. There is no handoff document: any agent, on any host, continues from the receipts.
+- **An optional decision model that only advises.** Give the kernel an `io.decide` and it may show a suggestion to the person — only when the probability clears `decideThreshold`, 0.9 by default — attached to the gate payload and marked as coming from the decision model. It never approves: the gate is always answered by the person, and without that answer the capability does not run. A model that throws, times out, misreports or is simply absent leaves the gate untouched. The kernel is identical without it.
 
-- **Historical release record:** [`v0.1.1-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.1-kernel) reports 16/16 kernel tests at release.
-- **RUN 05 result (post-v0.1.1; not a tagged release):** the current tree includes the human-decision provenance fix and passes 19/19 kernel tests plus 1/1 x402 adversarial test locally. It is not a new tagged release.
-- [`src/`](./src/) is the **operation kernel today**: a small local execution primitive for one bounded operation. It checks authority, optionally surfaces a decision, performs once, verifies separately and returns a structured receipt. It is not a universal runtime, orchestrator or continuation engine.
-- Authority is checked before a capability is allowed to perform. A missing or non-decisive human gate is recorded as `human_gate_no_decision`; an explicit `approved: false` is `human_gate_rejected`; an explicit approval is preserved as `human_gate_approved` in terminal receipts.
-- The kernel returns a structured receipt. It does not provide automatic durable persistence; the caller owns persistence if it needs it.
+## Using it as a laboratory
 
-**Terms in this repository:** A **capability** is an available action; a **grant** is the authority for an effect; a **human gate** is the decision surface the kernel consults when authority is insufficient, not a complete authenticated approval workflow; **provenance** records where a result or decision came from; a **receipt** is the structured object returned by the operation, not automatic durable persistence; a **criterion** is the governing standard used to judge the operation.
+For pilots, experiments and case studies, the public record is in [`experiments/`](./experiments/):
 
-- [`demo/x402/`](./demo/x402/) is the only place that knows x402, Stellar and USDC. It is an economic capability example, not Vespi's identity. The adapter checks effective 402 terms before payload creation against the declared fixed 0.01 USDC effect and the operation grant.
-- [`experiments/`](./experiments/) preserves public runs and evidence. [`001`](./experiments/001-operator-professor-loop/RUN.md) records an Operator↔Professor loop; [`002`](./experiments/002-x402-slice1/RUN.md) records an earlier x402/Stellar testnet slice with receipts and a kept verification failure; [`005`](./experiments/005/RUN.md) records the final RUN 05 evaluation, **CLOSED** within its declared local/offline scope.
+- [`000-genesis-hive`](./experiments/000-genesis-hive/) — the first bodies and the first receipts.
+- [`001-operator-professor-loop`](./experiments/001-operator-professor-loop/RUN.md) — an Operator ↔ Professor loop, with its evidence and its independent arbitration.
+- [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) — an earlier x402 / Stellar testnet slice with receipts and one real verification failure kept as evidence.
+- [`005`](./experiments/005/RUN.md) — the final RUN 05 evaluation, **CLOSED** within its declared local/offline scope, with the blind reads and the verifier reports that closed it.
 
-## How the kernel thinks about authority and operations
+The paid example lives in [`demo/x402/`](./demo/x402/), and it is the only place that knows x402, Stellar or USDC — an economic capability example, not Vespi's identity. **A fresh live x402 payment is currently NOT VERIFIED:** the real 402 response, the signature, the facilitator, the settlement and Horizon verification remain unverified in the current local run. Experiment 002 is historical testnet evidence, not current live settlement evidence.
 
-The operation declares its required effects. The authority check compares those requirements with the grants available to the operation. A capability is not called until the requirements are sufficient or a human explicitly approves them. Only then does the capability perform, and the result is verified and returned as a receipt.
+## How this was built
 
-The boundary is deliberately small:
+Every claim in a repository like this needs a receipt, and a claim without one does not go in. These are the reviews that formed Vespi, each with what it gave:
 
-- `required()` says what a capability intends to do.
-- `authority` says what the operation may do, including the destination when a grant is destination-specific.
-- the human gate is a decision surface, not a substitute for capability availability.
-- `perform()` is not evidence of success; verification is separate.
-- a returned receipt is not automatically durable.
+- **Raven and the Stellar ecosystem.** Raven, the MCP over the ecosystem's project directory, was active during the whole construction: without it x402 and Stellar would not have been possible, and the study it enabled is what showed that the missing piece was not another payment project but a kernel to coordinate the ones that exist. The absence of a tool is not made up with assumptions.
+- **The OpenAI report.** [OpenAI — Hugging Face Incident, Technical Report](https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf) gave the direction that an operation is authorized before it acts and not improvised while it acts: agents do organize themselves, what went wrong was the channel that was not authorized and the credential that was shared, a task with no legitimate exit pushes an agent off the edge, and the verification has to live outside the agent.
+- **Ultrareview.** [Ultrareview's documentation](https://code.claude.com/docs/en/ultrareview) gave the human gate its four gestures: show the cost first and let the person confirm it, never let the agent give the consent that belongs to the person, keep what goes public optional and off, and name the exit in every refusal.
+- **The fly.** The [Eon Systems connectome of the adult fly brain](https://github.com/eonsystemspbc/fly-brain) shows behaviour coming out of structure, with no training and no reward, which is why the kernel governs with structure — agreement, granted authority, separate verification — and does not depend on the model. It enters as a story and nothing else: Vespi is not a brain, and it does not learn.
+- **The skills.** The `writing-skills` discipline of [Superpowers](https://github.com/obra/superpowers) (MIT, with credit) gave the kernel its red first: a test that fails before the feature, and a badge that says what actually happened instead of what would be nice to have happened. The separate study of the skill ecosystem gave the rule that a skill is a capability like any other and enters only with written provenance — work that is queued for `0.1.4`.
 
-RUN 05 sharpened these boundaries without turning them into universal laws: authority must constrain the actual side effect before it occurs; a receipt must not attribute a human decision that did not happen; a structured receipt is not durable persistence; capability availability is not authority; a reachable criterion is not necessarily a loaded criterion; and durable state surfaces can diverge.
+Reviews launched by the person rather than by the agent — an ultrareview run over this kernel, a security review — enter this repository with their run, report, commit or session log attached, or they do not enter.
 
-## The capability example: x402 and Stellar
+## The search in the ecosystem
 
-x402/Stellar is the first exercised paid/economic capability, **not Vespi's identity**. It is where an operation can encounter a real economic boundary without teaching the kernel about payments.
+We did this search so as to offer something new and not repeat what other projects already do. Every project below was read in its own repository and confirmed on **2026-09-28**; their state changes, so the date is part of the claim. Credit, never disparagement: these are good projects and most of them are ahead of us in their own piece.
 
-The current evidence is **LOCAL / OFFLINE VERIFIED** for a bounded pre-signature path: version, exact scheme, Stellar testnet, USDC contract, configured recipient, exact 0.01 USDC price, safe timeout, sponsored authorization flow and the effective grant. The adversarial test proves, offline, that deviating offers do not reach `createPaymentPayload` while the exact offer does.
+- [REAPP](https://github.com/mks044/reapp-poc) — signed mandates for agent payments, validated in seven gates and enforced in a Soroban registry. It arrived at the same shape as this kernel from the other side, and is the closest thing in the ecosystem to what `0.1.3` builds: authority before the effect. No license shown in the repository, so it is called as a service, not grafted.
+- [Stellar AI Agent Kit](https://github.com/JoseCToscano/stellar-mcp) — turns any Soroban contract into an MCP server, and its policy-contract CLI is authority on chain. It is what makes "Vespi over MCP" more than a wish.
+- Trustless Work, Soroban Governor, Teken, Trustful and Chaincerts — escrow by milestones, audited collective governance, multisig, verifiable reputation and verifiable credentials already exist in Stellar. Vespi does not rebuild them; they are its capabilities.
+- Eascrow went inactive in 2026-07 after 147,950 USD in funds. A block alone does not hold a product up; what holds it up is someone using it in a real operation.
 
-A fresh live x402 payment is **CURRENT LIVE NOT VERIFIED**. Real 402 response, signing, facilitator, settlement and Horizon verification remain **NOT VERIFIED** in the current local run. Experiment 002 provides **HISTORICAL TESTNET EVIDENCE**, not current live settlement evidence.
+What came out of it, said as what we saw and with its date: the ecosystem is rich in pieces and no piece coordinates an operation across several people and organizations from beginning to end. That gap is where Vespi sits, and it is a claim about a moving landscape, not a law.
 
-## Experiments and evidence
+## What it does not do yet
 
-The public record belongs to the object. It keeps receipts, failures, blind reads, independent verification and unresolved questions in view. A method, benchmark or first-party skill does not become a law merely by appearing in this repository.
+- **`0.1.4` is already scoped and not built:** emergency access granted in advance and exercised with an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 in live. They are not in `0.1.3` because `0.1.3` builds only what all the projects share.
+- **The receipt is not durable by itself.** The kernel returns a receipt; whoever calls it owns where it lives. The external anchor is what makes it findable later in a public explorer, and only once verification confirms it.
+- **No cross-host runtime, scheduler, migration engine or quota manager.** The continuation semantics are here; the machinery that wakes the process is the host's, and it does not exist here.
+- **The six functions of the autonomy gap are not built**, and neither is a stable protocol, production readiness or regulatory compliance.
+- **The how of a resumable receipt is not decided yet**: where it lives and what an agent on another host needs to continue without a handoff.
 
-The question remains open: how much of the observed continuity comes from Vespi itself, and how much reduces to good state, policy, routing, host capabilities and verification? The residue is not assumed.
+## Terms in this repository
 
-## THE BET / LA APUESTA
+A **capability** is an available action. A **grant** is the authority for an effect. A **human gate** is the decision surface the kernel consults when the authority is insufficient — not a complete authenticated approval workflow, and not a signature system. **Provenance** records where a result or a decision came from. A **receipt** is the structured object the operation returns, not automatic durable persistence. A **criterion** is the governing standard used to judge the operation.
+
+## The bet
 
 > **DIRECTION, NOT CURRENT IMPLEMENTATION.**
 
-The bet is an operation that remains meaningful beyond the lifetime of one model, host or session, with enough state to continue honestly after an interruption.
+The bet is an operation that stays meaningful beyond the lifetime of one model, host or session, with enough state to continue honestly after an interruption.
 
 ### Continuity
 
-We imagine an operation that can survive:
-
-- changes of model;
-- changes of host;
-- quota or capacity exhaustion;
-- interruptions;
-- capability failures;
-- reconstruction from durable state;
-
-while preserving enough of the goal, authority, evidence, provenance, verification state and conditions for human intervention to know what remains true.
-
-A model, host or provider may disappear without that necessarily meaning the operation has ceased to exist. **Direction, not current implementation:** Vespi would own continuation semantics; the host/runtime may own waking the process. The current repository contains no cross-host runtime, scheduler, migration engine or quota manager.
+An operation that survives changes of model, changes of host, quota or capacity exhaustion, interruptions, capability failures, and reconstruction from durable state — while preserving the goal, the authority, the evidence, the provenance, the verification state and the conditions for human intervention. A model, host or provider may disappear without the operation ceasing to exist. **Direction, not current implementation:** Vespi owns the continuation semantics; the host may own waking the process. `resumeFromReceipts` is the first piece of that semantics, not the whole of it.
 
 ### Mechanical interruption is not human interruption
 
@@ -113,77 +122,56 @@ A model, host or provider may disappear without that necessarily meaning the ope
 
 > **Autonomy is not how long Vespi can operate without a human. It is how much legitimate work it can complete without consuming unnecessary human attention.**
 
-A mechanical boundary should not automatically consume a person's attention. Waiting, asking or stopping can be the correct result of an operation.
-
-### Continuation semantics
-
-Eventually, the direction includes being able to:
-
-- checkpoint what matters;
-- determine what remains authorized;
-- select another sufficient capability when appropriate;
-- continue or wait according to policy;
-- verify the result;
-- preserve receipts and provenance;
-- escalate only when a real human threshold appears.
-
-These are directions to investigate, not current features.
+Waiting, asking or stopping can be the correct result of an operation.
 
 ### Model and capability economy
 
 > **Use the least expensive sufficient intelligence. Escalation must be earned.**
 
-A Vespi capability may be local, host-native, external or paid. Its economic form does not define Vespi. x402/Stellar is the first exercised paid/economic capability, not Vespi's identity.
+A capability may be local, host-native, external or paid. Its economic form does not define Vespi.
 
 ### Honest uncertainty
 
 > **We do not yet know how much of this requires something specifically called Vespi. Some of it may reduce to good state, policy, routing, host capabilities and verification. That is part of the experiment.**
 
-The bet can be strong and still falsable. We do not invent “ese Vespi” to justify the name.
+The bet can be strong and still falsable. We do not invent "that Vespi" to justify the name.
 
 ## Relationship to [Lore Plugin](https://github.com/andresanemic/lore-plugin)
 
 > **Lore Plugin prepares the ground. Vespi operates on it.**
 
-**Today:** Vespi is a separate technical repository. [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md) and [Lore Plugin](https://github.com/andresanemic/lore-plugin) are part of its genealogy and criterion. There is no released first-party `vespi` skill.
-
-In the intended division of labor, Lore Plugin is expected to provide the durable ground an operation needs: goal/state, the relevant criterion and owner, the authority boundary, and evidence/provenance. Vespi operates within those boundaries; it does not replace Lore Plugin or create a second learning or write path.
-
-**Direction, not current implementation:** `vespi` should eventually become a first-party Lore Plugin skill, inherit Lore Plugin's governance and authority model, and preserve that single learning/write path.
+Vespi is a separate technical repository. [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md) and [Lore Plugin](https://github.com/andresanemic/lore-plugin) are part of its genealogy and its criterion. In the intended division of labor, Lore Plugin provides the durable ground an operation needs — goal and state, the relevant criterion and owner, the authority boundary, evidence and provenance — and Vespi operates inside those boundaries. It does not replace Lore Plugin and it does not create a second path for learning or writing.
 
 ## Origin, catalyst, pressure, horizon
 
 - **ORIGIN: [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md) + [Lore Plugin](https://github.com/andresanemic/lore-plugin).** Vespi grows from work on criterion, continuity and operational authority, not from a payment protocol.
-- **CATALYST / CURRENT PUBLIC PRESSURE: Find Your Way + Tellus.** This is context and evaluation pressure only. No ownership, sponsorship, endorsement, partnership, funding or official affiliation is claimed.
+- **CATALYST / CURRENT PUBLIC PRESSURE: Find Your Way + Tellus.** Context and evaluation pressure only. No ownership, sponsorship, endorsement, partnership, funding or official affiliation is claimed.
 - **FIRST EXERCISED ECONOMIC PRESSURE: x402 + Stellar testnet.** Payment is a pressure that exposed real authority questions; it is not the project's origin.
 - **HORIZON: Meridian / HackMeridian 2026.** The [HackMeridian event](https://meridian.stellar.org/event-details) is context and a public horizon, not a claim of ownership, sponsorship, endorsement, partnership, funding or official affiliation.
 
-## NOT VERIFIED: external and continuity claims
-
-RUN 05 is **CLOSED** within its declared local/offline evaluation scope. The following are not current claims:
+## Not verified
 
 - a fresh live x402 payment, signature, facilitator, settlement or Horizon verification;
 - automatic durable receipt persistence or persistent memory;
 - a general orchestration runtime, universal scheduler, daemon, migration engine or quota manager;
 - production readiness, regulatory compliance or a stable protocol;
-- a released first-party `vespi` skill;
-- a claim that Vespi is a crypto payment agent, a Tellus product or a hackathon-created project.
+- a claim that Vespi is a crypto payment agent, a Tellus product, a hackathon-created project, or an app backed by the Stellar Development Foundation or by any university.
 
-## Quickstart / evaluation path
+## Quickstart
 
-**Level 1: kernel, nothing external.** Clone the repository and run:
+**Level 1 — kernel, nothing external.** Clone and run:
 
 ```bash
-node --test
+node --test test/*.test.js
 ```
 
-The suite covers operation, bounded authority, human-gate provenance, capability boundaries, verification and receipts. No wallet, funds or network are required.
+The suite covers the operation, bounded authority with clock, budget and destination, multi-person approval, the impossible task, pausing, the four gestures of the human gate, receipts with a SHA-256 fingerprint and real coverage, the three states of anchoring, and continuity by receipts. `node --test` alone also runs the x402 demo suite. No wallet, no funds, no network.
 
-**Level 2: bounded x402 testnet demo.** See [`demo/x402/README.md`](./demo/x402/README.md). The paid route needs a funded testnet account, a USDC trustline, a receiver, environment variables and network access. The rejection route can stop before contacting the endpoint. The current local run does not certify a fresh live payment.
+**Level 2 — bounded x402 testnet demo.** See [`demo/x402/README.md`](./demo/x402/README.md). The paid route needs a funded testnet account, a USDC trustline, a receiver, environment variables and network access. The rejection route stops before contacting the endpoint. The current local run does not certify a fresh live payment.
 
 ## Why publish this early?
 
-Because the history is part of the evidence. Vespi should not arrive later with a polished origin story. What survives, what fails, what changes and what gets rejected should remain inspectable while the project is still becoming itself.
+Because the history is part of the evidence. Vespi should not arrive later with a polished origin story. What survives, what fails, what changes and what gets rejected should stay inspectable while the project is still becoming itself.
 
 ## Author
 
@@ -195,7 +183,7 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 ---
 
-[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experiments](./experiments/) · [Release v0.1.1-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.1-kernel) · [MIT License](./LICENSE)
+[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experiments](./experiments/) · [Last tag v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Apache 2.0 License](./LICENSE) · [NOTICE](./NOTICE)
 
 </details>
 
@@ -204,74 +192,94 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 <a id="español"></a>
 
-**Vespi es un experimento de continuidad operacional bajo autoridad acotada.**
+**Vespi mantiene viva una operación cuando cambian las personas, los agentes y las herramientas que la rodean.**
 
 > **La unidad no es el agente. La unidad es la operación.**
 
-Vespi es un pequeño experimento público sobre cómo personas, modelos y servicios pueden trabajar juntos sin compartir automáticamente el mismo contexto, permisos o historia. Lo construye en público **Andrés Peña Mellado**. Este repositorio es experimental: conserva lo que existe, lo que falla, lo que cambia y lo que sigue deliberadamente sin reclamar.
+Vespi es un pequeño experimento público de continuidad operacional bajo autoridad acotada, construido en público por **Andrés Peña Mellado**. Este repositorio es su **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Es experimental, y conserva lo que existe, lo que falla, lo que cambia y lo que sigue deliberadamente sin reclamar.
 
-## ¿Por qué existe?
+## En un minuto
 
-Cuando uno trabaja con agentes IA, hay un momento en que una sesión termina y la siguiente tiene que empezar.
+Este es el problema, en llano.
 
-Lo que debería pasar con los datos es relativamente fácil. Lo que me importa es que no se pierda el criterio que hizo que una decisión valiera. ¿Qué se conserva cuando cambian el modelo, el host o la sesión?
+Cuando trabajas con un agente, hay un momento en que la sesión termina y la siguiente tiene que empezar. Lo que sobrevive suele ser un resumen. Un resumen no dice **quién autorizó esto**, **cuánto**, **hasta cuándo**, **a quién**, ni **si lo que debía pasar de verdad pasó**. Eso no son detalles de un resumen: es la operación.
 
-El contexto ayuda, pero no alcanza. También hace falta conservar la razón por la que una respuesta era aceptable, sus límites y quién podía aprobarla.
+Por eso Vespi parte de la operación y no del agente. Una operación lleva un objetivo, una autoridad que una persona le otorgó —con reloj, presupuesto y destino—, una forma de ejecutarse exactamente una vez, una forma **separada** de verificar y un recibo que dice qué cubrió y qué no. Cuando algo cambia, la operación no se reinicia desde un resumen: se relee desde sus recibos, y solo continúa si lo que está a punto de hacer sigue siendo lo acordado. Si no lo es, vuelve a la persona.
 
-Ese problema me llevó a [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_es.md) y [Lore Plugin](https://github.com/andresanemic/lore-plugin), que intenta convertir ese criterio en algo portable, enrutable y ejecutable. El repositorio de Lore Plugin ya supera las 3.000 clonaciones.
+Puedes verlo completo en un minuto, sin conexión, sin wallet, sin fondos, sin llaves y sin red:
 
-Después llegué a Tellus Cooperative y a la hackatón de Find Your Way. Ahí la pregunta se volvió concreta: al construir en público, una operación tiene que distinguir lo que hice de lo que representa una institución.
+```bash
+git clone https://github.com/andresanemic/vespi.git
+cd vespi
+node --test test/*.test.js
+```
 
-Ahí fue tomando forma Vespi: una capa que intenta operar dentro de esos límites y dejar un registro verificable. También apunto a [Meridian 2026](https://meridian.stellar.org/event-details), de Stellar Development Foundation.
+```
+ℹ tests 100
+ℹ pass 100
+ℹ fail 0
+```
 
-Capability, contexto y authority son cosas distintas. Una capability puede estar disponible sin estar autorizada. Un receipt puede registrar un resultado sin demostrar que ese resultado fue persistido. Un modelo puede ser poderoso sin saber qué decisión tiene permiso para tomar.
+<a id="que-existe-hoy"></a>
+## Qué trae el 0.1.3 candidato
 
-Vespi parte de la operación y no del agente: qué debe ocurrir, qué evidencia contaría, quién puede autorizarla, cómo se verifica y qué permanece cuando uno de los participantes desaparece.
+`0.1.3` es una versión **candidata**, no una etiqueta: la última etiqueta de este repositorio es [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Todo lo que sigue se leyó en el código de este árbol, no en un plan. La suite del kernel está 100/100 en verde aquí.
 
-## Qué existe hoy
+- **Autoridad de varias personas.** Un permiso puede exigir varias aprobaciones: `authority.signers = { required, allowed }`. La puerta humana devuelve **identidades, no firmas criptográficas** — `{ approved: true, approvals: [{ by: 'ana' }, { by: 'bob' }] }` — y el kernel cuenta identidades *distintas* tomadas de `allowed`. La misma identidad dos veces cuenta una sola vez. Una identidad fuera de `allowed` no cuenta. **El agente de la operación nunca cuenta.** Con menos aprobaciones que `required`, `perform` no se llama y el recibo dice cuántas faltan. Las aprobaciones cargadas de antemano en la autoridad tampoco cuentan: solo cuentan las que llegan por la puerta. Aquí no se firma nada; es una identidad nombrada comparada en el proceso.
+- **Autoridad con reloj, presupuesto y destino.** Un grant es `{ asset, maxAmount, to, expiresAt }`. Un grant con `to` cubre solo ese destino; uno sin `to` cubre cualquier destino pero conserva **un** presupuesto, y varias exigencias gastan de ese mismo presupuesto — 400 + 400 contra un techo de 500 no alcanza. Un grant vencido se rechaza con una razón que nombra el momento en que venció, y `now` es inyectable, así que el mismo grant se puede ejercitar a los dos lados de su propio reloj.
+- **Recibos con huella SHA-256 y cobertura real.** Cada recibo trae un `digest`: SHA-256 sobre la forma canónica del recibo —claves ordenadas, `digest` y `anchor` excluidos— como 64 caracteres hexadecimales. `verifyReceipt` lo recalcula, así que cambiar el estado, la evidencia, la cobertura o el detalle hace fallar la verificación. **La cobertura no es una afirmación:** un chequeo cuenta como cubierto solo cuando volvió `true`; un chequeo que volvió otra cosa aparece en `notCovered` por su nombre, junto a `external anchor` mientras no haya anclaje externo. El estado del recibo es uno de seis valores y es el mismo estado que devuelve la operación. Los campos de evidencia no reconocidos se descartan.
+- **Anclaje en la red de pruebas de Stellar, como interfaz honesta.** `anchorReceipt(receipt, anchor, verifyAnchor)` sube por tres estados y no salta ninguno: `pending` cuando nada llegó a la red (no hay adaptador, el adaptador lanzó, o no volvió hash de transacción), `submitted` cuando el adaptador devolvió un hash, y `anchored` **solo** cuando `verifyAnchor(txHash, digest)` lo confirma. Un hash por sí solo no es un anclaje. La red es `stellar-testnet` y el kernel no habla con ella: el adaptador lo aporta quien lo usa. Hay un camino síncrono y uno asíncrono, así que una red real funciona, y el digest sobrevive al anclaje.
+- **La tarea imposible vuelve bloqueada, con su salida.** Una capability puede declarar `{ impossible: true, reason }` desde `required()` —entonces `perform` no se llama nunca— o devolverlo desde `perform`. En los dos casos la operación termina `blocked`, la razón viaja en el recibo y el recibo trae una `exit`: la salida, por defecto *return to the person: change the agreement or cancel*. Correr de nuevo devuelve el mismo recibo sin un segundo intento.
+- **Quién puede pausar está escrito.** `authority.pausers` es una lista de identidades. `pauseOperation(op, who)` lanza error si `who` no está en ella, y el error nombra quién sí. Pausar se rechaza mientras la operación corre y se rechaza en una terminal; preguntar otra vez no hace nada. `resumeOperation` pregunta la misma lista. Las dos dejan una línea `{ state, by, at }` en el historial de la operación.
+- **La puerta humana y sus cuatro gestos.** La puerta se abre **solo** cuando la autoridad disponible no cubre lo exigido; una operación cuyo grant ya lo cubre corre sin preguntar. Lo que recibe la persona lleva el costo (`requirements` y `cost`), la salida (`exit`) y `publicByDefault: false` —publicar es opcional—. Y cuando la operación declara un agente, se rechaza una aprobación cuyo `by` sea ese agente: el kernel deja escrito que el agente no puede consentir por la persona, y la operación vuelve a `needs_human_decision`. Todo rechazo lleva la salida. Sin `ask` no hay aprobación, así que la operación se detiene y pregunta.
+- **Continuidad por recibos.** `resumeFromReceipts(receipts, agreement)` recibe recibos más un acuerdo y contesta tres preguntas: cuál fue el último estado verificado, cuál es la siguiente acción y si hace falta que entre una persona. Los recibos que no verifican se descartan, y el número se reporta. Retomar lo acordado **no** abre la puerta. Tres cosas sí la abren: un recibo verificado de una acción fuera del acuerdo, un cambio en el alcance, la cantidad, el techo o el estado de la siguiente acción, y un último recibo de esa acción que fuera `blocked`, `paused` o `needs_human_decision`. No hay documento de traspaso: cualquier agente, en cualquier host, continúa desde los recibos.
+- **Un modelo de decisión opcional que solo aconseja.** Si le das al kernel un `io.decide`, puede mostrar una sugerencia a la persona —solo cuando la probabilidad supera `decideThreshold`, 0.9 por defecto— pegada al payload de la puerta y marcada como venida del modelo de decisión. Nunca aprueba: la puerta siempre la contesta la persona, y sin ese sí la capability no corre. Un modelo que lanza, expira, miente o simplemente no está deja la puerta intacta. El kernel es idéntico sin él.
 
-> **HOY — frontera actual del repositorio.** Los puntos siguientes son registros públicos actuales o comportamientos ejercitados localmente. El runtime de continuidad descrito más adelante no existe hoy.
+## Usarlo como laboratorio
 
-Estas son las afirmaciones públicas actuales respaldadas por el repositorio y RUN 05:
+Para pilotos, experimentos y casos de estudio, el registro público está en [`experiments/`](./experiments/):
 
-- **Registro histórico del release:** [`v0.1.1-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.1-kernel) reporta 16/16 tests del kernel al publicar.
-- **Resultado de RUN 05 (posterior a v0.1.1; no es un tagged release):** el árbol actual incluye la corrección de provenance de la decisión humana y pasa localmente 19/19 tests del kernel y 1/1 test adversarial de x402. No es un nuevo tagged release.
-- [`src/`](./src/) es el **operation kernel de hoy**: una primitiva local de ejecución para una operación acotada. Chequea authority, muestra opcionalmente una decisión, hace `perform` una vez, verifica por separado y devuelve un receipt estructurado. No es un runtime universal, orchestrator ni continuation engine.
-- La authority se chequea antes de permitir que una capability haga `perform`. Un gate humano ausente o no decisivo queda como `human_gate_no_decision`; un `approved: false` explícito queda como `human_gate_rejected`; una aprobación explícita se preserva como `human_gate_approved` en receipts terminales.
-- El kernel devuelve un receipt estructurado. No ofrece persistencia durable automática; el caller es responsable de persistirlo si la necesita.
+- [`000-genesis-hive`](./experiments/000-genesis-hive/) — los primeros cuerpos y los primeros recibos.
+- [`001-operator-professor-loop`](./experiments/001-operator-professor-loop/RUN.md) — un loop Operator ↔ Professor, con su evidencia y su arbitraje independiente.
+- [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) — una slice anterior de x402 / Stellar en testnet, con recibos y un fallo de verificación real conservado como evidencia.
+- [`005`](./experiments/005/RUN.md) — la evaluación final de RUN 05, **CLOSED** dentro de su alcance local/offline declarado, con las lecturas ciegas y los reportes del verificador que la cerraron.
 
-**Términos de este repositorio:** Una **capability** es una acción disponible; un **grant** es la authority para un efecto; un **human gate** es la superficie de decisión que el kernel consulta cuando la authority no basta, no un workflow completo de aprobación autenticada; **provenance** registra de dónde viene un resultado o decisión; un **receipt** es el objeto estructurado que devuelve la operación, no persistencia durable automática; un **criterion** es el estándar que gobierna la operación.
+El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), y es el único lugar que conoce x402, Stellar o USDC: un ejemplo de capability económica, no la identidad de Vespi. **Un pago x402 live nuevo está hoy NO VERIFICADO:** la respuesta 402 real, la firma, el facilitator, el settlement y la verificación en Horizon siguen sin verificarse en la corrida local actual. El experimento 002 es evidencia histórica de testnet, no evidencia actual de settlement live.
 
-- [`demo/x402/`](./demo/x402/) es el único lugar que conoce x402, Stellar y USDC. Es un ejemplo de capability económica, no la identidad de Vespi. El adapter chequea los términos efectivos del 402 antes de crear el payload contra el efecto fijo declarado de 0.01 USDC y el grant de la operación.
-- [`experiments/`](./experiments/) conserva corridas y evidencia públicas. [`001`](./experiments/001-operator-professor-loop/RUN.md) registra un loop Operator↔Professor; [`002`](./experiments/002-x402-slice1/RUN.md) registra una slice anterior de x402/Stellar en testnet con receipts y un fallo de verificación conservado; [`005`](./experiments/005/RUN.md) registra la evaluación final de RUN 05, **CLOSED** dentro de su alcance local/offline declarado.
+## Cómo se construyó
 
-## Cómo piensa el kernel sobre authority y operaciones
+Toda afirmación en un repositorio así necesita un recibo, y la que no lo tiene no entra. Estas son las revisiones que formaron a Vespi, cada una con qué dio:
 
-La operación declara los efectos que requiere. El chequeo de authority compara esos requisitos con los grants disponibles. No se llama a una capability hasta que los requisitos sean suficientes o una persona la apruebe explícitamente. Solo entonces ocurre `perform`, y el resultado se verifica y se devuelve como receipt.
+- **Raven y el ecosistema Stellar.** Raven, el MCP sobre el directorio de proyectos del ecosistema, estuvo activo durante toda la construcción: sin él no se habrían podido hacer x402 y Stellar, y el estudio que habilitó mostró que lo que faltaba no era otro proyecto de pagos sino un kernel que coordine los que ya existen. La ausencia de una herramienta no se compensa suponiendo lo que habría respondido.
+- **El informe de OpenAI.** [OpenAI — Hugging Face Incident, Technical Report](https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf) dio la dirección de que una operación se autoriza antes de actuar y no se improvisa mientras actúa: los agentes sí se organizan, lo que salió mal fue el canal no autorizado y la credencial compartida, una tarea sin salida legítima empuja al agente fuera del borde, y la verificación tiene que vivir fuera del agente.
+- **Ultrareview.** [La documentación de Ultrareview](https://code.claude.com/docs/en/ultrareview) dio a la puerta humana sus cuatro gestos: mostrar el costo primero y que lo confirme la persona, nunca dejar que el agente dé el consentimiento que le toca a la persona, mantener lo que sale a lo público opcional y apagado, y nombrar la salida en todo rechazo.
+- **La mosca.** El [conectoma de Eon Systems del cerebro de la mosca adulta](https://github.com/eonsystemspbc/fly-brain) muestra conducta que sale de la estructura, sin entrenamiento y sin recompensa, que es la razón por la que el kernel gobierna con estructura —acuerdo, autoridad otorgada, verificación separada— y no depende del modelo. Entra como relato y nada más: Vespi no es un cerebro y no aprende.
+- **Las skills.** La disciplina `writing-skills` de [Superpowers](https://github.com/obra/superpowers) (MIT, con crédito) le dio al kernel su rojo primero: un test que falla antes de la característica, y un badge que dice lo que pasó de verdad en vez de lo que estaría bien que hubiera pasado. El estudio aparte del ecosistema de skills dio la regla de que una skill es una capability como cualquier otra y entra solo con procedencia escrita: un trabajo que ya está en la cola del `0.1.4`.
 
-La frontera es deliberadamente pequeña:
+Las revisiones que lanza la persona y no el agente —una corrida de ultrareview sobre este kernel, una revisión de seguridad— entran a este repositorio con su corrida, su reporte, su commit o su registro de sesión adjunto, o no entran.
 
-- `required()` dice qué intends hacer.
-- `authority` dice qué puede hacer la operación, incluido el destino cuando un grant es específico.
-- el gate humano es una superficie de decisión, no un sustituto de la disponibilidad de una capability.
-- `perform()` no es evidencia de éxito; la verificación es separada.
-- un receipt devuelto no es durable automáticamente.
+## La búsqueda en el ecosistema
 
-RUN 05 afiló estas fronteras sin convertirlas en leyes universales: la authority debe restringir el side effect real antes de que ocurra; un receipt no puede atribuir una decisión humana que no ocurrió; un receipt estructurado no es persistencia durable; disponibilidad de capability no es authority; un criterio alcanzable no es necesariamente un criterio cargado; y las superficies de estado durable pueden divergir.
+Hicimos esta búsqueda para ofrecer algo nuevo y no repetir lo que otros proyectos ya hacen. Cada proyecto de abajo se leyó en su propio repositorio y se confirmó el **2026-09-28**; su estado cambia, así que la fecha es parte de la afirmación. Crédito, nunca comparación despectiva: son buenos proyectos y en su propia pieza la mayoría nos va por delante.
 
-## El ejemplo de capability: x402 y Stellar
+- [REAPP](https://github.com/mks044/reapp-poc) — mandatos firmados para pagos de agentes, validados en siete puertas y ejecutados en un registro de Soroban. Llegó por su lado a la misma forma que este kernel, y es lo más cerca que hay en el ecosistema de lo que construye el `0.1.3`: autoridad antes del efecto. No muestra licencia en el repositorio, así que se llama como servicio y no se injerta.
+- [Stellar AI Agent Kit](https://github.com/JoseCToscano/stellar-mcp) — convierte cualquier contrato de Soroban en un servidor MCP, y su CLI de contratos de política es autoridad en cadena. Es lo que vuelve «Vespi por MCP» algo más que un deseo.
+- Trustless Work, Soroban Governor, Teken, Trustful y Chaincerts — el escrow por hitos, la gobernanza colectiva auditada, la multifirma, la reputación verificable y las credenciales verificables ya existen en Stellar. Vespi no los reconstruye: son sus capabilities.
+- Eascrow se apagó en 2026-07 después de 147.950 USD en fondos. Un bloque solo no sostiene un producto; lo que lo sostiene es que alguien lo use en una operación real.
 
-x402/Stellar es la primera capability pagada/económica ejercitada, **no la identidad de Vespi**. Es donde una operación puede encontrar una frontera económica real sin que el kernel tenga que conocer pagos.
+Lo que sale de ahí, dicho como lo que vimos y con su fecha: el ecosistema es rico en piezas y ninguna pieza coordina una operación entre varias personas y organizaciones de principio a fin. Ese hueco es donde se sienta Vespi, y es una afirmación sobre un paisaje que se mueve, no una ley.
 
-La evidencia actual es **VERIFICACIÓN LOCAL / OFFLINE** para una ruta pre-firma acotada: versión, esquema exacto, Stellar testnet, contrato USDC, destinatario configurado, precio exacto de 0.01 USDC, timeout seguro, flujo de autorización patrocinado y grant efectivo. El test adversarial demuestra, offline, que ofertas desviadas no llegan a `createPaymentPayload` mientras que la oferta exacta sí llega.
+## Lo que todavía no hace
 
-Un pago x402 live nuevo es **CURRENT LIVE NOT VERIFIED**. La respuesta 402 real, la firma, el facilitator, el settlement y la verificación Horizon siguen **NOT VERIFIED** en la corrida local actual. El experimento 002 aporta **EVIDENCIA HISTÓRICA DE TESTNET**, no evidencia actual de settlement live.
+- **El `0.1.4` ya está acotado y no está construido:** acceso de emergencia otorgado por adelantado y ejercido con recibo inmediato, un verificador de pruebas de conocimiento cero, procedencia de skills y x402 en vivo. No están en el `0.1.3` porque el `0.1.3` construye solo lo que comparten todos los proyectos.
+- **El recibo no es durable por sí solo.** El kernel devuelve un recibo; quien lo llama decide dónde vive. El anclaje externo es lo que lo hace encontrable después en un explorador público, y solo una vez que la verificación lo confirma.
+- **No hay runtime cross-host, scheduler, migration engine ni quota manager.** La semántica de continuación está aquí; la maquinaria que despierta el proceso es del host, y aquí no existe.
+- **Las seis funciones del autonomy gap no están construidas**, y tampoco hay un protocolo estable, producción lista ni cumplimiento regulatorio.
+- **El cómo de un recibo retomable no está decidido todavía:** dónde vive y qué necesita un agente de otro host para continuar sin traspaso.
 
-## Experimentos y evidencia
+## Términos de este repositorio
 
-El registro público pertenece al objeto. Los experimentos conservan receipts, fallos, lecturas ciegas, verificaciones independientes y preguntas abiertas a la vista. Un método, benchmark o skill first-party no se convierte en ley solo por aparecer en este repositorio.
-
-La pregunta sigue abierta: ¿cuánta de la continuidad observada pertenece a Vespi y cuánta se reduce a buen estado, policy, routing, capabilities del host y verificación? No se presupone el residuo.
+Una **capability** es una acción disponible. Un **grant** es la autoridad para un efecto. Una **puerta humana** es la superficie de decisión que el kernel consulta cuando la authority no basta: no es un workflow completo de aprobación autenticada, ni un sistema de firmas. La **provenance** registra de dónde viene un resultado o una decisión. Un **recibo** es el objeto estructurado que devuelve la operación, no persistencia durable automática. Un **criterion** es el estándar que gobierna la operación.
 
 ## LA APUESTA
 
@@ -281,25 +289,7 @@ La apuesta es una operación que conserve significado más allá de la vida de u
 
 ### Continuidad
 
-Imaginamos una operación capaz de sobrevivir:
-
-- cambios de modelo;
-- cambios de host;
-- agotamiento de cuota o capacidad;
-- interrupciones;
-- capability failures;
-- reconstrucción desde estado durable;
-
-conservando suficientemente:
-
-- el goal;
-- la authority;
-- la evidencia;
-- la provenance;
-- el verification state;
-- las condiciones de intervención humana.
-
-Un modelo, host o proveedor puede desaparecer sin que eso implique necesariamente que la operación dejó de existir. **Dirección, no implementación actual:** Vespi poseería la semántica de continuación; el host/runtime podría encargarse de despertar el proceso. El repositorio actual no contiene un runtime cross-host, scheduler, migration engine ni quota manager.
+Una operación que sobrevive cambios de modelo, cambios de host, agotamiento de cuota o capacidad, interrupciones, capability failures y reconstrucción desde estado durable, conservando el goal, la authority, la evidencia, la provenance, el verification state y las condiciones de intervención humana. Un modelo, host o proveedor puede desaparecer sin que eso implique que la operación dejó de existir. **Dirección, no implementación actual:** Vespi posee la semántica de continuación; el host puede encargarse de despertar el proceso. `resumeFromReceipts` es la primera pieza de esa semántica, no toda ella.
 
 ### Una interrupción mecánica no es una interrupción humana
 
@@ -309,73 +299,52 @@ Un modelo, host o proveedor puede desaparecer sin que eso implique necesariament
 
 > **La autonomía no es cuánto tiempo puede operar Vespi sin un humano. Es cuánto trabajo legítimo puede completar sin consumir atención humana innecesaria.**
 
-Un límite mecánico no debería consumir automáticamente la atención de una persona. Esperar, preguntar o detenerse puede ser el resultado correcto de una operación.
-
-### Semántica de continuación
-
-Eventualmente, la dirección incluye poder:
-
-- hacer checkpoint de lo que importa;
-- determinar qué sigue autorizado;
-- seleccionar otra capability suficiente cuando corresponda;
-- continuar o esperar según policy;
-- verificar;
-- preservar receipts y provenance;
-- escalar solo cuando aparezca un umbral humano real.
-
-Estas son direcciones a investigar, no capacidades actuales.
+Esperar, preguntar o detenerse puede ser el resultado correcto de una operación.
 
 ### Economía de modelos y capabilities
 
 > **Usa la inteligencia suficiente más barata. La escalación debe ganarse.**
 
-Una capability de Vespi puede ser local, host-native, external o paid. Su forma económica no define Vespi. x402/Stellar es la primera capability pagada/económica ejercitada, no la identidad de Vespi.
+Una capability puede ser local, host-native, external o paid. Su forma económica no define Vespi.
 
 ### Honestidad sobre la incertidumbre
 
 > **Todavía no sabemos cuánto de esto requiere algo específicamente llamado Vespi. Parte puede reducirse a buen estado, policy, routing, capabilities del host y verificación. Descubrir ese residuo es parte del experimento.**
 
-La apuesta puede ser fuerte y seguir siendo falsable. No inventamos “ese Vespi” para justificar la marca.
+La apuesta puede ser fuerte y seguir siendo falsable. No inventamos «ese Vespi» para justificar la marca.
 
 ## Relación con [Lore Plugin](https://github.com/andresanemic/lore-plugin)
 
 > **Lore Plugin prepara el terreno. Vespi opera sobre él.**
 
-**Hoy:** Vespi es un repositorio técnico separado. [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_es.md) y [Lore Plugin](https://github.com/andresanemic/lore-plugin) son parte de su genealogía y su criterio. Todavía no existe una skill first-party `vespi` publicada.
-
-En la división de trabajo prevista, Lore Plugin debe aportar el suelo durable que una operación necesita: goal/state, el criterion y owner relevantes, la frontera de authority y evidence/provenance. Vespi opera dentro de esos límites; no reemplaza Lore Plugin ni crea un segundo camino de aprendizaje o escritura.
-
-**Dirección, no implementación actual:** `vespi` debería convertirse eventualmente en una skill first-party de Lore Plugin, heredar su modelo de governance y authority y conservar ese único camino de aprendizaje y escritura.
+Vespi es un repositorio técnico separado. [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_es.md) y [Lore Plugin](https://github.com/andresanemic/lore-plugin) son parte de su genealogía y de su criterio. En la división de trabajo prevista, Lore Plugin aporta el suelo durable que una operación necesita —goal y estado, el criterion y owner relevantes, la frontera de authority y evidence/provenance— y Vespi opera dentro de esos límites. No reemplaza a Lore Plugin ni crea un segundo camino de aprendizaje o escritura.
 
 ## Origen, catalizador, presión y horizonte
 
 - **ORIGEN: [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_es.md) + [Lore Plugin](https://github.com/andresanemic/lore-plugin).** Vespi crece del trabajo sobre criterio, continuidad y authority operacional, no de un protocolo de pagos.
 - **CATALIZADOR / PRESIÓN PÚBLICA ACTUAL: Find Your Way + Tellus.** Son contexto y presión de evaluación. No se reclama ownership, sponsorship, endorsement, partnership, funding ni afiliación oficial.
 - **PRIMERA PRESIÓN ECONÓMICA EJERCITADA: x402 + Stellar testnet.** El pago es una presión que expuso preguntas reales de authority; no es el origen del proyecto.
-- **HORIZONTE: Meridian / HackMeridian 2026.** El [evento HackMeridian](https://meridian.stellar.org/event-details) es contexto y horizonte público. No se reclama ownership, sponsorship, endorsement, partnership, funding ni afiliación oficial.
+- **HORIZONTE: Meridian / HackMeridian 2026.** El [evento HackMeridian](https://meridian.stellar.org/event-details) es contexto y horizonte público, no una reclamación de ownership, sponsorship, endorsement, partnership, funding ni afiliación oficial.
 
-## NO VERIFICADO: afirmaciones externas y de continuidad
-
-RUN 05 está **CLOSED** dentro de su alcance de evaluación local/offline declarado. Estas no son afirmaciones actuales:
+## NO VERIFICADO
 
 - un pago x402 live nuevo, una firma, facilitator, settlement o verificación Horizon;
-- persistencia durable automática de receipts o memoria persistente;
+- persistencia durable automática de recibos o memoria persistente;
 - un runtime general de orchestration, scheduler universal, daemon, migration engine o quota manager;
 - production readiness, cumplimiento regulatorio o un protocolo estable;
-- una skill first-party `vespi` publicada;
-- un claim de que Vespi es un agente de pagos crypto, un producto de Tellus o un proyecto creado por un hackathon.
+- una afirmación de que Vespi es un agente de pagos crypto, un producto de Tellus, un proyecto creado por una hackatón, o una app respaldada por la Stellar Development Foundation o por una universidad.
 
 ## Quickstart / ruta de evaluación
 
-**Nivel 1: kernel, nada externo.** Clona el repositorio y ejecuta:
+**Nivel 1 — kernel, nada externo.** Clona y ejecuta:
 
 ```bash
-node --test
+node --test test/*.test.js
 ```
 
-La suite cubre operación, authority acotada, provenance del gate humano, fronteras de capability, verificación y receipts. No requiere wallet, fondos ni red.
+La suite cubre la operación, la authority acotada con reloj, presupuesto y destino, la aprobación de varias personas, la tarea imposible, la pausa, los cuatro gestos de la puerta humana, los recibos con huella SHA-256 y cobertura real, los tres estados del anclaje y la continuidad por recibos. `node --test` a secas también corre la suite de la demo x402. No requiere wallet, fondos ni red.
 
-**Nivel 2: demo acotada de x402 en testnet.** Consulta [`demo/x402/README.md`](./demo/x402/README.md). La ruta pagada requiere una cuenta testnet fondeada, trustline USDC, receptor, variables de entorno y acceso a red. La ruta de rechazo puede detenerse antes de contactar el endpoint. La corrida local actual no certifica un pago live nuevo.
+**Nivel 2 — demo acotada de x402 en testnet.** Consulta [`demo/x402/README.md`](./demo/x402/README.md). La ruta pagada requiere una cuenta testnet fondeada, trustline USDC, receptor, variables de entorno y acceso a red. La ruta de rechazo se detiene antes de contactar el endpoint. La corrida local actual no certifica un pago live nuevo.
 
 ## ¿Por qué publicarlo tan temprano?
 
@@ -391,6 +360,6 @@ Digital Art Director & Creative Developer trabajando entre agentes de IA, Web3, 
 
 ---
 
-[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experimentos](./experiments/) · [Release v0.1.1-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.1-kernel) · [Licencia MIT](./LICENSE)
+[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experimentos](./experiments/) · [Última etiqueta v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Licencia Apache 2.0](./LICENSE) · [NOTICE](./NOTICE)
 
 </details>
