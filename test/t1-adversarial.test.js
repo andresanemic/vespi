@@ -117,7 +117,7 @@ test('T1-C1: a receipt whose digest does not verify is discarded, and it is coun
   const good = receipt.buildReceipt(spec());
   const bad = JSON.parse(JSON.stringify(good));
   bad.status = 'not_verified';
-  const out = resumeFromReceipts([good, bad], { approved: [{ action: 'op-1' }] });
+  const out = resumeFromReceipts([good, bad], { approved: [{ action: 'op-1', localReversible: true }] }, { verifyLocal: () => true });
   assert.equal(out.discarded, 1);
   assert.equal(out.needsPerson, false);
 });

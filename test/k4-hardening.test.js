@@ -12,8 +12,8 @@ const receiptFor = (goal, status) => buildReceipt({
 
 for (const status of ['blocked', 'paused', 'needs_human_decision']) {
   test(`K4-H1: a ${status} receipt for the next action returns it to the person`, () => {
-    const agreement = { approved: [{ action: 'uno' }, { action: 'dos' }], workingMode: 'cercana' };
-    const out = resumeFromReceipts([receiptFor('uno', 'verified'), receiptFor('dos', status)], agreement);
+    const agreement = { approved: [{ action: 'uno', localReversible: true }, { action: 'dos' }], workingMode: 'cercana' };
+    const out = resumeFromReceipts([receiptFor('uno', 'verified'), receiptFor('dos', status)], agreement, { verifyLocal: () => true });
     assert.equal(out.needsPerson, true);
     assert.equal(out.nextAction, null);
     assert.equal(out.lastState, status);

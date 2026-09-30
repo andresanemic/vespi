@@ -329,7 +329,10 @@ test('RS1.13 sin ningún destino nombrado por la autoridad, la operación vuelve
   assert.deepEqual(cap.required(op), { spend: [] });
   const res = await runOperation(op, cap, { verify: crearVerificador({ destino: raiz('nadie') }), ask: async () => ({ approved: false, by: 'andres' }) });
   assert.equal(res.status, STATES.NEEDS_DECISION);
-  assert.equal(res.receipt.detail, undefined);
+  assert.equal(res.receipt.authority.approval, 'human_gate_rejected');
+  // Antes este recibo volvía a la persona sin decir por qué (T2-R1: la razón que `sufficient()`
+  // calculaba se perdía). El rechazo ahora nombra su causa.
+  assert.match(res.receipt.detail, /no spend requirement declared/);
   assert.equal(typeof res.receipt.exit, 'string');
 });
 

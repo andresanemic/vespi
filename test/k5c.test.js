@@ -24,7 +24,8 @@ const verifiedReceipt = (action) => buildReceipt({
 test('K5c-1: the resume happy path answers in English', () => {
   const out = resumeFromReceipts(
     [verifiedReceipt('step-1')],
-    { approved: [{ action: 'step-1' }, { action: 'step-2' }] },
+    { approved: [{ action: 'step-1', localReversible: true }, { action: 'step-2' }] },
+    { verifyLocal: () => true },
   );
   assert.equal(out.nextAction.action, 'step-2');
   assert.equal(out.needsPerson, false);
@@ -127,8 +128,9 @@ test('K5c-10: a receipt from runOperation resumes the agreement it names', async
   const op = createOperation({ goal: 'demo', action: 'pay-invoice', authority: grantSpend('USDC:test', '500000', 'RECEIVER') });
   const res = await runOperation(op, SPEND_CAP, { verify: verifyOk });
   const out = resumeFromReceipts(
-    [res.receipt],
+    [anchorReceipt(res.receipt, () => ({ network: 'stellar:testnet', txHash: 'tx-pay' }), () => true)],
     { approved: [{ action: 'pay-invoice' }, { action: 'send-report' }] },
+    { verifyExternal: (txHash, digest, network) => txHash === 'tx-pay' && typeof digest === 'string' && network === 'stellar:testnet' },
   );
   assert.equal(out.discarded, 0);
   assert.equal(out.needsPerson, false);

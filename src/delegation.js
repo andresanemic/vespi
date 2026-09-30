@@ -15,6 +15,40 @@ const path = require('node:path');
 const SPARK_MAX_WORDS = 20;
 const DECKS = new Set(['eno', 'entre']);
 
+// Which orchestrator a delegation belongs to is written once, here, and never leaves this module.
+// The constructor already refused `delegate === orchestrator`, but that check only ever saw the
+// value at construction: the gate in `reviewDelegation` compared the reviewer against `d.orchestrator`,
+// a plain writable field of the very object being reviewed. A delegate that holds `d` could rewrite
+// that field, appoint itself, and review its own work — and `integrateDelegation` then produced a
+// receipt that `verifyReceipt` accepted. The field stays, because the receipt and the person view are
+// built from it, but it is now a report and not the authority. The authority lives here, and a
+// delegation with no binding is refused rather than trusted (S11).
+//
+// What this does NOT buy, stated plainly: this binds the *declared* orchestrator, it does not
+// authenticate the *caller*. Nothing inside this process can tell which agent is on the other end of
+// `reviewDelegation`, so a caller that can reach the object can still pass `reviewer: 'vespi'`. That
+// half is the host's job and it is a decision, not a patch.
+const BOUND_ORCHESTRATOR = new WeakMap();
+
+function boundOrchestrator(d) {
+  try {
+    if (d !== null && typeof d === 'object') {
+      const bound = BOUND_ORCHESTRATOR.get(d);
+      if (typeof bound === 'string' && bound.length > 0) return bound;
+    }
+  } catch {
+  }
+  return null;
+}
+
+// Where identity is reported. The binding wins when there is one, so a rewritten field cannot put a
+// false orchestrator into the receipt, into the person view, or into the attribution of a card.
+function orchestratorOf(d) {
+  const bound = boundOrchestrator(d);
+  if (bound !== null) return bound;
+  return d && typeof d === 'object' ? d.orchestrator : null;
+}
+
 function digestOf(text) {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
@@ -53,7 +87,7 @@ function createDelegation({ task, medium, delegate, orchestrator }) {
   if (delegateId === orchestratorId) {
     throw new Error(`delegate and orchestrator must be different: both are ${delegateId}`);
   }
-  return push({
+  const created = push({
     task: taskText,
     taskDigest: digestOf(taskText),
     medium: normalizeMedium(medium),
@@ -72,6 +106,8 @@ function createDelegation({ task, medium, delegate, orchestrator }) {
     sparks: [],
     cards: [],
   }, 'created', orchestratorId);
+  BOUND_ORCHESTRATOR.set(created, orchestratorId);
+  return created;
 }
 
 function recordStart(d, { readTask, firstStep, rejected } = {}) {
@@ -165,7 +201,7 @@ function recordCard(d, { deck, card, perturbation } = {}) {
     card: note,
     perturbation: text(perturbation) ? perturbation : null,
     silent: true,
-    by: d.orchestrator,
+    by: orchestratorOf(d),
     at: new Date().toISOString(),
   });
   return d;
@@ -177,7 +213,7 @@ function personView(d) {
     state: d.state,
     task: d.task,
     delegate: d.delegate,
-    orchestrator: d.orchestrator,
+    orchestrator: orchestratorOf(d),
     outputDigest: d.outputDigest,
     touched: [...d.touched],
     correctionRounds: d.correctionRounds,
@@ -214,7 +250,7 @@ function delegationReceipt(d) {
     taskDigest: d.taskDigest,
     medium: { ...d.medium, material: [...d.medium.material], forbidden: [...d.medium.forbidden] },
     delegate: d.delegate,
-    orchestrator: d.orchestrator,
+    orchestrator: orchestratorOf(d),
     respondedBy: d.respondedBy,
     outputDigest: d.outputDigest,
     touched: [...d.touched],
@@ -236,10 +272,15 @@ function delegationReceipt(d) {
 
 // Nothing delegated is integrated without the orchestrator's review (R42, R44):
 // 'accepted' is reachable only from a result that is in bounds, has no pending correction
-// and was accepted by the orchestrator.
+// and was accepted by the orchestrator. The reviewer is compared against the orchestrator this
+// module bound at construction, never against a field of `d` that whoever holds `d` can rewrite (S11).
 function reviewDelegation(d, { reviewer, findings, corrections, accept } = {}) {
-  if (reviewer !== d.orchestrator) {
-    throw new Error(`only the orchestrator may review delegated work: reviewer (${String(reviewer)}) must be the orchestrator (${d.orchestrator})`);
+  const orchestrator = boundOrchestrator(d);
+  if (orchestrator === null) {
+    throw new Error(`only the orchestrator may review delegated work: this object was never bound to an orchestrator, so the review is refused instead of trusted (reviewer (${String(reviewer)}))`);
+  }
+  if (reviewer !== orchestrator) {
+    throw new Error(`only the orchestrator may review delegated work: reviewer (${String(reviewer)}) must be the orchestrator (${orchestrator})`);
   }
   d.respondedBy = reviewer;
   d.findings = list(findings);

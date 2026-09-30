@@ -4,6 +4,7 @@ const assert = require('node:assert');
 
 const { buildReceipt } = require('../src/receipt.js');
 const continuity = require('../src/continuity.js');
+const resumeLocal = (receipts, agreement) => continuity.resumeFromReceipts(receipts, agreement, { verifyLocal: () => true });
 const { createOperation, runOperation, STATES } = require('../src/operation.js');
 const { grantSpend } = require('../src/authority.js');
 
@@ -25,7 +26,7 @@ function receiptFor(action, status = 'verified') {
 }
 
 function agreementFor(approved, workingMode = 'normal') {
-  return { approved, workingMode };
+  return { approved: approved.map((entry) => ({ ...entry, localReversible: true })), workingMode };
 }
 
 // --- 1. Continuidad por recibos ---
@@ -36,7 +37,7 @@ test('K4.1 resume retoma: nextAction es la siguiente aprobada sin recibo verifie
     { action: 'step-1', scope: 's1' },
     { action: 'step-2', scope: 's2' },
   ], 'normal');
-  const res = continuity.resumeFromReceipts([r1], agreement);
+  const res = resumeLocal([r1], agreement);
   assert.equal(res.lastState, 'verified');
   assert.equal(res.nextAction && res.nextAction.action, 'step-2');
   assert.equal(res.needsPerson, false);
@@ -53,13 +54,13 @@ test('K4.2 descarta recibos alterados, lo dice y es independiente del orden', ()
     { action: 'step-1', scope: 's1' },
     { action: 'step-2', scope: 's2' },
   ]);
-  const res = continuity.resumeFromReceipts([bad, r1], agreement);
+  const res = resumeLocal([bad, r1], agreement);
   assert.equal(res.discarded, 1);
   assert.match(res.reason, /discard/i);
   assert.equal(res.nextAction && res.nextAction.action, 'step-2');
   assert.equal(res.needsPerson, false);
   // orden inverso da lo mismo
-  const res2 = continuity.resumeFromReceipts([r1, bad], agreement);
+  const res2 = resumeLocal([r1, bad], agreement);
   assert.deepEqual(
     { next: res2.nextAction && res2.nextAction.action, discarded: res2.discarded, needs: res2.needsPerson },
     { next: 'step-2', discarded: 1, needs: false },
@@ -68,7 +69,7 @@ test('K4.2 descarta recibos alterados, lo dice y es independiente del orden', ()
 
 test('K4.3 todo completo: nextAction nula sin pedir persona', () => {
   const agreement = agreementFor([{ action: 'a', scope: 's' }, { action: 'b', scope: 's' }]);
-  const res = continuity.resumeFromReceipts([receiptFor('a'), receiptFor('b')], agreement);
+  const res = resumeLocal([receiptFor('a'), receiptFor('b')], agreement);
   assert.equal(res.nextAction, null);
   assert.equal(res.needsPerson, false);
   assert.match(res.reason, /complet/i);
@@ -85,7 +86,7 @@ test('K4.4 revalidación: si lo siguiente cambia amount/scope/ceiling/status pid
       { action: 'step-1', scope: 's1' },
       { action: 'step-2', scope: 's2', changes },
     ]);
-    const res = continuity.resumeFromReceipts([receiptFor('step-1')], agreement);
+    const res = resumeLocal([receiptFor('step-1')], agreement);
     assert.equal(res.needsPerson, true, `changes=${JSON.stringify(changes)}`);
     assert.equal(res.nextAction, null, `changes=${JSON.stringify(changes)}`);
     assert.equal(typeof res.reason, 'string');
@@ -97,7 +98,7 @@ test('K4.5 retomar lo acordado no abre la puerta (solo cambiar lo acordado la ab
     { action: 'step-1', scope: 's1' },
     { action: 'step-2', scope: 's2' },
   ]);
-  const res = continuity.resumeFromReceipts([receiptFor('step-1')], agreement);
+  const res = resumeLocal([receiptFor('step-1')], agreement);
   assert.equal(res.needsPerson, false);
   assert.equal(res.nextAction && res.nextAction.action, 'step-2');
 });
