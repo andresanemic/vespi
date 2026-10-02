@@ -173,7 +173,11 @@ function verifyInvocation(transaction, expected) {
   if (expected.authDigest && actualAuthDigest !== expected.authDigest) {
     return { verified: false, reason: 'authorization digest does not match the current payload' };
   }
-  return { verified: true, checks: { invocation: true, authorization: true, contract: expected.assetContract, function: 'transfer' } };
+  return {
+    verified: true,
+    checks: { invocation: true, authorization: true },
+    facts: { contract: expected.assetContract, function: 'transfer' },
+  };
 }
 
 function verifyPreparedTransaction(transaction, expected) {
@@ -187,12 +191,16 @@ function verifyPreparedTransaction(transaction, expected) {
   return {
     verified: true,
     checks: { ...result.checks, prepared: true },
+    facts: result.facts,
     reason: 'prepared transaction matches declared effect',
   };
 }
 
-function failure(reason, checks = {}) {
-  return { verified: false, checks, reason };
+// `checks` holds only booleans: the kernel counts a check as covered when it is `true` and lists
+// anything else in `notCovered`. Values a reader may want (a hash, a counter, an amount) go in
+// `facts`, which is not coverage.
+function failure(reason, checks = {}, facts = {}) {
+  return { verified: false, checks, facts, reason };
 }
 
 async function verifySettlement(evidence, options) {
@@ -227,9 +235,9 @@ async function verifySettlement(evidence, options) {
   const txHash = evidence.txHash.trim().toLowerCase();
   const txn = await horizon.transactions().transaction(txHash).call();
   if (typeof txn.hash !== 'string' || txn.hash.trim().toLowerCase() !== txHash) {
-    return failure('Horizon transaction hash does not match requested hash', { transaction: txHash });
+    return failure('Horizon transaction hash does not match requested hash', {}, { transaction: txHash });
   }
-  if (txn.successful !== true) return failure('transaction not successful', { transaction: txHash });
+  if (txn.successful !== true) return failure('transaction not successful', {}, { transaction: txHash });
   // In the Horizon SDK `ledger` is the HAL link (a function); the sequence number is `ledger_attr`.
   const currentLedger = Number(txn.ledger_attr ?? txn.ledger);
   if (!Number.isSafeInteger(currentLedger) || currentLedger < 0) {
@@ -244,10 +252,10 @@ async function verifySettlement(evidence, options) {
     requireAuthDigest: true,
     currentLedger,
   });
-  if (!invocation.verified) return failure(invocation.reason, { transaction: txHash, invocation: false });
+  if (!invocation.verified) return failure(invocation.reason, { invocation: false }, { transaction: txHash });
 
   const operations = await horizon.operations().forTransaction(txHash).call();
-  if (operations._links && operations._links.next) return failure('Horizon operation page is not complete', { transaction: txHash });
+  if (operations._links && operations._links.next) return failure('Horizon operation page is not complete', {}, { transaction: txHash });
   const changes = [];
   for (const operation of operations.records || []) {
     const full = await horizon.operations().operation(operation.id).call();
@@ -256,29 +264,31 @@ async function verifySettlement(evidence, options) {
 
   const assetChanges = changes.filter((change) => change.asset_code === 'USDC' && change.asset_issuer === issuer);
   const recipientChanges = assetChanges.filter((change) => change.to === payTo);
-  const checks = {
+  const checks = { ...invocation.checks };
+  const facts = {
+    ...invocation.facts,
     transaction: txHash,
-    ...invocation.checks,
     changesSeen: changes.length,
     assetChanges: assetChanges.length,
     recipientChanges: recipientChanges.length,
   };
   if (assetChanges.length !== 1 || recipientChanges.length !== 1) {
-    return failure('expected exactly one USDC transfer to recipient', checks);
+    return failure('expected exactly one USDC transfer to recipient', { ...checks, transfer: false }, facts);
   }
 
   const transfer = recipientChanges[0];
   if (transfer.from !== assetContract && transfer.from !== payer) {
-    return failure('transfer source is neither the asset contract nor the payer', { ...checks, source: false });
+    return failure('transfer source is neither the asset contract nor the payer', { ...checks, source: false }, facts);
   }
   const actual = toAtomic(transfer.amount);
   if (actual === null || actual !== expected) {
-    return failure('transfer amount does not match exact amount', { ...checks, amountAtomic: actual?.toString() });
+    return failure('transfer amount does not match exact amount', { ...checks, exactAmount: false }, { ...facts, amountAtomic: actual?.toString() });
   }
 
   return {
     verified: true,
-    checks: { ...checks, transfer: true, payer: true, source: true, exactAmount: true, amountAtomic: actual.toString() },
+    checks: { ...checks, transfer: true, payer: true, source: true, exactAmount: true },
+    facts: { ...facts, amountAtomic: actual.toString() },
     reason: 'settlement matches exact declared effect',
   };
 }

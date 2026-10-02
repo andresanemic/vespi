@@ -136,6 +136,46 @@ test('accepts one exact SAC transfer tied to the expected payer', async () => {
   assert.equal(result.checks.invocation, true);
 });
 
+// The kernel reads a check as covered only when it is `true`, and lists anything else in
+// `notCovered` by name. A hash, a function name or a counter inside `checks` therefore showed up as
+// "not covered" on a receipt that had verified (live run, 2026-10-02). Values travel as `facts`.
+function assertChecksAreBooleans(result) {
+  for (const [key, value] of Object.entries(result.checks || {})) {
+    assert.equal(typeof value, 'boolean', `checks.${key} must be a boolean, got ${typeof value}`);
+  }
+}
+
+test('a verified settlement reports only booleans as checks and keeps the values as facts', async () => {
+  const result = await verifySettlement(evidence('tx-exact'), options(fakeHorizon([change()])));
+  assert.equal(result.verified, true);
+  assertChecksAreBooleans(result);
+  assert.equal(result.facts.transaction, 'tx-exact');
+  assert.equal(result.facts.contract, ASSET_CONTRACT);
+  assert.equal(result.facts.function, 'transfer');
+  assert.equal(result.facts.amountAtomic, '100000');
+  assert.equal(result.facts.recipientChanges, 1);
+});
+
+test('a refused settlement also reports only booleans as checks', async () => {
+  const result = await verifySettlement(evidence('tx-two'), options(fakeHorizon([change(), change()])));
+  assert.equal(result.verified, false);
+  assertChecksAreBooleans(result);
+});
+
+test('a prepared transfer reports only booleans as checks and keeps the values as facts', () => {
+  const result = verifyPreparedTransaction(decodedTransfer(), {
+    payer: PAYER,
+    payTo: PAY_TO,
+    amount: '100000',
+    assetContract: ASSET_CONTRACT,
+    authDigest: EXPECTED_AUTH_DIGEST,
+  });
+  assert.equal(result.verified, true);
+  assertChecksAreBooleans(result);
+  assert.equal(result.facts.contract, ASSET_CONTRACT);
+  assert.equal(result.facts.function, 'transfer');
+});
+
 test('accepts the exact prepared transfer before settlement', () => {
   const result = verifyPreparedTransaction(decodedTransfer(), {
     payer: PAYER,
