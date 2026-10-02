@@ -239,11 +239,11 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 > **La unidad no es el agente. La unidad es la operación.**
 
-Vespi es un pequeño experimento público de continuidad operacional bajo autoridad acotada, construido en público por **Andrés Peña Mellado**. Este repositorio es su **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Es experimental, y conserva lo que existe, lo que falla, lo que cambia y lo que sigue deliberadamente sin reclamar.
+Vespi es un experimento público de continuidad operacional bajo autoridad acotada, construido en público por **Andrés Peña Mellado**. Este repositorio es su **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Es experimental, y conserva lo que existe, lo que falla, lo que cambia y lo que sigue deliberadamente sin reclamar.
 
 ## En un minuto
 
-Este es el problema, en llano.
+Este es el problema:
 
 Cuando trabajas con un agente, hay un momento en que la sesión termina y la siguiente tiene que empezar. Lo que sobrevive suele ser un resumen. Un resumen no dice **quién autorizó esto**, **cuánto**, **hasta cuándo**, **a quién**, ni **si lo que debía pasar de verdad pasó**. Eso no son detalles de un resumen: es la operación.
 
@@ -301,7 +301,7 @@ Dentro de `runOperation` el destino es el `to` del grant, así que el kernel dec
 
 ## Los proyectos funcionales
 
-Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, cada uno sobre **datos sintéticos**, sin red y sin una institución real detrás. El estado de abajo se leyó el **2026-10-02** corriendo la suite de cada proyecto contra el kernel instalado hoy (el candidato `0.1.3`).
+Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, cada uno sobre **datos ficcionados**. El estado de abajo se leyó el **2026-10-02** corriendo la suite de cada proyecto contra el kernel instalado hoy (el candidato `0.1.3`).
 
 | # | Proyecto | Qué es | Estado hoy | Su suite hoy |
 |---|---|---|---|---|
@@ -317,7 +317,7 @@ Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que 
 | 10 | **Vela** | Proteger a quien dice la verdad por un canal legal: el documento queda sellado y sin publicar hasta que varios medios firmen su verificación. No filtra ni identifica a la fuente; la prueba de conocimiento cero de pertenencia está marcada como pendiente. | Acuerdo + código + pruebas | 10 / 11 |
 | — | **TEMIS** | Una capa de validación legal para acuerdos bilaterales por hitos: firmados, contrafirmados y anclados para que un tercero reconstruya lo ocurrido. La primera operación real de Lore Plugin y Vespi trabajando como una unidad. | Whitepaper + MVP en construcción: forma canónica, firmas, cadena, anclaje en Stellar testnet y reconstrucción por un tercero hechos; pagos pendientes | 106 / 106 (lo que existe) |
 
-**Cómo leer la última columna.** Nueve de los diez se construyeron el 2026-09-29 contra el corte `54c20c7` del kernel, y sus propios registros los dan en verde en ese corte; aquí no se volvió a correr. Cada uno fija por digest el kernel que consume y falla a propósito cuando el kernel se mueve, así que contra el candidato `0.1.3` parte de cada suite falla hasta que se re-ancle. Ese re-anclaje está pendiente, y también cualquier afirmación de que los diez estén listos: hoy muestran un recorrido que funciona, no un producto terminado. Todo es sintético: sin personas reales, sin dinero real, sin red y sin blockchain en los diez proyectos, y ninguno afirma cumplir ley alguna. TEMIS no es uno de los diez: es la operación que prueba la unidad.
+**Cómo leer la última columna.** Nueve de los diez se construyeron el 2026-09-29 contra el corte `54c20c7` del kernel, y sus propios registros los dan en verde en ese corte; aquí no se volvió a correr. Cada uno fija por digest el kernel que consume y falla a propósito cuando el kernel se mueve, así que contra el candidato `0.1.3` parte de cada suite falla hasta que se re-ancle. Ese re-anclaje está pendiente, y también cualquier afirmación de que los diez estén listos: hoy muestran un recorrido que funciona, no un producto terminado.
 
 ## Cómo se construyó
 
@@ -380,13 +380,7 @@ Esperar, preguntar o detenerse puede ser el resultado correcto de una operación
 
 Una capability puede ser local, host-native, external o paid. Su forma económica no define Vespi.
 
-### Honestidad sobre la incertidumbre
-
-> **Todavía no sabemos cuánto de esto requiere algo específicamente llamado Vespi. Parte puede reducirse a buen estado, policy, routing, capabilities del host y verificación. Descubrir ese residuo es parte del experimento.**
-
-La apuesta puede ser fuerte y seguir siendo falsable. No inventamos «ese Vespi» para justificar la marca.
-
-## Relación con [Lore Plugin](https://github.com/andresanemic/lore-plugin)
+## Relación con Lore Plugin
 
 > **Lore Plugin prepara el terreno. Vespi opera sobre él.**
 
@@ -402,10 +396,8 @@ Vespi es un repositorio técnico separado. [LUS](https://github.com/andresanemic
 ## NO VERIFICADO
 
 - x402 en mainnet, con más de un proveedor, o un pago live corrido por otra persona;
-- persistencia durable automática de recibos o memoria persistente;
 - un runtime general de orchestration, scheduler universal, daemon, migration engine o quota manager;
 - production readiness, cumplimiento regulatorio o un protocolo estable;
-- una afirmación de que Vespi es un agente de pagos crypto, un producto de Tellus, un proyecto creado por una hackatón, o una app respaldada por la Stellar Development Foundation o por una universidad.
 
 ## Quickstart / ruta de evaluación
 
