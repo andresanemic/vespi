@@ -216,7 +216,7 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 ---
 
-[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [0.1.3 candidate note](./docs/RELEASE_0.1.3_KERNEL.md) · [Experiments](./experiments/) · [Last tag v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Apache 2.0 License](./LICENSE) · [NOTICE](./NOTICE)
+[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [0.1.3 candidate note](./docs/RELEASE_0.1.3_KERNEL.md) · [Coordinator method](./docs/METHOD.md) · [Experiments](./experiments/) · [Last tag v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Apache 2.0 License](./LICENSE) · [NOTICE](./NOTICE)
 
 </details>
 
@@ -413,6 +413,6 @@ Digital Art Director & Creative Developer trabajando entre agentes de IA, Web3, 
 
 ---
 
-[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Nota del candidato 0.1.3](./docs/RELEASE_0.1.3_KERNEL.md) · [Experimentos](./experiments/) · [Última etiqueta v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Licencia Apache 2.0](./LICENSE) · [NOTICE](./NOTICE)
+[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Nota del candidato 0.1.3](./docs/RELEASE_0.1.3_KERNEL.md) · [Método del coordinador](./docs/METHOD.md) · [Experimentos](./experiments/) · [Última etiqueta v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Licencia Apache 2.0](./LICENSE) · [NOTICE](./NOTICE)
 
 </details>
