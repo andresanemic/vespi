@@ -17,7 +17,8 @@ function fakeHorizon(changes, page = {}, transactionPatch = {}) {
       transaction: (hash) => ({
         call: async () => {
           transactionCalls++;
-          return { hash, successful: true, ledger: 1000, envelope_xdr: 'encoded', ...transactionPatch };
+          // Real SDK shape: `ledger` is the HAL link (a function) and the number is `ledger_attr`.
+          return { hash, successful: true, ledger: async () => ({}), ledger_attr: 1000, envelope_xdr: 'encoded', ...transactionPatch };
         },
       }),
     }),

@@ -230,7 +230,8 @@ async function verifySettlement(evidence, options) {
     return failure('Horizon transaction hash does not match requested hash', { transaction: txHash });
   }
   if (txn.successful !== true) return failure('transaction not successful', { transaction: txHash });
-  const currentLedger = Number(txn.ledger);
+  // In the Horizon SDK `ledger` is the HAL link (a function); the sequence number is `ledger_attr`.
+  const currentLedger = Number(txn.ledger_attr ?? txn.ledger);
   if (!Number.isSafeInteger(currentLedger) || currentLedger < 0) {
     return failure('transaction ledger is missing or invalid');
   }
