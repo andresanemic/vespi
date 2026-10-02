@@ -32,11 +32,11 @@
 
 > **The unit is not the agent. The unit is the operation.**
 
-Vespi is a small public experiment in operational continuity under bounded authority, built in public by **Andrés Peña Mellado**. This repository is its **kernel**: dependency-free JavaScript, no framework, no daemon, no network. It is experimental, and it records what exists, what fails, what changes and what is deliberately still unclaimed.
+Vespi is the kernel of an operating system for working with AI. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepares the ground — criterion, Lore, the coordinator's method — and Vespi operates on it: authority a person grants, an operation that is verified apart from whoever ran it, and a receipt anyone can check. This repository is the **kernel**: dependency-free JavaScript, no framework, no daemon, no network. It is built in public by **Andrés Peña Mellado**, and it keeps what exists, what fails, what changes and what is deliberately still unclaimed. Before `1.0` its versions are public snapshots, not a stable protocol.
 
 ## In one minute
 
-Here is the problem, in plain words.
+Here is the problem:
 
 When you work with an agent, there is a moment when the session ends and the next one has to begin. What usually survives is a summary. A summary does not say **who allowed this to happen**, **how much**, **until when**, **to whom**, or **whether the thing that was supposed to happen actually happened**. Those are not details of a summary; they are the operation.
 
@@ -55,6 +55,57 @@ node --test test/*.test.js
 ℹ pass 203
 ℹ fail 0
 ```
+
+## What Vespi is, seen from the outside: a method
+
+A request becomes work you can check. When you ask an agent for something that is not trivial, the coordinator — the agent that took your request — follows one loop. Vespi is what makes each step of that loop something you can verify instead of something you are told.
+
+1. **Classify the ask.** A question gets findings, a task gets a verified change, and anything outward-facing gets a plan first.
+2. **Define done.** What will be observed when it is finished, and how.
+3. **Gather evidence.** Read the primary source; never write from memory.
+4. **Decide.** One recommendation. An outward act — a push, a payment, a publication — needs the person's own words behind it.
+5. **Act surgically.** The smallest correct change.
+6. **Verify by observation.** Apart from whoever built it.
+7. **Report the outcome first.** With what was skipped and what could not be verified.
+
+| In the loop | In the operation |
+|---|---|
+| Done is a named observation | The operation declares its effect and what verification will observe |
+| The outward-facing gate | Authority is proved before the border, with a clock, a budget and a destination; the agent cannot answer the gate for the person |
+| Verify apart from whoever built it | A verifier that is not the executor, and a receipt that lists what it covered and what it did not |
+| Report the outcome first, with caveats | The receipt is the report: status, evidence, `coverage`, `notCovered` |
+| A surprise returns to an earlier step | A material premise that falls opens revalidation before the operation continues |
+| Stop after three failed cycles | An impossible task comes back `blocked` with its exit, not retried blindly |
+| Resume from the checkpoint, not from a summary | Continuity by receipts: the last verified state, the next action, and whether a person must step in |
+
+**What it looked like on a real operation.** The first operation the whole system ran was building TEMIS, a layer that makes the commitments of a bilateral agreement checkable by a third party (testnet, fictional data). Before the form of the signed records was fixed, an independent advisor model reviewed the design and found four holes. The implementation went to a cheaper worker model that only saw the tests. Verification was done apart and found eight more holes that the worker's tests did not cover. A third agent, with no access to the code, rebuilt the whole record from the public Stellar history and reproduced all 22 outcomes. The suite is 106 tests, and what each receipt does not prove is written next to it. The method is written once, for the whole system, in [`docs/METHOD.md`](./docs/METHOD.md).
+
+## Vespi and Lore Plugin: an operating system for working with AI
+
+Lore Plugin and Vespi are one system with two halves.
+
+```
+  you        say what you want, in your own words
+  ──────────────────────────────────────────────────────────────────────────
+  hosts      Claude Code · Codex · OpenCode          where the agent runs
+  ──────────────────────────────────────────────────────────────────────────
+  Lore Plugin   the ground: your criterion (Lore), the routing that opens the
+                right criterion for each task, the coordinator's method, and
+                the hooks that keep a session honest
+  ──────────────────────────────────────────────────────────────────────────
+  Vespi         the kernel: operations under granted authority, verification
+                apart from execution, receipts, continuity from the last
+                verified state
+  ──────────────────────────────────────────────────────────────────────────
+  apps          what gets built on top: the functional projects below, and
+                the ones that come next
+```
+
+**What a person sees.** You say what you want. The coordinator opens the criterion that governs it, defines what done will look like, and asks you only for what is yours to decide: authority, money, publishing. It hands bounded stretches of work to other models — one that investigates, one that critiques a decision before it is fixed, one that implements — each with its own question, its own limits and a receipt. It verifies apart, writes one checkpoint in the project's `FASES.md`, and when the session ends the next one resumes from the receipts, not from a summary. You never need to know the kernel exists.
+
+**What it lets you build.** Complex applications. Who allowed what, how much, until when, and whether it actually happened stop being something a prompt promises and become a property of the system. That is what each of the projects below exercises: an intranet, a clinical record, a registry of changes, a verification between countries.
+
+**Where it stands.** Today: the kernel (`0.1.3`), the Vespi skill inside Lore Plugin, the coordinator's method, and one real operation run end to end. Next release of Lore Plugin: the whole flow in the kit — one checkpoint per project in `FASES.md`, roles dispatched through the tools the host really exposes, and the economy of an operation declared before it runs. After that: the first applications for real users, starting with web development and this project's own landing page. What is not claimed is listed further down, under *Not verified*.
 
 <a id="what-exists-today"></a>
 ## What the 0.1.3 candidate brings
@@ -94,7 +145,9 @@ Inside `runOperation` the destination is the grant's `to`, so the kernel decides
 
 ## The functional projects
 
-Vespi is a kernel, not an app. What shows it works is what gets built on top of it: ten projects, each with its **own agreement written before its code**, each running on **synthetic data** with no network and no real institution behind it. Their stage below was read on **2026-10-02** by running each project's own test suite against the kernel installed today (the `0.1.3` candidate).
+Vespi is a kernel, not an app. What shows it works is what gets built on top of it: ten projects, each with its **own agreement written before its code**, each running on **fictional data**. Their stage below was read on **2026-10-02** by running each project's own test suite against the kernel installed today (the `0.1.3` candidate).
+
+**During the judging period of the Find Your Way hackathon, several of these projects will be released so their code can be reviewed.** The aim is to show how Vespi works and what it can do, not only to tell it.
 
 | # | Project | What it is | Stage today | Its suite today |
 |---|---|---|---|---|
@@ -110,7 +163,7 @@ Vespi is a kernel, not an app. What shows it works is what gets built on top of 
 | 10 | **Vela** | Protecting whoever tells the truth through a legal channel: the document is sealed and unpublished until several media sign their verification. It neither leaks nor identifies the source; the zero-knowledge proof of membership is marked pending. | Agreement + code + tests | 10 / 11 |
 | — | **TEMIS** | A legal-validation layer for bilateral agreements by milestones: signed, counter-signed and anchored so a third party can rebuild what happened. The first real operation of Lore Plugin and Vespi working as one. | Whitepaper + MVP under construction: canonical form, signatures, chain, anchoring on Stellar testnet and third-party reconstruction done; payments pending | 106 / 106 (what exists) |
 
-**How to read the last column.** Nine of the ten were built on 2026-09-29 against the kernel cut `54c20c7`, and their own records report them green at that cut; that was not re-run here. Each one pins the kernel it consumes by digest and fails on purpose when the kernel moves, so against the `0.1.3` candidate part of every suite fails until it is re-pinned. That re-pinning is pending, and so is any claim that these ten are ready: today they show a working path, not a finished product. Everything is synthetic: no real people, no real money, no network and no blockchain in the ten projects, and none of them claims to comply with any law. TEMIS is not one of the ten; it is the operation that tests the unit.
+**How to read the last column.** Nine of the ten were built on 2026-09-29 against the kernel cut `54c20c7`, and their own records report them green at that cut; that was not re-run here. Each one pins the kernel it consumes by digest and fails on purpose when the kernel moves, so against the `0.1.3` candidate part of every suite fails until it is re-pinned. That re-pinning is pending, and so is any claim that these ten are ready: today they show a working path, not a finished product.
 
 ## How this was built
 
@@ -173,13 +226,7 @@ Waiting, asking or stopping can be the correct result of an operation.
 
 A capability may be local, host-native, external or paid. Its economic form does not define Vespi.
 
-### Honest uncertainty
-
-> **We do not yet know how much of this requires something specifically called Vespi. Some of it may reduce to good state, policy, routing, host capabilities and verification. That is part of the experiment.**
-
-The bet can be strong and still falsable. We do not invent "that Vespi" to justify the name.
-
-## Relationship to [Lore Plugin](https://github.com/andresanemic/lore-plugin)
+## Relationship to Lore Plugin
 
 > **Lore Plugin prepares the ground. Vespi operates on it.**
 
@@ -195,10 +242,8 @@ Vespi is a separate technical repository. [LUS](https://github.com/andresanemic/
 ## Not verified
 
 - x402 on mainnet, with more than one provider, or a live payment run by someone else;
-- automatic durable receipt persistence or persistent memory;
 - a general orchestration runtime, universal scheduler, daemon, migration engine or quota manager;
 - production readiness, regulatory compliance or a stable protocol;
-- a claim that Vespi is a crypto payment agent, a Tellus product, a hackathon-created project, or an app backed by the Stellar Development Foundation or by any university.
 
 ## Quickstart
 
@@ -239,7 +284,7 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 > **La unidad no es el agente. La unidad es la operación.**
 
-Vespi es un experimento público de continuidad operacional bajo autoridad acotada, construido en público por **Andrés Peña Mellado**. Este repositorio es su **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Es experimental, y conserva lo que existe, lo que falla, lo que cambia y lo que sigue deliberadamente sin reclamar.
+Vespi es el kernel de un sistema operativo para trabajar con IA. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepara el terreno —criterio, Lore, el método del coordinador— y Vespi opera sobre él: autoridad que otorga una persona, una operación que se verifica aparte de quien la ejecutó y un recibo que cualquiera puede comprobar. Este repositorio es el **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Lo construye en público **Andrés Peña Mellado**, y conserva lo que existe, lo que falla, lo que cambia y lo que sigue deliberadamente sin reclamar. Antes de la `1.0` sus versiones son fotos públicas, no un protocolo estable.
 
 ## En un minuto
 
@@ -262,6 +307,57 @@ node --test test/*.test.js
 ℹ pass 203
 ℹ fail 0
 ```
+
+## Qué es Vespi visto desde fuera: un método
+
+Un encargo se vuelve trabajo que puedes comprobar. Cuando le pides a un agente algo que no es trivial, el coordinador —el agente que tomó tu encargo— sigue un solo ciclo. Vespi es lo que hace que cada paso de ese ciclo sea algo que puedes verificar y no algo que te cuentan.
+
+1. **Clasifica el encargo.** Una pregunta recibe hallazgos, una tarea recibe un cambio verificado, y todo lo que sale hacia afuera recibe primero un plan.
+2. **Define terminado.** Qué se va a observar cuando esté listo, y cómo.
+3. **Reúne evidencia.** Lee la fuente primaria; nunca escribe de memoria.
+4. **Decide.** Una recomendación. Un acto que sale hacia afuera —un push, un pago, una publicación— necesita las palabras de la persona detrás.
+5. **Actúa con precisión.** El cambio mínimo correcto.
+6. **Verifica por observación.** Aparte de quien lo construyó.
+7. **Reporta primero el resultado.** Con lo que se omitió y lo que no se pudo verificar.
+
+| En el ciclo | En la operación |
+|---|---|
+| Terminado es una observación nombrada | La operación declara su efecto y qué observará la verificación |
+| La compuerta de lo que sale hacia afuera | La autoridad se prueba antes de la frontera, con reloj, presupuesto y destino; el agente no puede contestar la puerta por la persona |
+| Verificar aparte de quien lo construyó | Un verificador que no es el ejecutor, y un recibo que dice qué cubrió y qué no |
+| Reportar primero el resultado, con salvedades | El recibo es el reporte: estado, evidencia, `coverage`, `notCovered` |
+| Una sorpresa vuelve a un paso anterior | Una premisa material que cae abre revalidación antes de continuar |
+| Detenerse tras tres ciclos fallidos | Una tarea imposible vuelve `blocked` con su salida, no se reintenta a ciegas |
+| Retomar desde el punto de control, no desde un resumen | Continuidad por recibos: el último estado verificado, la siguiente acción y si una persona debe intervenir |
+
+**Cómo se vio en una operación real.** La primera operación que corrió todo el sistema fue construir TEMIS, una capa que hace comprobables por un tercero los compromisos de un acuerdo bilateral (testnet, datos ficcionados). Antes de fijar la forma de los registros firmados, un modelo asesor independiente revisó el diseño y encontró cuatro huecos. La implementación se le dio a un modelo trabajador más barato que solo vio las pruebas. La verificación se hizo aparte y encontró ocho huecos más que las pruebas del trabajador no cubrían. Un tercer agente, sin acceso al código, reconstruyó todo el registro desde el historial público de Stellar y reprodujo los 22 resultados. La suite son 106 pruebas, y lo que cada recibo no prueba está escrito a su lado. El método está escrito una sola vez, para todo el sistema, en [`docs/METHOD.md`](./docs/METHOD.md).
+
+## Vespi y Lore Plugin: un sistema operativo para trabajar con IA
+
+Lore Plugin y Vespi son un solo sistema con dos mitades.
+
+```
+  tú         dices lo que quieres, con tus palabras
+  ──────────────────────────────────────────────────────────────────────────
+  hosts      Claude Code · Codex · OpenCode          donde corre el agente
+  ──────────────────────────────────────────────────────────────────────────
+  Lore Plugin   el terreno: tu criterio (Lore), el enrutamiento que abre el
+                criterio correcto para cada tarea, el método del coordinador
+                y los hooks que mantienen honesta una sesión
+  ──────────────────────────────────────────────────────────────────────────
+  Vespi         el kernel: operaciones bajo autoridad otorgada, verificación
+                aparte de la ejecución, recibos, continuidad desde el último
+                estado verificado
+  ──────────────────────────────────────────────────────────────────────────
+  apps          lo que se construye encima: los proyectos funcionales de
+                abajo, y los que vienen
+```
+
+**Lo que ve una persona.** Dices lo que quieres. El coordinador abre el criterio que lo gobierna, define cómo se verá terminado y te pregunta solo lo que te toca decidir: autoridad, dinero, publicar. Entrega tramos acotados a otros modelos —uno que investiga, uno que critica una decisión antes de fijarla, uno que implementa—, cada uno con su pregunta, sus límites y un recibo. Verifica aparte, escribe un solo punto de control en el `FASES.md` del proyecto, y cuando la sesión termina la siguiente retoma desde los recibos, no desde un resumen. Nunca necesitas saber que el kernel existe.
+
+**Lo que permite construir.** Aplicaciones complejas. Quién permitió qué, cuánto, hasta cuándo y si de verdad ocurrió dejan de ser algo que un prompt promete y pasan a ser una propiedad del sistema. Eso es lo que ejercita cada uno de los proyectos de abajo: una intranet, una ficha clínica, un registro de cambios, una verificación entre países.
+
+**Dónde está hoy.** Hoy: el kernel (`0.1.3`), la skill de Vespi dentro de Lore Plugin, el método del coordinador y una operación real corrida de punta a punta. En la próxima versión de Lore Plugin: el flujo completo en el kit —un punto de control por proyecto en `FASES.md`, roles despachados por las herramientas que el host realmente expone y la economía de una operación declarada antes de correr—. Después: las primeras aplicaciones para personas reales, empezando por desarrollo web y la landing de este mismo proyecto. Lo que no se afirma está más abajo, en *NO VERIFICADO*.
 
 <a id="que-existe-hoy"></a>
 ## Qué trae el 0.1.3 candidato
@@ -302,6 +398,8 @@ Dentro de `runOperation` el destino es el `to` del grant, así que el kernel dec
 ## Los proyectos funcionales
 
 Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, cada uno sobre **datos ficcionados**. El estado de abajo se leyó el **2026-10-02** corriendo la suite de cada proyecto contra el kernel instalado hoy (el candidato `0.1.3`).
+
+**Durante el periodo de revisión de los jueces de la hackatón Find Your Way, varios de estos proyectos estarán liberados para que se revise su código.** La idea es mostrar cómo funciona Vespi y de qué es capaz, no solo contarlo.
 
 | # | Proyecto | Qué es | Estado hoy | Su suite hoy |
 |---|---|---|---|---|
