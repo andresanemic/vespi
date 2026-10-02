@@ -57,11 +57,14 @@ This is the depth, and it enters after the first screen, not instead of it.
 Written as open, not softened.
 
 - **`0.1.4` is already scoped and not built**: emergency access granted in advance and exercised with
-  an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 in live.
+  an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 live inside the kernel itself. The demo adapter already pays live on testnet
+  (below).
 - **The receipt is not durable by itself.** The kernel returns a receipt; whoever calls it owns where
   it lives. There is no cross-host runtime, scheduler, migration engine or quota manager here.
-- **A fresh live x402 payment is NOT VERIFIED**: the real 402 response, the signature, the
-  facilitator, the settlement and Horizon verification remain unverified in the current local run.
+- **One live x402 payment on testnet is verified, and nothing more**: on 2026-10-02 the repaired adapter
+  paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed
+  the transaction separately (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). Its receipt still lists `external anchor` in
+  `notCovered`. No mainnet, no second provider. Receipt: [`demo/x402/receipts/live-testnet-2026-10-02.json`](../demo/x402/receipts/live-testnet-2026-10-02.json).
 - **The commits in this repository are not signed.** `git log --format='%G?'` returns `N` for every commit in this repository.
   See [`../NOTICE`](../NOTICE).
 - **No stable protocol, no production readiness, no regulatory compliance, and no external security
@@ -72,8 +75,9 @@ Written as open, not softened.
 | Claim | Result | Cut and scope |
 |---|---|---|
 | `node --test test/*.test.js` at the previous RC5 cut `54c20c7` | **181/181**, exit 0 | Historical baseline carried by the installed RC5 plugin; not the 0.1.3 candidate result. |
-| Candidate core suite, `node --test test/*.test.js` at `892bd91` | **203/203**, exit 0 | Kernel tests, run on 2026-09-30. |
-| Full candidate suite, `node --test` at `892bd91` | **249/249**, exit 0 | Includes the x402 demo with its dependencies available. |
+| Candidate core suite, `node --test test/*.test.js` at `2dcfd92` | **203/203**, exit 0 | Kernel tests, run on 2026-10-02. |
+| Full candidate suite, `node --test` at `2dcfd92` | **252/252**, exit 0 | Includes the x402 demo with its dependencies available. |
+| One live x402 payment, `demo/x402` run against the real facilitator | **verified**, 0.01 USDC | Stellar testnet, 2026-10-02, transaction `abb968e8…` confirmed separately on Horizon. |
 | Benchmark for this version | **Not run.** No figure on this page describes a measured effect of 0.1.3. | — |
 | External review | **Pending.** No review is credited here without its run attached. | — |
 | Installation | **None.** This is a candidate, not a tag. | — |
@@ -140,11 +144,14 @@ Escrito como abierto, no suavizado.
 
 - **El `0.1.4` ya está acotado y no está construido**: acceso de emergencia otorgado por adelantado
   y ejercido con recibo inmediato, un verificador de pruebas de conocimiento cero, procedencia de
-  skills y x402 en vivo.
+  skills y x402 en vivo dentro del propio kernel. El adaptador de la demo ya paga en vivo en testnet
+  (abajo).
 - **El recibo no es durable por sí solo.** El kernel devuelve un recibo; quien lo llama decide dónde
   vive. Aquí no hay runtime cross-host, scheduler, migration engine ni quota manager.
-- **Un pago x402 live nuevo está NO VERIFICADO**: la respuesta 402 real, la firma, el facilitator,
-  el settlement y la verificación en Horizon siguen sin verificarse en la corrida local actual.
+- **Hay un pago x402 live verificado en testnet, y nada más**: el 2026-10-02 el adaptador reparado pagó
+  0,01 USDC a través del facilitator real, el recibo volvió `verified` y Horizon confirmó la transacción
+  por separado (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). Su recibo todavía lista `external anchor` en `notCovered`.
+  Sin mainnet, sin un segundo proveedor. Recibo: [`demo/x402/receipts/live-testnet-2026-10-02.json`](../demo/x402/receipts/live-testnet-2026-10-02.json).
 - **Los commits de este repositorio no están firmados.** `git log --format='%G?'` devuelve `N` para todos los commits de este repositorio. Ver [`../NOTICE`](../NOTICE).
 - **No hay protocolo estable, ni producción lista, ni cumplimiento regulatorio, y no se ha corrido
   ninguna revisión de seguridad externa.** Una revisión entra a este repositorio con su corrida
@@ -155,8 +162,9 @@ Escrito como abierto, no suavizado.
 | Afirmación | Resultado | Corte y alcance |
 |---|---|---|
 | `node --test test/*.test.js` en el corte RC5 anterior `54c20c7` | **181/181**, exit 0 | Línea base histórica que llevaba el plugin RC5 instalado; no es el resultado del candidato 0.1.3. |
-| Suite central candidata, `node --test test/*.test.js` en `892bd91` | **203/203**, exit 0 | Pruebas del kernel, corridas el 2026-09-30. |
-| Suite completa candidata, `node --test` en `892bd91` | **249/249**, exit 0 | Incluye la demo x402 con sus dependencias disponibles. |
+| Suite central candidata, `node --test test/*.test.js` en `2dcfd92` | **203/203**, exit 0 | Pruebas del kernel, corridas el 2026-10-02. |
+| Suite completa candidata, `node --test` en `2dcfd92` | **252/252**, exit 0 | Incluye la demo x402 con sus dependencias disponibles. |
+| Un pago x402 live, `demo/x402` contra el facilitator real | **verificado**, 0,01 USDC | Stellar testnet, 2026-10-02, transacción `abb968e8…` confirmada por separado en Horizon. |
 | Benchmark de esta versión | **No corrido.** Ninguna cifra de esta página describe un efecto medido del 0.1.3. | — |
 | Revisión externa | **Pendiente.** Aquí no se acredita ninguna revisión sin su corrida adjunta. | — |
 | Instalación | **Ninguna.** Esto es un candidato, no una etiqueta. | — |

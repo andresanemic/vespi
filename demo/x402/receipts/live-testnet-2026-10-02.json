@@ -1,0 +1,63 @@
+{
+  "status": "verified",
+  "operation": {
+    "id": "op-mur9yczl-0",
+    "goal": "obtain-marketing-plan (demo)"
+  },
+  "capability": "x402-marketing-plan",
+  "authority": {
+    "grants": [
+      {
+        "asset": "USDC:CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        "maxAmount": "500000",
+        "to": "GD7MPNDYJO6YOQJ2NTSWDN2QDPZWORG2J7L7SCVIXU3IGVOMJNGZUV6J"
+      }
+    ],
+    "exercised": [
+      {
+        "asset": "USDC:CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        "maxAmount": "100000",
+        "to": "GD7MPNDYJO6YOQJ2NTSWDN2QDPZWORG2J7L7SCVIXU3IGVOMJNGZUV6J"
+      }
+    ],
+    "approval": "preauthorized"
+  },
+  "outcome": "verified",
+  "evidence": {
+    "txHash": "abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5",
+    "payer": "GAB3TBOXYG5T2OXF42NQJRMJEUJ7E7GTDT3P7QYYTKBIZEYJUQ6NQBN4",
+    "network": "stellar:testnet",
+    "authDigest": "119c83524b65ccd696f90cc80fcda21ce333e4b256e9e6eb6bee41b6ba860e4f",
+    "planDigest": "011dc9f6a8e01780026d213a2f2eafaf33eae84251b7afb11399b6c5d9a09060"
+  },
+  "verification": {
+    "verified": true,
+    "checks": {
+      "invocation": true,
+      "authorization": true,
+      "transfer": true,
+      "payer": true,
+      "source": true,
+      "exactAmount": true
+    },
+    "reason": "settlement matches exact declared effect"
+  },
+  "coverage": [
+    "invocation",
+    "authorization",
+    "transfer",
+    "payer",
+    "source",
+    "exactAmount"
+  ],
+  "notCovered": [
+    "external anchor"
+  ],
+  "anchor": {
+    "status": "pending",
+    "network": "stellar:testnet"
+  },
+  "detail": null,
+  "at": "2026-10-02T18:06:33.958Z",
+  "digest": "0276794d68e0eb0fc25f4db3ed3991252c59d29c317277067e75cc02df8c4265"
+}

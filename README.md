@@ -46,7 +46,7 @@ node --test test/*.test.js
 <a id="what-exists-today"></a>
 ## What the 0.1.3 candidate brings
 
-`0.1.3` is a **candidate** release, not a tag: the last tag in this repository is [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Everything below was read in the code of this tree, not in a plan. The kernel suite is **203/203** green at commit `892bd91`, reproduced with `node --test test/*.test.js`. The full `node --test` run, including the x402 demo with its dependencies, is **249/249** at that same commit; both scopes are listed in the candidate release note.
+`0.1.3` is a **candidate** release, not a tag: the last tag in this repository is [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Everything below was read in the code of this tree, not in a plan. The kernel suite is **203/203** green at commit `2dcfd92`, reproduced with `node --test test/*.test.js`. The full `node --test` run, including the x402 demo with its dependencies, is **252/252** at that same commit; both scopes are listed in the candidate release note.
 
 - **Authority of several people.** A permission can require several approvals: `authority.signers = { required, allowed }`. The human gate returns **identities, not cryptographic signatures** — `{ approved: true, approvals: [{ by: 'ana' }, { by: 'bob' }] }` — and the kernel counts *distinct* identities drawn from `allowed`. The same identity twice counts once. An identity outside `allowed` does not count. **The operation's own agent never counts.** With fewer approvals than `required`, `perform` is not called and the receipt says how many are missing. Approvals pre-loaded into the authority do not count either: only approvals that arrive through the gate count. Nothing here signs anything; it is a named identity compared in process.
 - **Authority with clock, budget and destination.** A grant is `{ asset, maxAmount, to, expiresAt }`. A grant with `to` covers only that destination; a grant without `to` covers any destination but keeps **one** budget, and several requirements spend from that same budget — 400 + 400 against a 500 ceiling is not enough. An expired grant is refused with a reason that names the moment it expired, and `now` is injectable, so the same grant can be exercised on both sides of its own clock.
@@ -67,7 +67,7 @@ For pilots, experiments and case studies, the public record is in [`experiments/
 - [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) — an earlier x402 / Stellar testnet slice with receipts and one real verification failure kept as evidence.
 - [`005`](./experiments/005/RUN.md) — the final RUN 05 evaluation, **CLOSED** within its declared local/offline scope, with the blind reads and the verifier reports that closed it.
 
-The paid example lives in [`demo/x402/`](./demo/x402/), and it is the only place that knows x402, Stellar or USDC — an economic capability example, not Vespi's identity. **A fresh live x402 payment is currently NOT VERIFIED:** the real 402 response, the signature, the facilitator, the settlement and Horizon verification remain unverified in the current local run. Experiment 002 is historical testnet evidence, not current live settlement evidence.
+The paid example lives in [`demo/x402/`](./demo/x402/), and it is the only place that knows x402, Stellar or USDC — an economic capability example, not Vespi's identity. **A live x402 payment on Stellar testnet is verified for this candidate:** on 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). It is one payment, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The receipt is [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). Experiment 002 stays as historical testnet evidence.
 
 ## How this was built
 
@@ -94,7 +94,7 @@ What came out of it, said as what we saw and with its date: the ecosystem is ric
 
 ## What it does not do yet
 
-- **`0.1.4` is already scoped and not built:** emergency access granted in advance and exercised with an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 in live. They are not in `0.1.3` because `0.1.3` builds only what all the projects share.
+- **`0.1.4` is already scoped and not built:** emergency access granted in advance and exercised with an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 live inside the kernel itself (the demo adapter already pays live on testnet). They are not in `0.1.3` because `0.1.3` builds only what all the projects share.
 - **The receipt is not durable by itself.** The kernel returns a receipt; whoever calls it owns where it lives. The external anchor is what makes it findable later in a public explorer, and only once verification confirms it.
 - **No cross-host runtime, scheduler, migration engine or quota manager.** The continuation semantics are here; the machinery that wakes the process is the host's, and it does not exist here.
 - **The six functions of the autonomy gap are not built**, and neither is a stable protocol, production readiness or regulatory compliance.
@@ -151,7 +151,7 @@ Vespi is a separate technical repository. [LUS](https://github.com/andresanemic/
 
 ## Not verified
 
-- a fresh live x402 payment, signature, facilitator, settlement or Horizon verification;
+- x402 on mainnet, with more than one provider, or a live payment run by someone else;
 - automatic durable receipt persistence or persistent memory;
 - a general orchestration runtime, universal scheduler, daemon, migration engine or quota manager;
 - production readiness, regulatory compliance or a stable protocol;
@@ -167,7 +167,7 @@ node --test test/*.test.js
 
 The suite covers the operation, bounded authority with clock, budget and destination, multi-person approval, the impossible task, pausing, the four gestures of the human gate, receipts with a SHA-256 fingerprint and real coverage, the three states of anchoring, and continuity by receipts. `node --test` alone also runs the x402 demo suite. No wallet, no funds, no network.
 
-**Level 2 — bounded x402 testnet demo.** See [`demo/x402/README.md`](./demo/x402/README.md). The paid route needs a funded testnet account, a USDC trustline, a receiver, environment variables and network access. The rejection route stops before contacting the endpoint. The current local run does not certify a fresh live payment.
+**Level 2 — bounded x402 testnet demo.** See [`demo/x402/README.md`](./demo/x402/README.md). The paid route needs a funded testnet account, a USDC trustline, a receiver, environment variables and network access. The rejection route stops before contacting the endpoint. One live testnet payment is verified (see above); that is all it certifies.
 
 ## Why publish this early?
 
@@ -223,7 +223,7 @@ node --test test/*.test.js
 <a id="que-existe-hoy"></a>
 ## Qué trae el 0.1.3 candidato
 
-`0.1.3` es una versión **candidata**, no una etiqueta: la última etiqueta de este repositorio es [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Todo lo que sigue se leyó en el código de este árbol, no en un plan. La suite del kernel está en **203/203** en el commit `892bd91`, corrida con `node --test test/*.test.js`. La suite completa `node --test`, incluida la demo x402 con sus dependencias, quedó en **249/249** en ese mismo commit; ambas coberturas están en la nota candidata.
+`0.1.3` es una versión **candidata**, no una etiqueta: la última etiqueta de este repositorio es [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Todo lo que sigue se leyó en el código de este árbol, no en un plan. La suite del kernel está en **203/203** en el commit `2dcfd92`, corrida con `node --test test/*.test.js`. La suite completa `node --test`, incluida la demo x402 con sus dependencias, quedó en **252/252** en ese mismo commit; ambas coberturas están en la nota candidata.
 
 - **Autoridad de varias personas.** Un permiso puede exigir varias aprobaciones: `authority.signers = { required, allowed }`. La puerta humana devuelve **identidades, no firmas criptográficas** — `{ approved: true, approvals: [{ by: 'ana' }, { by: 'bob' }] }` — y el kernel cuenta identidades *distintas* tomadas de `allowed`. La misma identidad dos veces cuenta una sola vez. Una identidad fuera de `allowed` no cuenta. **El agente de la operación nunca cuenta.** Con menos aprobaciones que `required`, `perform` no se llama y el recibo dice cuántas faltan. Las aprobaciones cargadas de antemano en la autoridad tampoco cuentan: solo cuentan las que llegan por la puerta. Aquí no se firma nada; es una identidad nombrada comparada en el proceso.
 - **Autoridad con reloj, presupuesto y destino.** Un grant es `{ asset, maxAmount, to, expiresAt }`. Un grant con `to` cubre solo ese destino; uno sin `to` cubre cualquier destino pero conserva **un** presupuesto, y varias exigencias gastan de ese mismo presupuesto — 400 + 400 contra un techo de 500 no alcanza. Un grant vencido se rechaza con una razón que nombra el momento en que venció, y `now` es inyectable, así que el mismo grant se puede ejercitar a los dos lados de su propio reloj.
@@ -244,7 +244,7 @@ Para pilotos, experimentos y casos de estudio, el registro público está en [`e
 - [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) — una slice anterior de x402 / Stellar en testnet, con recibos y un fallo de verificación real conservado como evidencia.
 - [`005`](./experiments/005/RUN.md) — la evaluación final de RUN 05, **CLOSED** dentro de su alcance local/offline declarado, con las lecturas ciegas y los reportes del verificador que la cerraron.
 
-El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), y es el único lugar que conoce x402, Stellar o USDC: un ejemplo de capability económica, no la identidad de Vespi. **Un pago x402 live nuevo está hoy NO VERIFICADO:** la respuesta 402 real, la firma, el facilitator, el settlement y la verificación en Horizon siguen sin verificarse en la corrida local actual. El experimento 002 es evidencia histórica de testnet, no evidencia actual de settlement live.
+El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), y es el único lugar que conoce x402, Stellar o USDC: un ejemplo de capability económica, no la identidad de Vespi. **Un pago x402 live en Stellar testnet está verificado para este candidato:** el 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitator real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). Es un solo pago, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El recibo es [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). El experimento 002 queda como evidencia histórica de testnet.
 
 ## Cómo se construyó
 
@@ -271,7 +271,7 @@ Lo que sale de ahí, dicho como lo que vimos y con su fecha: el ecosistema es ri
 
 ## Lo que todavía no hace
 
-- **El `0.1.4` ya está acotado y no está construido:** acceso de emergencia otorgado por adelantado y ejercido con recibo inmediato, un verificador de pruebas de conocimiento cero, procedencia de skills y x402 en vivo. No están en el `0.1.3` porque el `0.1.3` construye solo lo que comparten todos los proyectos.
+- **El `0.1.4` ya está acotado y no está construido:** acceso de emergencia otorgado por adelantado y ejercido con recibo inmediato, un verificador de pruebas de conocimiento cero, procedencia de skills y x402 en vivo dentro del propio kernel (el adaptador de la demo ya paga en vivo en testnet). No están en el `0.1.3` porque el `0.1.3` construye solo lo que comparten todos los proyectos.
 - **El recibo no es durable por sí solo.** El kernel devuelve un recibo; quien lo llama decide dónde vive. El anclaje externo es lo que lo hace encontrable después en un explorador público, y solo una vez que la verificación lo confirma.
 - **No hay runtime cross-host, scheduler, migration engine ni quota manager.** La semántica de continuación está aquí; la maquinaria que despierta el proceso es del host, y aquí no existe.
 - **Las seis funciones del autonomy gap no están construidas**, y tampoco hay un protocolo estable, producción lista ni cumplimiento regulatorio.
@@ -328,7 +328,7 @@ Vespi es un repositorio técnico separado. [LUS](https://github.com/andresanemic
 
 ## NO VERIFICADO
 
-- un pago x402 live nuevo, una firma, facilitator, settlement o verificación Horizon;
+- x402 en mainnet, con más de un proveedor, o un pago live corrido por otra persona;
 - persistencia durable automática de recibos o memoria persistente;
 - un runtime general de orchestration, scheduler universal, daemon, migration engine o quota manager;
 - production readiness, cumplimiento regulatorio o un protocolo estable;
@@ -344,7 +344,7 @@ node --test test/*.test.js
 
 La suite cubre la operación, la authority acotada con reloj, presupuesto y destino, la aprobación de varias personas, la tarea imposible, la pausa, los cuatro gestos de la puerta humana, los recibos con huella SHA-256 y cobertura real, los tres estados del anclaje y la continuidad por recibos. `node --test` a secas también corre la suite de la demo x402. No requiere wallet, fondos ni red.
 
-**Nivel 2 — demo acotada de x402 en testnet.** Consulta [`demo/x402/README.md`](./demo/x402/README.md). La ruta pagada requiere una cuenta testnet fondeada, trustline USDC, receptor, variables de entorno y acceso a red. La ruta de rechazo se detiene antes de contactar el endpoint. La corrida local actual no certifica un pago live nuevo.
+**Nivel 2 — demo acotada de x402 en testnet.** Consulta [`demo/x402/README.md`](./demo/x402/README.md). La ruta pagada requiere una cuenta testnet fondeada, trustline USDC, receptor, variables de entorno y acceso a red. La ruta de rechazo se detiene antes de contactar el endpoint. Hay un pago live en testnet verificado (ver arriba); eso es todo lo que certifica.
 
 ## ¿Por qué publicarlo tan temprano?
 

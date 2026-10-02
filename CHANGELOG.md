@@ -20,6 +20,8 @@ The note that opens with what this changes for the person is [`RELEASE_0.1.3_KER
 
 ### Fixed — adversarial review of the candidate
 
+- x402 demo adapter, found by the first live testnet run on 2026-10-02: settlement verification read `txn.ledger` as a number when the Horizon SDK exposes it as a link (the sequence is `ledger_attr`), so a paid and settled run came back `not_verified`. A second run came back `verified`; a third, after the `checks`/`facts` split below, listed only `external anchor` in `notCovered` (transaction `abb968e8…`, confirmed on Horizon).
+- x402 demo verification returns `checks` as booleans only and keeps hashes, names and counters in `facts`; before, those values showed up as `notCovered` on a receipt that had verified.
 - Kernel messages are in English on every path, including the resume one.
 - The receipt keeps the amount it exercised, and carries the action the agreement names, so a real receipt pairs with a real agreement.
 - The receipt names who approved, and a gate approval no longer erases who can pause.
@@ -28,7 +30,7 @@ The note that opens with what this changes for the person is [`RELEASE_0.1.3_KER
 
 ### Not in this candidate — scoped for 0.1.4
 
-- Emergency access granted in advance and exercised with an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 in live.
+- Emergency access granted in advance and exercised with an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 live inside the kernel itself (the demo adapter already pays live on testnet).
 - The receipt is not durable by itself: the caller owns where it lives, and nothing here makes it authentic.
 
 ## [v0.1.2-kernel]
