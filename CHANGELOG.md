@@ -7,6 +7,7 @@ This project is experimental. Before `v1.0.0`, version numbers describe public s
 ## 0.1.3 — candidato (sin publicar)
 
 Candidate, not a tag: the last tag here is `v0.1.2-kernel`. Everything below was read in this tree.
+The note that opens with what this changes for the person is [`RELEASE_0.1.3_KERNEL.md`](./docs/RELEASE_0.1.3_KERNEL.md).
 
 ### Added
 
@@ -30,9 +31,10 @@ Candidate, not a tag: the last tag here is `v0.1.2-kernel`. Everything below was
 - Emergency access granted in advance and exercised with an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 in live.
 - The receipt is not durable by itself: the caller owns where it lives, and nothing here makes it authentic.
 
-## 0.1.2
+## [v0.1.2-kernel]
 
-Current working tree: **Unreleased**.
+Released: this version carries the `v0.1.2-kernel` tag. The current working tree is the **0.1.3
+candidate**, described above.
 
 ### RUN 05 — public evaluation surface (local, not released)
 
@@ -40,7 +42,7 @@ Current working tree: **Unreleased**.
 - Remove the compatibility-only `README_es.md`; `README.md` is now the single bilingual public surface.
 - RUN 05 repair: x402 adapter checks effective 402 terms against its declared fixed effect and the operation grant, and prepares the exact Soroban transfer/auth digest before the paid request; offline adversarial test covers amount, token, recipient, network, scheme and signing-window divergence.
 - Current code gate after external Stellar/blockchain/x402 review: destination-bound payment authority, no redirect forwarding, bounded fetch/body deadlines, abort propagation before the paid request, post-settlement exact Soroban authorization checks, transaction hash/network binding, marketing-plan schema validation, receipt evidence allowlist, and route-level in-process payment deduplication after x402 processing.
-- Local verification: 47/47 kernel tests and 53/53 demo tests; `npm test` in `demo/x402` includes the adversarial suite.
+- Local verification at that release: 47/47 kernel tests and 53/53 demo tests; `npm test` in `demo/x402` includes the adversarial suite. Not a current figure — see the 0.1.3 candidate above.
 - Scope remains an offline-testable demo. Durable cross-process operation/idempotency storage and production payment readiness are not claimed.
 
 ## [v0.1.1-kernel] — 2026-09-23 (16/16 tests at release)

@@ -38,15 +38,15 @@ node --test test/*.test.js
 ```
 
 ```
-ℹ tests 100
-ℹ pass 100
+ℹ tests 203
+ℹ pass 203
 ℹ fail 0
 ```
 
 <a id="what-exists-today"></a>
 ## What the 0.1.3 candidate brings
 
-`0.1.3` is a **candidate** release, not a tag: the last tag in this repository is [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Everything below was read in the code of this tree, not in a plan. The kernel suite is 100/100 green here.
+`0.1.3` is a **candidate** release, not a tag: the last tag in this repository is [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Everything below was read in the code of this tree, not in a plan. The kernel suite is **203/203** green at commit `892bd91`, reproduced with `node --test test/*.test.js`. The full `node --test` run, including the x402 demo with its dependencies, is **249/249** at that same commit; both scopes are listed in the candidate release note.
 
 - **Authority of several people.** A permission can require several approvals: `authority.signers = { required, allowed }`. The human gate returns **identities, not cryptographic signatures** — `{ approved: true, approvals: [{ by: 'ana' }, { by: 'bob' }] }` — and the kernel counts *distinct* identities drawn from `allowed`. The same identity twice counts once. An identity outside `allowed` does not count. **The operation's own agent never counts.** With fewer approvals than `required`, `perform` is not called and the receipt says how many are missing. Approvals pre-loaded into the authority do not count either: only approvals that arrive through the gate count. Nothing here signs anything; it is a named identity compared in process.
 - **Authority with clock, budget and destination.** A grant is `{ asset, maxAmount, to, expiresAt }`. A grant with `to` covers only that destination; a grant without `to` covers any destination but keeps **one** budget, and several requirements spend from that same budget — 400 + 400 against a 500 ceiling is not enough. An expired grant is refused with a reason that names the moment it expired, and `now` is injectable, so the same grant can be exercised on both sides of its own clock.
@@ -183,7 +183,7 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 ---
 
-[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experiments](./experiments/) · [Last tag v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Apache 2.0 License](./LICENSE) · [NOTICE](./NOTICE)
+[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [0.1.3 candidate note](./docs/RELEASE_0.1.3_KERNEL.md) · [Experiments](./experiments/) · [Last tag v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Apache 2.0 License](./LICENSE) · [NOTICE](./NOTICE)
 
 </details>
 
@@ -215,15 +215,15 @@ node --test test/*.test.js
 ```
 
 ```
-ℹ tests 100
-ℹ pass 100
+ℹ tests 203
+ℹ pass 203
 ℹ fail 0
 ```
 
 <a id="que-existe-hoy"></a>
 ## Qué trae el 0.1.3 candidato
 
-`0.1.3` es una versión **candidata**, no una etiqueta: la última etiqueta de este repositorio es [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Todo lo que sigue se leyó en el código de este árbol, no en un plan. La suite del kernel está 100/100 en verde aquí.
+`0.1.3` es una versión **candidata**, no una etiqueta: la última etiqueta de este repositorio es [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Todo lo que sigue se leyó en el código de este árbol, no en un plan. La suite del kernel está en **203/203** en el commit `892bd91`, corrida con `node --test test/*.test.js`. La suite completa `node --test`, incluida la demo x402 con sus dependencias, quedó en **249/249** en ese mismo commit; ambas coberturas están en la nota candidata.
 
 - **Autoridad de varias personas.** Un permiso puede exigir varias aprobaciones: `authority.signers = { required, allowed }`. La puerta humana devuelve **identidades, no firmas criptográficas** — `{ approved: true, approvals: [{ by: 'ana' }, { by: 'bob' }] }` — y el kernel cuenta identidades *distintas* tomadas de `allowed`. La misma identidad dos veces cuenta una sola vez. Una identidad fuera de `allowed` no cuenta. **El agente de la operación nunca cuenta.** Con menos aprobaciones que `required`, `perform` no se llama y el recibo dice cuántas faltan. Las aprobaciones cargadas de antemano en la autoridad tampoco cuentan: solo cuentan las que llegan por la puerta. Aquí no se firma nada; es una identidad nombrada comparada en el proceso.
 - **Autoridad con reloj, presupuesto y destino.** Un grant es `{ asset, maxAmount, to, expiresAt }`. Un grant con `to` cubre solo ese destino; uno sin `to` cubre cualquier destino pero conserva **un** presupuesto, y varias exigencias gastan de ese mismo presupuesto — 400 + 400 contra un techo de 500 no alcanza. Un grant vencido se rechaza con una razón que nombra el momento en que venció, y `now` es inyectable, así que el mismo grant se puede ejercitar a los dos lados de su propio reloj.
@@ -360,6 +360,6 @@ Digital Art Director & Creative Developer trabajando entre agentes de IA, Web3, 
 
 ---
 
-[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Experimentos](./experiments/) · [Última etiqueta v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Licencia Apache 2.0](./LICENSE) · [NOTICE](./NOTICE)
+[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Nota del candidato 0.1.3](./docs/RELEASE_0.1.3_KERNEL.md) · [Experimentos](./experiments/) · [Última etiqueta v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Licencia Apache 2.0](./LICENSE) · [NOTICE](./NOTICE)
 
 </details>
