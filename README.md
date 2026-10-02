@@ -10,8 +10,21 @@
   <a href="#what-exists-today"><img src="https://img.shields.io/badge/authority-bounded-D7B698?style=for-the-badge&labelColor=07111A" alt="Bounded authority"></a>
 </p>
 
-<details open>
-<summary><strong>English</strong></summary>
+<p align="center">
+  <b>Vespi keeps an operation alive when the people, the agents and the tools around it change.</b><br>
+  The kernel of the operating system for working with AI: authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.<br>
+  <a href="https://github.com/andresanemic/lore-plugin">Lore Plugin</a> prepares the ground. Vespi operates on it.
+</p>
+
+<p align="center">
+  <b>Vespi mantiene viva una operación cuando cambian las personas, los agentes y las herramientas que la rodean.</b><br>
+  El kernel del sistema operativo para trabajar con IA: autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
+</p>
+
+---
+
+<details>
+<summary><b>Read in English</b></summary>
 
 <a id="english"></a>
 
@@ -68,6 +81,26 @@ For pilots, experiments and case studies, the public record is in [`experiments/
 - [`005`](./experiments/005/RUN.md) — the final RUN 05 evaluation, **CLOSED** within its declared local/offline scope, with the blind reads and the verifier reports that closed it.
 
 The paid example lives in [`demo/x402/`](./demo/x402/), and it is the only place that knows x402, Stellar or USDC — an economic capability example, not Vespi's identity. **A live x402 payment on Stellar testnet is verified for this candidate:** on 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). It is one payment, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The receipt is [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). Experiment 002 stays as historical testnet evidence.
+
+## The functional projects
+
+Vespi is a kernel, not an app. What shows it works is what gets built on top of it: ten projects, each with its **own agreement written before its code**, each running on **synthetic data** with no network and no real institution behind it. Their stage below was read on **2026-10-02** by running each project's own test suite against the kernel installed today (the `0.1.3` candidate).
+
+| # | Project | What it is | Stage today | Its suite today |
+|---|---|---|---|---|
+| 1 | **Queen** | The marketing agency of the Stellar ecosystem: takes a commission, talks to the project through Vespi, budgets inside the ceiling it was granted and charges through a **simulated** x402 layer. | Agreement + code + tests | 42 / 45 |
+| 2 | **Permamuseum** | Latin American cultural heritage on Stellar: a museum registers its works, with provenance and permissions. The project this would coordinate already has smart contracts written outside Vespi, with tests that assert nothing yet. | Idea: Vespi has only a study note, no code | — |
+| 3 | **Casa Firme** | Housing for informal settlements: authority is born in the housing committee's assembly; volunteers, foundation and municipality enter with different permissions; every donation leaves a trace. | Agreement + code + tests | 21 / 24 |
+| 4 | **Ficha Contigo** | The clinical record: the patient hands it to an institution, the institution can use only what was granted, and emergency access is granted in advance. | Agreement + code + tests | 7 / 13 |
+| 5 | **Cátedra** | The university: enrolment, work with declared AI use, grades signed by the professor, degrees as verifiable credentials. | Agreement + code + tests | 34 / 35 |
+| 6 | **Escribano** | A DAO with a legal record of every change to its contract (Wyoming W.S. 17-31): append-only, each change with its receipt and the signatures the quorum requires. | Agreement + code + tests | 8 / 13 |
+| 7 | **Llavero** | "My data": the person sees who asks for it, for what, under which permission; grants or revokes; and reads which access happened and which was refused. | Agreement + code + tests | 8 / 14 |
+| 8 | **Farolero** | Authority for agents without code: an organization's agent registry fused with the authority layer. Delegating only narrows; what does not fit comes back blocked with its exit. | Agreement + code + tests | 8 / 13 |
+| 9 | **Marea** | Verifying climate commitments between countries (Paris Agreement art. 6.2): the verifier refuses to count the same reduction twice. | Agreement + code + tests | 25 / 25 |
+| 10 | **Vela** | Protecting whoever tells the truth through a legal channel: the document is sealed and unpublished until several media sign their verification. It neither leaks nor identifies the source; the zero-knowledge proof of membership is marked pending. | Agreement + code + tests | 10 / 11 |
+| — | **TEMIS** | A legal-validation layer for bilateral agreements by milestones: signed, counter-signed and anchored so a third party can rebuild what happened. The first real operation of Lore Plugin and Vespi working as one. | Whitepaper + MVP under construction: canonical form and signatures built, chain, anchoring and payments pending | 56 / 56 (what exists) |
+
+**How to read the last column.** Nine of the ten were built on 2026-09-29 against the kernel cut `54c20c7`, and their own records report them green at that cut; that was not re-run here. Each one pins the kernel it consumes by digest and fails on purpose when the kernel moves, so against the `0.1.3` candidate part of every suite fails until it is re-pinned. That re-pinning is pending, and so is any claim that these ten are ready: today they show a working path, not a finished product. Everything is synthetic: no real people, no real money, no network and no blockchain in the ten projects, and none of them claims to comply with any law. TEMIS is not one of the ten; it is the operation that tests the unit.
 
 ## How this was built
 
@@ -188,7 +221,7 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 </details>
 
 <details>
-<summary><strong>Español</strong></summary>
+<summary><b>Leer en español</b></summary>
 
 <a id="español"></a>
 
@@ -245,6 +278,26 @@ Para pilotos, experimentos y casos de estudio, el registro público está en [`e
 - [`005`](./experiments/005/RUN.md) — la evaluación final de RUN 05, **CLOSED** dentro de su alcance local/offline declarado, con las lecturas ciegas y los reportes del verificador que la cerraron.
 
 El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), y es el único lugar que conoce x402, Stellar o USDC: un ejemplo de capability económica, no la identidad de Vespi. **Un pago x402 live en Stellar testnet está verificado para este candidato:** el 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitator real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). Es un solo pago, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El recibo es [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). El experimento 002 queda como evidencia histórica de testnet.
+
+## Los proyectos funcionales
+
+Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, cada uno sobre **datos sintéticos**, sin red y sin una institución real detrás. El estado de abajo se leyó el **2026-10-02** corriendo la suite de cada proyecto contra el kernel instalado hoy (el candidato `0.1.3`).
+
+| # | Proyecto | Qué es | Estado hoy | Su suite hoy |
+|---|---|---|---|---|
+| 1 | **Queen** | La agencia de marketing del ecosistema Stellar: recibe un encargo, conversa con el proyecto a través de Vespi, presupuesta dentro del techo que le otorgaron y cobra con una capa x402 **simulada**. | Acuerdo + código + pruebas | 42 / 45 |
+| 2 | **Permamuseum** | Patrimonio cultural latinoamericano en Stellar: un museo registra sus obras, con procedencia y permisos. El proyecto que esto coordinaría ya tiene contratos escritos fuera de Vespi, con pruebas que todavía no afirman nada. | Idea: en Vespi solo hay una nota de estudio, sin código | — |
+| 3 | **Casa Firme** | Vivienda en campamentos: la autoridad nace en la asamblea del comité de vivienda; voluntarios, fundación y municipio entran con permisos distintos; cada donación deja su rastro. | Acuerdo + código + pruebas | 21 / 24 |
+| 4 | **Ficha Contigo** | La ficha clínica: la paciente la entrega a una institución, la institución usa solo lo que se le otorgó y el acceso de emergencia se otorga por adelantado. | Acuerdo + código + pruebas | 7 / 13 |
+| 5 | **Cátedra** | La universidad: matrícula, trabajos con uso de IA declarado, notas firmadas por el profesor y títulos como credenciales verificables. | Acuerdo + código + pruebas | 34 / 35 |
+| 6 | **Escribano** | Una DAO con registro legal de cada cambio de su contrato (Wyoming, W.S. 17-31): solo se agrega, y cada cambio entra con su recibo y las firmas que exige el quórum. | Acuerdo + código + pruebas | 8 / 13 |
+| 7 | **Llavero** | «Mis datos»: la persona ve quién los pide, para qué y bajo qué permiso; concede o revoca; y lee qué acceso ocurrió y cuál se rechazó. | Acuerdo + código + pruebas | 8 / 14 |
+| 8 | **Farolero** | Autoridad para agentes sin código: el registro de agentes de una organización fusionado con la capa de autoridad. Delegar solo reduce; lo que no cabe vuelve bloqueado con su salida. | Acuerdo + código + pruebas | 8 / 13 |
+| 9 | **Marea** | Verificación de compromisos climáticos entre países (Acuerdo de París, art. 6.2): el verificador se niega a contar dos veces la misma reducción. | Acuerdo + código + pruebas | 25 / 25 |
+| 10 | **Vela** | Proteger a quien dice la verdad por un canal legal: el documento queda sellado y sin publicar hasta que varios medios firmen su verificación. No filtra ni identifica a la fuente; la prueba de conocimiento cero de pertenencia está marcada como pendiente. | Acuerdo + código + pruebas | 10 / 11 |
+| — | **TEMIS** | Una capa de validación legal para acuerdos bilaterales por hitos: firmados, contrafirmados y anclados para que un tercero reconstruya lo ocurrido. La primera operación real de Lore Plugin y Vespi trabajando como una unidad. | Whitepaper + MVP en construcción: forma canónica y firmas hechas; cadena, anclaje y pagos pendientes | 56 / 56 (lo que existe) |
+
+**Cómo leer la última columna.** Nueve de los diez se construyeron el 2026-09-29 contra el corte `54c20c7` del kernel, y sus propios registros los dan en verde en ese corte; aquí no se volvió a correr. Cada uno fija por digest el kernel que consume y falla a propósito cuando el kernel se mueve, así que contra el candidato `0.1.3` parte de cada suite falla hasta que se re-ancle. Ese re-anclaje está pendiente, y también cualquier afirmación de que los diez estén listos: hoy muestran un recorrido que funciona, no un producto terminado. Todo es sintético: sin personas reales, sin dinero real, sin red y sin blockchain en los diez proyectos, y ninguno afirma cumplir ley alguna. TEMIS no es uno de los diez: es la operación que prueba la unidad.
 
 ## Cómo se construyó
 
