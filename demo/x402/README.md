@@ -31,14 +31,14 @@ Use Node 24+, a funded Stellar testnet payer, a USDC trustline, a receiver you c
 Terminal 1: reference paid endpoint
 
 ```sh
-BORA_PAY_TO=G... npm run server
+QUEEN_PAY_TO=G... npm run server
 ```
 
 Terminal 2: no authority
 
 ```sh
 CLIENT_SECRET=S... \
-BORA_PAY_TO_EXPECTED=G... \
+QUEEN_PAY_TO_EXPECTED=G... \
 SERVICE_BASE_URL=http://localhost:3777/api/agent-service \
 node run.js --max-usdc=0
 ```
@@ -49,7 +49,7 @@ With a sufficient, destination-bound grant:
 
 ```sh
 CLIENT_SECRET=S... \
-BORA_PAY_TO_EXPECTED=G... \
+QUEEN_PAY_TO_EXPECTED=G... \
 SERVICE_BASE_URL=http://localhost:3777/api/agent-service \
 node run.js --max-usdc=0.05
 ```
@@ -102,14 +102,14 @@ Usa Node 24+, una cuenta pagadora de Stellar testnet con fondos, un trustline de
 Terminal 1: endpoint de referencia
 
 ```sh
-BORA_PAY_TO=G... npm run server
+QUEEN_PAY_TO=G... npm run server
 ```
 
 Terminal 2: sin autoridad
 
 ```sh
 CLIENT_SECRET=S... \
-BORA_PAY_TO_EXPECTED=G... \
+QUEEN_PAY_TO_EXPECTED=G... \
 SERVICE_BASE_URL=http://localhost:3777/api/agent-service \
 node run.js --max-usdc=0
 ```
@@ -120,7 +120,7 @@ Con un grant suficiente ligado al receptor:
 
 ```sh
 CLIENT_SECRET=S... \
-BORA_PAY_TO_EXPECTED=G... \
+QUEEN_PAY_TO_EXPECTED=G... \
 SERVICE_BASE_URL=http://localhost:3777/api/agent-service \
 node run.js --max-usdc=0.05
 ```

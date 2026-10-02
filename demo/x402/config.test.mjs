@@ -12,6 +12,6 @@ test('accepts a Stellar G public recipient', () => {
 test('rejects empty, malformed, and secret recipients without echoing them', () => {
   const secret = Keypair.random().secret();
   for (const value of ['', 'not-a-key', secret]) {
-    assert.throws(() => requirePublicKey(value, 'BORA_PAY_TO_EXPECTED'), /public key/);
+    assert.throws(() => requirePublicKey(value, 'QUEEN_PAY_TO_EXPECTED'), /public key/);
   }
 });

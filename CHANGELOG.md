@@ -17,6 +17,11 @@ The note that opens with what this changes for the person is [`RELEASE_0.1.3_KER
 - K4: continuity by receipts with the revalidation gate, and a decision model that advises and never consents.
 - K7: work delegated to a cheaper model returns with a receipt, is reviewed by the orchestrator before anything is integrated, and leaves sparks behind.
 - Apache 2.0 with a NOTICE, and a bilingual README verified against the code.
+- A backup capability outside the kernel, `capabilities/respaldo/`: it copies a working tree, binaries included, into a folder the person already syncs; incremental by SHA-256 with a manifest, with verification, restoration and «where is the latest copy». The destination is the grant's `to`. No encryption, no versions and no API upload yet; see its `LEEME.md`.
+
+### Changed
+
+- The x402 demo is told from Queen, not from Bora: the environment variables are now `QUEEN_PAY_TO` and `QUEEN_PAY_TO_EXPECTED` and the sample plan is titled «Queen Marketing Plan». The sealed historical receipts under `experiments/` are untouched.
 
 ### Fixed — adversarial review of the candidate
 

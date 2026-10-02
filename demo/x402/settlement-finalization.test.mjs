@@ -36,7 +36,7 @@ test('keeps the auth digest when merging settlement evidence', () => {
 });
 
 const plan = {
-  title: 'AI BORA Marketing Plan',
+  title: 'Queen Marketing Plan',
   summary: 'A test plan.',
   deliverables: ['Landing page'],
   nextSteps: ['Launch'],

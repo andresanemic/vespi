@@ -52,6 +52,10 @@ This is the depth, and it enters after the first screen, not instead of it.
   network, `submitted` when the adapter returned a transaction hash, and `anchored` **only** when
   the verifier confirms the digest *and* the network. A transaction hash on its own is not an anchor.
 
+## A capability outside the kernel
+
+`capabilities/respaldo/` copies a person's working tree — Lore, sites, images, video — into a folder that Drive, Dropbox or OneDrive already sync, incrementally and by SHA-256, with a manifest, a verification that recomputes every hash, a restoration that checks the hash before returning a file, and a «where is the latest copy» lookup. The destination is the grant's `to`: a folder the authority does not name opens the human gate and nothing is copied. It does not encrypt, keep versions, upload through any API or follow symbolic links, and says so in its [`LEEME.md`](../capabilities/respaldo/LEEME.md). 17 tests, in both suites below.
+
 ## What is deliberately still open
 
 Written as open, not softened.
@@ -137,6 +141,10 @@ Esta es la profundidad, y entra después de la primera pantalla, no en vez de el
 - **Anclar en Stellar es una interfaz, no un certificado.** `pending` cuando nada llegó a la red,
   `submitted` cuando el adaptador devolvió un hash de transacción, y `anchored` **solo** cuando el
   verificador confirma el digest *y* la red. Un hash por sí solo no es un anclaje.
+
+## Una capacidad fuera del kernel
+
+`capabilities/respaldo/` copia el árbol de trabajo de una persona —Lore, sitios, imágenes, video— a una carpeta que Drive, Dropbox u OneDrive ya sincronizan, de forma incremental y por SHA-256, con un manifiesto, una verificación que recalcula cada huella, una restauración que comprueba la huella antes de devolver un archivo y una búsqueda de «dónde está la última copia». El destino es el `to` del grant: una carpeta que la autoridad no nombra abre la puerta humana y no se copia nada. No cifra, no lleva versiones, no sube por ninguna API ni sigue enlaces simbólicos, y lo dice en su [`LEEME.md`](../capabilities/respaldo/LEEME.md). 17 pruebas, dentro de las dos suites de abajo.
 
 ## Lo que sigue deliberadamente abierto
 

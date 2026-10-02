@@ -4,7 +4,7 @@
  * Serves ONE operation behind official x402 v2 on Stellar testnet:
  *   GET /api/agent-service?service=marketing-plan
  * Unknown service -> 400 before any payment dance. No payTo configured -> 503.
- * Run: BORA_PAY_TO=G... node server.js   (then the demo runner in a second terminal)
+ * Run: QUEEN_PAY_TO=G... node server.js   (then the demo runner in a second terminal)
  */
 import express from 'express';
 import { claimPayment } from './idempotency.js';
@@ -18,13 +18,13 @@ const PRICE = '$0.01';
 const ROUTE_PATH = '/api/agent-service';
 const PORT = Number(process.env.PORT || 3777);
 const FACILITATOR_URL = process.env.X402_FACILITATOR_URL || 'https://x402.org/facilitator';
-const PAY_TO = process.env.BORA_PAY_TO || '';
+const PAY_TO = process.env.QUEEN_PAY_TO || '';
 
 const app = express();
 app.use(express.json());
 
 if (!isValidPublicKey(PAY_TO)) {
-  app.use((_req, res) => res.status(503).json({ error: 'BORA_PAY_TO must be a valid Stellar G... public key. Refusing to serve.' }));
+  app.use((_req, res) => res.status(503).json({ error: 'QUEEN_PAY_TO must be a valid Stellar G... public key. Refusing to serve.' }));
 } else {
   app.use(ROUTE_PATH, (req, res, next) => {
     if ((req.query.service || 'marketing-plan') !== 'marketing-plan') {
@@ -58,7 +58,7 @@ if (!isValidPublicKey(PAY_TO)) {
       service: 'marketing-plan',
       paid: true,
       paidAt: new Date().toISOString(),
-      title: 'AI BORA Marketing Plan',
+      title: 'Queen Marketing Plan',
       summary: 'A 90-day plan to move your B2B sales to on-chain proposals and instant settlements.',
       deliverables: [
         'Landing page A/B test variants (hero copy + CTA)',

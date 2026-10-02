@@ -42,7 +42,7 @@ const op = createOperation({
 
 const res = await runOperation(op, cap, {
   verify: crearVerificador({ destino }),   // recalcula las huellas de verdad
-  ask: (requisitos) => pedirAA-la-persona(requisitos),
+  ask: (requisitos) => preguntarALaPersona(requisitos),
 });
 ```
 
@@ -106,7 +106,7 @@ dondeEsta({ destino, nombre: 'clip' });                   // dónde está la úl
 - **No hace versiones ni retención.** Una copia es una copia; si dos respaldos pisan el mismo
   archivo, gana el más nuevo. El historial de cambios no está.
 - **No sabe de permisos, cuotas ni conflictos de sincronización.** Si el destino está lleno, o el
-  servicio de sincronización está paused, o hay un conflicto, esto no lo ve.
+  servicio de sincronización está en pausa, o hay un conflicto, esto no lo ve.
 - **No sigue enlaces simbólicos.** Un enlace puede apuntar afuera y hacer un ciclo; no se sigue y
   queda anotado en `excluidos`.
 - **Una carpeta vacía se crea pero no se anota en el manifiesto**, así que `restaurar` no la

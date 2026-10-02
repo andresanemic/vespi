@@ -13,7 +13,7 @@ const { verifySettlement } = await import('./settlement.js');
 const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 const args = parseArgs(process.argv.slice(2), new Set(['--service-url', '--pay-to', '--max-usdc']));
 const SERVICE_URL = args['--service-url'] || process.env.SERVICE_BASE_URL || 'http://localhost:3777/api/agent-service';
-const PAY_TO = args['--pay-to'] || process.env.BORA_PAY_TO_EXPECTED || '';
+const PAY_TO = args['--pay-to'] || process.env.QUEEN_PAY_TO_EXPECTED || '';
 const SECRET = process.env.CLIENT_SECRET || '';
 const MAX_USDC = args['--max-usdc'] ?? '0.05';
 
@@ -35,8 +35,8 @@ async function verify(evidence, payer, payTo) {
 }
 
 async function main() {
-  if (!PAY_TO) throw new Error('Need BORA_PAY_TO_EXPECTED env (never committed).');
-  const payTo = requirePublicKey(PAY_TO, 'BORA_PAY_TO_EXPECTED');
+  if (!PAY_TO) throw new Error('Need QUEEN_PAY_TO_EXPECTED env (never committed).');
+  const payTo = requirePublicKey(PAY_TO, 'QUEEN_PAY_TO_EXPECTED');
   const serviceUrl = validateServiceUrl(SERVICE_URL);
   const payer = SECRET ? Keypair.fromSecret(SECRET).publicKey() : '';
   const authority = { spend: [{ asset: `USDC:${USDC_CONTRACT}`, maxAmount: parseUsdc(MAX_USDC), to: payTo }] };

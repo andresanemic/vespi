@@ -82,6 +82,16 @@ For pilots, experiments and case studies, the public record is in [`experiments/
 
 The paid example lives in [`demo/x402/`](./demo/x402/), and it is the only place that knows x402, Stellar or USDC — an economic capability example, not Vespi's identity. **A live x402 payment on Stellar testnet is verified for this candidate:** on 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). It is one payment, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The receipt is [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). Experiment 002 stays as historical testnet evidence.
 
+## A capability outside the kernel: the garden backup
+
+The kernel never imports a capability; the ones that exist live next to it, like the paid x402 example. `capabilities/respaldo/` is a second one. It copies a person's working tree — the Lore, but also sites, images and video — into a **folder** that Google Drive, Dropbox or OneDrive already sync (or an external disk), and it answers where the latest copy is. It asks for no keys and talks to no service: it writes files into a directory and the sync that was already there does the rest.
+
+Inside `runOperation` the destination is the grant's `to`, so the kernel decides whether someone authorized that folder; a folder the authority does not name opens the human gate and **nothing is copied**. The receipt keeps its checks boolean on purpose, because the kernel counts coverage by `true`.
+
+- **It does:** copies binaries by streaming, so a one-gigabyte video does not blow up the process; copies only what is new or changed, by SHA-256; writes a `manifiesto.json` with every file, size and hash; never deletes anything from the destination; `verificar` recomputes every hash and also notices a hand-edited manifest; `restaurar` checks the hash of the copy before returning it and never overwrites an existing file unless asked; `dondeEsta` finds the latest copy by partial name.
+- **It does not, yet:** upload through the Drive, Dropbox or OneDrive APIs; **encrypt** (the files are copied as they are, so the destination is the person's choice and only they have access, and whether to encrypt is still an open decision); keep versions or retention; see quotas or sync conflicts; follow symbolic links; or restore an empty folder.
+- **Checked by:** 17 tests (`node --test test/respaldo.test.js`). Details and the honest caveat about the incremental shortcut in [`capabilities/respaldo/LEEME.md`](./capabilities/respaldo/LEEME.md).
+
 ## The functional projects
 
 Vespi is a kernel, not an app. What shows it works is what gets built on top of it: ten projects, each with its **own agreement written before its code**, each running on **synthetic data** with no network and no real institution behind it. Their stage below was read on **2026-10-02** by running each project's own test suite against the kernel installed today (the `0.1.3` candidate).
@@ -278,6 +288,16 @@ Para pilotos, experimentos y casos de estudio, el registro público está en [`e
 - [`005`](./experiments/005/RUN.md) — la evaluación final de RUN 05, **CLOSED** dentro de su alcance local/offline declarado, con las lecturas ciegas y los reportes del verificador que la cerraron.
 
 El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), y es el único lugar que conoce x402, Stellar o USDC: un ejemplo de capability económica, no la identidad de Vespi. **Un pago x402 live en Stellar testnet está verificado para este candidato:** el 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitator real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). Es un solo pago, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El recibo es [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). El experimento 002 queda como evidencia histórica de testnet.
+
+## Una capacidad fuera del kernel: el respaldo del jardín
+
+El kernel nunca importa una capacidad; las que existen viven a su lado, como el ejemplo pagado de x402. `capabilities/respaldo/` es una segunda. Copia el árbol de trabajo de una persona —el Lore, pero también sitios, imágenes y video— a una **carpeta** que Google Drive, Dropbox o OneDrive ya sincronizan (o a un disco externo), y responde dónde está la última copia. No pide llaves ni habla con ningún servicio: escribe archivos en un directorio y la sincronización que ya estaba ahí hace el resto.
+
+Dentro de `runOperation` el destino es el `to` del grant, así que el kernel decide si alguien autorizó esa carpeta; una carpeta que la autoridad no nombra abre la puerta humana y **no se copia nada**. El recibo mantiene sus checks booleanos a propósito, porque el kernel cuenta la cobertura por `true`.
+
+- **Lo que hace:** copia los binarios por flujo, así que un video de un gigabyte no revienta el proceso; copia solo lo nuevo o lo cambiado, por SHA-256; escribe un `manifiesto.json` con cada archivo, su tamaño y su huella; nunca borra nada del destino; `verificar` recalcula todas las huellas y también nota un manifiesto editado a mano; `restaurar` comprueba la huella de la copia antes de devolverla y nunca sobrescribe un archivo existente sin que se pida; `dondeEsta` encuentra la última copia por nombre parcial.
+- **Lo que todavía no hace:** subir por las API de Drive, Dropbox u OneDrive; **cifrar** (los archivos se copian tal cual, así que el destino lo elige la persona y solo ella tiene acceso, y si se cifra es una decisión que sigue abierta); llevar versiones o retención; ver cuotas o conflictos de sincronización; seguir enlaces simbólicos; ni restaurar una carpeta vacía.
+- **Cómo se comprueba:** 17 pruebas (`node --test test/respaldo.test.js`). Los detalles y la salvedad honesta sobre el atajo del incremental están en [`capabilities/respaldo/LEEME.md`](./capabilities/respaldo/LEEME.md).
 
 ## Los proyectos funcionales
 
