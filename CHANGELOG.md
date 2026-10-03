@@ -14,6 +14,7 @@ Prepared in this worktree; not published or tagged. This section describes the p
 
 ### Changed
 
+- `docs/METHOD.md` gains the section "Stop and search after repeated failures" (English and Spanish), the same text Lore Plugin 2.4.9 carries in `skills/vespi/method.md`.
 - No public export was removed or renamed. A receipt built without the new clock retains its previous digest.
 
 ### Fixed
