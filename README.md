@@ -17,6 +17,12 @@
   <a href="https://github.com/andresanemic/lore-plugin">Lore Plugin</a> prepares the ground. Vespi operates on it.
 </p>
 
+<p align="center">
+  <b>Do you build on Stellar? This is for you.</b><br>
+  The idea is that Lore, the operating system whose kernel is Vespi, becomes the definitive operating system of the Stellar ecosystem: a way to create apps on Stellar together with Raven MCP, quickly, reliably and securely.<br>
+  I invite every builder in the Stellar ecosystem to review this kernel and to use it if it helps you.
+</p>
+
 
 
 
@@ -44,8 +50,7 @@ You say what you want; Vespi keeps the operation standing under an authority a p
 2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone. In all, [50 successful testnet transactions from 8 accounts](./docs/TESTNET_EVIDENCE.md), read back from Horizon, back the project: a full agreement lifecycle run twice, concurrent anchors, an idempotent payment and the x402 runs.
 3. **Check it yourself, offline.** `node --test test/*.test.js` runs 205 tests with no wallet and no network. The live receipt is [in the repository](./demo/x402/receipts/live-testnet-2026-10-02.json). With a network, `node scripts/verify-testnet-evidence.mjs` asks Horizon about every transaction listed in the evidence file.
 4. **See what is built on it.** Ten functional projects, each with its agreement written before its code, run on fictional data. Several will be open for review during the judging period. The table is in the section below.
-5. **An invitation.** If you are taking part in Find Your Way, or will take part in Meridian, I invite you to review this kernel and to use it if it is useful to you.
-6. **What we do not claim.** No mainnet, no second provider, no production readiness. It is listed under *Not verified*.
+5. **What we do not claim.** No mainnet, no second provider, no production readiness. It is listed under *Not verified*.
 
 
 ## In one minute
@@ -60,6 +65,30 @@ cd vespi
 node --test test/*.test.js     # ℹ tests 205 · ℹ pass 205 · ℹ fail 0
 node scripts/verify-testnet-evidence.mjs   # re-checks the 50 testnet transactions against Horizon (needs a network)
 ```
+
+## Why Vespi, and not building it yourself
+
+Writing an app is the easy part. What takes months, and usually gets skipped, is everything around the work: who may do what, up to when and for how much; proof of what happened; stopping honestly when an outcome is uncertain; resuming tomorrow where you stopped; a human decision where one is needed; and a check by someone who did not do the work. Vespi gives you those as a tested kernel, so each app does not reinvent them and the person with the idea does not have to be an expert in how they are done.
+
+| You need | What Vespi gives you | Where it lives |
+|---|---|---|
+| Permission with limits | A grant with an asset, a ceiling, a destination and an expiry; one budget that cannot be spent twice; an expired grant is refused; several named people can be required | `authority`: `{ asset, maxAmount, to, expiresAt }`, `signers`, `pausers` |
+| Proof of what happened | A receipt with a SHA-256 fingerprint, the checks that came back true, and what was not covered, by name | `buildReceipt`, `verifyReceipt`, `notCovered` |
+| Honest stops | A task with no legitimate exit comes back blocked with its way out; an outcome of uncertain result is never retried blindly | `impossible`, `not_verified`, `resumeFromReceipts` |
+| A human where one is needed | A gate that shows the cost first, never lets the agent consent for the person, and names the exit in every refusal | the human gate and its four gestures |
+| Continuing tomorrow | Resuming from receipts: the last verified state, the next action, and whether a person must step in | `resumeFromReceipts(receipts, agreement)` |
+| An independent check | The verifier is never the executor; blind readers judge without seeing how it was made; a third agent without code access rebuilds the result | [`docs/METHOD.md`](./docs/METHOD.md), [`experiments/`](./experiments/) |
+| Public proof, if you want it | An anchor on Stellar that only counts when a verifier confirms the digest and the network | `anchorReceipt`: `pending` → `submitted` → `anchored` |
+
+**With AI or without it, with a blockchain or without one.** The kernel does not care what your effect is. It is dependency-free JavaScript that talks to no network: the thing it supervises can be a database write, a call to another system, a step done by an AI agent or a payment, and authority, receipts, the human gate and continuity work the same way in every case. Stellar is an adapter, not a requirement: you can anchor a receipt on the network when something has to be publicly provable, or never touch a blockchain at all. x402 lives in one place, [`demo/x402/`](./demo/x402/), and nowhere else. That is why the same kernel can sit under an app that uses AI and Stellar and under one that uses neither.
+
+**Designed with Chile's new laws in mind.** Vespi was designed thinking of the new Chilean laws on personal data protection (Law 21.719) and on the interoperability of clinical records (Law 21.668). In practice: authority is limited by purpose, amount and time, because a permission names who may act, on what, up to how much and until when; the authority can name who is allowed to pause and resume an operation; every access and every refusal leaves a readable receipt, so someone can see who asked for what and what was refused; receipts are built to carry fingerprints and named checks rather than the content itself; and the kernel stores nothing and calls no network, so each institution keeps its own systems of record. Two of the ten functional projects are proofs of concept of exactly this: **Llavero** (my data: who asks for it, for what, under which permission) and **Ficha Contigo** (the clinical record). This is design intent. It is not legal compliance, and no regulator or lawyer has certified it.
+
+**Why institutions can pilot it.** The kernel was shaped so that an institution can try it without adopting a platform: it is a library under Apache 2.0, with no dependencies and no hosted service, so a pilot runs inside the institution's own environment and nothing has to be handed over; its permissions are the shape a compliance team asks about (who, what, how much, until when, who approved); and the proof of what happened is something the institution's own auditor can recompute. I hope to work soon with institutions from the public and the private world to create the apps they need to coordinate and work as a team. The functional projects are proofs of concept of exactly that kind of task.
+
+**Where this is going.** The goal is for Lore to become the definitive operating system, worldwide, for working and building with AI, and for the Stellar ecosystem in particular: a way to create apps on Stellar, together with Raven MCP, quickly, reliably and securely.
+
+**How to use it today.** The kernel is plain JavaScript: require it and wrap your effect. The Vespi skill comes inside [Lore Plugin](https://github.com/andresanemic/lore-plugin). Installing Vespi on its own as a first-party skill, without the rest of the Lore kit, is planned for the end of Find Your Way; it is not available yet.
 
 ## What Vespi is, seen from the outside: a method
 
@@ -227,6 +256,8 @@ We searched so as to offer something new and not repeat what other projects alre
 <details>
 <summary><b>Leer en español</b></summary>
 
+> **¿Construyes en Stellar? Esto es para ti.** La idea es que Lore, el sistema operativo cuyo kernel es Vespi, se convierta en el sistema operativo definitivo del ecosistema de Stellar: una forma de crear apps en Stellar junto con Raven MCP, de manera rápida, confiable y segura. Invito a cada persona que construye en el ecosistema de Stellar a revisar este kernel y a usarlo si le sirve.
+
 <a id="español"></a>
 
 **Vespi mantiene viva una operación cuando cambian las personas, los agentes y las herramientas que la rodean.**
@@ -245,8 +276,7 @@ Tú dices qué quieres; Vespi mantiene viva la operación bajo una autoridad que
 2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público. En total, [50 transacciones exitosas en testnet desde 8 cuentas](./docs/TESTNET_EVIDENCE.md), releídas desde Horizon, respaldan el proyecto: un ciclo completo de un acuerdo corrido dos veces, anclajes concurrentes, un pago idempotente y las corridas de x402.
 3. **Compruébalo tú, sin red.** `node --test test/*.test.js` corre 205 pruebas sin billetera y sin red. El recibo en vivo está [en el repositorio](./demo/x402/receipts/live-testnet-2026-10-02.json). Con red, `node scripts/verify-testnet-evidence.mjs` le pregunta a Horizon por cada transacción listada en el archivo de evidencia.
 4. **Mira lo que se construye encima.** Diez proyectos funcionales, cada uno con su acuerdo escrito antes de su código, sobre datos ficcionados. Varios estarán abiertos para revisión durante el periodo de los jueces. La tabla está en la sección de abajo.
-5. **Una invitación.** Si participas en Find Your Way, o participarás en Meridian, te invito a revisar este kernel y a usarlo si te sirve.
-6. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Está en *No verificado*.
+5. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Está en *No verificado*.
 
 
 ## En un minuto
@@ -261,6 +291,30 @@ cd vespi
 node --test test/*.test.js     # ℹ tests 205 · ℹ pass 205 · ℹ fail 0
 node scripts/verify-testnet-evidence.mjs   # vuelve a comprobar las 50 transacciones de testnet contra Horizon (necesita red)
 ```
+
+## Por qué Vespi, y no hacerlo uno mismo
+
+Escribir una app es la parte fácil. Lo que toma meses, y casi siempre se omite, es todo lo que rodea al trabajo: quién puede hacer qué, hasta cuándo y por cuánto; la prueba de lo que ocurrió; detenerse con honestidad cuando un resultado es incierto; retomar mañana donde quedaste; una decisión humana donde hace falta; y una verificación hecha por alguien que no hizo el trabajo. Vespi te da todo eso como un kernel probado, para que cada app no lo reinvente y para que la persona con la idea no tenga que ser experta en cómo se hace.
+
+| Necesitas | Lo que te da Vespi | Dónde vive |
+|---|---|---|
+| Permiso con límites | Una autorización con un activo, un tope, un destino y un vencimiento; un solo presupuesto que no se puede gastar dos veces; una autorización vencida se rechaza; se puede exigir a varias personas con nombre | `authority`: `{ asset, maxAmount, to, expiresAt }`, `signers`, `pausers` |
+| Prueba de lo que ocurrió | Un recibo con huella SHA-256, las comprobaciones que dieron verdadero y lo que no se cubrió, por nombre | `buildReceipt`, `verifyReceipt`, `notCovered` |
+| Detenciones honestas | Una tarea sin salida legítima vuelve bloqueada con su salida; un resultado de desenlace incierto nunca se reintenta a ciegas | `impossible`, `not_verified`, `resumeFromReceipts` |
+| Una persona donde hace falta | Una puerta que muestra el costo primero, nunca deja que el agente consienta por la persona y nombra la salida en cada rechazo | la puerta humana y sus cuatro gestos |
+| Continuar mañana | Reanudar desde los recibos: el último estado verificado, la próxima acción y si debe intervenir una persona | `resumeFromReceipts(receipts, agreement)` |
+| Una verificación independiente | Quien verifica nunca es quien ejecuta; lectores ciegos juzgan sin ver cómo se hizo; un tercer agente sin acceso al código reconstruye el resultado | [`docs/METHOD.md`](./docs/METHOD.md), [`experiments/`](./experiments/) |
+| Prueba pública, si la quieres | Un anclaje en Stellar que solo cuenta cuando un verificador confirma el digest y la red | `anchorReceipt`: `pending` → `submitted` → `anchored` |
+
+**Con IA o sin ella, con blockchain o sin ella.** Al kernel no le importa cuál es tu efecto. Es JavaScript sin dependencias que no habla con ninguna red: lo que supervisa puede ser una escritura en una base de datos, una llamada a otro sistema, un paso hecho por un agente de IA o un pago, y la autoridad, los recibos, la puerta humana y la continuidad funcionan igual en todos los casos. Stellar es un adaptador, no un requisito: puedes anclar un recibo en la red cuando algo deba poder probarse públicamente, o no tocar nunca una blockchain. x402 vive en un solo lugar, [`demo/x402/`](./demo/x402/), y en ningún otro. Por eso el mismo kernel puede estar bajo una app que usa IA y Stellar y bajo una que no usa ninguna de las dos.
+
+**Pensado para las nuevas leyes de Chile.** Vespi se diseñó pensando en las nuevas leyes chilenas de protección de datos personales (Ley 21.719) y de interoperabilidad de fichas clínicas (Ley 21.668). En la práctica: la autoridad se limita por finalidad, monto y tiempo, porque un permiso nombra quién puede actuar, sobre qué, hasta cuánto y hasta cuándo; la autoridad puede nombrar quién puede pausar y reanudar una operación; cada acceso y cada rechazo deja un recibo legible, de modo que alguien puede ver quién pidió qué y qué se rechazó; los recibos están hechos para llevar huellas y comprobaciones con nombre en vez del contenido mismo; y el kernel no guarda nada y no llama a ninguna red, de modo que cada institución conserva sus propios sistemas de registro. Dos de los diez proyectos funcionales son pruebas de concepto de justo esto: **Llavero** (mis datos: quién los pide, para qué, bajo qué permiso) y **Ficha Contigo** (la ficha clínica). Esto es intención de diseño. No es cumplimiento legal, y ninguna autoridad ni abogado lo certificó.
+
+**Por qué las instituciones pueden hacer pilotos.** El kernel se pensó para que una institución pueda probarlo sin adoptar una plataforma: es una biblioteca bajo Apache 2.0, sin dependencias y sin servicio alojado, así que un piloto corre dentro del entorno de la propia institución y no hay que entregar nada; sus permisos tienen la forma que pregunta un equipo de cumplimiento (quién, qué, cuánto, hasta cuándo, quién aprobó); y la prueba de lo que ocurrió es algo que el propio auditor de la institución puede recalcular. Espero trabajar pronto con instituciones del mundo público y del privado para crear las apps que necesitan para coordinarse y trabajar en equipo. Los proyectos funcionales son pruebas de concepto de justo ese tipo de tarea.
+
+**Hacia dónde va.** La meta es que Lore se convierta en el sistema operativo definitivo, a nivel mundial, para trabajar y construir con IA, y para el ecosistema de Stellar en particular: una forma de crear apps en Stellar, junto con Raven MCP, de manera rápida, confiable y segura.
+
+**Cómo usarlo hoy.** El kernel es JavaScript simple: lo importas y envuelves tu efecto. La skill de Vespi viene dentro de [Lore Plugin](https://github.com/andresanemic/lore-plugin). Instalar Vespi por sí sola como skill de primera parte, sin el resto del kit de Lore, está planeado para el final de Find Your Way; todavía no está disponible.
 
 ## Qué es Vespi visto desde fuera: un método
 
