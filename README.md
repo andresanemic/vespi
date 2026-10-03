@@ -6,37 +6,21 @@
   <a href="#english"><img src="https://img.shields.io/badge/version-v0.1.3-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.3"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
   <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E0C170?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
-  <a href="./experiments/005/RUN.md"><img src="https://img.shields.io/badge/run-05--closed-E0C170?style=for-the-badge&labelColor=07111A" alt="RUN 05: closed"></a>
+  <a href="#the-functional-projects"><img src="https://img.shields.io/badge/projects-10_functional-D7B698?style=for-the-badge&labelColor=07111A" alt="Functional projects: 10"></a>
+  <a href="./demo/x402/"><img src="https://img.shields.io/badge/built_with-Stellar_%C2%B7_x402_%C2%B7_Raven_MCP-E0C170?style=for-the-badge&labelColor=07111A" alt="Built with Stellar, x402 and Raven MCP"></a>
   <a href="#what-exists-today"><img src="https://img.shields.io/badge/authority-bounded-D7B698?style=for-the-badge&labelColor=07111A" alt="Bounded authority"></a>
 </p>
 
 <p align="center">
-  <b>Vespi keeps an operation alive when the people, the agents and the tools around it change.</b><br>
-  The kernel of the operating system for working with AI: authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.<br>
+  <b>Vespi is the kernel that lets you build great apps without having to know the hardest parts of AI.</b><br>
+  It already integrates x402 and Stellar, and it gives you an authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.<br>
+  <br>
   <a href="https://github.com/andresanemic/lore-plugin">Lore Plugin</a> prepares the ground. Vespi operates on it.
 </p>
 
-<p align="center">
-  <b>Vespi mantiene viva una operación cuando cambian las personas, los agentes y las herramientas que la rodean.</b><br>
-  El kernel del sistema operativo para trabajar con IA: autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
-</p>
 
 
-**If you are judging Find Your Way or Meridian, start here. Five minutes.**
 
-1. **What it is.** The kernel of an operating system for working with AI: an authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.
-2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone.
-3. **Check it yourself, offline.** `node --test test/*.test.js` runs 203 tests with no wallet and no network. The live receipt is [in the repository](./demo/x402/receipts/live-testnet-2026-10-02.json).
-4. **See what is built on it.** Ten functional projects, each with its agreement written before its code, run on fictional data. Several will be open for review during the judging period. The table is in the section below.
-5. **What we do not claim.** No mainnet, no second provider, no production readiness. It is listed under *Not verified*.
-
-**Si estás evaluando Find Your Way o Meridian, empieza aquí. Cinco minutos.**
-
-1. **Qué es.** El kernel de un sistema operativo para trabajar con IA: una autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
-2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público.
-3. **Compruébalo tú, sin red.** `node --test test/*.test.js` corre 203 pruebas sin billetera y sin red. El recibo en vivo está [en el repositorio](./demo/x402/receipts/live-testnet-2026-10-02.json).
-4. **Mira lo que se construye encima.** Diez proyectos funcionales, cada uno con su acuerdo escrito antes de su código, sobre datos ficcionados. Varios estarán abiertos para revisión durante el periodo de los jueces. La tabla está en la sección de abajo.
-5. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Está en *No verificado*.
 
 ---
 
@@ -50,6 +34,15 @@
 > **The unit is not the agent. The unit is the operation.**
 
 Vespi is the kernel of an operating system for working with AI, and it lets you build complex applications without having to know how it is done. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepares the ground — criterion, Lore, the coordinator's method — and Vespi operates on it, running the hard parts for you: loops until the work is done, test-first development, blind readers who judge the result without seeing how it was made, and a check by someone other than whoever did the work. You say what you want; Vespi keeps the operation standing under an authority a person grants and leaves a receipt anyone can check. The kernel was built in part with Raven MCP (the MCP over the Stellar ecosystem's project directory) and Stellar. This repository is the **kernel**: dependency-free JavaScript, no framework, no daemon, no network. Before `1.0` its versions are public snapshots, not a stable protocol.
+
+**If you are judging Find Your Way or Meridian, start here. Five minutes.**
+
+1. **What it is.** The kernel of an operating system for working with AI: an authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.
+2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone.
+3. **Check it yourself, offline.** `node --test test/*.test.js` runs 203 tests with no wallet and no network. The live receipt is [in the repository](./demo/x402/receipts/live-testnet-2026-10-02.json).
+4. **See what is built on it.** Ten functional projects, each with its agreement written before its code, run on fictional data. Several will be open for review during the judging period. The table is in the section below.
+5. **What we do not claim.** No mainnet, no second provider, no production readiness. It is listed under *Not verified*.
+
 
 ## In one minute
 
@@ -207,6 +200,15 @@ We searched so as to offer something new and not repeat what other projects alre
 > **La unidad no es el agente. La unidad es la operación.**
 
 Vespi es el kernel de un sistema operativo para trabajar con IA, y te permite construir aplicaciones complejas sin que tengas que saber cómo se hace. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepara el terreno —criterio, Lore, el método del coordinador— y Vespi opera sobre él, ejecutando por ti lo difícil: ciclos hasta terminar el trabajo, desarrollo con la prueba primero, lectores ciegos que juzgan el resultado sin ver cómo se hizo y una verificación hecha por alguien distinto de quien trabajó. Tú dices qué quieres; Vespi mantiene viva la operación bajo una autoridad que otorga una persona y deja un recibo que cualquiera puede comprobar. El kernel se construyó en parte con Raven MCP (el MCP sobre el directorio de proyectos del ecosistema Stellar) y Stellar. Este repositorio es el **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Antes de la `1.0` sus versiones son fotos públicas, no un protocolo estable.
+
+**Si estás evaluando Find Your Way o Meridian, empieza aquí. Cinco minutos.**
+
+1. **Qué es.** El kernel de un sistema operativo para trabajar con IA: una autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
+2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público.
+3. **Compruébalo tú, sin red.** `node --test test/*.test.js` corre 203 pruebas sin billetera y sin red. El recibo en vivo está [en el repositorio](./demo/x402/receipts/live-testnet-2026-10-02.json).
+4. **Mira lo que se construye encima.** Diez proyectos funcionales, cada uno con su acuerdo escrito antes de su código, sobre datos ficcionados. Varios estarán abiertos para revisión durante el periodo de los jueces. La tabla está en la sección de abajo.
+5. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Está en *No verificado*.
+
 
 ## En un minuto
 
