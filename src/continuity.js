@@ -1,6 +1,7 @@
 'use strict';
 
 const { verifyReceipt } = require('./receipt.js');
+const { parseTime } = require('./time.js');
 
 function receiptAction(receipt) {
   try {
@@ -43,10 +44,35 @@ function claimsVerifiedWithoutProof(receipt) {
   }
 }
 
+function mayHaveExercised(receipt) {
+  try {
+    const exercised = receipt?.authority?.exercised;
+    if (exercised === undefined || exercised === null) return false;
+    if (Array.isArray(exercised)) return exercised.length > 0;
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+function receiptTime(receipt) {
+  try {
+    return parseTime(receipt?.at);
+  } catch {
+    return null;
+  }
+}
+
 function resumeFromReceipts(receipts, agreement, { verifyExternal, verifyLocal } = {}) {
   const list = Array.isArray(receipts) ? receipts : [];
   const approved = Array.isArray(agreement?.approved) ? agreement.approved : [];
   const workingMode = agreement?.workingMode;
+
+  for (const entry of approved) {
+    if (entry?.maxAttempts !== undefined && (!Number.isInteger(entry.maxAttempts) || entry.maxAttempts <= 0)) {
+      throw new Error('maxAttempts must be a positive integer');
+    }
+  }
 
   const approvedByAction = new Map();
   for (const entry of approved) {
@@ -63,6 +89,9 @@ function resumeFromReceipts(receipts, agreement, { verifyExternal, verifyLocal }
   const unprovenByAction = new Map();
   const seenVerifiedActions = new Set();
   const verifiedReceipts = [];
+  const uncertainByAction = new Map();
+  const attemptsByAction = new Map();
+  const seenDigests = new Set();
 
   for (const receipt of list) {
     let check;
@@ -75,10 +104,26 @@ function resumeFromReceipts(receipts, agreement, { verifyExternal, verifyLocal }
       discarded += 1;
       continue;
     }
+    const digest = receipt?.digest;
+    if (typeof digest === 'string' && seenDigests.has(digest)) continue;
+    if (typeof digest === 'string') seenDigests.add(digest);
+    if (receipt?.status === 'failed' || receipt?.status === 'not_verified') {
+      const action = receiptAction(receipt);
+      if (action) attemptsByAction.set(action, (attemptsByAction.get(action) || 0) + 1);
+    }
     if (receipt?.status !== 'verified') {
       const pendingAction = receiptAction(receipt);
       if (pendingAction && ['blocked', 'paused', 'needs_human_decision'].includes(receipt?.status)) {
         waitingByAction.set(pendingAction, receipt.status);
+      }
+      if (pendingAction && (
+        (receipt?.status === 'not_verified' && mayHaveExercised(receipt))
+        || (receipt?.status === 'failed' && receipt?.evidence?.settlementUnknown === true)
+        || receipt?.evidence?.exercisedUnknown === true
+      )) {
+        const uncertainties = uncertainByAction.get(pendingAction) || [];
+        uncertainties.push(receipt);
+        uncertainByAction.set(pendingAction, uncertainties);
       }
       continue;
     }
@@ -109,14 +154,14 @@ function resumeFromReceipts(receipts, agreement, { verifyExternal, verifyLocal }
       continue;
     }
     if (!verifiedByAction.has(action)) verifiedByAction.set(action, receipt);
-    verifiedReceipts.push(receipt);
+    verifiedReceipts.push({ receipt, action });
   }
 
   // A verified receipt for an action outside the agreement: revalidate.
   for (const action of seenVerifiedActions) {
     if (!approvedByAction.has(action)) {
       return {
-        lastState: verifiedReceipts.length > 0 ? verifiedReceipts[0].status : null,
+        lastState: verifiedReceipts.length > 0 ? verifiedReceipts[0].receipt.status : null,
         nextAction: null,
         needsPerson: true,
         reason: `an action outside the agreement needs revalidation: ${action}; discarded ${discarded}`,
@@ -139,6 +184,19 @@ function resumeFromReceipts(receipts, agreement, { verifyExternal, verifyLocal }
       discarded,
       workingMode,
     };
+  }
+
+  for (const [action, uncertainties] of uncertainByAction) {
+    if (!approvedByAction.has(action)) continue;
+    const stillPending = uncertainties.some((uncertain) => !verifiedReceipts.some((verified) => {
+      if (verified.action !== action) return false;
+      const uncertainTime = receiptTime(uncertain);
+      const verifiedTime = receiptTime(verified.receipt);
+      return uncertainTime !== null && verifiedTime !== null && verifiedTime > uncertainTime;
+    }));
+    if (stillPending) {
+      return { lastState: 'not_verified', nextAction: null, needsPerson: true, reason: 'reconciliation_required', discarded, workingMode };
+    }
   }
 
   let lastState = null;
@@ -166,6 +224,24 @@ function resumeFromReceipts(receipts, agreement, { verifyExternal, verifyLocal }
       discarded,
       workingMode,
     };
+  }
+
+  if (uncertainByAction.has(nextAction.action)) {
+    return {
+      lastState,
+      nextAction: null,
+      needsPerson: true,
+      reason: 'reconciliation_required',
+      discarded,
+      workingMode,
+    };
+  }
+
+  if (nextAction.maxAttempts !== undefined) {
+    const attempts = attemptsByAction.get(nextAction.action) || 0;
+    if (attempts >= nextAction.maxAttempts) {
+      return { lastState, nextAction: null, needsPerson: true, reason: 'attempts_exhausted', discarded, workingMode };
+    }
   }
 
   // R36 gate (orchestrator review R42): an action whose last receipt is blocked, paused or waiting for a

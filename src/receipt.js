@@ -1,6 +1,7 @@
 'use strict';
 
 const { createHash } = require('node:crypto');
+const { parseTime } = require('./time.js');
 
 const RECEIPT_STATUSES = new Set([
   'verified',
@@ -211,7 +212,7 @@ async function anchorReceiptAsync(receipt, anchor, verifyAnchor) {
 
 const SAFE_EVIDENCE_KEYS = new Set([
   'txHash', 'tx', 'transaction', 'payer', 'network', 'amount', 'authDigest', 'planDigest',
-  'status', 'success', 'ledger', 'operationId', 'blockHeight', 'type', 'code',
+  'status', 'success', 'ledger', 'operationId', 'blockHeight', 'type', 'code', 'settlementUnknown', 'exercisedUnknown',
 ]);
 
 function safeText(value) {
@@ -275,14 +276,34 @@ function sanitizeSpend(items) {
       to: safeScalar(item.to),
     };
     const expiresAt = safeScalar(item.expiresAt);
-    if (typeof expiresAt === 'string' && expiresAt.length > 0) out.expiresAt = expiresAt;
+    if ((typeof expiresAt === 'string' && expiresAt.length > 0)
+      || (typeof expiresAt === 'number' && parseTime(expiresAt) !== null)) out.expiresAt = expiresAt;
     return out;
   });
 }
 
-function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification, decidedBy }) {
+function validExercisedEntry(item) {
+  try {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+    const asset = item.asset;
+    const to = item.to;
+    const amount = item.amount ?? item.maxAmount;
+    const validAmount = (typeof amount === 'string' && amount.length > 0)
+      || (typeof amount === 'number' && Number.isFinite(amount));
+    return typeof asset === 'string' && asset.length > 0
+      && typeof to === 'string' && to.length > 0 && validAmount;
+  } catch {
+    return false;
+  }
+}
+
+function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification, decidedBy, at }) {
   const grants = Array.isArray(authority && authority.spend) ? authority.spend : [];
-  const exercised = Array.isArray(outcome && outcome.exercised) ? outcome.exercised : [];
+  const rawExercised = outcome && outcome.exercised;
+  const exercised = Array.isArray(rawExercised) ? rawExercised : [];
+  const validExercised = exercised.filter(validExercisedEntry);
+  const exercisedUnknown = (Array.isArray(rawExercised) && rawExercised.length > 0 && validExercised.length !== rawExercised.length)
+    || (rawExercised !== undefined && rawExercised !== null && !Array.isArray(rawExercised));
   const safeVerification = sanitizeVerification(verification);
   const rawStatus = safeText(outcome && outcome.status) || 'failed';
   const status = RECEIPT_STATUSES.has(rawStatus) ? rawStatus : 'failed';
@@ -305,11 +326,15 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
     capability: receiptCapability,
     authority: {
       grants: sanitizeSpend(grants),
-      exercised: sanitizeSpend(exercised),
+      exercised: sanitizeSpend(validExercised),
       ...(approval ? { approval } : {}),
     },
     outcome: status,
-    evidence: sanitizeEvidence(evidence),
+    evidence: (() => {
+      const safeEvidence = sanitizeEvidence(evidence);
+      if (!exercisedUnknown) return safeEvidence;
+      return { ...(safeEvidence || {}), exercisedUnknown: true };
+    })(),
     verification: safeVerification,
     coverage,
     notCovered: [...failedChecks, 'external anchor'],
@@ -318,7 +343,8 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
     ...(reason ? { reason } : {}),
     ...(exit ? { exit } : {}),
     ...(decided ? { decidedBy: decided } : {}),
-    at: new Date().toISOString(),
+    // An injected operation clock may supply the receipt time; direct callers retain wall time.
+    at: at === undefined ? new Date().toISOString() : at,
   };
   receipt.digest = computeDigest(receipt);
   return receipt;

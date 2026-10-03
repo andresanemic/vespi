@@ -11,6 +11,7 @@
 
 const { createHash } = require('node:crypto');
 const path = require('node:path');
+const { parseTime } = require('./time.js');
 
 const SPARK_MAX_WORDS = 20;
 const DECKS = new Set(['eno', 'entre']);
@@ -79,7 +80,41 @@ function push(d, state, by) {
   return d;
 }
 
-function createDelegation({ task, medium, delegate, orchestrator }) {
+function createDelegation({ task, medium, delegate, orchestrator, deadlineMs, now }) {
+  // Store a fixed due time so later status checks do not need the creation clock.
+  if (deadlineMs !== undefined && (!Number.isInteger(deadlineMs) || deadlineMs <= 0)) {
+    throw new Error('deadlineMs must be a positive integer');
+  }
+  let createdAt = Date.now();
+  if (typeof now === 'function') {
+    let value;
+    let read = false;
+    try {
+      value = now();
+      read = true;
+    } catch {
+    }
+    if (read && value !== null && (typeof value === 'object' || typeof value === 'function')) {
+      let then;
+      try {
+        then = value.then;
+      } catch {
+        throw new Error('reloj inyectado no comprobable');
+      }
+      if (typeof then === 'function') {
+        try {
+          // The clock contract is synchronous; contain any eventual rejection before refusing it.
+          Promise.resolve(value).catch(() => {});
+        } catch {
+        }
+        throw new Error('reloj inyectado no comprobable');
+      }
+    }
+    if (read) {
+      const parsed = parseTime(value);
+      if (parsed !== null) createdAt = parsed;
+    }
+  }
   const taskText = text(task) ? task : '';
   const delegateId = text(delegate) ? delegate : null;
   const orchestratorId = text(orchestrator) ? orchestrator : null;
@@ -87,8 +122,13 @@ function createDelegation({ task, medium, delegate, orchestrator }) {
   if (delegateId === orchestratorId) {
     throw new Error(`delegate and orchestrator must be different: both are ${delegateId}`);
   }
+  const dueAt = deadlineMs === undefined ? undefined : createdAt + deadlineMs;
+  if (deadlineMs !== undefined && parseTime(dueAt) === null) {
+    throw new Error('deadlineMs produces a dueAt outside the supported time contract');
+  }
   const created = push({
     task: taskText,
+    ...(deadlineMs === undefined ? {} : { dueAt }),
     taskDigest: digestOf(taskText),
     medium: normalizeMedium(medium),
     delegate: delegateId,
@@ -108,6 +148,16 @@ function createDelegation({ task, medium, delegate, orchestrator }) {
   }, 'created', orchestratorId);
   BOUND_ORCHESTRATOR.set(created, orchestratorId);
   return created;
+}
+
+function delegationStatus(delegation, now = Date.now()) {
+  const dueAt = Number.isFinite(delegation?.dueAt) ? delegation.dueAt : null;
+  const resolved = Boolean(delegation?.reviewReceipt)
+    || ['accepted', 'rejected', 'integrated', 'completed'].includes(delegation?.state);
+  let nowMs = Date.now();
+  const parsed = parseTime(now);
+  if (parsed !== null) nowMs = parsed;
+  return { overdue: dueAt !== null && !resolved && nowMs > dueAt, dueAt };
 }
 
 function recordStart(d, { readTask, firstStep, rejected } = {}) {
@@ -306,6 +356,7 @@ function integrateDelegation(d) {
 
 module.exports = {
   createDelegation,
+  delegationStatus,
   recordStart,
   recordResult,
   reviewDelegation,

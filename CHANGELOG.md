@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.4: prepared, not published
+
+Prepared in this worktree; not published or tagged. This section describes the pending cut, not a public release.
+
+### Added
+
+- Uncertain effects are not proposed again blindly: `resumeFromReceipts` returns `needsPerson: true` with `reconciliation_required` after an exercised `not_verified` receipt or a `failed` receipt with `settlementUnknown`. Only a later `verified` receipt closes the uncertainty.
+- `perform` receives a SHA-256 `idempotencyKey` derived from the canonical effect: goal, action and requirements. It is stable across attempts and resumes, and excludes time, operation id and renewable permission metadata.
+- Delegations can carry `deadlineMs`; `delegationStatus(d, now)` reports `{ overdue, dueAt }` when queried. It does not run or schedule anything.
+- Agreements can set `maxAttempts` per action. Duplicate receipts count once; the limit returns `needsPerson: true` with `attempts_exhausted`.
+- `io.now` can supply the clock used to check permission validity and issue each receipt.
+
+### Changed
+
+- No public export was removed or renamed. A receipt built without the new clock retains its previous digest.
+
+### Fixed
+
+- Resume no longer loses an unresolved possibly-executed effect or lets an older receipt hide a later uncertainty.
+
+### Not in this release
+
+- Lightweight receipt chaining with `prev`, recording intent before the effect, and accumulated budgets across operations.
+- `narrow(parent, child)` and a resume epoch.
+- Leases and leader election, a scheduler, and a project-owned Merkle log are not recommended for this kernel cut.
+- Six independent verification passes; every defect they reproduced (eight in the first, more in time handling, unknown-shape signals and asynchronous clocks later) was corrected with a red-first test; 267 tests. This prepared cut is not published.
+
 All notable public changes to Vespi will be recorded here.
 
 This project is experimental. Before `v1.0.0`, version numbers describe public snapshots of a system still under active arbitration.
