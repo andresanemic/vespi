@@ -148,14 +148,14 @@ The projects with code have their own public repository, linked in the table and
 | # | Project | What it is | Stage today | Suite today |
 |---|---|---|---|---|
 | 1 | [**Queen**](https://github.com/andresanemic/queen) | The marketing agency of the Stellar ecosystem: budgets inside the ceiling it was granted and charges through a **simulated** x402 layer. | Agreement + code + tests | 42 / 45 |
-| 2 | **Permamuseum** | Latin American cultural heritage on Stellar, with provenance and permissions. | Idea: a study note, no code | — |
+| 2 | [**Permamuseum**](https://github.com/andresanemic/permamuseum) | Latin American cultural heritage on Stellar, with provenance and permissions. | Idea: a study note, no code | — |
 | 3 | [**Casa Firme**](https://github.com/andresanemic/casa-firme) | Housing for informal settlements: authority born in the committee's assembly; every donation leaves a trace. | Agreement + code + tests | 21 / 24 |
 | 4 | [**Ficha Contigo**](https://github.com/andresanemic/ficha-contigo) | The clinical record: the institution uses only what the patient granted; emergency access is granted in advance. | Agreement + code + tests | 7 / 13 |
 | 5 | [**Cátedra**](https://github.com/andresanemic/catedra) | The university: declared AI use, grades signed by the professor, degrees as verifiable credentials. | Agreement + code + tests | 34 / 35 |
 | 6 | **Escribano** | A DAO with a legal record of every change to its contract (Wyoming W.S. 17-31). | Agreement + code + tests | 8 / 13 |
 | 7 | [**Llavero**](https://github.com/andresanemic/llavero) | "My data": who asks for it, for what, under which permission, and what was refused. | Agreement + code + tests | 8 / 14 |
 | 8 | [**Farolero**](https://github.com/andresanemic/farolero) | Authority for agents without code: delegating only narrows; what does not fit comes back blocked. | Agreement + code + tests | 8 / 13 |
-| 9 | **Marea** | Verifying climate commitments between countries (Paris Agreement art. 6.2) without counting a reduction twice. | Agreement + code + tests | 25 / 25 |
+| 9 | [**Marea**](https://github.com/andresanemic/marea) | Verifying climate commitments between countries (Paris Agreement art. 6.2) without counting a reduction twice. | Agreement + code + tests | 25 / 25 |
 | 10 | [**Vela**](https://github.com/andresanemic/vela) | Protecting whoever tells the truth through a legal channel; the zero-knowledge membership proof is pending. | Agreement + code + tests | 10 / 11 |
 | — | [**TEMIS**](https://github.com/andresanemic/temis) | Legal validation for bilateral agreements by milestones: signed, counter-signed and anchored so a third party can rebuild what happened. The first real operation of Lore Plugin and Vespi as one. | Whitepaper + MVP: tests 0 to 8 run on Stellar testnet with fictional data (a full lifecycle run twice, 38 transactions, plus concurrent anchors and an idempotent x402 payment); owner's certificate and legal review pending | 135 / 135 |
 
@@ -351,14 +351,14 @@ Los proyectos con código tienen su propio repositorio público, enlazado en la 
 | # | Proyecto | Qué es | Estado hoy | Su suite hoy |
 |---|---|---|---|---|
 | 1 | [**Queen**](https://github.com/andresanemic/queen) | La agencia de marketing del ecosistema Stellar: presupuesta dentro del techo que se le otorgó y cobra con una capa x402 **simulada**. | Acuerdo + código + pruebas | 42 / 45 |
-| 2 | **Permamuseum** | Patrimonio cultural latinoamericano en Stellar, con procedencia y permisos. | Idea: una nota de estudio, sin código | — |
+| 2 | [**Permamuseum**](https://github.com/andresanemic/permamuseum) | Patrimonio cultural latinoamericano en Stellar, con procedencia y permisos. | Idea: una nota de estudio, sin código | — |
 | 3 | [**Casa Firme**](https://github.com/andresanemic/casa-firme) | Vivienda para asentamientos informales: la autoridad nace en la asamblea del comité; cada donación deja rastro. | Acuerdo + código + pruebas | 21 / 24 |
 | 4 | [**Ficha Contigo**](https://github.com/andresanemic/ficha-contigo) | La ficha clínica: la institución usa solo lo que el paciente otorgó; el acceso de emergencia se otorga de antemano. | Acuerdo + código + pruebas | 7 / 13 |
 | 5 | [**Cátedra**](https://github.com/andresanemic/catedra) | La universidad: uso declarado de IA, notas firmadas por el profesor, títulos como credenciales verificables. | Acuerdo + código + pruebas | 34 / 35 |
 | 6 | **Escribano** | Una DAO con registro legal de cada cambio de su contrato (Wyoming W.S. 17-31). | Acuerdo + código + pruebas | 8 / 13 |
 | 7 | [**Llavero**](https://github.com/andresanemic/llavero) | «Mis datos»: quién los pide, para qué, bajo qué permiso y qué se rechazó. | Acuerdo + código + pruebas | 8 / 14 |
 | 8 | [**Farolero**](https://github.com/andresanemic/farolero) | Autoridad para agentes sin código: delegar solo estrecha; lo que no cabe vuelve bloqueado. | Acuerdo + código + pruebas | 8 / 13 |
-| 9 | **Marea** | Verificar compromisos climáticos entre países (Acuerdo de París art. 6.2) sin contar una reducción dos veces. | Acuerdo + código + pruebas | 25 / 25 |
+| 9 | [**Marea**](https://github.com/andresanemic/marea) | Verificar compromisos climáticos entre países (Acuerdo de París art. 6.2) sin contar una reducción dos veces. | Acuerdo + código + pruebas | 25 / 25 |
 | 10 | [**Vela**](https://github.com/andresanemic/vela) | Proteger a quien dice la verdad por un canal legal; la prueba de conocimiento cero de pertenencia está pendiente. | Acuerdo + código + pruebas | 10 / 11 |
 | — | [**TEMIS**](https://github.com/andresanemic/temis) | Validación legal de acuerdos bilaterales por hitos: firmados, contrafirmados y anclados para que un tercero reconstruya lo ocurrido. La primera operación real de Lore Plugin y Vespi como uno. | Whitepaper + MVP: pruebas 0 a 8 corridas en Stellar testnet con datos ficcionados (un ciclo completo corrido dos veces, 38 transacciones, más anclajes concurrentes y un pago x402 idempotente); falta el certificado de su dueño y la revisión jurídica | 135 / 135 |
 
