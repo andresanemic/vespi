@@ -41,7 +41,7 @@ You say what you want; Vespi keeps the operation standing under an authority a p
 **If you are judging Find Your Way or Meridian, start here.**
 
 1. **What it is.** The kernel of an operating system for working with AI: an authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.
-2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone.
+2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone. In all, [50 successful testnet transactions from 8 accounts](./docs/TESTNET_EVIDENCE.md), read back from Horizon, back the project: a full agreement lifecycle run twice, concurrent anchors, an idempotent payment and the x402 runs.
 3. **Check it yourself, offline.** `node --test test/*.test.js` runs 203 tests with no wallet and no network. The live receipt is [in the repository](./demo/x402/receipts/live-testnet-2026-10-02.json).
 4. **See what is built on it.** Ten functional projects, each with its agreement written before its code, run on fictional data. Several will be open for review during the judging period. The table is in the section below.
 5. **What we do not claim.** No mainnet, no second provider, no production readiness. It is listed under *Not verified*.
@@ -193,7 +193,7 @@ We searched so as to offer something new and not repeat what other projects alre
 
 **Level 1, kernel, nothing external:** `node --test test/*.test.js`. It covers the operation, bounded authority, multi-person approval, the impossible task, pausing, the human gate, receipts, anchoring states and continuity by receipts. `node --test` alone also runs the x402 demo suite.
 
-**Level 2, bounded x402 testnet demo:** see [`demo/x402/README.md`](./demo/x402/README.md). The paid route needs a funded testnet account, a USDC trustline, a receiver, environment variables and network access. One live testnet payment is verified; that is all it certifies.
+**Level 2, bounded x402 testnet demo:** see [`demo/x402/README.md`](./demo/x402/README.md). The paid route needs a funded testnet account, a USDC trustline, a receiver, environment variables and network access. One live x402 payment through the real facilitator is verified; that is all this demo certifies. The rest of the testnet activity is in [docs/TESTNET_EVIDENCE.md](./docs/TESTNET_EVIDENCE.md).
 
 **Why publish this early?** Because the history is part of the evidence: what survives, what fails, what changes and what gets rejected stays inspectable while the project is still becoming itself.
 
@@ -227,7 +227,7 @@ Tú dices qué quieres; Vespi mantiene viva la operación bajo una autoridad que
 **Si estás evaluando Find Your Way o Meridian, empieza aquí.**
 
 1. **Qué es.** El kernel de un sistema operativo para trabajar con IA: una autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
-2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público.
+2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público. En total, [50 transacciones exitosas en testnet desde 8 cuentas](./docs/TESTNET_EVIDENCE.md), releídas desde Horizon, respaldan el proyecto: un ciclo completo de un acuerdo corrido dos veces, anclajes concurrentes, un pago idempotente y las corridas de x402.
 3. **Compruébalo tú, sin red.** `node --test test/*.test.js` corre 203 pruebas sin billetera y sin red. El recibo en vivo está [en el repositorio](./demo/x402/receipts/live-testnet-2026-10-02.json).
 4. **Mira lo que se construye encima.** Diez proyectos funcionales, cada uno con su acuerdo escrito antes de su código, sobre datos ficcionados. Varios estarán abiertos para revisión durante el periodo de los jueces. La tabla está en la sección de abajo.
 5. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Está en *No verificado*.
@@ -379,7 +379,7 @@ Buscamos para ofrecer algo nuevo y no repetir lo que otros proyectos ya hacen. C
 
 **Nivel 1, kernel, nada externo:** `node --test test/*.test.js`. Cubre la operación, la autoridad acotada, la aprobación de varias personas, la tarea imposible, la pausa, la puerta humana, los recibos, los estados del anclaje y la continuidad por recibos. `node --test` solo también corre la suite de la demo x402.
 
-**Nivel 2, demo x402 acotada en testnet:** mira [`demo/x402/README.md`](./demo/x402/README.md). La ruta pagada necesita una cuenta de testnet con fondos, una línea de confianza a USDC, un receptor, variables de entorno y acceso a red. Un pago en vivo en testnet está verificado; eso es todo lo que certifica.
+**Nivel 2, demo x402 acotada en testnet:** mira [`demo/x402/README.md`](./demo/x402/README.md). La ruta pagada necesita una cuenta de testnet con fondos, una línea de confianza a USDC, un receptor, variables de entorno y acceso a red. Un pago x402 en vivo a través del facilitador real está verificado; eso es todo lo que certifica esta demo. El resto de la actividad en testnet está en [docs/TESTNET_EVIDENCE.md](./docs/TESTNET_EVIDENCE.md).
 
 **¿Por qué publicarlo tan temprano?** Porque la historia es parte de la evidencia: lo que sobrevive, lo que falla, lo que cambia y lo que se rechaza queda a la vista mientras el proyecto todavía se está volviendo a sí mismo.
 
