@@ -1,0 +1,419 @@
+{
+  "summary": {
+    "consulted_at": "2026-10-03T14:45:12.109Z",
+    "network": "Stellar testnet (Horizon)",
+    "unique_hex64": 109,
+    "transactions_found": 50,
+    "successful": 50,
+    "not_transactions_or_missing": 59,
+    "unknown": 0,
+    "ledgers": [
+      4987795,
+      4996153
+    ],
+    "operations_total": 50,
+    "accounts": 8
+  },
+  "transactions": [
+    {
+      "hash": "4748d366aafa23d9a65d3367238e43c610f97d5697c58fdc5958067651f64377",
+      "ledger": 4987795,
+      "created_at": "2026-10-02T17:36:02Z",
+      "operations": 1,
+      "source_account": "GC6CSXBV4C6RL3HEDTW57KXYXSSXKAWKGYDEOSATXM3XNKXSR2VRYN3K",
+      "run": "Vespi x402, corridas 1 a 3 (corrida-1-not_verified.json)"
+    },
+    {
+      "hash": "e43e1ed80675d2b7d174167765beeec1f6b5226b8bd2950fa8231e9bb31a9f91",
+      "ledger": 4987944,
+      "created_at": "2026-10-02T17:48:27Z",
+      "operations": 1,
+      "source_account": "GC6CSXBV4C6RL3HEDTW57KXYXSSXKAWKGYDEOSATXM3XNKXSR2VRYN3K",
+      "run": "Vespi x402, corridas 1 a 3 (corrida-2-verified.json)"
+    },
+    {
+      "hash": "abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5",
+      "ledger": 4988161,
+      "created_at": "2026-10-02T18:06:32Z",
+      "operations": 1,
+      "source_account": "GC6CSXBV4C6RL3HEDTW57KXYXSSXKAWKGYDEOSATXM3XNKXSR2VRYN3K",
+      "run": "Vespi x402 en vivo (kernel)"
+    },
+    {
+      "hash": "bd459ea5fea594db726f9ac3728807f3de29779a711f131a9819c32c85f1edd4",
+      "ledger": 4988781,
+      "created_at": "2026-10-02T18:58:12Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "65512968234035225169cf4a920501f07005422cf84b60985fb89f4cd0827f58",
+      "ledger": 4988782,
+      "created_at": "2026-10-02T18:58:17Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "ea0231b92194350f698eb75355955a25ed3137ded5c7f992c21992d7d5d7ad0d",
+      "ledger": 4988783,
+      "created_at": "2026-10-02T18:58:22Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "95689cb5cea3c3ae0c5a79f17cd57e028edd119eeea21b31c3e8461d887de167",
+      "ledger": 4988784,
+      "created_at": "2026-10-02T18:58:27Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "143979b1fde532875d93dc2f63e25d064eb4d549f5a4f2a63c6f1f75f68e9a40",
+      "ledger": 4988785,
+      "created_at": "2026-10-02T18:58:32Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "423974ba56ec29d3d5080679a8e86cf1c7948d67329da7436e7a042251123a73",
+      "ledger": 4988786,
+      "created_at": "2026-10-02T18:58:37Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "86c12eedb07b7cb664d0542a3612fdc77c3da98016caab314e62feaf441b4c61",
+      "ledger": 4988787,
+      "created_at": "2026-10-02T18:58:42Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "51118d23a1c5316cdeef4110a4634b056db7eb598ea1933c69c5a916215e1f6b",
+      "ledger": 4988788,
+      "created_at": "2026-10-02T18:58:47Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "56e4dbb3260e4915e6cb5bfd3442bfcc1255a9d81ec99449bfc911fecbd452e3",
+      "ledger": 4988789,
+      "created_at": "2026-10-02T18:58:52Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "165df06b95c879cae9de38978239b0575f5cd7b828464b668d5cc92d448979d8",
+      "ledger": 4988790,
+      "created_at": "2026-10-02T18:58:57Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "493a6f1cf06bdec8e5ecb62f979230fb3fc2663b99310e79b99211a5597b756a",
+      "ledger": 4988791,
+      "created_at": "2026-10-02T18:59:02Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "221b5bb7952cb93b46f676f870f44c4e8ab267faf318860dc15838b1b11de7c1",
+      "ledger": 4988792,
+      "created_at": "2026-10-02T18:59:07Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "e93f8718064a8f6514c342378ed5af799a75b8429a1882cfb4f598b265555a46",
+      "ledger": 4988793,
+      "created_at": "2026-10-02T18:59:12Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "70d5c4bd4c650a31239371ca610a262bbe95fbd0771502648b1cc7f07d296dd0",
+      "ledger": 4988794,
+      "created_at": "2026-10-02T18:59:17Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "12b84c7ede24b753bb4b8e635d0daad92e23aff37d9c5658ccd0230b9270b835",
+      "ledger": 4988795,
+      "created_at": "2026-10-02T18:59:22Z",
+      "operations": 1,
+      "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+      "run": "TEMIS tramo 3, corrida 1"
+    },
+    {
+      "hash": "c4c3e3a0857b85b57f9cd4f71c55951f998491f9e876f1148cbe9f352962f48e",
+      "ledger": 4989043,
+      "created_at": "2026-10-02T19:20:02Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "0a3fa813db9db5b3812dfd3616633c45cbc692cf7d061ea7a19b0c688595b232",
+      "ledger": 4989044,
+      "created_at": "2026-10-02T19:20:07Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "9901e04a88d3792e3a7c53bf92d0eb590ab00d6213c6bcf46ba047e68de02aec",
+      "ledger": 4989045,
+      "created_at": "2026-10-02T19:20:12Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "436b3c757bfbb86d0058d1ce4ec5a4d28b8968cf6a3076f3f5a8880c58f79c62",
+      "ledger": 4989046,
+      "created_at": "2026-10-02T19:20:17Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "a574a1ee6389b6aaa6efecf18be584ef9ecea7deed64d42bb7ac4d925ce6d865",
+      "ledger": 4989047,
+      "created_at": "2026-10-02T19:20:22Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "8ec19d65a616a1bc0f37ba02f5157ee913971363bdcbcb94921ffb4dec9b6f65",
+      "ledger": 4989048,
+      "created_at": "2026-10-02T19:20:27Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "65f8d09694a32fe38d3bc77c9069058370efd363fa45b32b1028a11ff9d90fdb",
+      "ledger": 4989049,
+      "created_at": "2026-10-02T19:20:32Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "149072fbad724c3ea82be313d750d60937f5c10728ad88fb05cb9ed6a909a7d7",
+      "ledger": 4989050,
+      "created_at": "2026-10-02T19:20:37Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "a53030f21bd6682b69cab83c026ad1e7f49b6382917493552158d2b2c80da590",
+      "ledger": 4989051,
+      "created_at": "2026-10-02T19:20:42Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "9b44bd038cfbb7ce17fa4cc929f32d81b1e341cb8b935f78fbcc51577960a498",
+      "ledger": 4989052,
+      "created_at": "2026-10-02T19:20:47Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "d5ab4540688ead20a3402cf0e4df83a471e0e2627e39af7e5cfc0e793ad645e3",
+      "ledger": 4989053,
+      "created_at": "2026-10-02T19:20:52Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "8899960a63f18ba369633fdc940af1aabac346fff1ea4e0f721b88f02c6cf1e1",
+      "ledger": 4989054,
+      "created_at": "2026-10-02T19:20:57Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "497e993973bc25ba9050559121073f7db3a88290e8e39cab32fd988adaf7ce74",
+      "ledger": 4989055,
+      "created_at": "2026-10-02T19:21:02Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "6e5277d64a6186ae46f07dc9893e289a1284a3321152fc20a400b4326d8fa17c",
+      "ledger": 4989056,
+      "created_at": "2026-10-02T19:21:07Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "9b8f5259c456f0161e83971a23dc24cf6f27afd094ff1674a0471e312ef4d23e",
+      "ledger": 4989057,
+      "created_at": "2026-10-02T19:21:12Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "f214ae28eb073936433480aeaeef345f6c7db626a5bde1ee6079b0b0947fb4ef",
+      "ledger": 4989058,
+      "created_at": "2026-10-02T19:21:17Z",
+      "operations": 1,
+      "source_account": "GBLGGBD744UYUO6VPGTNQHAR67YJ6LDH57PNNBLPVUQDUUDVGVB7Z4W2",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "34ee18dbdabaed895b37c7e830e4531f1cbafdfd282400033688c32c04e2be4a",
+      "ledger": 4989059,
+      "created_at": "2026-10-02T19:21:22Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "8ae6018de2544468902af713dd38baebccd90792aa7bcb001519c81fd4129323",
+      "ledger": 4989060,
+      "created_at": "2026-10-02T19:21:27Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "ee2e494877186f59388ffe38b719d79ce61a95cd5bb9c4f483ad5de1db76d04a",
+      "ledger": 4989061,
+      "created_at": "2026-10-02T19:21:32Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "4db430c5204abd5595f3ca316c8737c9d006268060790721a0d387ff893f6478",
+      "ledger": 4989062,
+      "created_at": "2026-10-02T19:21:37Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "5c6472c9d5d3787ad00feadf31a503ba64b5cbbe1b1a9cbcef5065740005c3dd",
+      "ledger": 4989063,
+      "created_at": "2026-10-02T19:21:42Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "ba28ca1426835dd7d12a9b1c7628a834d7450f5b75e8dfcdd239c358652b7e47",
+      "ledger": 4989064,
+      "created_at": "2026-10-02T19:21:47Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "675cda89adbab94bb89bbf737bb30c83d57f380c7850b7104ade9de06d5d0a78",
+      "ledger": 4989065,
+      "created_at": "2026-10-02T19:21:52Z",
+      "operations": 1,
+      "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
+      "run": "TEMIS tramo 3, corrida 2 (versión corregida)"
+    },
+    {
+      "hash": "a7b8393c5295acfc445b857a026c016646f56ceb53193ece2ce09eebbf40830f",
+      "ledger": 4995969,
+      "created_at": "2026-10-03T04:57:12Z",
+      "operations": 1,
+      "source_account": "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ",
+      "run": "TEMIS tramo 4, payTo multiplexada y tipo de operación"
+    },
+    {
+      "hash": "44e0f75295004850dee7f6894d2111124d4c1a4d4e528bb777122878937a7542",
+      "ledger": 4995970,
+      "created_at": "2026-10-03T04:57:17Z",
+      "operations": 1,
+      "source_account": "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ",
+      "run": "TEMIS tramo 4, payTo multiplexada y tipo de operación"
+    },
+    {
+      "hash": "72c4e3db6e42ef352263d1a2a382d2343020d071ac7a981848d057d05fff18b2",
+      "ledger": 4995994,
+      "created_at": "2026-10-03T04:59:17Z",
+      "operations": 1,
+      "source_account": "GBUJ2OIMWU2XMRBDYBATO76CWXY3VZMYR3RUIO22IGOYUHUHDPYNRLW5",
+      "run": "TEMIS tramo 4, anclajes concurrentes"
+    },
+    {
+      "hash": "eaa79b261b4c8ef0dc4717a73fe72593d02c733e47afd121cfaa87e557fda451",
+      "ledger": 4996000,
+      "created_at": "2026-10-03T04:59:47Z",
+      "operations": 1,
+      "source_account": "GBUJ2OIMWU2XMRBDYBATO76CWXY3VZMYR3RUIO22IGOYUHUHDPYNRLW5",
+      "run": "TEMIS tramo 4, anclajes concurrentes"
+    },
+    {
+      "hash": "64069991758381e8f9ca84b44ec10dfca022fdf05a69a9be714c77071396cb32",
+      "ledger": 4996005,
+      "created_at": "2026-10-03T05:00:12Z",
+      "operations": 1,
+      "source_account": "GBJQ3C746LWEUXNBBCJJNZOWDYE2T27MSRNI4WMI7LRESMF5FIHJCC4R",
+      "run": "TEMIS tramo 4, anclajes concurrentes"
+    },
+    {
+      "hash": "725ec0a7645f8cb525004b78001d9b9a6c882512588016b5232a834865efbcbf",
+      "ledger": 4996011,
+      "created_at": "2026-10-03T05:00:42Z",
+      "operations": 1,
+      "source_account": "GBJQ3C746LWEUXNBBCJJNZOWDYE2T27MSRNI4WMI7LRESMF5FIHJCC4R",
+      "run": "TEMIS tramo 4, anclajes concurrentes"
+    },
+    {
+      "hash": "2a427fea35a153ec7cec59907d885546c19b9bc60eca4357345e7393311ce357",
+      "ledger": 4996016,
+      "created_at": "2026-10-03T05:01:07Z",
+      "operations": 1,
+      "source_account": "GBDVO2MBRWENFH2EOFQS4FFMG7S2DGM4WVKSYTRC4IABC2ZFZP7LT23K",
+      "run": "TEMIS tramo 4, anclajes concurrentes"
+    },
+    {
+      "hash": "1e7bf39958f208824480ad2da12acb27bfbac59370427993e91fe6066b9c2bcd",
+      "ledger": 4996022,
+      "created_at": "2026-10-03T05:01:37Z",
+      "operations": 1,
+      "source_account": "GBDVO2MBRWENFH2EOFQS4FFMG7S2DGM4WVKSYTRC4IABC2ZFZP7LT23K",
+      "run": "TEMIS tramo 4, anclajes concurrentes"
+    },
+    {
+      "hash": "5495a053cfde91f2ac2dd4eece581fc628072416cf9007d6ca78ab3becf4273a",
+      "ledger": 4996153,
+      "created_at": "2026-10-03T05:12:32Z",
+      "operations": 1,
+      "source_account": "GC6CSXBV4C6RL3HEDTW57KXYXSSXKAWKGYDEOSATXM3XNKXSR2VRYN3K",
+      "run": "TEMIS tramo 4, idempotencia del pago x402"
+    }
+  ]
+}

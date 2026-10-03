@@ -7,6 +7,7 @@
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
   <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E0C170?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
   <a href="#the-functional-projects"><img src="https://img.shields.io/badge/projects-10_functional-D7B698?style=for-the-badge&labelColor=07111A" alt="Functional projects: 10"></a>
+  <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet_transactions-50_verified-E0C170?style=for-the-badge&labelColor=07111A" alt="50 successful transactions on Stellar testnet"></a>
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/built_with-Stellar_%C2%B7_x402_%C2%B7_Raven_MCP-E0C170?style=for-the-badge&labelColor=07111A" alt="Built with Stellar, x402 and Raven MCP"></a>
 </p>
 
@@ -41,8 +42,8 @@ You say what you want; Vespi keeps the operation standing under an authority a p
 **If you are judging Find Your Way or Meridian, start here.**
 
 1. **What it is.** The kernel of an operating system for working with AI: an authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.
-2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone.
-3. **Check it yourself, offline.** `node --test test/*.test.js` runs 203 tests with no wallet and no network. The live receipt is [in the repository](./demo/x402/receipts/live-testnet-2026-10-02.json).
+2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone. In all, [50 successful testnet transactions from 8 accounts](./docs/TESTNET_EVIDENCE.md), read back from Horizon, back the project: a full agreement lifecycle run twice, concurrent anchors, an idempotent payment and the x402 runs.
+3. **Check it yourself, offline.** `node --test test/*.test.js` runs 205 tests with no wallet and no network. The live receipt is [in the repository](./demo/x402/receipts/live-testnet-2026-10-02.json). With a network, `node scripts/verify-testnet-evidence.mjs` asks Horizon about every transaction listed in the evidence file.
 4. **See what is built on it.** Ten functional projects, each with its agreement written before its code, run on fictional data. Several will be open for review during the judging period. The table is in the section below.
 5. **What we do not claim.** No mainnet, no second provider, no production readiness. It is listed under *Not verified*.
 
@@ -56,7 +57,8 @@ So Vespi starts from the operation. It carries a goal and an authority a person 
 ```bash
 git clone https://github.com/andresanemic/vespi.git
 cd vespi
-node --test test/*.test.js     # ℹ tests 203 · ℹ pass 203 · ℹ fail 0
+node --test test/*.test.js     # ℹ tests 205 · ℹ pass 205 · ℹ fail 0
+node scripts/verify-testnet-evidence.mjs   # re-checks the 50 testnet transactions against Horizon (needs a network)
 ```
 
 ## What Vespi is, seen from the outside: a method
@@ -95,11 +97,11 @@ A request becomes work you can check. When you ask an agent for something that i
 
 You say what you want. The coordinator opens the criterion that governs it, defines what done will look like, and asks you only for what is yours to decide: authority, money, publishing. It hands bounded stretches of work to other models, each with its own question, its own limits and a receipt, verifies apart, and writes one checkpoint in the project's `FASES.md`. The next session resumes from the receipts, not from a summary. You never need to know the kernel exists.
 
-**Where it stands.** Today: the kernel (`0.1.3`), the Vespi skill inside Lore Plugin, the coordinator's method, and one real operation run end to end. Lore Plugin `2.4.9` brings the flow into the kit: one checkpoint per project, tasks by role through the tools the host really exposes, and the economy of an operation declared before it runs. Next: the first applications for real users.
+**Where it stands.** The first experiments (RUN 01 to 05) were only the start: they were the tests that shaped the kernel, and the project has moved a long way since. Today there is a published kernel (`0.1.3`, with `0.1.4` prepared and not yet published), the Vespi skill inside Lore Plugin, the coordinator's method, ten functional projects built on it (nine with code and tests), and one real operation run end to end: TEMIS, whose agreement records are anchored on Stellar and were rebuilt by an independent third agent from Horizon alone (22 of 22 statuses). On Stellar testnet there are now [50 successful transactions from 8 accounts](./docs/TESTNET_EVIDENCE.md), including a live x402 payment through the real facilitator, concurrent anchors and an idempotent payment, and the repository carries a [study of how kernels, schedulers and durable-execution systems solved the same problems](./docs/PRIOR_ART.md). Lore Plugin `2.4.9` brings the flow into the kit: one checkpoint per project, tasks by role through the tools the host really exposes, and the economy of an operation declared before it runs. Next: the first applications for real users.
 
 ## What 0.1.3 brings
 
-Published as [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (previous: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Everything below was read in the code, not in a plan. The kernel suite is **203/203** and the full run, including the x402 demo, **252/252** (`2dcfd92`, and again at `7dcec77`).
+Published as [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (previous: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Everything below was read in the code, not in a plan. The kernel suite is **205/205** and the full run, including the x402 demo, **254/254**. At the release commits (`2dcfd92`, and again at `7dcec77`) they were 203/203 and 252/252; the two tests added since check the testnet evidence list.
 
 <details>
 <summary><b>The capabilities, one by one</b></summary>
@@ -118,9 +120,21 @@ Published as [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/ta
 
 ## Evidence you can open
 
-The public record is in [`experiments/`](./experiments/): the first bodies and receipts, an Operator ↔ Professor loop with independent arbitration, an earlier x402 / Stellar testnet slice that kept one real verification failure as evidence, and the final RUN 05 evaluation, **closed** within its declared local, offline scope, with the blind reads and the verifier reports that closed it.
+The newest record is the Stellar testnet evidence below. Underneath it are the first experiments that formed the kernel, in [`experiments/`](./experiments/): the first bodies and receipts, an Operator ↔ Professor loop with independent arbitration, an earlier x402 / Stellar testnet slice that kept one real verification failure as evidence, and the final RUN 05 evaluation, **closed** within its declared local, offline scope, with the blind reads and the verifier reports that closed it. Those runs were the first tests, not the latest work: the evidence below is what the kernel and the projects built on it have done since.
 
-**A live x402 payment on Stellar testnet is verified for this release.** On 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e8…`, ledger 4988161). It is one payment, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The paid example lives in [`demo/x402/`](./demo/x402/), the only place that knows x402, Stellar or USDC.
+**A live x402 payment on Stellar testnet is verified for this release.** On 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e8…`, ledger 4988161). It is one of the 50 transactions below, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The paid example lives in [`demo/x402/`](./demo/x402/), the only place that knows x402, Stellar or USDC.
+
+**It was not one transaction.** Between 2026-10-02 and 2026-10-03 the work around Vespi wrote **50 successful testnet transactions** from 8 accounts to the Stellar testnet (ledgers 4987795 to 4996153), on fictional data and with no real money. Every hash is in [docs/TESTNET_EVIDENCE.md](./docs/TESTNET_EVIDENCE.md) and in a [machine-readable file](./docs/testnet-evidence.json), and `node scripts/verify-testnet-evidence.mjs` asks Horizon about each one (50 of 50 were successful when this was written).
+
+| What was exercised on Stellar | Transactions | What it shows |
+|---|---|---|
+| Full agreement lifecycle of TEMIS (registration, signature and counter-signature, anchor, milestone, challenge, correction, dispute), run twice | 38 | Commitments written as ordered ledger transactions with their digest in a hash memo. A third agent with no access to the code rebuilt the record from Horizon history alone: 22 of 22 statuses matched, and it found a defect no test had seen. |
+| Concurrent anchors, two processes, three rounds | 6 | Two writers racing from one account: the loser retries and the order by (ledger, index) stays deterministic. |
+| Operation-type probe: a classic payment and a Soroban asset-contract transfer | 2 | Both emit the same `transfer` event, so an event alone does not prove how a payment was made. |
+| Idempotent x402 payment | 1 | One call, one real credit, and a retried delivery was not charged twice. |
+| x402 payment runs through the real facilitator | 3 | The first came back `not_verified` because of our own bug (we read the wrong field); the repaired adapter verified, and Horizon confirmed it separately. |
+
+Two more findings came from testnet without a transaction: the facilitator rejects a muxed-account `payTo` at `/verify` (`invalid_exact_stellar_payload_event_wrong_to`), and a payload that was already settled is rejected when it is replayed at `/settle`. What this exercises on Stellar: classic payments, hash-memo anchoring, a Soroban asset-contract transfer, the x402 `exact` scheme through the real facilitator, concurrent writers, and read-back from Horizon. All of it is testnet, with one facilitator and one payer. Stellar resets the testnet a few times a year, so the receipts in this repository are the lasting record.
 
 A second capability lives outside the kernel: [`capabilities/respaldo/`](./capabilities/respaldo/LEEME.md) copies a person's working tree into a folder that Drive, Dropbox or OneDrive already sync, never deletes, and verifies every hash. It does not encrypt, upload through APIs or keep versions yet. 17 tests.
 
@@ -142,7 +156,7 @@ Vespi is a kernel, not an app. What shows it works is what gets built on it: ten
 | 8 | **Farolero** | Authority for agents without code: delegating only narrows; what does not fit comes back blocked. | Agreement + code + tests | 8 / 13 |
 | 9 | **Marea** | Verifying climate commitments between countries (Paris Agreement art. 6.2) without counting a reduction twice. | Agreement + code + tests | 25 / 25 |
 | 10 | **Vela** | Protecting whoever tells the truth through a legal channel; the zero-knowledge membership proof is pending. | Agreement + code + tests | 10 / 11 |
-| — | **TEMIS** | Legal validation for bilateral agreements by milestones: signed, counter-signed and anchored so a third party can rebuild what happened. The first real operation of Lore Plugin and Vespi as one. | Whitepaper + MVP: tests 0 to 8 run on Stellar testnet with fictional data; owner's certificate and legal review pending | 135 / 135 |
+| — | **TEMIS** | Legal validation for bilateral agreements by milestones: signed, counter-signed and anchored so a third party can rebuild what happened. The first real operation of Lore Plugin and Vespi as one. | Whitepaper + MVP: tests 0 to 8 run on Stellar testnet with fictional data (a full lifecycle run twice, 38 transactions, plus concurrent anchors and an idempotent x402 payment); owner's certificate and legal review pending | 135 / 135 |
 
 **How to read the last column.** Nine of the ten were built on 2026-09-29 against the kernel cut `54c20c7` and their own records report them green there; that was not re-run here. Each pins the kernel it consumes by digest and fails on purpose when the kernel moves, so against `0.1.3` part of every suite fails until it is re-pinned. That re-pinning is pending, and so is any claim that these ten are ready: today they show a working path, not a finished product.
 
@@ -227,8 +241,8 @@ Tú dices qué quieres; Vespi mantiene viva la operación bajo una autoridad que
 **Si estás evaluando Find Your Way o Meridian, empieza aquí.**
 
 1. **Qué es.** El kernel de un sistema operativo para trabajar con IA: una autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
-2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público.
-3. **Compruébalo tú, sin red.** `node --test test/*.test.js` corre 203 pruebas sin billetera y sin red. El recibo en vivo está [en el repositorio](./demo/x402/receipts/live-testnet-2026-10-02.json).
+2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público. En total, [50 transacciones exitosas en testnet desde 8 cuentas](./docs/TESTNET_EVIDENCE.md), releídas desde Horizon, respaldan el proyecto: un ciclo completo de un acuerdo corrido dos veces, anclajes concurrentes, un pago idempotente y las corridas de x402.
+3. **Compruébalo tú, sin red.** `node --test test/*.test.js` corre 205 pruebas sin billetera y sin red. El recibo en vivo está [en el repositorio](./demo/x402/receipts/live-testnet-2026-10-02.json). Con red, `node scripts/verify-testnet-evidence.mjs` le pregunta a Horizon por cada transacción listada en el archivo de evidencia.
 4. **Mira lo que se construye encima.** Diez proyectos funcionales, cada uno con su acuerdo escrito antes de su código, sobre datos ficcionados. Varios estarán abiertos para revisión durante el periodo de los jueces. La tabla está en la sección de abajo.
 5. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Está en *No verificado*.
 
@@ -242,7 +256,8 @@ Por eso Vespi parte de la operación. Lleva un objetivo y una autoridad que una 
 ```bash
 git clone https://github.com/andresanemic/vespi.git
 cd vespi
-node --test test/*.test.js     # ℹ tests 203 · ℹ pass 203 · ℹ fail 0
+node --test test/*.test.js     # ℹ tests 205 · ℹ pass 205 · ℹ fail 0
+node scripts/verify-testnet-evidence.mjs   # vuelve a comprobar las 50 transacciones de testnet contra Horizon (necesita red)
 ```
 
 ## Qué es Vespi visto desde fuera: un método
@@ -281,11 +296,11 @@ Un encargo se vuelve trabajo que puedes comprobar. Cuando le pides a un agente a
 
 Tú dices qué quieres. El coordinador abre el criterio que lo gobierna, define cómo se verá terminado y te pide solo lo que te toca decidir: autoridad, dinero, publicar. Reparte tramos acotados de trabajo a otros modelos, cada uno con su pregunta, sus límites y un recibo, verifica aparte y escribe un checkpoint en el `FASES.md` del proyecto. La sesión siguiente retoma desde los recibos, no desde un resumen. Nunca necesitas saber que existe el kernel.
 
-**Dónde está hoy.** El kernel (`0.1.3`), la skill de Vespi dentro de Lore Plugin, el método del coordinador y una operación real corrida de punta a punta. Lore Plugin `2.4.9` trae el flujo al kit: un checkpoint por proyecto, tareas por rol con las herramientas que el host realmente expone y la economía de una operación declarada antes de correr. Después: las primeras aplicaciones para personas reales.
+**Dónde está hoy.** Los primeros experimentos (RUN 01 a 05) fueron solo el comienzo: fueron las pruebas que dieron forma al kernel, y el proyecto avanzó mucho desde entonces. Hoy hay un kernel publicado (`0.1.3`, con `0.1.4` preparada y sin publicar), la skill de Vespi dentro de Lore Plugin, el método del coordinador, diez proyectos funcionales construidos sobre él (nueve con código y pruebas) y una operación real corrida de punta a punta: TEMIS, cuyos registros de acuerdos están anclados en Stellar y los reconstruyó un tercer agente independiente solo desde Horizon (22 de 22 estatus). En la testnet de Stellar hay ahora [50 transacciones exitosas desde 8 cuentas](./docs/TESTNET_EVIDENCE.md), incluido un pago x402 en vivo a través del facilitador real, anclajes concurrentes y un pago idempotente, y el repositorio lleva un [estudio de cómo kernels, planificadores y sistemas de ejecución durable resolvieron los mismos problemas](./docs/PRIOR_ART.md). Lore Plugin `2.4.9` trae el flujo al kit: un checkpoint por proyecto, tareas por rol con las herramientas que el host realmente expone y la economía de una operación declarada antes de correr. Después: las primeras aplicaciones para personas reales.
 
 ## Qué trae el 0.1.3
 
-Publicado como [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (anterior: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Todo lo que sigue se leyó en el código, no en un plan. La suite del kernel está en **203/203** y la corrida completa, con la demo x402, en **252/252** (`2dcfd92`, y de nuevo en `7dcec77`).
+Publicado como [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (anterior: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Todo lo que sigue se leyó en el código, no en un plan. La suite del kernel está en **205/205** y la corrida completa, con la demo x402, en **254/254**. En los commits de la versión (`2dcfd92`, y de nuevo en `7dcec77`) eran 203/203 y 252/252; las dos pruebas añadidas desde entonces revisan la lista de evidencia de testnet.
 
 <details>
 <summary><b>Las capacidades, una por una</b></summary>
@@ -304,9 +319,21 @@ Publicado como [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/
 
 ## Evidencia que puedes abrir
 
-El registro público está en [`experiments/`](./experiments/): los primeros cuerpos y recibos, un ciclo Operador ↔ Profesor con arbitraje independiente, un corte anterior de x402 / Stellar testnet que conservó una falla real de verificación como evidencia y la evaluación final del RUN 05, **cerrada** dentro de su alcance local y sin red declarado, con las lecturas ciegas y los informes del verificador que la cerraron.
+El registro más nuevo es la evidencia en la testnet de Stellar de más abajo. Debajo están los primeros experimentos que formaron el kernel, en [`experiments/`](./experiments/): los primeros cuerpos y recibos, un ciclo Operador ↔ Profesor con arbitraje independiente, un corte anterior de x402 / Stellar testnet que conservó una falla real de verificación como evidencia y la evaluación final del RUN 05, **cerrada** dentro de su alcance local y sin red declarado, con las lecturas ciegas y los informes del verificador que la cerraron. Esas corridas fueron las primeras pruebas, no lo último que se hizo: la evidencia de abajo es lo que el kernel y los proyectos construidos sobre él han hecho desde entonces.
 
-**Un pago x402 en vivo en Stellar testnet está verificado para esta versión.** El 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitador real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e8…`, ledger 4988161). Es un solo pago, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), el único lugar que conoce x402, Stellar o USDC.
+**Un pago x402 en vivo en Stellar testnet está verificado para esta versión.** El 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitador real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e8…`, ledger 4988161). Es una de las 50 transacciones de abajo, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), el único lugar que conoce x402, Stellar o USDC.
+
+**No fue una sola transacción.** Entre el 2026-10-02 y el 2026-10-03 el trabajo alrededor de Vespi escribió **50 transacciones exitosas en testnet** desde 8 cuentas en la testnet de Stellar (ledgers 4987795 a 4996153), con datos de fantasía y sin dinero real. Cada hash está en [docs/TESTNET_EVIDENCE.md](./docs/TESTNET_EVIDENCE.md) y en un [archivo legible por máquina](./docs/testnet-evidence.json), y `node scripts/verify-testnet-evidence.mjs` le pregunta a Horizon por cada una (50 de 50 estaban exitosas al escribir esto).
+
+| Qué se ejerció en Stellar | Transacciones | Qué muestra |
+|---|---|---|
+| Ciclo completo de un acuerdo de TEMIS (alta, firma y contrafirma, anclaje, hito, impugnación, corrección, disputa), corrido dos veces | 38 | Compromisos escritos como transacciones ordenadas por ledger, con su digest en un memo de hash. Un tercer agente sin acceso al código reconstruyó el registro solo desde el historial de Horizon: coincidieron 22 de 22 estatus y encontró un defecto que ninguna prueba había visto. |
+| Anclajes concurrentes, dos procesos, tres rondas | 6 | Dos escritores compitiendo desde una cuenta: el que pierde reintenta y el orden por (ledger, índice) sigue siendo determinista. |
+| Prueba de tipo de operación: un pago clásico y una transferencia del contrato de activo de Soroban | 2 | Ambas emiten el mismo evento `transfer`, así que un evento solo no prueba cómo se hizo el pago. |
+| Pago x402 idempotente | 1 | Una llamada, un abono real, y una entrega reintentada no se cobró dos veces. |
+| Corridas de pago x402 a través del facilitador real | 3 | La primera volvió `not_verified` por un error nuestro (leíamos el campo equivocado); el adaptador reparado verificó, y Horizon lo confirmó por separado. |
+
+Otros dos hallazgos salieron de testnet sin una transacción: el facilitador rechaza en `/verify` una `payTo` de cuenta multiplexada (`invalid_exact_stellar_payload_event_wrong_to`), y un payload ya liquidado se rechaza cuando se reenvía a `/settle`. Lo que esto ejerce en Stellar: pagos clásicos, anclaje con memo de hash, una transferencia del contrato de activo de Soroban, el esquema `exact` de x402 a través del facilitador real, escritores concurrentes y lectura de vuelta desde Horizon. Todo es testnet, con un facilitador y un pagador. Stellar reinicia la testnet unas veces al año, así que los recibos de este repositorio son el registro duradero.
 
 Una segunda capacidad vive fuera del kernel: [`capabilities/respaldo/`](./capabilities/respaldo/LEEME.md) copia el árbol de trabajo de una persona a una carpeta que Drive, Dropbox o OneDrive ya sincronizan, nunca borra y verifica cada hash. Todavía no cifra, no sube por APIs ni guarda versiones. 17 pruebas.
 
@@ -328,7 +355,7 @@ Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que 
 | 8 | **Farolero** | Autoridad para agentes sin código: delegar solo estrecha; lo que no cabe vuelve bloqueado. | Acuerdo + código + pruebas | 8 / 13 |
 | 9 | **Marea** | Verificar compromisos climáticos entre países (Acuerdo de París art. 6.2) sin contar una reducción dos veces. | Acuerdo + código + pruebas | 25 / 25 |
 | 10 | **Vela** | Proteger a quien dice la verdad por un canal legal; la prueba de conocimiento cero de pertenencia está pendiente. | Acuerdo + código + pruebas | 10 / 11 |
-| — | **TEMIS** | Validación legal de acuerdos bilaterales por hitos: firmados, contrafirmados y anclados para que un tercero reconstruya lo ocurrido. La primera operación real de Lore Plugin y Vespi como uno. | Whitepaper + MVP: pruebas 0 a 8 corridas en Stellar testnet con datos ficcionados; falta el certificado de su dueño y la revisión jurídica | 135 / 135 |
+| — | **TEMIS** | Validación legal de acuerdos bilaterales por hitos: firmados, contrafirmados y anclados para que un tercero reconstruya lo ocurrido. La primera operación real de Lore Plugin y Vespi como uno. | Whitepaper + MVP: pruebas 0 a 8 corridas en Stellar testnet con datos ficcionados (un ciclo completo corrido dos veces, 38 transacciones, más anclajes concurrentes y un pago x402 idempotente); falta el certificado de su dueño y la revisión jurídica | 135 / 135 |
 
 **Cómo leer la última columna.** Nueve de los diez se construyeron el 2026-09-29 contra el corte `54c20c7` del kernel y sus propios registros los dan en verde ahí; aquí no se volvió a correr. Cada uno fija por digest el kernel que consume y falla a propósito cuando el kernel se mueve, así que contra `0.1.3` parte de cada suite falla hasta re-anclarlo. Ese re-anclaje está pendiente, y también lo está cualquier afirmación de que estos diez estén listos: hoy muestran un camino que funciona, no un producto terminado.
 
