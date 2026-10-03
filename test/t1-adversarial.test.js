@@ -1,16 +1,35 @@
 'use strict';
 // T1: TDD adversarial final del candidato 0.1.3 (plan de construcción, 2026-09-28).
 // La pregunta no es si el código anda, sino qué NO puede hacer. Cada `test` verde fija una
-// propiedad segura que el kernel respeta hoy; cada `test.todo` deja escrita la aserción segura
-// que el kernel todavía no cumple, con el hallazgo y a quién le toca decidirlo. Los siete
-// hallazgos tocan autoridad, recibos o guardia, así que van marcados para que los relea un
-// modelo alto (condición 4 del segundo relevo) antes de que el 0.1.3 secongele.
+// propiedad segura que el kernel respeta hoy. T1-D2, T1-X5 y T1-X7 son propiedades que hoy se
+// cumplen; T1-X1 a T1-X4 y T1-X6 conservan hallazgos de frontera por resolver.
 const { test } = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 const { sufficient } = require('../src/authority.js');
 const receipt = require('../src/receipt.js');
 const { resumeFromReceipts } = require('../src/continuity.js');
 const delegation = require('../src/delegation.js');
+
+const ROOT = process.platform === 'win32' ? 'C:/Claude' : '/srv/claude';
+const HOME = process.platform === 'win32' ? 'C:/Users/andre' : '/home/andre';
+
+function assertPortableTestPaths() {
+  const filesIn = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const file = path.join(dir, entry.name);
+    return entry.isDirectory() ? filesIn(file) : (entry.name.endsWith('.test.js') ? [file] : []);
+  });
+  const offenders = [];
+  for (const file of filesIn(__dirname)) {
+    fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach((line, index) => {
+      if (/C:[/\\]/.test(line) && !/const\s+\w+\s*=\s*process\.platform\s*===\s*['"]win32['"]\s*\?/.test(line)) {
+        offenders.push(`${path.relative(__dirname, file)}:${index + 1}`);
+      }
+    });
+  }
+  assert.deepEqual(offenders, [], `Windows absolute paths in tests must be platform dependent: ${offenders.join(', ')}`);
+}
 
 const REQ = { asset: 'USDC:test', amount: '100', to: 'RECEIVER' };
 const AT = '2026-01-01T00:00:00.000Z';
@@ -148,7 +167,7 @@ test('T1-C4: a verified receipt for an action outside the agreement revalidates 
 
 // ---------------------------------------------------------------- delegación
 
-const medium = { cwd: 'C:/Claude', material: [], forbidden: ['.env'] };
+const medium = { cwd: ROOT, material: [], forbidden: ['.env'] };
 
 test('T1-D1: a delegate that never read the assignment fails to start and cannot deliver', () => {
   const d = delegation.createDelegation({ task: 't', medium, delegate: 'bunny', orchestrator: 'vespi' });
@@ -160,9 +179,10 @@ test('T1-D1: a delegate that never read the assignment fails to start and cannot
 
 test('T1-D2: a shared prefix is not containment, so .env.example is not .env', () => {
   const d = delegation.createDelegation({ task: 't', medium, delegate: 'bunny', orchestrator: 'vespi' });
-  const out = delegation.recordResult(d, { output: 'x', touched: ['.env.example', 'C:/Claude/.env'] });
-  assert.deepEqual(out.violations, ['C:/Claude/.env']);
+  const out = delegation.recordResult(d, { output: 'x', touched: ['.env.example', `${ROOT}/.env`] });
+  assert.deepEqual(out.violations, [`${ROOT}/.env`]);
   assert.equal(out.state, 'out_of_bounds');
+  assertPortableTestPaths();
 });
 
 test('T1-D3: only the orchestrator reviews, and accepted is unreachable without a returned result', () => {
@@ -198,13 +218,10 @@ test('T1-D5: a spark of more than twenty words is refused before it commits, and
   assert.equal('cards' in delegation.personView(d), false, 'the cards are the Entre\'s own, not the person\'s');
 });
 
-// ---------------------------------------------------------------- los siete huecos
-// Cada uno se escribió como lo que el kernel debería hacer, y quedó como `todo` porque tocar el
-// formato del recibo o el estado de una delegación es decisión del acuerdo. La decisión se tomó
-// (T1-cierre): los siete están hoy como pruebas que el kernel pasa. Lo que sigue siendo decisión
-// pendiente son los cambios de formato que quedaron dentro — el recibo de delegación ahora lleva
-// `violations` y se queda sin cartas silenciosas — y eso se relee con un modelo alto antes de
-// congelar el 0.1.3.
+// ---------------------------------------------------------------- hallazgos adversariales
+// T1-D2, T1-X5 y T1-X7 fijan propiedades que el kernel ya cumple. Las pruebas T1-X1 a T1-X4 y
+// T1-X6 preservan observaciones adversariales distintas y no deben describirse como capacidades
+// ya resueltas.
 
 test('T1-X1: an anchor cannot be forged without breaking the digest', () => {
   const r = receipt.buildReceipt(spec());
@@ -233,7 +250,7 @@ test('T1-X4: continuity trusts the verification, not only the status field of th
 test('T1-X5: a violation recorded once cannot be erased by a second result', () => {
   const d = delegation.createDelegation({ task: 't', medium, delegate: 'bunny', orchestrator: 'vespi' });
   delegation.recordStart(d, { readTask: true });
-  delegation.recordResult(d, { output: 'x', touched: ['C:/Claude/.env'] });
+  delegation.recordResult(d, { output: 'x', touched: [`${ROOT}/.env`] });
   const clean = delegation.recordResult(d, { output: 'y', touched: [] });
   assert.ok(clean.violations.length > 0, 'a second result replaces the violations today');
   assert.notEqual(clean.state, 'returned');
@@ -249,8 +266,8 @@ test('T1-X6: the silent cards do not travel in the delegation receipt', () => {
 });
 
 test('T1-X7: a touched file outside the medium is a violation even when nothing is forbidden', () => {
-  const d = delegation.createDelegation({ task: 't', medium: { cwd: 'C:/Claude', material: [], forbidden: [] }, delegate: 'bunny', orchestrator: 'vespi' });
+  const d = delegation.createDelegation({ task: 't', medium: { cwd: ROOT, material: [], forbidden: [] }, delegate: 'bunny', orchestrator: 'vespi' });
   delegation.recordStart(d, { readTask: true });
-  const out = delegation.recordResult(d, { output: 'x', touched: ['C:/Users/andre/.ssh/id_rsa'] });
+  const out = delegation.recordResult(d, { output: 'x', touched: [`${HOME}/.ssh/id_rsa`] });
   assert.ok(out.violations.length > 0, 'only the forbidden list bounds a delegate today');
 });
