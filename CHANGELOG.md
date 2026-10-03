@@ -4,9 +4,9 @@ All notable public changes to Vespi will be recorded here.
 
 This project is experimental. Before `v1.0.0`, version numbers describe public snapshots of a system still under active arbitration.
 
-## 0.1.3 — candidato (sin publicar)
+## [v0.1.3-kernel] — 2026-10-03
 
-Candidate, not a tag: the last tag here is `v0.1.2-kernel`. Everything below was read in this tree.
+Released: this version carries the `v0.1.3-kernel` tag; the previous tag is `v0.1.2-kernel`. Everything below was read in this tree.
 The note that opens with what this changes for the person is [`RELEASE_0.1.3_KERNEL.md`](./docs/RELEASE_0.1.3_KERNEL.md).
 
 ### Added
@@ -23,7 +23,7 @@ The note that opens with what this changes for the person is [`RELEASE_0.1.3_KER
 
 - The x402 demo is told from Queen, not from Bora: the environment variables are now `QUEEN_PAY_TO` and `QUEEN_PAY_TO_EXPECTED` and the sample plan is titled «Queen Marketing Plan». The sealed historical receipts under `experiments/` are untouched.
 
-### Fixed — adversarial review of the candidate
+### Fixed — adversarial review before the release
 
 - x402 demo adapter, found by the first live testnet run on 2026-10-02: settlement verification read `txn.ledger` as a number when the Horizon SDK exposes it as a link (the sequence is `ledger_attr`), so a paid and settled run came back `not_verified`. A second run came back `verified`; a third, after the `checks`/`facts` split below, listed only `external anchor` in `notCovered` (transaction `abb968e8…`, confirmed on Horizon).
 - x402 demo verification returns `checks` as booleans only and keeps hashes, names and counters in `facts`; before, those values showed up as `notCovered` on a receipt that had verified.
@@ -33,15 +33,14 @@ The note that opens with what this changes for the person is [`RELEASE_0.1.3_KER
 - The anchor names its network in CAIP-2 (`stellar:testnet` or `stellar:pubnet`), refuses any other, and its verifier confirms the network as well as the digest.
 - `verifyReceipt` is declared, in the code and in the README, as a proof of integrity and not of authenticity.
 
-### Not in this candidate — scoped for 0.1.4
+### Not in this release — scoped for 0.1.4
 
 - Emergency access granted in advance and exercised with an immediate receipt, a zero-knowledge proof verifier, skill provenance, and x402 live inside the kernel itself (the demo adapter already pays live on testnet).
 - The receipt is not durable by itself: the caller owns where it lives, and nothing here makes it authentic.
 
 ## [v0.1.2-kernel]
 
-Released: this version carries the `v0.1.2-kernel` tag. The current working tree is the **0.1.3
-candidate**, described above.
+Released: this version carries the `v0.1.2-kernel` tag. The release that follows it, 0.1.3, is described above.
 
 ### RUN 05 — public evaluation surface (local, not released)
 
@@ -49,7 +48,7 @@ candidate**, described above.
 - Remove the compatibility-only `README_es.md`; `README.md` is now the single bilingual public surface.
 - RUN 05 repair: x402 adapter checks effective 402 terms against its declared fixed effect and the operation grant, and prepares the exact Soroban transfer/auth digest before the paid request; offline adversarial test covers amount, token, recipient, network, scheme and signing-window divergence.
 - Current code gate after external Stellar/blockchain/x402 review: destination-bound payment authority, no redirect forwarding, bounded fetch/body deadlines, abort propagation before the paid request, post-settlement exact Soroban authorization checks, transaction hash/network binding, marketing-plan schema validation, receipt evidence allowlist, and route-level in-process payment deduplication after x402 processing.
-- Local verification at that release: 47/47 kernel tests and 53/53 demo tests; `npm test` in `demo/x402` includes the adversarial suite. Not a current figure — see the 0.1.3 candidate above.
+- Local verification at that release: 47/47 kernel tests and 53/53 demo tests; `npm test` in `demo/x402` includes the adversarial suite. Not a current figure — see 0.1.3 above.
 - Scope remains an offline-testable demo. Durable cross-process operation/idempotency storage and production payment readiness are not claimed.
 
 ## [v0.1.1-kernel] — 2026-09-23 (16/16 tests at release)

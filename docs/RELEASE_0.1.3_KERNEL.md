@@ -1,9 +1,8 @@
-# v0.1.3 (candidate — not a tag, not published)
+# v0.1.3
 
-> **Not released.** The last tag in this repository is
-> [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Nothing on this
-> page is a release note for something the world can install; it is what this tree proposes, written
-> so that a person can decide whether to tag it.
+> **Published as [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) on 2026-10-03.** The previous tag is
+> [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). This page says what the version changes for a person and what was
+> and was not tested; it is source you read and run, not something that installs itself.
 
 ## What you no longer have to carry
 
@@ -12,7 +11,7 @@
 Until now, when a session ended and another had to begin, what carried over was a summary. A
 summary does not say who allowed the thing, how much, until when, to whom, or whether the thing that
 was supposed to happen actually happened. Those are not details of a summary — they are the
-operation. So Vespi starts from the operation, and this candidate is what makes that hold.
+operation. So Vespi starts from the operation, and this version is what makes that hold.
 
 - **You re-decide less.** Resuming what was agreed does **not** ask you anything. The kernel reads
   the operation back from its receipts, not from a handoff document, and it only continues if what it
@@ -78,22 +77,22 @@ Written as open, not softened.
 
 | Claim | Result | Cut and scope |
 |---|---|---|
-| `node --test test/*.test.js` at the previous RC5 cut `54c20c7` | **181/181**, exit 0 | Historical baseline carried by the installed RC5 plugin; not the 0.1.3 candidate result. |
-| Candidate core suite, `node --test test/*.test.js` at `2dcfd92` | **203/203**, exit 0 | Kernel tests, run on 2026-10-02. |
-| Full candidate suite, `node --test` at `2dcfd92` | **252/252**, exit 0 | Includes the x402 demo with its dependencies available. |
+| `node --test test/*.test.js` at the previous RC5 cut `54c20c7` | **181/181**, exit 0 | Historical baseline carried by the installed RC5 plugin; not the 0.1.3 result. |
+| Core suite, `node --test test/*.test.js` at `2dcfd92` | **203/203**, exit 0 | Kernel tests, run on 2026-10-02. |
+| Full suite, `node --test` at `2dcfd92` | **252/252**, exit 0 | Includes the x402 demo with its dependencies available. |
+| Full suite, `node --test` at `7dcec77` | **252/252**, exit 0 | Run again on 2026-10-03 on the tree that was published; the tag adds only the text changes that say «released». |
 | One live x402 payment, `demo/x402` run against the real facilitator | **verified**, 0.01 USDC | Stellar testnet, 2026-10-02, transaction `abb968e8…` confirmed separately on Horizon. |
 | Benchmark for this version | **Not run.** No figure on this page describes a measured effect of 0.1.3. | — |
 | External review | **Pending.** No review is credited here without its run attached. | — |
-| Installation | **None.** This is a candidate, not a tag. | — |
+| Installation | **None from this release.** The kernel is source you read and run; Lore Plugin carries its own fixed copy of it. | — |
 
 ---
 
-# v0.1.3 (candidato — sin etiqueta, sin publicar)
+# v0.1.3
 
-> **No está publicado.** La última etiqueta de este repositorio es
-> [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Nada de esta
-> página es la nota de un lanzamiento que alguien pueda instalar; es lo que propone este árbol,
-> escrito para que una persona decida si etiquetarlo.
+> **Publicado como [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) el 2026-10-03.** La etiqueta anterior es
+> [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Esta página dice qué cambia la versión para una persona y qué se probó
+> y qué no; es código que se lee y se corre, no algo que se instale solo.
 
 ## Lo que ya no tienes que cargar tú
 
@@ -102,7 +101,7 @@ Written as open, not softened.
 Hasta ahora, cuando una sesión terminaba y otra tenía que empezar, lo que pasaba era un resumen. Un
 resumen no dice quién autorizó la cosa, cuánto, hasta cuándo, a quién, ni si la cosa que debía
 pasar de verdad pasó. Eso no son detalles de un resumen: es la operación. Por eso Vespi parte de la
-operación, y este candidato es lo que hace que eso se sostenga.
+operación, y esta versión es lo que hace que eso se sostenga.
 
 - **Vuelves a decidir menos.** Retomar lo acordado **no** te pregunta nada. El kernel relee la
   operación desde sus recibos, no desde un documento de traspaso, y solo continúa si lo que está a
@@ -169,10 +168,11 @@ Escrito como abierto, no suavizado.
 
 | Afirmación | Resultado | Corte y alcance |
 |---|---|---|
-| `node --test test/*.test.js` en el corte RC5 anterior `54c20c7` | **181/181**, exit 0 | Línea base histórica que llevaba el plugin RC5 instalado; no es el resultado del candidato 0.1.3. |
-| Suite central candidata, `node --test test/*.test.js` en `2dcfd92` | **203/203**, exit 0 | Pruebas del kernel, corridas el 2026-10-02. |
-| Suite completa candidata, `node --test` en `2dcfd92` | **252/252**, exit 0 | Incluye la demo x402 con sus dependencias disponibles. |
+| `node --test test/*.test.js` en el corte RC5 anterior `54c20c7` | **181/181**, exit 0 | Línea base histórica que llevaba el plugin RC5 instalado; no es el resultado del 0.1.3. |
+| Suite central, `node --test test/*.test.js` en `2dcfd92` | **203/203**, exit 0 | Pruebas del kernel, corridas el 2026-10-02. |
+| Suite completa, `node --test` en `2dcfd92` | **252/252**, exit 0 | Incluye la demo x402 con sus dependencias disponibles. |
+| Suite completa, `node --test` en `7dcec77` | **252/252**, exit 0 | Corrida de nuevo el 2026-10-03 sobre el árbol que se publicó; la etiqueta agrega solo los cambios de texto que dicen «publicado». |
 | Un pago x402 live, `demo/x402` contra el facilitator real | **verificado**, 0,01 USDC | Stellar testnet, 2026-10-02, transacción `abb968e8…` confirmada por separado en Horizon. |
 | Benchmark de esta versión | **No corrido.** Ninguna cifra de esta página describe un efecto medido del 0.1.3. | — |
 | Revisión externa | **Pendiente.** Aquí no se acredita ninguna revisión sin su corrida adjunta. | — |
-| Instalación | **Ninguna.** Esto es un candidato, no una etiqueta. | — |
+| Instalación | **Ninguna desde este lanzamiento.** El kernel es código que se lee y se corre; Lore Plugin lleva su propia copia fija. | — |

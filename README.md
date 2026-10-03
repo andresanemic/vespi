@@ -3,7 +3,7 @@
 # Vespi
 
 <p align="center">
-  <a href="#english"><img src="https://img.shields.io/badge/version-v0.1.3--candidate-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.3 candidate"></a>
+  <a href="#english"><img src="https://img.shields.io/badge/version-v0.1.3-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.3"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
   <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E0C170?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
   <a href="./experiments/005/RUN.md"><img src="https://img.shields.io/badge/run-05--closed-E0C170?style=for-the-badge&labelColor=07111A" alt="RUN 05: closed"></a>
@@ -108,9 +108,9 @@ Lore Plugin and Vespi are one system with two halves.
 **Where it stands.** Today: the kernel (`0.1.3`), the Vespi skill inside Lore Plugin, the coordinator's method, and one real operation run end to end. Next release of Lore Plugin: the whole flow in the kit — one checkpoint per project in `FASES.md`, roles dispatched through the tools the host really exposes, and the economy of an operation declared before it runs. After that: the first applications for real users, starting with web development and this project's own landing page. What is not claimed is listed further down, under *Not verified*.
 
 <a id="what-exists-today"></a>
-## What the 0.1.3 candidate brings
+## What 0.1.3 brings
 
-`0.1.3` is a **candidate** release, not a tag: the last tag in this repository is [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Everything below was read in the code of this tree, not in a plan. The kernel suite is **203/203** green at commit `2dcfd92`, reproduced with `node --test test/*.test.js`. The full `node --test` run, including the x402 demo with its dependencies, is **252/252** at that same commit; both scopes are listed in the candidate release note.
+`0.1.3` is published as the tag [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel); the previous tag is [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Everything below was read in the code of this tree, not in a plan. The kernel suite is **203/203** green at commit `2dcfd92`, reproduced with `node --test test/*.test.js`. The full `node --test` run, including the x402 demo with its dependencies, is **252/252** at that same commit; both scopes are listed in the release note.
 
 - **Authority of several people.** A permission can require several approvals: `authority.signers = { required, allowed }`. The human gate returns **identities, not cryptographic signatures** — `{ approved: true, approvals: [{ by: 'ana' }, { by: 'bob' }] }` — and the kernel counts *distinct* identities drawn from `allowed`. The same identity twice counts once. An identity outside `allowed` does not count. **The operation's own agent never counts.** With fewer approvals than `required`, `perform` is not called and the receipt says how many are missing. Approvals pre-loaded into the authority do not count either: only approvals that arrive through the gate count. Nothing here signs anything; it is a named identity compared in process.
 - **Authority with clock, budget and destination.** A grant is `{ asset, maxAmount, to, expiresAt }`. A grant with `to` covers only that destination; a grant without `to` covers any destination but keeps **one** budget, and several requirements spend from that same budget — 400 + 400 against a 500 ceiling is not enough. An expired grant is refused with a reason that names the moment it expired, and `now` is injectable, so the same grant can be exercised on both sides of its own clock.
@@ -131,7 +131,7 @@ For pilots, experiments and case studies, the public record is in [`experiments/
 - [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) — an earlier x402 / Stellar testnet slice with receipts and one real verification failure kept as evidence.
 - [`005`](./experiments/005/RUN.md) — the final RUN 05 evaluation, **CLOSED** within its declared local/offline scope, with the blind reads and the verifier reports that closed it.
 
-The paid example lives in [`demo/x402/`](./demo/x402/), and it is the only place that knows x402, Stellar or USDC — an economic capability example, not Vespi's identity. **A live x402 payment on Stellar testnet is verified for this candidate:** on 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). It is one payment, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The receipt is [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). Experiment 002 stays as historical testnet evidence.
+The paid example lives in [`demo/x402/`](./demo/x402/), and it is the only place that knows x402, Stellar or USDC — an economic capability example, not Vespi's identity. **A live x402 payment on Stellar testnet is verified for this release:** on 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). It is one payment, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The receipt is [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). Experiment 002 stays as historical testnet evidence.
 
 ## A capability outside the kernel: the garden backup
 
@@ -145,7 +145,7 @@ Inside `runOperation` the destination is the grant's `to`, so the kernel decides
 
 ## The functional projects
 
-Vespi is a kernel, not an app. What shows it works is what gets built on top of it: ten projects, each with its **own agreement written before its code**, each running on **fictional data**. Their stage below was read on **2026-10-02** by running each project's own test suite against the kernel installed today (the `0.1.3` candidate).
+Vespi is a kernel, not an app. What shows it works is what gets built on top of it: ten projects, each with its **own agreement written before its code**, each running on **fictional data**. Their stage below was read on **2026-10-02** by running each project's own test suite against the kernel installed today (`0.1.3`).
 
 **During the judging period of the Find Your Way hackathon, several of these projects will be released so their code can be reviewed.** The aim is to show how Vespi works and what it can do, not only to tell it.
 
@@ -163,7 +163,7 @@ Vespi is a kernel, not an app. What shows it works is what gets built on top of 
 | 10 | **Vela** | Protecting whoever tells the truth through a legal channel: the document is sealed and unpublished until several media sign their verification. It neither leaks nor identifies the source; the zero-knowledge proof of membership is marked pending. | Agreement + code + tests | 10 / 11 |
 | — | **TEMIS** | A legal-validation layer for bilateral agreements by milestones: signed, counter-signed and anchored so a third party can rebuild what happened. The first real operation of Lore Plugin and Vespi working as one. | Whitepaper + MVP under construction: canonical form, signatures, chain, anchoring on Stellar testnet and third-party reconstruction done; payments pending | 106 / 106 (what exists) |
 
-**How to read the last column.** Nine of the ten were built on 2026-09-29 against the kernel cut `54c20c7`, and their own records report them green at that cut; that was not re-run here. Each one pins the kernel it consumes by digest and fails on purpose when the kernel moves, so against the `0.1.3` candidate part of every suite fails until it is re-pinned. That re-pinning is pending, and so is any claim that these ten are ready: today they show a working path, not a finished product.
+**How to read the last column.** Nine of the ten were built on 2026-09-29 against the kernel cut `54c20c7`, and their own records report them green at that cut; that was not re-run here. Each one pins the kernel it consumes by digest and fails on purpose when the kernel moves, so against `0.1.3` part of every suite fails until it is re-pinned. That re-pinning is pending, and so is any claim that these ten are ready: today they show a working path, not a finished product.
 
 ## How this was built
 
@@ -271,7 +271,7 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 ---
 
-[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [0.1.3 candidate note](./docs/RELEASE_0.1.3_KERNEL.md) · [Coordinator method](./docs/METHOD.md) · [Experiments](./experiments/) · [Last tag v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Apache 2.0 License](./LICENSE) · [NOTICE](./NOTICE)
+[Genesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [0.1.3 release note](./docs/RELEASE_0.1.3_KERNEL.md) · [Coordinator method](./docs/METHOD.md) · [Experiments](./experiments/) · [Last tag v0.1.3-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) · [Apache 2.0 License](./LICENSE) · [NOTICE](./NOTICE)
 
 </details>
 
@@ -360,9 +360,9 @@ Lore Plugin y Vespi son un solo sistema con dos mitades.
 **Dónde está hoy.** Hoy: el kernel (`0.1.3`), la skill de Vespi dentro de Lore Plugin, el método del coordinador y una operación real corrida de punta a punta. En la próxima versión de Lore Plugin: el flujo completo en el kit —un punto de control por proyecto en `FASES.md`, roles despachados por las herramientas que el host realmente expone y la economía de una operación declarada antes de correr—. Después: las primeras aplicaciones para personas reales, empezando por desarrollo web y la landing de este mismo proyecto. Lo que no se afirma está más abajo, en *NO VERIFICADO*.
 
 <a id="que-existe-hoy"></a>
-## Qué trae el 0.1.3 candidato
+## Qué trae el 0.1.3
 
-`0.1.3` es una versión **candidata**, no una etiqueta: la última etiqueta de este repositorio es [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Todo lo que sigue se leyó en el código de este árbol, no en un plan. La suite del kernel está en **203/203** en el commit `2dcfd92`, corrida con `node --test test/*.test.js`. La suite completa `node --test`, incluida la demo x402 con sus dependencias, quedó en **252/252** en ese mismo commit; ambas coberturas están en la nota candidata.
+`0.1.3` se publica como la etiqueta [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel); la anterior es [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel). Todo lo que sigue se leyó en el código de este árbol, no en un plan. La suite del kernel está en **203/203** en el commit `2dcfd92`, corrida con `node --test test/*.test.js`. La suite completa `node --test`, incluida la demo x402 con sus dependencias, quedó en **252/252** en ese mismo commit; ambas coberturas están en la nota de la versión.
 
 - **Autoridad de varias personas.** Un permiso puede exigir varias aprobaciones: `authority.signers = { required, allowed }`. La puerta humana devuelve **identidades, no firmas criptográficas** — `{ approved: true, approvals: [{ by: 'ana' }, { by: 'bob' }] }` — y el kernel cuenta identidades *distintas* tomadas de `allowed`. La misma identidad dos veces cuenta una sola vez. Una identidad fuera de `allowed` no cuenta. **El agente de la operación nunca cuenta.** Con menos aprobaciones que `required`, `perform` no se llama y el recibo dice cuántas faltan. Las aprobaciones cargadas de antemano en la autoridad tampoco cuentan: solo cuentan las que llegan por la puerta. Aquí no se firma nada; es una identidad nombrada comparada en el proceso.
 - **Autoridad con reloj, presupuesto y destino.** Un grant es `{ asset, maxAmount, to, expiresAt }`. Un grant con `to` cubre solo ese destino; uno sin `to` cubre cualquier destino pero conserva **un** presupuesto, y varias exigencias gastan de ese mismo presupuesto — 400 + 400 contra un techo de 500 no alcanza. Un grant vencido se rechaza con una razón que nombra el momento en que venció, y `now` es inyectable, así que el mismo grant se puede ejercitar a los dos lados de su propio reloj.
@@ -383,7 +383,7 @@ Para pilotos, experimentos y casos de estudio, el registro público está en [`e
 - [`002-x402-slice1`](./experiments/002-x402-slice1/RUN.md) — una slice anterior de x402 / Stellar en testnet, con recibos y un fallo de verificación real conservado como evidencia.
 - [`005`](./experiments/005/RUN.md) — la evaluación final de RUN 05, **CLOSED** dentro de su alcance local/offline declarado, con las lecturas ciegas y los reportes del verificador que la cerraron.
 
-El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), y es el único lugar que conoce x402, Stellar o USDC: un ejemplo de capability económica, no la identidad de Vespi. **Un pago x402 live en Stellar testnet está verificado para este candidato:** el 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitator real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). Es un solo pago, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El recibo es [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). El experimento 002 queda como evidencia histórica de testnet.
+El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), y es el único lugar que conoce x402, Stellar o USDC: un ejemplo de capability económica, no la identidad de Vespi. **Un pago x402 live en Stellar testnet está verificado para esta versión:** el 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitator real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5`, ledger 4988161). Es un solo pago, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El recibo es [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). El experimento 002 queda como evidencia histórica de testnet.
 
 ## Una capacidad fuera del kernel: el respaldo del jardín
 
@@ -397,7 +397,7 @@ Dentro de `runOperation` el destino es el `to` del grant, así que el kernel dec
 
 ## Los proyectos funcionales
 
-Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, cada uno sobre **datos ficcionados**. El estado de abajo se leyó el **2026-10-02** corriendo la suite de cada proyecto contra el kernel instalado hoy (el candidato `0.1.3`).
+Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, cada uno sobre **datos ficcionados**. El estado de abajo se leyó el **2026-10-02** corriendo la suite de cada proyecto contra el kernel instalado hoy (`0.1.3`).
 
 **Durante el periodo de revisión de los jueces de la hackatón Find Your Way, varios de estos proyectos estarán liberados para que se revise su código.** La idea es mostrar cómo funciona Vespi y de qué es capaz, no solo contarlo.
 
@@ -415,7 +415,7 @@ Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que 
 | 10 | **Vela** | Proteger a quien dice la verdad por un canal legal: el documento queda sellado y sin publicar hasta que varios medios firmen su verificación. No filtra ni identifica a la fuente; la prueba de conocimiento cero de pertenencia está marcada como pendiente. | Acuerdo + código + pruebas | 10 / 11 |
 | — | **TEMIS** | Una capa de validación legal para acuerdos bilaterales por hitos: firmados, contrafirmados y anclados para que un tercero reconstruya lo ocurrido. La primera operación real de Lore Plugin y Vespi trabajando como una unidad. | Whitepaper + MVP en construcción: forma canónica, firmas, cadena, anclaje en Stellar testnet y reconstrucción por un tercero hechos; pagos pendientes | 106 / 106 (lo que existe) |
 
-**Cómo leer la última columna.** Nueve de los diez se construyeron el 2026-09-29 contra el corte `54c20c7` del kernel, y sus propios registros los dan en verde en ese corte; aquí no se volvió a correr. Cada uno fija por digest el kernel que consume y falla a propósito cuando el kernel se mueve, así que contra el candidato `0.1.3` parte de cada suite falla hasta que se re-ancle. Ese re-anclaje está pendiente, y también cualquier afirmación de que los diez estén listos: hoy muestran un recorrido que funciona, no un producto terminado.
+**Cómo leer la última columna.** Nueve de los diez se construyeron el 2026-09-29 contra el corte `54c20c7` del kernel, y sus propios registros los dan en verde en ese corte; aquí no se volvió a correr. Cada uno fija por digest el kernel que consume y falla a propósito cuando el kernel se mueve, así que contra el `0.1.3` parte de cada suite falla hasta que se re-ancle. Ese re-anclaje está pendiente, y también cualquier afirmación de que los diez estén listos: hoy muestran un recorrido que funciona, no un producto terminado.
 
 ## Cómo se construyó
 
@@ -523,6 +523,6 @@ Digital Art Director & Creative Developer trabajando entre agentes de IA, Web3, 
 
 ---
 
-[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Nota del candidato 0.1.3](./docs/RELEASE_0.1.3_KERNEL.md) · [Método del coordinador](./docs/METHOD.md) · [Experimentos](./experiments/) · [Última etiqueta v0.1.2-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel) · [Licencia Apache 2.0](./LICENSE) · [NOTICE](./NOTICE)
+[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Nota de la versión 0.1.3](./docs/RELEASE_0.1.3_KERNEL.md) · [Método del coordinador](./docs/METHOD.md) · [Experimentos](./experiments/) · [Última etiqueta v0.1.3-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) · [Licencia Apache 2.0](./LICENSE) · [NOTICE](./NOTICE)
 
 </details>
