@@ -17,12 +17,12 @@
 
 <p align="center">
   <b>Do you build on Stellar? This is for you.</b><br>
-  Our goal is for Vespi, together with Lore, to become the definitive operating system of the Stellar ecosystem: a way to create apps on Stellar together with Raven MCP, quickly, reliably and securely.<br>
-  I invite every builder in the Stellar ecosystem to review this kernel and to use it if it helps you.
+  Our goal is for Vespi, together with Lore, to become the definitive operating system of the Stellar ecosystem: a way to create apps on Stellar together with Raven MCP, quickly, reliably and securely.
 </p>
 
 <p align="center">
-  <a href="https://github.com/andresanemic/lore-plugin">Lore Plugin</a> prepares the ground. Vespi operates on it.
+  <a href="https://github.com/andresanemic/lore-plugin">Lore Plugin</a> prepares the ground. Vespi operates on it.<br>
+  I invite every builder in the Stellar ecosystem to review this kernel and to use it if it helps you.
 </p>
 
 
@@ -130,7 +130,9 @@ A request becomes work you can check. When you ask an agent for something that i
 
 You say what you want. The coordinator opens the criterion that governs it, defines what done will look like, and asks you only for what is yours to decide: authority, money, publishing. It hands bounded stretches of work to other models, each with its own question, its own limits and a receipt, verifies apart, and writes one checkpoint in the project's `FASES.md`. The next session resumes from the receipts, not from a summary. You never need to know the kernel exists.
 
-**Where it stands.** The first experiments (RUN 01 to 05) were only the start: they were the tests that shaped the kernel, and the project has moved a long way since. Today there is a published kernel (`0.1.3`, with `0.1.4` prepared and not yet published), the Vespi skill inside Lore Plugin, the coordinator's method, ten functional projects built on it (nine with code and tests), and one real operation run end to end: TEMIS, whose agreement records are anchored on Stellar and were rebuilt by an independent third agent from Horizon alone (22 of 22 statuses). On Stellar testnet there are now [50 successful transactions from 8 accounts](./docs/TESTNET_EVIDENCE.md), including a live x402 payment through the real facilitator, concurrent anchors and an idempotent payment, and the repository carries a [study of how kernels, schedulers and durable-execution systems solved the same problems](./docs/PRIOR_ART.md). Lore Plugin `2.4.9` brings the flow into the kit: one checkpoint per project, tasks by role through the tools the host really exposes, and the economy of an operation declared before it runs. Next: the first applications for real users.
+**Where it stands.** The first experiments (RUN 01 to 05) were only the start: they were the tests that shaped the kernel, and the project has moved a long way since. Today there is a published kernel (`0.1.3`, with `0.1.4` prepared and not yet published), the Vespi skill inside Lore Plugin, the coordinator's method, ten functional projects built on it (nine with code and tests), and one real operation run end to end: TEMIS, whose agreement records are anchored on Stellar and were rebuilt by an independent third agent from Horizon alone (22 of 22 statuses).
+
+On Stellar testnet there are now [50 successful transactions from 8 accounts](./docs/TESTNET_EVIDENCE.md), including a live x402 payment through the real facilitator, concurrent anchors and an idempotent payment, and the repository carries a [study of how kernels, schedulers and durable-execution systems solved the same problems](./docs/PRIOR_ART.md). Lore Plugin `2.4.9` brings the flow into the kit: one checkpoint per project, tasks by role through the tools the host really exposes, and the economy of an operation declared before it runs. Next: the first applications for real users.
 
 ## What 0.1.3 brings
 
@@ -358,7 +360,9 @@ Un encargo se vuelve trabajo que puedes comprobar. Cuando le pides a un agente a
 
 Tú dices qué quieres. El coordinador abre el criterio que lo gobierna, define cómo se verá terminado y te pide solo lo que te toca decidir: autoridad, dinero, publicar. Reparte tramos acotados de trabajo a otros modelos, cada uno con su pregunta, sus límites y un recibo, verifica aparte y escribe un checkpoint en el `FASES.md` del proyecto. La sesión siguiente retoma desde los recibos, no desde un resumen. Nunca necesitas saber que existe el kernel.
 
-**Dónde está hoy.** Los primeros experimentos (RUN 01 a 05) fueron solo el comienzo: fueron las pruebas que dieron forma al kernel, y el proyecto avanzó mucho desde entonces. Hoy hay un kernel publicado (`0.1.3`, con `0.1.4` preparada y sin publicar), la skill de Vespi dentro de Lore Plugin, el método del coordinador, diez proyectos funcionales construidos sobre él (nueve con código y pruebas) y una operación real corrida de punta a punta: TEMIS, cuyos registros de acuerdos están anclados en Stellar y los reconstruyó un tercer agente independiente solo desde Horizon (22 de 22 estatus). En la testnet de Stellar hay ahora [50 transacciones exitosas desde 8 cuentas](./docs/TESTNET_EVIDENCE.md), incluido un pago x402 en vivo a través del facilitador real, anclajes concurrentes y un pago idempotente, y el repositorio lleva un [estudio de cómo kernels, planificadores y sistemas de ejecución durable resolvieron los mismos problemas](./docs/PRIOR_ART.md). Lore Plugin `2.4.9` trae el flujo al kit: un checkpoint por proyecto, tareas por rol con las herramientas que el host realmente expone y la economía de una operación declarada antes de correr. Después: las primeras aplicaciones para personas reales.
+**Dónde está hoy.** Los primeros experimentos (RUN 01 a 05) fueron solo el comienzo: fueron las pruebas que dieron forma al kernel, y el proyecto avanzó mucho desde entonces. Hoy hay un kernel publicado (`0.1.3`, con `0.1.4` preparada y sin publicar), la skill de Vespi dentro de Lore Plugin, el método del coordinador, diez proyectos funcionales construidos sobre él (nueve con código y pruebas) y una operación real corrida de punta a punta: TEMIS, cuyos registros de acuerdos están anclados en Stellar y los reconstruyó un tercer agente independiente solo desde Horizon (22 de 22 estatus).
+
+En la testnet de Stellar hay ahora [50 transacciones exitosas desde 8 cuentas](./docs/TESTNET_EVIDENCE.md), incluido un pago x402 en vivo a través del facilitador real, anclajes concurrentes y un pago idempotente, y el repositorio lleva un [estudio de cómo kernels, planificadores y sistemas de ejecución durable resolvieron los mismos problemas](./docs/PRIOR_ART.md). Lore Plugin `2.4.9` trae el flujo al kit: un checkpoint por proyecto, tareas por rol con las herramientas que el host realmente expone y la economía de una operación declarada antes de correr. Después: las primeras aplicaciones para personas reales.
 
 ## Qué trae el 0.1.3
 
