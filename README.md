@@ -92,7 +92,7 @@ Writing an app is the easy part. What takes months, and usually gets skipped, is
 
 **Where this is going.** The goal is for Lore to become the definitive operating system, worldwide, for working and building with AI. We are also evaluating the launch of a Vespi token on Stellar. Nothing has been issued, and any design follows the principle that a token comes last, and only if an economic problem justifies it.
 
-**How to use it today.** The kernel is plain JavaScript: require it and wrap your effect. The Vespi skill comes inside [Lore Plugin](https://github.com/andresanemic/lore-plugin). Installing Vespi on its own as a first-party skill, without the rest of the Lore kit, is planned for the end of Find Your Way; it is not available yet.
+**How to use it today.** The kernel is plain JavaScript: require it and wrap your effect. To start building with Vespi by vibe coding, install the [Lore Plugin](https://github.com/andresanemic/lore-plugin) kit and use the Vespi skill that comes inside it. Lore Plugin `2.4.9` and kernel `0.1.4` are planned for publication on Monday, 2026-10-05. Installing Vespi on its own as a first-party skill, without the rest of the Lore kit, is planned for the end of Find Your Way; it is not available yet.
 
 ## What Vespi is, seen from the outside: a method
 
@@ -320,7 +320,7 @@ Escribir una app es la parte fácil. Lo que toma meses, y casi siempre se omite,
 
 **Hacia dónde va.** La meta es que Lore se convierta en el sistema operativo definitivo, a nivel mundial, para trabajar y construir con IA. También estamos evaluando el lanzamiento de un token de Vespi en Stellar. No se ha emitido nada, y cualquier diseño sigue el principio de que el token va al final, y solo si un problema económico lo justifica.
 
-**Cómo usarlo hoy.** El kernel es JavaScript simple: lo importas y envuelves tu efecto. La skill de Vespi viene dentro de [Lore Plugin](https://github.com/andresanemic/lore-plugin). Instalar Vespi por sí sola como skill de primera parte, sin el resto del kit de Lore, está planeado para el final de Find Your Way; todavía no está disponible.
+**Cómo usarlo hoy.** El kernel es JavaScript simple: lo importas y envuelves tu efecto. Para empezar a construir con Vespi haciendo vibe coding, instala el kit de [Lore Plugin](https://github.com/andresanemic/lore-plugin) y usa la skill de Vespi que viene dentro. Lore Plugin `2.4.9` y el kernel `0.1.4` se publicarán el lunes 2026-10-05. Instalar Vespi por sí sola como skill de primera parte, sin el resto del kit de Lore, está planeado para el final de Find Your Way; todavía no está disponible.
 
 ## Qué es Vespi visto desde fuera: un método
 
