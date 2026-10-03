@@ -45,7 +45,8 @@ You say what you want; Vespi keeps the operation standing under an authority a p
 2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone. In all, [50 successful testnet transactions from 8 accounts](./docs/TESTNET_EVIDENCE.md), read back from Horizon, back the project: a full agreement lifecycle run twice, concurrent anchors, an idempotent payment and the x402 runs.
 3. **Check it yourself, offline.** `node --test test/*.test.js` runs 205 tests with no wallet and no network. The live receipt is [in the repository](./demo/x402/receipts/live-testnet-2026-10-02.json). With a network, `node scripts/verify-testnet-evidence.mjs` asks Horizon about every transaction listed in the evidence file.
 4. **See what is built on it.** Ten functional projects, each with its agreement written before its code, run on fictional data. Several will be open for review during the judging period. The table is in the section below.
-5. **What we do not claim.** No mainnet, no second provider, no production readiness. It is listed under *Not verified*.
+5. **An invitation.** If you are taking part in Find Your Way, or will take part in Meridian, I invite you to review this kernel and to use it if it is useful to you.
+6. **What we do not claim.** No mainnet, no second provider, no production readiness. It is listed under *Not verified*.
 
 
 ## In one minute
@@ -142,7 +143,7 @@ A second capability lives outside the kernel: [`capabilities/respaldo/`](./capab
 
 Vespi is a kernel, not an app. What shows it works is what gets built on it: ten projects, each with its **own agreement written before its code**, on **fictional data**. Their stage was read on **2026-10-02** by running each project's own suite against the kernel installed today (`0.1.3`).
 
-**During the judging period of the Find Your Way hackathon, several of these projects will be released so their code can be reviewed.** The aim is to show how Vespi works, not only to tell it.
+**During the judging period of the Find Your Way hackathon, several of these projects will be released so their code can be reviewed.** Next week the repositories of the functional projects start going public, first without code, each explaining in detail the why, the how and the what: how it works, who takes part and with what rights, and what evidence it has. The code opens for review during the judging period under a license that lets you read and clone it to evaluate it, not modify it. The aim is to show how Vespi works, not only to tell it.
 
 | # | Project | What it is | Stage today | Suite today |
 |---|---|---|---|---|
@@ -167,6 +168,7 @@ A claim without a receipt does not go in. These are the reviews that formed Vesp
 <details>
 <summary><b>The reviews and sources that formed Vespi</b></summary>
 
+- **Discipline: how it is verified.** Tests first, someone else verifying, attacks written as tests, and a security review with Anthropic's method that found a real flaw in our own kit and was fixed test first. What is simulated so far (the superreview) and what comes next are listed with their limits in [`docs/VERIFICATION.md`](./docs/VERIFICATION.md).
 - **Raven and the Stellar ecosystem.** Raven, the MCP over the ecosystem's project directory, was active during the whole construction: without it x402 and Stellar would not have been possible, and the study it enabled showed that the missing piece was a kernel to coordinate the projects that exist, not another payment project.
 - **The Fable Method.** The coordinator's loop is Vespi's own wording of [The Fable Method](https://github.com/Sahir619/fable-method) by Sahir619 (MIT), distilled so that it depends on no installed skill: see [`docs/METHOD.md`](./docs/METHOD.md).
 - **Prior art.** [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) summarizes the technical comparisons and their limits.
@@ -244,7 +246,8 @@ Tú dices qué quieres; Vespi mantiene viva la operación bajo una autoridad que
 2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público. En total, [50 transacciones exitosas en testnet desde 8 cuentas](./docs/TESTNET_EVIDENCE.md), releídas desde Horizon, respaldan el proyecto: un ciclo completo de un acuerdo corrido dos veces, anclajes concurrentes, un pago idempotente y las corridas de x402.
 3. **Compruébalo tú, sin red.** `node --test test/*.test.js` corre 205 pruebas sin billetera y sin red. El recibo en vivo está [en el repositorio](./demo/x402/receipts/live-testnet-2026-10-02.json). Con red, `node scripts/verify-testnet-evidence.mjs` le pregunta a Horizon por cada transacción listada en el archivo de evidencia.
 4. **Mira lo que se construye encima.** Diez proyectos funcionales, cada uno con su acuerdo escrito antes de su código, sobre datos ficcionados. Varios estarán abiertos para revisión durante el periodo de los jueces. La tabla está en la sección de abajo.
-5. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Está en *No verificado*.
+5. **Una invitación.** Si participas en Find Your Way, o participarás en Meridian, te invito a revisar este kernel y a usarlo si te sirve.
+6. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Está en *No verificado*.
 
 
 ## En un minuto
@@ -341,7 +344,7 @@ Una segunda capacidad vive fuera del kernel: [`capabilities/respaldo/`](./capabi
 
 Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, sobre **datos ficcionados**. Su estado se leyó el **2026-10-02** corriendo la suite propia de cada proyecto contra el kernel instalado hoy (`0.1.3`).
 
-**Durante el periodo de revisión de los jueces de la hackatón Find Your Way, varios de estos proyectos estarán liberados para que se revise su código.** La idea es mostrar cómo funciona Vespi, no solo contarlo.
+**Durante el periodo de revisión de los jueces de la hackatón Find Your Way, varios de estos proyectos estarán liberados para que se revise su código.** La próxima semana los repositorios de los proyectos funcionales empiezan a hacerse públicos, primero sin código, cada uno explicando en detalle el porqué, el cómo y el qué: cómo funciona, quién participa y con qué derechos, y qué evidencia tiene. El código se abre para revisión durante el periodo de los jueces, con una licencia que permite leerlo y clonarlo para evaluar, no modificarlo. La idea es mostrar cómo funciona Vespi, no solo contarlo.
 
 | # | Proyecto | Qué es | Estado hoy | Su suite hoy |
 |---|---|---|---|---|
@@ -366,6 +369,7 @@ Una afirmación sin recibo no entra. Estas son las revisiones que formaron a Ves
 <details>
 <summary><b>Las revisiones y fuentes que formaron a Vespi</b></summary>
 
+- **Disciplina: cómo se verifica.** La prueba primero, otro verificando, ataques escritos como pruebas y una revisión de seguridad con el método de Anthropic que encontró un fallo real en nuestro propio kit y se corrigió con la prueba primero. Lo que es simulado hasta ahora (el superreview) y lo que viene está con sus límites en [`docs/VERIFICATION.md`](./docs/VERIFICATION.md).
 - **Raven y el ecosistema Stellar.** Raven, el MCP sobre el directorio de proyectos del ecosistema, estuvo activo durante toda la construcción: sin él no se habrían podido hacer x402 y Stellar, y el estudio que habilitó mostró que la pieza que faltaba era un kernel para coordinar los proyectos que existen, no otro proyecto de pagos.
 - **The Fable Method.** El ciclo del coordinador es la redacción propia de Vespi de [The Fable Method](https://github.com/Sahir619/fable-method), de Sahir619 (MIT), destilada para que no dependa de ninguna skill instalada: mira [`docs/METHOD.md`](./docs/METHOD.md).
 - **Arte previo.** [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) resume las comparaciones técnicas y sus límites.
