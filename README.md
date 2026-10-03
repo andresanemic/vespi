@@ -21,10 +21,6 @@
   El kernel del sistema operativo para trabajar con IA: autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
 </p>
 
-**The simplest way to say it.** Vespi lets you build complex applications with AI without having to know how it is done. Its kernel and [Lore Plugin](https://github.com/andresanemic/lore-plugin) already run the hard parts for you: loops until the work is done, test-first development, blind readers who judge the result without seeing how it was made, and a check by someone other than whoever did the work. You say what you want; Vespi keeps the operation standing and leaves a receipt anyone can verify. The kernel was built in part with Raven MCP (the MCP over the Stellar ecosystem's project directory) and Stellar, and the coordinator's method is distilled from [The Fable Method](https://github.com/Sahir619/fable-method) (MIT).
-
-**Lo más simple.** Vespi te permite construir aplicaciones complejas con IA sin que tengas que saber cómo se hace. Su kernel y [Lore Plugin](https://github.com/andresanemic/lore-plugin) ya ejecutan por ti lo difícil: ciclos hasta terminar el trabajo, desarrollo con la prueba primero (TDD), lectores ciegos que juzgan el resultado sin ver cómo se hizo, y una verificación hecha por alguien distinto de quien trabajó. Tú dices qué quieres; Vespi mantiene viva la operación y deja un recibo que cualquiera puede comprobar. El kernel se construyó en parte con Raven MCP (el MCP sobre el directorio de proyectos del ecosistema Stellar) y Stellar, y el método del coordinador se destiló de [The Fable Method](https://github.com/Sahir619/fable-method) (MIT).
-
 ---
 
 <details>
@@ -36,7 +32,7 @@
 
 > **The unit is not the agent. The unit is the operation.**
 
-Vespi is the kernel of an operating system for working with AI. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepares the ground — criterion, Lore, the coordinator's method — and Vespi operates on it: authority a person grants, an operation that is verified apart from whoever ran it, and a receipt anyone can check. This repository is the **kernel**: dependency-free JavaScript, no framework, no daemon, no network. It is built in public by **Andrés Peña Mellado**, and it keeps what exists, what fails, what changes and what is deliberately still unclaimed. Before `1.0` its versions are public snapshots, not a stable protocol.
+Vespi is the kernel of an operating system for working with AI, and it lets you build complex applications without having to know how it is done. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepares the ground — criterion, Lore, the coordinator's method — and Vespi operates on it, running the hard parts for you: loops until the work is done, test-first development, blind readers who judge the result without seeing how it was made, and a check by someone other than whoever did the work. You say what you want; Vespi keeps the operation standing under an authority a person grants and leaves a receipt anyone can check. The kernel was built in part with Raven MCP (the MCP over the Stellar ecosystem's project directory) and Stellar, and the coordinator's method is distilled from [The Fable Method](https://github.com/Sahir619/fable-method) (MIT). This repository is the **kernel**: dependency-free JavaScript, no framework, no daemon, no network. Before `1.0` its versions are public snapshots, not a stable protocol.
 
 ## In one minute
 
@@ -288,7 +284,7 @@ Digital Art Director & Creative Developer working across AI agents, Web3, design
 
 > **La unidad no es el agente. La unidad es la operación.**
 
-Vespi es el kernel de un sistema operativo para trabajar con IA. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepara el terreno —criterio, Lore, el método del coordinador— y Vespi opera sobre él: autoridad que otorga una persona, una operación que se verifica aparte de quien la ejecutó y un recibo que cualquiera puede comprobar. Este repositorio es el **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Lo construye en público **Andrés Peña Mellado**, y conserva lo que existe, lo que falla, lo que cambia y lo que sigue deliberadamente sin reclamar. Antes de la `1.0` sus versiones son fotos públicas, no un protocolo estable.
+Vespi es el kernel de un sistema operativo para trabajar con IA, y te permite construir aplicaciones complejas sin que tengas que saber cómo se hace. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepara el terreno —criterio, Lore, el método del coordinador— y Vespi opera sobre él, ejecutando por ti lo difícil: ciclos hasta terminar el trabajo, desarrollo con la prueba primero, lectores ciegos que juzgan el resultado sin ver cómo se hizo y una verificación hecha por alguien distinto de quien trabajó. Tú dices qué quieres; Vespi mantiene viva la operación bajo una autoridad que otorga una persona y deja un recibo que cualquiera puede comprobar. El kernel se construyó en parte con Raven MCP (el MCP sobre el directorio de proyectos del ecosistema Stellar) y Stellar, y el método del coordinador se destiló de [The Fable Method](https://github.com/Sahir619/fable-method) (MIT). Este repositorio es el **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Antes de la `1.0` sus versiones son fotos públicas, no un protocolo estable.
 
 ## En un minuto
 
