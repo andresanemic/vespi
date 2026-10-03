@@ -5,7 +5,6 @@
 <p align="center">
   <a href="#english"><img src="https://img.shields.io/badge/version-v0.1.3-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.3"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
-  <a href="./docs/GENESIS.md"><img src="https://img.shields.io/badge/status-experimental-E0C170?style=for-the-badge&labelColor=07111A" alt="Status: experimental"></a>
   <a href="#the-functional-projects"><img src="https://img.shields.io/badge/projects-10_functional-D7B698?style=for-the-badge&labelColor=07111A" alt="Functional projects: 10"></a>
   <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet_transactions-50_verified-E0C170?style=for-the-badge&labelColor=07111A" alt="50 successful transactions on Stellar testnet"></a>
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/built_with-Stellar_%C2%B7_x402_%C2%B7_Raven_MCP-E0C170?style=for-the-badge&labelColor=07111A" alt="Built with Stellar, x402 and Raven MCP"></a>
