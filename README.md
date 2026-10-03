@@ -33,7 +33,7 @@
 
 > **The unit is not the agent. The unit is the operation.**
 
-Vespi is the kernel of an operating system for working with AI, and it lets you build complex applications without having to know how it is done. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepares the ground — criterion, Lore, the coordinator's method — and Vespi operates on it, running the hard parts for you: loops until the work is done, test-first development, blind readers who judge the result without seeing how it was made, and a check by someone other than whoever did the work.
+Vespi is the kernel of Lore's operating system for working with AI, and it lets you build complex applications without having to know how it is done. The goal behind it is that Lore becomes the definitive operating system, worldwide, for working and building with AI. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepares the ground — criterion, Lore, the coordinator's method — and Vespi operates on it, running the hard parts for you: loops until the work is done, test-first development, blind readers who judge the result without seeing how it was made, and a check by someone other than whoever did the work.
 
 You say what you want; Vespi keeps the operation standing under an authority a person grants and leaves a receipt whose digest anyone can recompute to check integrity. The kernel was built in part with Raven MCP (the MCP over the Stellar ecosystem's project directory), and this repository is the **kernel**: dependency-free JavaScript, no framework, no daemon, no network. Before `1.0` its versions are public snapshots, not a stable protocol.
 
@@ -41,7 +41,7 @@ You say what you want; Vespi keeps the operation standing under an authority a p
 
 **If you are judging Find Your Way or Meridian, start here.**
 
-1. **What it is.** The kernel of an operating system for working with AI: an authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.
+1. **What it is.** The kernel of Lore's operating system for working with AI: an authority a person grants, a receipt anyone can check, and an operation another agent can pick up tomorrow.
 2. **Why it belongs on Stellar.** A live x402 payment of 0.01 USDC on Stellar testnet came back `verified`, and [Horizon confirms the transaction](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) separately. Receipts can be anchored on Stellar, and TEMIS, the first real operation, anchors its records there and was rebuilt by a third party from the public history alone. In all, [50 successful testnet transactions from 8 accounts](./docs/TESTNET_EVIDENCE.md), read back from Horizon, back the project: a full agreement lifecycle run twice, concurrent anchors, an idempotent payment and the x402 runs.
 3. **Check it yourself, offline.** `node --test test/*.test.js` runs 205 tests with no wallet and no network. The live receipt is [in the repository](./demo/x402/receipts/live-testnet-2026-10-02.json). With a network, `node scripts/verify-testnet-evidence.mjs` asks Horizon about every transaction listed in the evidence file.
 4. **See what is built on it.** Ten functional projects, each with its agreement written before its code, run on fictional data. Several will be open for review during the judging period. The table is in the section below.
@@ -232,7 +232,7 @@ We searched so as to offer something new and not repeat what other projects alre
 
 > **La unidad no es el agente. La unidad es la operación.**
 
-Vespi es el kernel de un sistema operativo para trabajar con IA, y te permite construir aplicaciones complejas sin que tengas que saber cómo se hace. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepara el terreno —criterio, Lore, el método del coordinador— y Vespi opera sobre él, ejecutando por ti lo difícil: ciclos hasta terminar el trabajo, desarrollo con la prueba primero, lectores ciegos que juzgan el resultado sin ver cómo se hizo y una verificación hecha por alguien distinto de quien trabajó.
+Vespi es el kernel del sistema operativo de Lore para trabajar con IA, y te permite construir aplicaciones complejas sin que tengas que saber cómo se hace. La meta detrás es que Lore se convierta en el sistema operativo definitivo, a nivel mundial, para trabajar y construir con IA. [Lore Plugin](https://github.com/andresanemic/lore-plugin) prepara el terreno —criterio, Lore, el método del coordinador— y Vespi opera sobre él, ejecutando por ti lo difícil: ciclos hasta terminar el trabajo, desarrollo con la prueba primero, lectores ciegos que juzgan el resultado sin ver cómo se hizo y una verificación hecha por alguien distinto de quien trabajó.
 
 Tú dices qué quieres; Vespi mantiene viva la operación bajo una autoridad que otorga una persona y deja un recibo cuyo digest cualquiera puede recalcular para comprobar su integridad. El kernel se construyó en parte con Raven MCP (el MCP sobre el directorio de proyectos del ecosistema Stellar). Este repositorio es el **kernel**: JavaScript sin dependencias, sin framework, sin demonio y sin red. Antes de la `1.0` sus versiones son fotos públicas, no un protocolo estable.
 
@@ -240,7 +240,7 @@ Tú dices qué quieres; Vespi mantiene viva la operación bajo una autoridad que
 
 **Si estás evaluando Find Your Way o Meridian, empieza aquí.**
 
-1. **Qué es.** El kernel de un sistema operativo para trabajar con IA: una autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
+1. **Qué es.** El kernel del sistema operativo de Lore para trabajar con IA: una autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
 2. **Por qué es un proyecto de Stellar.** Un pago x402 en vivo de 0,01 USDC en Stellar testnet volvió `verified`, y [Horizon confirma la transacción](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5) por separado. Los recibos se pueden anclar en Stellar, y TEMIS, la primera operación real, ancla ahí sus registros y un tercero los reconstruyó solo desde el historial público. En total, [50 transacciones exitosas en testnet desde 8 cuentas](./docs/TESTNET_EVIDENCE.md), releídas desde Horizon, respaldan el proyecto: un ciclo completo de un acuerdo corrido dos veces, anclajes concurrentes, un pago idempotente y las corridas de x402.
 3. **Compruébalo tú, sin red.** `node --test test/*.test.js` corre 205 pruebas sin billetera y sin red. El recibo en vivo está [en el repositorio](./demo/x402/receipts/live-testnet-2026-10-02.json). Con red, `node scripts/verify-testnet-evidence.mjs` le pregunta a Horizon por cada transacción listada en el archivo de evidencia.
 4. **Mira lo que se construye encima.** Diez proyectos funcionales, cada uno con su acuerdo escrito antes de su código, sobre datos ficcionados. Varios estarán abiertos para revisión durante el periodo de los jueces. La tabla está en la sección de abajo.
