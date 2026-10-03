@@ -21,6 +21,10 @@
   El kernel del sistema operativo para trabajar con IA: autoridad que otorga una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
 </p>
 
+**The simplest way to say it.** Vespi lets you build complex applications with AI without having to know how it is done. Its kernel and [Lore Plugin](https://github.com/andresanemic/lore-plugin) already run the hard parts for you: loops until the work is done, test-first development, blind readers who judge the result without seeing how it was made, and a check by someone other than whoever did the work. You say what you want; Vespi keeps the operation standing and leaves a receipt anyone can verify. The kernel was built in part with Raven MCP (the MCP over the Stellar ecosystem's project directory) and Stellar, and the coordinator's method is distilled from [The Fable Method](https://github.com/Sahir619/fable-method) (MIT).
+
+**Lo más simple.** Vespi te permite construir aplicaciones complejas con IA sin que tengas que saber cómo se hace. Su kernel y [Lore Plugin](https://github.com/andresanemic/lore-plugin) ya ejecutan por ti lo difícil: ciclos hasta terminar el trabajo, desarrollo con la prueba primero (TDD), lectores ciegos que juzgan el resultado sin ver cómo se hizo, y una verificación hecha por alguien distinto de quien trabajó. Tú dices qué quieres; Vespi mantiene viva la operación y deja un recibo que cualquiera puede comprobar. El kernel se construyó en parte con Raven MCP (el MCP sobre el directorio de proyectos del ecosistema Stellar) y Stellar, y el método del coordinador se destiló de [The Fable Method](https://github.com/Sahir619/fable-method) (MIT).
+
 ---
 
 <details>
@@ -58,7 +62,7 @@ node --test test/*.test.js
 
 ## What Vespi is, seen from the outside: a method
 
-A request becomes work you can check. When you ask an agent for something that is not trivial, the coordinator — the agent that took your request — follows one loop. Vespi is what makes each step of that loop something you can verify instead of something you are told.
+A request becomes work you can check. When you ask an agent for something that is not trivial, the coordinator — the agent that took your request — follows one loop. Vespi is what makes each step of that loop something you can verify instead of something you are told. The loop is Vespi's own wording of [The Fable Method](https://github.com/Sahir619/fable-method) by Sahir619 (MIT), distilled so that it depends on no installed skill: see the [full method](./docs/METHOD.md).
 
 1. **Classify the ask.** A question gets findings, a task gets a verified change, and anything outward-facing gets a plan first.
 2. **Define done.** What will be observed when it is finished, and how.
@@ -310,7 +314,7 @@ node --test test/*.test.js
 
 ## Qué es Vespi visto desde fuera: un método
 
-Un encargo se vuelve trabajo que puedes comprobar. Cuando le pides a un agente algo que no es trivial, el coordinador —el agente que tomó tu encargo— sigue un solo ciclo. Vespi es lo que hace que cada paso de ese ciclo sea algo que puedes verificar y no algo que te cuentan.
+Un encargo se vuelve trabajo que puedes comprobar. Cuando le pides a un agente algo que no es trivial, el coordinador —el agente que tomó tu encargo— sigue un solo ciclo. Vespi es lo que hace que cada paso de ese ciclo sea algo que puedes verificar y no algo que te cuentan. El ciclo es la redacción propia de Vespi de [The Fable Method](https://github.com/Sahir619/fable-method), de Sahir619 (MIT), destilada para que no dependa de ninguna skill instalada: mira el [método completo](./docs/METHOD.md).
 
 1. **Clasifica el encargo.** Una pregunta recibe hallazgos, una tarea recibe un cambio verificado, y todo lo que sale hacia afuera recibe primero un plan.
 2. **Define terminado.** Qué se va a observar cuando esté listo, y cómo.
