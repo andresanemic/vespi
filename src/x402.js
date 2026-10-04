@@ -488,10 +488,8 @@ async function callSettlementPort(ctx, evidence) {
   const budget = readVerifyTimeout(ctx.io);
   const controller = new AbortController();
   let timer = null;
-  let timedOut = false;
   const timeout = new Promise((resolve) => {
     timer = setTimeout(() => {
-      timedOut = true;
       try {
         controller.abort();
       } catch {
