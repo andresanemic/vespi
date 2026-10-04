@@ -479,3 +479,133 @@ test('K4-B8 selection never mutates what the server sent and never widens the re
   assert.equal(chosen.terms.grantAsset, undefined);
   assert.equal(chosen.terms.payer, undefined);
 });
+// =====================================================================================
+// Group C — composition with authority: the gate, the named recipient, the clock (cases 3, 4, 5)
+// =====================================================================================
+
+function opWith(authority, over = {}) {
+  return createOperation({ goal: 'obtain-marketing-plan', action: 'pay', authority, agent: 'agent-1', ...over });
+}
+
+test('K4-C1 an authority that does not cover the effect returns needs_human_decision with zero ports', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const op = opWith({ spend: [] });
+  const res = await payment.run(op, { now: () => CLOCK_MS, ask: async () => ({ approved: false, by: 'ana' }) });
+  assert.equal(res.status, 'needs_human_decision');
+  assert.equal(res.receipt.status, 'needs_human_decision');
+  assert.equal(ports.calls.discover, 0);
+  assert.equal(ports.calls.prepare, 0);
+  assert.equal(ports.calls.send, 0);
+  assert.deepEqual(res.receipt.authority.exercised, []);
+});
+
+test('K4-C2 an approval by the agent is not an approval: the gate returns and no port is called', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const op = opWith({ spend: [] });
+  const res = await payment.run(op, { now: () => CLOCK_MS, ask: async () => ({ approved: true, by: 'agent-1' }) });
+  assert.equal(res.status, 'needs_human_decision');
+  assert.match(res.receipt.detail, /agent/i);
+  assert.equal(ports.calls.discover, 0);
+  assert.equal(ports.calls.send, 0);
+});
+
+test('K4-C3 a quorum that repeats one identity or names nobody allowed opens no port', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const quorum = { signers: { required: 2, allowed: ['ana', 'beto'] }, spend: [grant({ maxAmount: '1' })] };
+  const repeated = await payment.run(opWith(quorum), {
+    now: () => CLOCK_MS,
+    ask: async () => ({ approvals: [{ by: 'ana' }, { by: 'ana' }] }),
+  });
+  assert.equal(repeated.status, 'needs_human_decision');
+  const outsider = await payment.run(opWith(quorum), {
+    now: () => CLOCK_MS,
+    ask: async () => ({ approvals: [{ by: 'ana' }, { by: 'mallory' }] }),
+  });
+  assert.equal(outsider.status, 'needs_human_decision');
+  assert.equal(ports.calls.discover, 0);
+  assert.equal(ports.calls.send, 0);
+});
+
+test('K4-C4 a wildcard grant or a grant to another recipient blocks before any port runs', async () => {
+  for (const [label, granted] of Object.entries({
+    wildcard: [{ asset: 'USDC:TOKEN', maxAmount: '500000' }],
+    'another recipient': [{ asset: 'USDC:TOKEN', maxAmount: '500000', to: 'SOMEONE-ELSE' }],
+    'another asset': [{ asset: 'USDC:OTHER', maxAmount: '500000', to: 'RECIPIENT' }],
+  })) {
+    const ports = fakePorts();
+    const payment = loadKernel().createX402Payment(spec(), ports);
+    const res = await payment.run(opWith({ spend: granted }), { now: () => CLOCK_MS });
+    assert.equal(res.status, 'blocked', label);
+    assert.equal(res.receipt.status, 'blocked');
+    assert.equal(res.receipt.reason, 'TERMS_REJECTED', label);
+    assert.equal(res.receipt.exit, 'return to the person: change the agreement or cancel', label);
+    assert.deepEqual(res.receipt.authority.exercised, [], label);
+    assert.equal(ports.calls.discover, 0, label);
+    assert.equal(ports.calls.prepare, 0, label);
+    assert.equal(ports.calls.send, 0, label);
+  }
+});
+
+test('K4-C5 a grant naming this recipient reaches discovery exactly once', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const res = await payment.run(opWith(authority()), { now: () => CLOCK_MS });
+  assert.equal(ports.calls.discover, 1);
+  assert.notEqual(res.status, 'blocked');
+  assert.deepEqual(ports.seenRequests[0], {
+    url: CANONICAL_URL, method: 'GET', redirect: 'error', signal: ports.seenRequests[0].signal,
+  });
+  assert.equal(ports.seenRequests[0].signal.aborted, false);
+});
+
+test('K4-C6 an invalid or asynchronous injected clock sends nothing and leaves the state honest', async () => {
+  for (const [label, now] of Object.entries({
+    garbage: () => 'not-a-clock',
+    null: () => null,
+    promise: async () => CLOCK_MS,
+    throws: () => { throw new Error('clock down'); },
+  })) {
+    const ports = fakePorts();
+    const payment = loadKernel().createX402Payment(spec(), ports);
+    const res = await payment.run(opWith(authority()), { now });
+    assert.equal(ports.calls.discover, 0, label);
+    assert.equal(ports.calls.prepare, 0, label);
+    assert.equal(ports.calls.send, 0, label);
+    assert.equal(res.status, 'failed', label);
+    assert.equal(res.output, null, label);
+  }
+});
+
+test('K4-C7 an approval at the gate never takes away who can pause or who can sign', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const op = opWith({
+    spend: [],
+    pausers: ['ana'],
+    signers: { required: 1, allowed: ['ana'] },
+  });
+  const res = await payment.run(op, { now: () => CLOCK_MS, ask: async () => ({ approved: true, by: 'ana' }) });
+  assert.equal(ports.calls.discover, 1);
+  assert.deepEqual(op.authority.pausers, ['ana']);
+  assert.deepEqual(op.authority.signers, { required: 1, allowed: ['ana'] });
+  assert.equal(res.receipt.authority.approval, 'human_gate_approved');
+  assert.equal(res.receipt.decidedBy, 'ana');
+});
+
+test('K4-C8 the gate receives the declared effect, and a person who says no stops the run', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  let seen = null;
+  const op = opWith({ spend: [] });
+  const res = await payment.run(op, {
+    now: () => CLOCK_MS,
+    ask: async (payload) => { seen = payload; return { approved: false, by: 'beto' }; },
+  });
+  assert.equal(res.status, 'needs_human_decision');
+  assert.equal(ports.calls.discover, 0);
+  assert.deepEqual(seen.map((r) => `${r.amount} of ${r.asset} to ${r.to}`), ['100000 of USDC:TOKEN to RECIPIENT']);
+  assert.equal(seen.publicByDefault, false);
+});
