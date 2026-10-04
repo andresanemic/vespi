@@ -128,6 +128,11 @@ test('R206 revoked requested array is refused without escaping the authority API
   let decision;
   assert.doesNotThrow(() => { decision = authorizeSkill(claim, result, revoked.proxy); });
   assert.equal(decision.authorized, false);
+  // The fix asked for more than a refusal without a throw: the provenance that was verified stays
+  // verified, the four checks that passed stay covered, and the scope check is the one marked false.
+  assert.equal(decision.checks.authority_scope, false);
+  assert.equal(decision.provenanceStatus, 'verified');
+  assert.deepEqual([...decision.coverage].sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
 });
 
 // --- The eleven the review found already holding: they must stay that way ---

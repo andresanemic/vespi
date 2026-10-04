@@ -511,14 +511,18 @@ function listedIn(list, value) {
 // `requested` the decision reports all read only that copy. A capture that cannot be completed (a
 // length that is not a length, a getter that throws) is refused with a fixed reason: nothing the
 // caller did is repeated back at them (A02, A03, A16).
+//
+// `Array.isArray` is inside the guard for the same reason and not only for the revoked-proxy case: it
+// reads the proxy's target, and a caller who revoked the proxy before handing it over would otherwise
+// get a `TypeError` out of `authorizeSkill` instead of a refusal. Whether the value is an array at
+// all still reads as its own fixed reason, and the refusal is the same either way (A18, review R206).
 function captureRequest(value) {
-  if (!Array.isArray(value)) {
-    return { ok: false, names: [], reason: 'the requested authority must be an array of capability names' };
-  }
   const names = [];
-  let length;
   try {
-    length = value.length;
+    if (!Array.isArray(value)) {
+      return { ok: false, names: [], reason: 'the requested authority must be an array of capability names' };
+    }
+    const length = value.length;
     if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) {
       return { ok: false, names: [], reason: 'the requested authority could not be read as a list of names' };
     }
