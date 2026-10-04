@@ -848,7 +848,12 @@ function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {
 
 // ─── Pause, revocation and renewal (decision 16: the agreement says who may pause) ──────────────
 
-function pauseEmergencyPermission(permission, { ledger, by } = {}) {
+// The state these three answer with is read with the clock the caller injected. It used to be read
+// with `{ ledger }` alone, so a `now` in the options was dropped on the floor and the state was
+// decided against the wall clock: a caller that had been working with a fixed clock all along got
+// an answer about a moment nobody asked about, and the existing suite already passed a `now` to
+// `revokeEmergencyPermission` without ever seeing it arrive (H03).
+function pauseEmergencyPermission(permission, { ledger, by, now } = {}) {
   const bound = requireBinding(permission, bindingOf(permission), 'paused');
   const snapshot = bound.snapshot;
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
@@ -857,10 +862,10 @@ function pauseEmergencyPermission(permission, { ledger, by } = {}) {
   const claimed = claimRecord(records, snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   claimed.record.paused = true;
-  return getEmergencyState(permission, { ledger });
+  return getEmergencyState(permission, { ledger, now });
 }
 
-function resumeEmergencyPermission(permission, { ledger, by } = {}) {
+function resumeEmergencyPermission(permission, { ledger, by, now } = {}) {
   const bound = requireBinding(permission, bindingOf(permission), 'resumed');
   const snapshot = bound.snapshot;
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
@@ -872,10 +877,10 @@ function resumeEmergencyPermission(permission, { ledger, by } = {}) {
   if (record.revoked) throw new Error('a revoked emergency permission cannot be resumed');
   if (record.stopped) throw new Error(`this emergency permission was stopped by the rejected review of ${record.rejectedUse}; resuming it is not what the person decided, so it needs a new grant`);
   record.paused = false;
-  return getEmergencyState(permission, { ledger });
+  return getEmergencyState(permission, { ledger, now });
 }
 
-function revokeEmergencyPermission(permission, { ledger, by } = {}) {
+function revokeEmergencyPermission(permission, { ledger, by, now } = {}) {
   const bound = requireBinding(permission, bindingOf(permission), 'revoked');
   const snapshot = bound.snapshot;
   if (by !== snapshot.owner) throw new Error('only the person who granted this emergency permission may revoke it');
@@ -884,7 +889,7 @@ function revokeEmergencyPermission(permission, { ledger, by } = {}) {
   const claimed = claimRecord(records, snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   claimed.record.revoked = true;
-  return getEmergencyState(permission, { ledger });
+  return getEmergencyState(permission, { ledger, now });
 }
 
 // Renewal moves the clock and nothing else. The grant a person signed does not grow because time
