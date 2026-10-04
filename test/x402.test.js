@@ -622,3 +622,173 @@ test('K4-C8 the gate receives the declared effect, and a person who says no stop
   assert.deepEqual(seen.map((r) => `${r.amount} of ${r.asset} to ${r.to}`), ['100000 of USDC:TOKEN to RECIPIENT']);
   assert.equal(seen.publicByDefault, false);
 });
+// =====================================================================================
+// Group D — preparation and independent inspection (cases 10 and 11, and the mid-run clock of 5)
+// =====================================================================================
+
+function runOnce(ports, io = {}, declared = spec(), granted = authority()) {
+  const payment = loadKernel().createX402Payment(declared, ports);
+  return payment.run(opWith(granted), { now: () => CLOCK_MS, ...io });
+}
+
+test('K4-D1 a signer that returns no authorization string fails before any inspection and never sends', async () => {
+  for (const [label, prepare] of Object.entries({
+    'no authorization': async () => ({}),
+    'blank authorization': async () => ({ authorization: '   ' }),
+    'authorization as object': async () => ({ authorization: { x: 1 } }),
+    'not an object': async () => 'PUBLIC-AUTH',
+  })) {
+    const ports = fakePorts({ prepare });
+    const res = await runOnce(ports);
+    assert.equal(res.status, 'failed', label);
+    assert.equal(res.receipt.detail, 'PREPARE_FAILED', label);
+    assert.deepEqual(res.receipt.authority.exercised, [], label);
+    assert.equal(ports.calls.inspect, 0, label);
+    assert.equal(ports.calls.send, 0, label);
+  }
+});
+
+test('K4-D2 a signer that throws fails with PREPARE_FAILED and zero sends', async () => {
+  const ports = fakePorts({ prepare: async () => { throw new Error('keypair unavailable: SECRET-marker'); } });
+  const res = await runOnce(ports);
+  assert.equal(res.status, 'failed');
+  assert.equal(res.receipt.detail, 'PREPARE_FAILED');
+  assert.doesNotMatch(JSON.stringify(res.receipt), /SECRET-marker/);
+  assert.equal(ports.calls.inspect, 0);
+  assert.equal(ports.calls.send, 0);
+});
+
+test('K4-D3 an inspection that does not verify, or that is malformed, blocks before sending', async () => {
+  const refusals = {
+    'not verified': { verified: false, checks: { prepared: true }, reason: 'no', authDigest: AUTH_DIGEST },
+    'prepared missing': { verified: true, checks: {}, reason: 'ok', authDigest: AUTH_DIGEST },
+    'prepared false': { verified: true, checks: { prepared: false }, reason: 'ok', authDigest: AUTH_DIGEST },
+    'empty reason': { verified: true, checks: { prepared: true }, reason: '', authDigest: AUTH_DIGEST },
+    'empty digest': { verified: true, checks: { prepared: true }, reason: 'ok', authDigest: '' },
+    'digest not hex': { verified: true, checks: { prepared: true }, reason: 'ok', authDigest: 'zz' },
+    'non boolean check': { verified: true, checks: { prepared: true, fee: '1' }, reason: 'ok', authDigest: AUTH_DIGEST },
+    'checks not an object': { verified: true, checks: 'prepared', reason: 'ok', authDigest: AUTH_DIGEST },
+    'truthy verified': { verified: 'yes', checks: { prepared: true }, reason: 'ok', authDigest: AUTH_DIGEST },
+  };
+  for (const [label, result] of Object.entries(refusals)) {
+    const ports = fakePorts({ inspectPrepared: async () => result });
+    const res = await runOnce(ports);
+    assert.equal(res.status, 'blocked', label);
+    assert.equal(res.receipt.reason, 'PREPARED_REJECTED', label);
+    assert.deepEqual(res.receipt.authority.exercised, [], label);
+    assert.equal(ports.calls.send, 0, label);
+  }
+});
+
+test('K4-D4 a prepared effect that differs from the declaration in any single field is refused', async () => {
+  const base = {
+    verified: true,
+    authDigest: AUTH_DIGEST,
+    checks: { prepared: true },
+    reason: 'prepared transaction matches declared effect',
+  };
+  const effects = {
+    network: 'stellar:pubnet',
+    asset: 'OTHER',
+    payer: 'SOMEONE-ELSE',
+    payTo: 'SOMEONE-ELSE',
+    amount: '400000',
+    'amount as number': 100000,
+  };
+  for (const [field, value] of Object.entries(effects)) {
+    const key = field === 'amount as number' ? 'amount' : field;
+    const ports = fakePorts({
+      inspectPrepared: async () => ({ ...base, effect: { network: 'stellar:testnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000', [key]: value } }),
+    });
+    const res = await runOnce(ports);
+    assert.equal(res.status, 'blocked', field);
+    assert.equal(res.receipt.reason, 'PREPARED_REJECTED', field);
+    assert.equal(ports.calls.send, 0, field);
+  }
+  const control = fakePorts({ inspectPrepared: async () => ({ ...base, effect: { network: 'stellar:testnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000' } }) });
+  const positive = await runOnce(control);
+  assert.equal(control.calls.send, 1, 'the exact declared effect reaches the send');
+  assert.notEqual(positive.status, 'blocked');
+});
+
+test('K4-D5 an inspector that throws is a failure, not a block, and nothing is sent', async () => {
+  const ports = fakePorts({ inspectPrepared: async () => { throw new Error('envelope decode failed: marker'); } });
+  const res = await runOnce(ports);
+  assert.equal(res.status, 'failed');
+  assert.equal(res.receipt.detail, 'PREPARED_REJECTED');
+  assert.deepEqual(res.receipt.authority.exercised, []);
+  assert.equal(ports.calls.send, 0);
+  assert.doesNotMatch(JSON.stringify(res.receipt), /marker/);
+});
+
+test('K4-D6 the signer receives the terms and the expected effect, and never a widened one', async () => {
+  const ports = fakePorts();
+  await runOnce(ports, {}, spec({ amount: '100000' }), authority({ spend: [grant({ maxAmount: '500000' })] }));
+  const prepareRequest = ports.seenRequests.find((r) => r && r.terms);
+  assert.deepEqual(prepareRequest.terms, {
+    scheme: 'exact', network: 'stellar:testnet', asset: 'TOKEN', payTo: 'RECIPIENT',
+    amount: '100000', maxTimeoutSeconds: 300, extra: { areFeesSponsored: true, paymentFlow: 'authorization' },
+  });
+  assert.deepEqual(prepareRequest.expected, {
+    network: 'stellar:testnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000',
+  });
+  assert.equal(Object.isFrozen(prepareRequest.terms), true);
+  const inspectRequest = ports.seenRequests.find((r) => r && r.authorization !== undefined);
+  assert.equal(inspectRequest.authorization, 'PUBLIC-AUTH');
+  assert.equal(inspectRequest.expected.amount, '100000');
+});
+
+test('K4-D7 mutating the authority or the offer during the awaits cannot widen the declared effect', async () => {
+  const op = opWith(authority());
+  const grantRef = op.authority.spend[0];
+  const ports = fakePorts({
+    discover: async () => {
+      grantRef.maxAmount = '999999999';
+      grantRef.asset = 'USDC:ANYTHING';
+      return { status: 402, paymentRequired: paymentRequired({ accepts: [offer({ amount: '100000' })] }) };
+    },
+    inspectPrepared: async () => {
+      grantRef.maxAmount = '999999999';
+      return {
+        verified: true,
+        authDigest: AUTH_DIGEST,
+        effect: { network: 'stellar:testnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000' },
+        checks: { prepared: true },
+        reason: 'prepared transaction matches declared effect',
+      };
+    },
+  });
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const res = await payment.run(op, { now: () => CLOCK_MS });
+  assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT' }]);
+  const prepareRequest = ports.seenRequests.find((r) => r && r.terms);
+  assert.equal(prepareRequest.terms.amount, '100000');
+});
+
+test('K4-D8 a grant that expires while the run is in flight blocks before sending, and the gate keeps its people', async () => {
+  const op = opWith(authority({ pausers: ['ana'], signers: { required: 1, allowed: ['ana'] } }));
+  const grantRef = op.authority.spend[0];
+  const ports = fakePorts({
+    inspectPrepared: async () => {
+      grantRef.expiresAt = '2000-01-01T00:00:00.000Z';
+      return {
+        verified: true,
+        authDigest: AUTH_DIGEST,
+        effect: { network: 'stellar:testnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000' },
+        checks: { prepared: true },
+        reason: 'prepared transaction matches declared effect',
+      };
+    },
+  });
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const res = await payment.run(op, {
+    now: () => CLOCK_MS,
+    ask: async () => ({ approvals: [{ by: 'ana' }] }),
+  });
+  assert.equal(res.status, 'blocked');
+  assert.equal(res.receipt.reason, 'AUTHORITY_EXPIRED');
+  assert.equal(ports.calls.prepare, 1);
+  assert.equal(ports.calls.send, 0);
+  assert.deepEqual(op.authority.pausers, ['ana']);
+  assert.deepEqual(op.authority.signers, { required: 1, allowed: ['ana'] });
+});
