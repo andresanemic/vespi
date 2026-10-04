@@ -363,6 +363,24 @@ function uncoveredKeys(checks) {
 // (see the header), and nothing here narrows that.
 const PROVENANCE_SOURCES = Object.freeze({ verified: 'verified', declared: 'declared' });
 
+// Which of the two things a receipt's `name` is, in the vocabulary `provenanceSource` already taught
+// a host reading this same block.
+//
+// Nothing compares the name. The four comparisons are the repository, the commit, the author and the
+// bytes, and the name cannot become a fifth without this kernel knowing which path inside the commit
+// holds the artifact — which it does not, and will not guess. A shape check on the name would be
+// theatre: a borrowed name with the shape of a path would pass it (the borrowed-name case the study
+// found, several unrelated repositories publishing a skill called `superpowers`). So the name stays
+// what it is and always was, a search hint a host uses to find the skill again, and the receipt says
+// in one word that nobody checked it.
+//
+// One word is the whole vocabulary: there is no second value to reach for, because there is no state
+// in which this kernel could honestly write the other one. The label is this constant and never a
+// field read from the decision, so nothing a host, a resolver or a hand-written decision can write can
+// promote a declared name into a checked identity (P2b finding 4.3; decided by the owner on
+// 2026-10-04, option B of the H-P report).
+const NAME_SOURCE = 'declared';
+
 function refuse(record, reason) {
   // No record means nothing can be covered: a claim this kernel never registered has no provenance to
   // check, so all four checks are reported as not covered rather than quietly passing. Nothing was
@@ -945,6 +963,10 @@ function buildSkillReceipt(spec, decision) {
   });
   receipt.skill = Object.freeze({
     name: decision.name,
+    // The name the skill was registered under, and the word that says nothing here checked it. Placed
+    // right under the name so a reader cannot reach the value without reading its label, and derived
+    // from nothing the decision carries, so it cannot arrive as evidence (P2b finding 4.3).
+    nameSource: NAME_SOURCE,
     status,
     provenanceStatus: decision.provenanceStatus,
     provenanceReceiptStatus: RECEIPT_STATUS[provenanceVerdict],
