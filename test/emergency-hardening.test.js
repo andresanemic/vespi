@@ -593,3 +593,33 @@ test('H20 a body past the depth or the size budget is refused before the verifie
     .update(JSON.stringify({ critical: true, id: 's', nested: { a: 'b' }, samples: [1, 2, 3], source: 'sensor' }))
     .digest('hex'));
 });
+
+// ─── H21 · the last caller object still read without the one-read rule ─────────────────────────
+
+// The class: a field read twice. Every caller object in this module is read once through its own
+// descriptors, the permission and the request included, and the options of the seven entry points
+// after R301. `changes` was the one left: its keys were counted, its `expiresAt` was read once, and an
+// object carrying its own accessor was read anyway. Reading it once is already safe, but a shape this
+// module refuses everywhere else cannot be the exception that proves the rule, and a renewal is the
+// one call that grows a grant a person signed.
+test('H21 a renewal whose changes carry their own accessor is refused like any other caller object', {
+  todo: 'not applied: refusing it would contradict ADV18 and ADV18R, which hold this module to reading `expiresAt` exactly once and storing the value it validated. One read of one field cannot bind one value and validate another, so the shape is safe here; the test stays red and declared instead of being deleted',
+}, async () => {
+  const permission = await granted({ id: 'h21' });
+  const ledger = ledgerFor();
+  const changes = {};
+  let reads = 0;
+  Object.defineProperty(changes, 'expiresAt', {
+    enumerable: true,
+    get() { reads += 1; return '2026-10-06T00:00:00Z'; },
+  });
+  assert.throws(() => emergency.renewEmergencyPermission(permission, changes), /accessor|read|once|renew/i);
+  assert.equal(reads, 0, 'an accessor is never invoked, not even once');
+  // The original grant is exactly as usable as it was.
+  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).status, 'active');
+  assert.equal(run(permission, ledger).state, 'review_pending');
+  // A plain change still renews, so nothing was loosened on the way.
+  const other = await granted({ id: 'h21-ok' });
+  const renewed = emergency.renewEmergencyPermission(other, { expiresAt: '2026-10-06T00:00:00Z' });
+  assert.equal(renewed.expiresAt, '2026-10-06T00:00:00.000Z');
+});

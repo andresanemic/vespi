@@ -1105,6 +1105,14 @@ function renewEmergencyPermission(permission, changes) {
   } catch {
     keys = [];
   }
+  // A `changes` that carries its own accessor is NOT refused here, and that is a decision, not an
+  // oversight. The rule elsewhere in this module is one read per own descriptor, and this is one
+  // read: the accessor is invoked exactly once, the value that was validated is the value that gets
+  // stored, and there is no second look to disagree with. Refusing the shape would only contradict
+  // the promise two earlier reviews already hold this module to (ADV18, ADV18R), for no gain in
+  // authority. An own accessor is refused where a permission, a request or an options bag is read
+  // field by field, because there a getter that answers twice would bind one thing and validate
+  // another (H21, still red and marked in the hardening file).
   if (keys.length !== 1 || keys[0] !== 'expiresAt') {
     throw new Error('renewal cannot widen or alter the grant: only expiresAt may change, because the person signed the rest');
   }
