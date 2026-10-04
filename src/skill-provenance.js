@@ -51,8 +51,6 @@ const RECEIPT_STATUS = Object.freeze({
   not_verifiable: 'not_verified',
 });
 
-const PROVENANCE_FIELDS = Object.freeze(['repository', 'commit', 'author', 'contentDigest']);
-
 // The registry of record. WeakMaps, not fields: whoever holds a claim can rewrite its fields, so the
 // values this module acts on are the ones bound at registration and nothing else (decision 16 —
 // authority is granted, it does not emerge from the object you were handed).
