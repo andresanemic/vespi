@@ -5,12 +5,14 @@
 // calls the historical adapter (capability.js) makes, and the demo runner consumes the contract
 // through them.
 //
-// NOT EXECUTED IN THIS DELIVERY. The demo package has its own dependencies (Stellar SDK, four x402
-// packages, Express) and they are not installed in this checkout, so nothing in this file was run:
-// not its tests, not the runner. Everything below is transcribed from capability.js and settlement.js,
-// which are the parts this project already exercised, and every behaviour it claims is covered by the
-// kernel suite through simulated ports (test/x402.test.js). Treat this file as unverified until the
-// demo suite runs somewhere its dependencies exist.
+// PARTIALLY VERIFIED, AND ONLY IN ITS SHAPE. The demo package has its own dependencies (Stellar SDK,
+// four x402 packages, Express) and they are not installed in this checkout, so nothing that touches
+// the SDK, XDR, HTTP or Horizon was run: not the demo suite, not the runner, not a payment. What the
+// kernel suite does run, with the SDK replaced by stubs, is the composition: the object this factory
+// returns is the object src/x402.js accepts (test/k4-x402-advisor.test.js, case ADV15). Everything
+// below the ports is transcribed from capability.js and settlement.js, and the behaviours the
+// contract claims are covered by the kernel suite through simulated ports (test/x402.test.js).
+// Treat the payment path as unverified until the demo suite runs where its dependencies exist.
 import { Keypair, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { x402Client, x402HTTPClient } from '@x402/fetch';
 import { createEd25519Signer, getNetworkPassphrase } from '@x402/stellar';
