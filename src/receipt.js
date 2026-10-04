@@ -2,6 +2,9 @@
 
 const { createHash } = require('node:crypto');
 const { parseTime } = require('./time.js');
+// The zk vocabulary lives in one place (src/zk.js) so the port that writes the evidence and the
+// receipt that reads it cannot drift apart on what a valid claim is.
+const { claimsZk, reconcileZk, ZK_INCONSISTENT_REASON } = require('./zk.js');
 
 const RECEIPT_STATUSES = new Set([
   'verified',
@@ -243,6 +246,11 @@ function sanitizeEvidence(evidence) {
 // `verification` travels as evidence too, so it gets the same treatment: three named fields and
 // nothing else. A verifier is still free to return whatever it likes, but only the verdict, the
 // per-check results and the reason reach the receipt — a key it invented does not (T1-X2).
+//
+// `zk` is the one addition, and it is read with a closed schema (src/zk.js). A claim that does not
+// hold up — malformed, or inconsistent with the verdict and the checks it travels with — is removed
+// and the verdict becomes false with a fixed reason. It is never repaired into something valid: a
+// sanitizer that fixed a bad claim would be manufacturing evidence.
 function sanitizeVerification(verification) {
   if (!verification || typeof verification !== 'object' || Array.isArray(verification)) return null;
   const safe = {};
@@ -261,6 +269,20 @@ function sanitizeVerification(verification) {
     if (typeof reason === 'string' && reason.length > 0) safe.reason = reason;
   } catch {
     return null;
+  }
+  const zkClaimed = claimsZk(verification);
+  const reconciled = reconcileZk({
+    verified: safe.verified === true,
+    checks: safe.checks,
+    claimed: zkClaimed,
+    zk: zkClaimed ? verification.zk : null,
+  });
+  if (reconciled.zk !== null) safe.zk = reconciled.zk;
+  if (!reconciled.consistent) {
+    safe.verified = false;
+    safe.reason = ZK_INCONSISTENT_REASON;
+  } else if (safe.verified !== reconciled.verified) {
+    safe.verified = reconciled.verified;
   }
   return safe;
 }
@@ -306,7 +328,15 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
     || (rawExercised !== undefined && rawExercised !== null && !Array.isArray(rawExercised));
   const safeVerification = sanitizeVerification(verification);
   const rawStatus = safeText(outcome && outcome.status) || 'failed';
-  const status = RECEIPT_STATUSES.has(rawStatus) ? rawStatus : 'failed';
+  let status = RECEIPT_STATUSES.has(rawStatus) ? rawStatus : 'failed';
+  // A direct caller can pass any status, so the zk rule is applied here too and not only inside
+  // runOperation: a receipt may only read `verified` when the zk it carries says `verified` and the
+  // verdict agrees. A claim that was refused cannot leave a verified receipt behind.
+  if (status === 'verified' && claimsZk(verification)
+    && !(safeVerification && safeVerification.verified === true && safeVerification.zk
+      && safeVerification.zk.result === 'verified')) {
+    status = 'not_verified';
+  }
   const operationId = safeText(operation && operation.id) || 'unknown';
   const goal = safeText(operation && operation.goal) || '';
   const action = safeText(operation && operation.action);

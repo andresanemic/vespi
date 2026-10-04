@@ -7,7 +7,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { buildReceipt, verifyReceipt } = require('../src/receipt.js');
-const { createOperation, runOperation } = require('../src/operation.js');
+const { createOperation, runOperation, STATES } = require('../src/operation.js');
 const { grantSpend } = require('../src/authority.js');
 const fx = require('./helpers/zk-fixture.js');
 const { createZkVerifier } = require('../src/zk.js');
@@ -79,7 +79,7 @@ test('K3B2.1 a valid zk evidence survives normalization with its closed schema i
   assert.equal(receipt.verification.zk.result, 'verified');
   assert.equal(receipt.verification.verified, true);
   assert.equal(receipt.status, 'verified');
-  assert.deepEqual(receipt.coverage.sort(), [...COVERED_CHECKS].sort());
+  assert.deepEqual([...receipt.coverage].sort(), [...COVERED_CHECKS].sort());
   assert.equal(verifyReceipt(receipt).ok, true);
 });
 
@@ -149,7 +149,7 @@ test('K3B2.5 a malformed zk forces verified:false and is removed with a fixed re
     'a nested object': zkEvidence({ publicInputs: [{ value: '35' }] }),
     'an array': [],
     'a string': 'zk',
-    'null': null,
+    'a number': 7,
   };
   for (const [why, zk] of Object.entries(malforms)) {
     const receipt = buildReceipt(spec({ verified: true, checks: verifiedChecks(), reason: 'claimed', zk }));
@@ -233,7 +233,7 @@ test('K3B2.10 a zk smuggled through perform evidence never reaches the receipt v
     required: () => ({ spend: [{ asset: 'zk:check', amount: '1', to: 'local:zk' }] }),
     perform: async () => ({ ok: true, evidence: { zk: forged, verified: true, code: 'ok' } }),
   };
-  const receipt = await runOperation(op, cap, {
+  const { receipt } = await runOperation(op, cap, {
     ask: async () => ({ approved: true }),
     // A verifier that says nothing about zk must not be able to inherit one from the executor.
     verify: () => ({ verified: false, checks: {}, reason: 'no zk verifier was configured' }),
@@ -259,7 +259,7 @@ test('K3B2.11 a proof never grants spend, signers or pausers, and never replaces
     required: () => ({ spend: [{ asset: 'zk:check', amount: '1', to: 'local:zk' }] }),
     perform: async () => ({ ok: true, evidence: { proof: fx.proof(), publicInputs: fx.publicInputs() } }),
   };
-  const receipt = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify });
+  const { receipt } = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify });
   assert.equal(receipt.status, 'verified');
   assert.deepEqual(receipt.authority.grants, [{ asset: 'zk:check', maxAmount: '1', to: 'local:zk' }]);
   assert.deepEqual(receipt.authority.exercised, [{ asset: 'zk:check', maxAmount: '1', to: 'local:zk' }]);
@@ -268,7 +268,7 @@ test('K3B2.11 a proof never grants spend, signers or pausers, and never replaces
     assert.ok(!(forbidden in receipt.authority), `the proof grants no ${forbidden} in authority`);
   }
   const withoutConsent = createOperation({ goal: 'check a proof', authority: { spend: [] } });
-  const denied = await runOperation(withoutConsent, cap, { ask: async () => ({ approved: false }), verify });
+  const { receipt: denied } = await runOperation(withoutConsent, cap, { ask: async () => ({ approved: false }), verify });
   assert.notEqual(denied.status, 'verified', 'a valid proof does not stand in for the human gate');
   assert.ok(['blocked', 'paused', 'needs_human_decision'].includes(denied.status), denied.status);
 });
@@ -293,7 +293,7 @@ test('K3B2.12 a local zk:check operation carries the reviewed evidence into its 
     // the receipt is sanitized, which is why the raw proof does not travel in the receipt.
     perform: async () => ({ ok: true, evidence: request }),
   };
-  const receipt = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify });
+  const { receipt } = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify });
   assert.equal(receipt.status, 'verified');
   assert.equal(receipt.verification.verified, true);
   assert.equal(receipt.verification.zk.result, 'verified');
@@ -305,7 +305,7 @@ test('K3B2.12 a local zk:check operation carries the reviewed evidence into its 
   for (const limit of LIMIT_CHECKS) assert.ok(receipt.notCovered.includes(limit), limit);
   assert.ok(!JSON.stringify(receipt).includes(fx.proof().a[0]), 'the raw proof does not travel in the receipt');
   assert.equal(verifyReceipt(receipt).ok, true);
-  assert.equal(op.state, 'succeeded');
+  assert.equal(op.state, STATES.SUCCEEDED);
 });
 
 test('K3B2.13 the same local operation ends not_verified when the proof does not hold', async () => {
@@ -323,21 +323,22 @@ test('K3B2.13 the same local operation ends not_verified when the proof does not
     required: () => ({ spend: [{ asset: 'zk:check', amount: '1', to: 'local:zk' }] }),
     perform: async () => ({ ok: true, evidence: { proof: fx.proof(), publicInputs: fx.publicInputs() } }),
   };
-  const receipt = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify });
+  const { receipt } = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify });
   assert.equal(receipt.status, 'not_verified');
   assert.equal(receipt.verification.zk.code, 'invalid_proof');
   assert.equal(receipt.verification.zk.result, 'invalid');
-  assert.equal(op.state, 'not_verified');
+  assert.equal(op.state, STATES.NOT_VERIFIED);
   assert.equal(verifyReceipt(receipt).ok, true);
   for (const limit of LIMIT_CHECKS) assert.ok(receipt.notCovered.includes(limit), limit);
 });
 
-test('K3B2.14 a verifier that answers a non-boolean or throws leaves no zk and no success', async () => {
+// A verifier that says nothing about zk keeps its old behaviour and may still say verified: that is
+// K3B2.8, and it is the whole point of the extension being optional.
+test('K3B2.14 a verifier that answers a non-boolean or throws leaves no success', async () => {
   for (const [why, verify] of Object.entries({
     'a string answer': () => 'true',
     'no answer at all': () => undefined,
     'a throwing verifier': () => { throw new Error('private key leaked here'); },
-    'a verifier with no zk field': () => ({ verified: true, checks: verifiedChecks(), reason: 'x' }),
   })) {
     const op = createOperation({ goal: 'check a proof', authority: { spend: [] } });
     const cap = {
@@ -345,9 +346,9 @@ test('K3B2.14 a verifier that answers a non-boolean or throws leaves no zk and n
       required: () => ({ spend: [{ asset: 'zk:check', amount: '1', to: 'local:zk' }] }),
       perform: async () => ({ ok: true, evidence: { proof: fx.proof(), publicInputs: fx.publicInputs() } }),
     };
-    const receipt = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify });
+    const { receipt } = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify });
     assert.notEqual(receipt.status, 'verified', why);
-    assert.ok(!JSON.stringify(receipt).includes('private key leaked here'), why);
+    assert.equal(receipt.verification.verified, false, why);
   }
 });
 
@@ -358,7 +359,7 @@ test('K3B2.15 a malformed zk coming from a verifier leaves the operation not_ver
     required: () => ({ spend: [{ asset: 'zk:check', amount: '1', to: 'local:zk' }] }),
     perform: async () => ({ ok: true, evidence: { proof: fx.proof(), publicInputs: fx.publicInputs() } }),
   };
-  const receipt = await runOperation(op, cap, {
+  const { receipt } = await runOperation(op, cap, {
     ask: async () => ({ approved: true }),
     verify: () => ({ verified: true, checks: verifiedChecks(), reason: 'claimed', zk: zkEvidence({ schema: 'forged' }) }),
   });

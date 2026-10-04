@@ -56,6 +56,19 @@ const CHECK_KEYS = [
 const COVERED_CHECKS = new Set(CHECK_KEYS.slice(0, 3));
 const LIMIT_CHECKS = CHECK_KEYS.slice(3);
 
+// What each result may claim as its code. A closed vocabulary, so a receipt cannot carry a result
+// and a code that tell different stories.
+const RESULT_CODES = {
+  verified: new Set(['ok']),
+  invalid: new Set(['malformed_input', 'public_inputs_mismatch', 'invalid_proof']),
+  unavailable: new Set(['backend_unavailable']),
+  error: new Set(['backend_error']),
+};
+
+// The one reason a receipt carries when a zk claim did not hold up. Fixed, so a reader can compare
+// it and so nothing from the rejected claim travels with it.
+const ZK_INCONSISTENT_REASON = 'zk evidence missing or inconsistent with the verdict; verification not confirmed';
+
 // One fixed reason per outcome. Nothing from the request, the backend or an exception reaches it.
 const REASONS = {
   ok: 'groth16 proof verified against the pinned verification key',
@@ -271,9 +284,15 @@ function readDigest(value) {
   return typeof value === 'string' && DIGEST_PATTERN.test(value) ? value : null;
 }
 
+// A configuration may leave `backend` and `maxPublicInputs` out; nothing else.
+function hasOnlyKeys(value, allowed) {
+  for (const key of Object.keys(value)) if (!allowed.includes(key)) return false;
+  return true;
+}
+
 function readConfig(raw) {
   try {
-    if (!isPlainObject(raw) || !hasExactKeysAny(raw, CONFIG_KEYS)) return null;
+    if (!isPlainObject(raw) || !hasOnlyKeys(raw, CONFIG_KEYS)) return null;
     if (isAccessor(raw, 'backend')) return null;
     const maxPublicInputs = raw.maxPublicInputs === undefined
       ? DEFAULT_MAX_PUBLIC_INPUTS
@@ -326,10 +345,94 @@ function hasExactKeysAny(value, allowed) {
   return true;
 }
 
+// --- reading a zk claim that arrived from somewhere else ---
+
+// A zk evidence object, read with the same strictness as a request: plain JSON data, exact keys, no
+// accessors, no symbols, no foreign prototype, and a closed vocabulary for `result` and `code`. It
+// returns a fresh copy of the accepted fields, so the caller cannot keep a handle on what it passed
+// in. Used by the receipt path, which receives this object from a verifier it does not own.
+function readZkEvidence(value) {
+  try {
+    if (!isPlainObject(value) || !hasExactKeys(value, EVIDENCE_KEYS)) return null;
+    for (const key of EVIDENCE_KEYS) if (isAccessor(value, key)) return null;
+    if (readData(value, 'schema') !== EVIDENCE_SCHEMA) return null;
+    if (readData(value, 'system') !== 'groth16') return null;
+    if (readData(value, 'curve') !== 'bn254') return null;
+    const circuitDigest = readDigest(readData(value, 'circuitDigest'));
+    const vkDigest = readDigest(readData(value, 'vkDigest'));
+    const backendDigest = readDigest(readData(value, 'backendDigest'));
+    if (circuitDigest === null || vkDigest === null || backendDigest === null) return null;
+    const proofDigestRaw = readData(value, 'proofDigest');
+    if (proofDigestRaw !== null && (typeof proofDigestRaw !== 'string' || !DIGEST_PATTERN.test(proofDigestRaw))) return null;
+    const publicInputs = readPublicInputs(readData(value, 'publicInputs'), MAX_PUBLIC_INPUTS_CEILING);
+    if (publicInputs === null) return null;
+    const result = readData(value, 'result');
+    const code = readData(value, 'code');
+    if (typeof result !== 'string' || !Object.prototype.hasOwnProperty.call(RESULT_CODES, result)) return null;
+    if (typeof code !== 'string' || code.length === 0 || code.length > 64) return null;
+    if (!RESULT_CODES[result].has(code)) return null;
+    return {
+      schema: EVIDENCE_SCHEMA,
+      system: 'groth16',
+      curve: 'bn254',
+      circuitDigest,
+      vkDigest,
+      backendDigest,
+      proofDigest: proofDigestRaw === undefined ? null : proofDigestRaw,
+      publicInputs,
+      result,
+      code,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// The rule the receipt has to hold: a zk saying `verified` needs the verdict and the three covered
+// checks, and a zk saying anything else cannot carry a `verified` verdict. The four limits are
+// limits: a claim that counts one of them as covered is overclaiming, and overclaiming is refused
+// rather than trimmed.
+//
+// `claimed` is true when the object had a non-null `zk` property, including one that is malformed:
+// a claim that did not survive cannot leave a `verified` receipt behind.
+function reconcileZk({ verified, checks, claimed, zk }) {
+  if (!claimed) return { verified, zk: null, consistent: true };
+  const read = readZkEvidence(zk);
+  if (read === null) return { verified: false, zk: null, consistent: false };
+  const checksAre = {};
+  for (const key of CHECK_KEYS) {
+    if (!checks || typeof checks !== 'object' || Array.isArray(checks)) return { verified: false, zk: null, consistent: false };
+    const value = checks[key];
+    if (typeof value !== 'boolean') return { verified: false, zk: null, consistent: false };
+    checksAre[key] = value;
+  }
+  for (const key of LIMIT_CHECKS) if (checksAre[key] !== false) return { verified: false, zk: null, consistent: false };
+  if (read.result === 'verified') {
+    if (verified !== true) return { verified: false, zk: null, consistent: false };
+    for (const key of COVERED_CHECKS) if (checksAre[key] !== true) return { verified: false, zk: null, consistent: false };
+    return { verified: true, zk: read, consistent: true };
+  }
+  if (verified !== false) return { verified: false, zk: null, consistent: false };
+  return { verified: false, zk: read, consistent: true };
+}
+
 function readConfigChecked(raw) {
   const read = readConfig(raw);
   if (read === null) throw new TypeError(CONFIG_ERROR);
   return read;
+}
+
+// Whether a verification object claims a zk at all, read without trusting a getter on it.
+function claimsZk(verification) {
+  try {
+    if (!verification || typeof verification !== 'object' || Array.isArray(verification)) return false;
+    const descriptor = Object.getOwnPropertyDescriptor(verification, 'zk');
+    if (descriptor === undefined) return false;
+    if (typeof descriptor.get === 'function' || typeof descriptor.set === 'function') return true;
+    return descriptor.value !== undefined && descriptor.value !== null;
+  } catch {
+    return true;
+  }
 }
 
 // --- the verifier ---
@@ -455,10 +558,15 @@ function createZkVerifier(rawConfig) {
 module.exports = {
   createZkVerifier,
   digestZkVerificationKey,
+  readZkEvidence,
+  reconcileZk,
+  claimsZk,
   VK_SCHEMA,
   EVIDENCE_SCHEMA,
+  ZK_CHECK_KEYS: CHECK_KEYS,
   COVERED_CHECKS,
   LIMIT_CHECKS,
+  ZK_INCONSISTENT_REASON,
   FP_MODULUS,
   SCALAR_MODULUS,
 };
