@@ -193,9 +193,12 @@ function runIo(over = {}) {
 // Group A — exports, spec validation, port validation, import hygiene (cases 1 and 2)
 // =====================================================================================
 
-test('K4-A1 the contract exports exactly createX402Payment, selectX402Terms and createMemoryPaymentClaims', () => {
+test('K4-A1 the contract exports the three builders, plus the settlement vocabulary and the key version', () => {
   const kernel = loadKernel();
-  assert.deepEqual(Object.keys(kernel).sort(), ['createMemoryPaymentClaims', 'createX402Payment', 'selectX402Terms']);
+  assert.deepEqual(Object.keys(kernel).sort(), [
+    'EFFECT_KEY_VERSION', 'SETTLEMENT_CONTROL_NAMES',
+    'createMemoryPaymentClaims', 'createX402Payment', 'selectX402Terms',
+  ]);
 });
 
 test('K4-A2 a payment keeps the declared effect, returns fresh spend copies and refuses to widen them', () => {
@@ -1336,7 +1339,12 @@ test('K4-G2 no public export was removed or renamed by the new module', () => {
   assert.deepEqual(Object.keys(continuity), ['resumeFromReceipts']);
   assert.deepEqual(Object.keys(time), ['parseTime']);
   assert.ok(Object.keys(delegation).length > 0);
-  assert.deepEqual(Object.keys(require('../src/x402.js')).sort(), ['createMemoryPaymentClaims', 'createX402Payment', 'selectX402Terms']);
+  // x402.js added two exports by the owner's decision (the settlement vocabulary and the effect key
+  // version) and this is where nothing else may have been added, renamed or removed.
+  assert.deepEqual(Object.keys(require('../src/x402.js')).sort(), [
+    'EFFECT_KEY_VERSION', 'SETTLEMENT_CONTROL_NAMES',
+    'createMemoryPaymentClaims', 'createX402Payment', 'selectX402Terms',
+  ]);
 });
 
 test('K4-G3 continuity: an exercised not_verified asks for reconciliation and an unanchored verified is not resumable', async () => {

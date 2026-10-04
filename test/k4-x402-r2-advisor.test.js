@@ -289,7 +289,7 @@ test('R2-10 the human-gate path still pays after the pre-send authority revalida
 // =====================================================================================
 
 test('R2-05 a payment refused before the wire can be retried once the grant is renewed', {
-  todo: "risk, not a fix of this round: the effect key is reserved before the preparation and nothing releases it, so a refusal before the send burns the key until the process restarts. Releasing a reservation is a design decision (a crash could have sent anyway), not a hardening fix.",
+  todo: "risk, deferred to 0.1.5 by the coordinator's decision: the effect key is reserved before the preparation and nothing releases it, so a refusal before the send burns the key until the process restarts. Releasing a reservation is a design decision (a crash could have sent anyway), not a hardening fix, and this round does not take it.",
 }, async () => {
   const claims = kernel.createMemoryPaymentClaims();
   let clock = CLOCK_MS;
@@ -313,17 +313,39 @@ test('R2-05 a payment refused before the wire can be retried once the grant is r
   assert.equal(second.calls.send, 1, `retry after a refusal that never sent was blocked: ${after.receipt?.detail}`);
 });
 
-test('R2-07 a verify budget above the timer ceiling does not turn a settled payment into not_verified', {
-  todo: "risk, not a fix of this round: `verifyTimeoutMs` is only checked for being a positive finite number, so a budget above 2^31-1 ms overflows the timer and fires immediately. The same shape of read exists in operation.js, which is base code this branch does not touch.",
-}, async () => {
-  const { ports } = fakePorts({
-    verifySettlement: async () => {
-      await new Promise((resolve) => { setTimeout(resolve, 20); });
-      return { verified: true, checks: { transfer: true }, reason: 'readback' };
-    },
-  });
-  const res = await runOnce(ports, { verifyTimeoutMs: 2 ** 31 });
-  assert.equal(res.status, 'verified', `got ${res.status}: ${res.receipt?.verification?.reason}`);
+test('R2-07 a verify budget above the timer ceiling is refused, and one at the ceiling is honoured', async () => {
+  // Node's timers are 32-bit: a delay of 2^31 ms or more is armed as 1 ms. A budget the host meant as
+  // a long wait used to abort the settlement reader on the spot and seal a paid effect as
+  // not_verified. The module refuses the budget instead of arming a timer it cannot honour, and it
+  // refuses it while the run options are built: before the discovery, before the reservation and
+  // before anything goes on the wire. It is not clamped, because a clamp would answer with a budget
+  // the host did not ask for.
+  const reader = async () => {
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    return { verified: true, checks: { transfer: true }, reason: 'readback' };
+  };
+  for (const budget of [2 ** 31, 2 ** 31 + 1, 2 ** 40, Number.MAX_SAFE_INTEGER]) {
+    const { ports, calls } = fakePorts({ verifySettlement: reader });
+    let error = null;
+    try {
+      await runOnce(ports, { verifyTimeoutMs: budget });
+    } catch (thrown) {
+      error = thrown;
+    }
+    assert.ok(error !== null, `a budget of ${budget} ms has to be refused, not clamped`);
+    assert.equal(error.code, 'VESPI_X402_INVALID_IO', `a budget of ${budget} ms is refused with the public code of this module`);
+    assert.equal(calls.discover, 0, `a budget of ${budget} ms: the payment never left this process`);
+    assert.equal(calls.prepare, 0, `a budget of ${budget} ms: nothing was signed`);
+    assert.equal(calls.send, 0, `a budget of ${budget} ms: nothing was paid`);
+  }
+  // The ceiling itself is a real budget and it is armed as asked, so a host that meant "wait" waits.
+  const { ports: enElTecho } = fakePorts({ verifySettlement: reader });
+  const res = await runOnce(enElTecho, { verifyTimeoutMs: 2 ** 31 - 1 });
+  assert.equal(res.status, 'verified', `a budget at the ceiling is honoured, got ${res.status}: ${res.receipt?.verification?.reason}`);
+  // A budget this module cannot read keeps falling back to its own default, as it always did.
+  const { ports: sinNumero } = fakePorts();
+  const legible = await runOnce(sinNumero, { verifyTimeoutMs: '9000' });
+  assert.equal(legible.status, 'verified', 'a deadline that is not a number is the module\'s own default, not a refusal');
 });
 
 // =====================================================================================

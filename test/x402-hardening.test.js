@@ -346,7 +346,7 @@ test('H10 an unreadable io cannot leak its private message out of the contract',
 });
 
 test('H11 the gate payload names the network and the resource it authorizes', {
-  todo: "decision of the owner: a spend grant has no network and no resource field, so the person who says yes cannot tell which chain and which url the payment reaches. Adding either one changes the public shape of authority.js, which is not this hardening's call.",
+  todo: "deferred to 0.1.5 by the coordinator's decision: a spend grant has no network and no resource field, so the person who says yes cannot tell which chain and which url the payment reaches. Adding either one changes the public shape of authority.js, which this charge does not touch.",
 }, () => {
   const kernel = require('../src/x402.js');
   const required = kernel.createX402Payment(spec(), fakePorts()).required({ authority: authority() });
@@ -354,13 +354,52 @@ test('H11 the gate payload names the network and the resource it authorizes', {
   assert.equal(required.spend[0].resource, CANONICAL_URL);
 });
 
-test('H12 an output that cannot be read again is not a delivered output', {
-  todo: "decision of the owner: what a validateOutput port may return as `output` is a contract choice. Refusing a non-plain output is defensible and json-copying it changes what a host gets back; either way it is the owner's call, not a hardening fix.",
-}, async () => {
-  const trap = { get title() { throw new Error(PRIVATE_MARKER); } };
-  const ports = fakePorts({ validateOutput: () => ({ ok: true, output: trap, digest: PLAN_DIGEST }) });
-  const res = await runOnce(ports);
-  assert.equal(res.output, null, 'a body nobody can read again is not a delivered body');
+test('H12 an output that is not a plain object is not a delivered output', async () => {
+  // The contract the owner chose for `validateOutput`: what it hands back as `output` has to be a
+  // plain body, the same rule the other ports answer to. It fails closed and it is not copied with
+  // JSON: a copy would hand the host a body this module read, and reading it here is exactly what
+  // the case below refuses to do.
+  const cases = [
+    // An accessor: a body nobody can read again throws in the host's hands, with its own message.
+    ['an accessor', { get title() { throw new Error(PRIVATE_MARKER); } }],
+    ['a list', [PLAN]],
+    ['a string', JSON.stringify(PLAN)],
+    ['a number', 42],
+    ['a boolean', true],
+    ['a function', () => PLAN],
+    ['a date', new Date(CLOCK_MS)],
+    ['a class instance', new (class Plan { constructor() { this.title = 'x'; } })()],
+    ['a proxy', new Proxy({ ...PLAN }, {})],
+  ];
+  for (const [name, output] of cases) {
+    const ports = fakePorts({ validateOutput: () => ({ ok: true, output, digest: PLAN_DIGEST }) });
+    const res = await runOnce(ports);
+    assert.equal(res.output, null, `${name} is not a delivered body`);
+    assert.equal(res.receipt.verification.checks.delivery, false, `${name} is a refused delivery`);
+    assert.equal(
+      res.receipt.verification.reason,
+      'the paid response did not deliver a validated body (DELIVERY_REJECTED)',
+      `${name} names the port, not what the port wrote`,
+    );
+    assert.equal(String(JSON.stringify(res.receipt)).includes(PRIVATE_MARKER), false, `${name}: no message a port wrote travels`);
+    assert.equal(ports.calls.send, 1, `${name}: the effect was paid, and the receipt says so honestly`);
+  }
+  // A plain body is delivered as it always was, and a body the validator reports nothing about is
+  // still a covered delivery: "nothing to hand back" is not a malformed answer.
+  const plano = await runOnce(fakePorts({ validateOutput: (body) => ({ ok: true, output: body, digest: PLAN_DIGEST }) }));
+  assert.deepEqual(plano.output, PLAN);
+  assert.equal(plano.receipt.status, 'verified');
+  for (const vacio of [{ ok: true, digest: PLAN_DIGEST }, { ok: true, output: null, digest: PLAN_DIGEST }]) {
+    const sinCuerpo = await runOnce(fakePorts({ validateOutput: () => vacio }));
+    assert.equal(sinCuerpo.receipt.status, 'verified', `an absent output is not a refusal: ${JSON.stringify(vacio)}`);
+    assert.equal(sinCuerpo.output, null);
+  }
+  // And a body that only looks plain because it was copied is still refused: the rule is on what the
+  // port handed back, not on what could have been serialized out of it.
+  const classConAcceso = new (class Body { get title() { return 'x'; } })();
+  const sinCopiar = await runOnce(fakePorts({ validateOutput: () => ({ ok: true, output: classConAcceso, digest: PLAN_DIGEST }) }));
+  assert.equal(sinCopiar.output, null, 'a json copy would have made this body readable, and the module does not make one');
+  assert.equal(sinCopiar.receipt.verification.checks.delivery, false);
 });
 
 // =====================================================================================

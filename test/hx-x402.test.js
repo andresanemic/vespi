@@ -15,14 +15,18 @@
 //     pin that, including a port that rejects, a thenable whose `then` is a trap, a promise that
 //     never settles and a port called twice.
 //
-//   Group B (the closed settlement control catalog): the gap is real — a host that writes the
-//     settlement port has no way to learn the vocabulary — and the fix is one line, but it turns the
-//     three tests that pin the exports of `src/x402.js` red. It is left for the owner, written down
-//     as a todo, with the hostile case kept green so the gate cannot be lost in the meantime.
-//
-//   Group C (owner decisions, left as todos): the reason a control name was refused, the version of
-//     the effect key in the receipt, the effect key itself as something a host can reconcile with,
-//     and a public catalog of codes.
+//   Group B (the closed settlement control catalog, exported by the owner's decision): the gap was
+//     real — a host that writes the settlement port has no way to learn the vocabulary — and the
+//     vocabulary is now exported as a frozen copy, `SETTLEMENT_CONTROL_NAMES`, so a host can check
+//     its own names without reading this repository. HX-08, HX-10 and HX-14 hold that the export is
+//     the gate: every name it carries is admitted, nothing else is, and reading or writing the copy
+//     cannot widen the closed set.
+
+//   Group C (owner decisions still open, kept as todos): the reason a control name was refused, the
+//     version of the effect key as a field of the receipt, the effect key itself as something a
+//     receipt can be reconciled against, and a public catalog of codes. HX-15 belongs here and is
+//     not a todo: the coordinator decided that the version of the canonical effect key is exported
+//     instead, which is the half a host keeping keys outside the process can use.
 //
 // Out of scope by instruction: the identity of the operation in `createOperation` (hallazgo 4). That
 // is `operation.js`, shared core, verified elsewhere; it is described in the report and not touched.
@@ -42,6 +46,7 @@ const AUTH_DIGEST = createHash('sha256').update(AUTHORIZATION, 'utf8').digest('h
 const PLAN = { title: 'Queen Marketing Plan', summary: 'A 90-day plan.', deliverables: ['Landing page'], nextSteps: ['Launch week 1'] };
 const PLAN_DIGEST = createHash('sha256').update(JSON.stringify(PLAN), 'utf8').digest('hex');
 const TX = 'c'.repeat(64);
+const EXPECTED_EFFECT = { network: 'stellar:testnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000' };
 
 function spec(over = {}) {
   return {
@@ -160,6 +165,37 @@ function kernel() {
   return require('../src/x402.js');
 }
 
+// What a host that keeps effect keys outside the process (a register, a reconciliation table) has to
+// be able to do: recompute the key this kernel reserved and compare it with a stored one. That is
+// only possible if the version of the canonical content is a name the host can read, so the replica
+// below is that host: it reads no private value of the module, only the exported version, the
+// declaration this file wrote and the operation it built. The canonical form is sorted keys, which
+// is what the module states about its own hash.
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === 'object') {
+    const out = {};
+    for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
+    return out;
+  }
+  return value;
+}
+
+function sha256(text) {
+  return createHash('sha256').update(text, 'utf8').digest('hex');
+}
+
+function hostEffectKey(version, op, requirements) {
+  const operationKey = sha256(JSON.stringify(canonicalize({ goal: op.goal, action: op.action, requirements })));
+  return sha256(JSON.stringify(canonicalize({
+    version,
+    operation: op.id,
+    operationKey,
+    request: { url: CANONICAL_URL, method: 'GET' },
+    expected: EXPECTED_EFFECT,
+  })));
+}
+
 // =====================================================================================
 // Group A — the delivery validator is a port like the other five, and it is awaited
 // =====================================================================================
@@ -234,22 +270,17 @@ test('HX-07 the validator is called exactly once per run', async () => {
 });
 
 // =====================================================================================
-// Group B — the closed catalog of settlement controls: read from a host, decided by the owner
+// Group B — the closed catalog of settlement controls, exported by the owner's decision
 //
-// The finding is right about the gap: a host that writes the `verifySettlement` port has to know
-// which control names are admitted, and the only place to read them is this repository. The fix is
-// one line (`SETTLEMENT_CONTROL_NAMES` next to the set, exported frozen) — and it collides with a
-// contract that was already reviewed and is already pinned: three tests (D2-16, K4-A1, K4-G2)
-// assert that `src/x402.js` exports exactly `createX402Payment`, `selectX402Terms` and
-// `createMemoryPaymentClaims`. Adding a fourth export is not removing or renaming anything, but it
-// does widen a surface a previous round closed on purpose, so it is the owner's word and not this
-// charge's. What is left here is the observation, pinned so it is not lost, and the hostile case
-// that must keep failing either way.
+// The finding was right about the gap: a host that writes the `verifySettlement` port has to know
+// which control names are admitted, and the only place to read them was this repository. The owner
+// decided that a frozen copy is exported (`SETTLEMENT_CONTROL_NAMES`, HX-08), and the three tests
+// that pin the exports of `src/x402.js` (D2-16, K4-A1, K4-G2) moved with the word: they allow that
+// name and the exported key version, and nothing else. A copy is exported, not the set the gate
+// reads, so what a host can read cannot become what the gate accepts (HX-14).
 // =====================================================================================
 
-test('HX-08 a host can ask which settlement control names this kernel admits', {
-  todo: "decision of the owner: `SETTLEMENT_CONTROLS` is closed and not exported, so a host that writes `verifySettlement` cannot learn the vocabulary except by reading the file. Exporting a frozen copy of the names is one line, and it was written and measured on this branch: it turns D2-16, K4-A1 and K4-G2 red, the three tests that pin the exports of `src/x402.js` to exactly three names. Widening a surface a previous round closed on purpose is the owner's call, and the three lines move with the word.",
-}, () => {
+test('HX-08 a host can ask which settlement control names this kernel admits', () => {
   const { SETTLEMENT_CONTROL_NAMES } = kernel();
   assert.equal(Array.isArray(SETTLEMENT_CONTROL_NAMES), true, 'a host can read it without the file');
   assert.equal(Object.isFrozen(SETTLEMENT_CONTROL_NAMES), true, 'and it is frozen: reading it cannot widen it');
@@ -257,10 +288,71 @@ test('HX-08 a host can ask which settlement control names this kernel admits', {
   assert.deepEqual([...SETTLEMENT_CONTROL_NAMES].sort(), [
     'authorization', 'exactAmount', 'invocation', 'payer', 'prepared', 'source', 'transfer',
   ]);
+  assert.deepEqual(
+    SETTLEMENT_CONTROL_NAMES.filter((name) => typeof name !== 'string' || name.length === 0),
+    [],
+    'every entry is a name a host could compare against, with no hole where one should be',
+  );
+});
+
+test('HX-14 the exported names are the gate itself: reading them cannot widen it', async () => {
+  const { SETTLEMENT_CONTROL_NAMES } = kernel();
+  // Every name the export carries is admitted by the reader, and nothing else is. The export is a
+  // copy of the catalog, so a host that trusted it would never be refused for a control of its own.
+  for (const name of SETTLEMENT_CONTROL_NAMES) {
+    const res = await runOnce(fakePorts({
+      verifySettlement: async () => ({ verified: true, checks: { [name]: true }, reason: 'independent readback' }),
+    }));
+    assert.equal(res.receipt.verification.checks[`settlement_${name}`], true, `the export promises ${name}`);
+  }
+  // And a host that tries to widen it by writing to what it read gets nowhere.
+  try {
+    SETTLEMENT_CONTROL_NAMES.push('transaccion');
+    SETTLEMENT_CONTROL_NAMES[0] = 'transaccion';
+    Object.defineProperty(SETTLEMENT_CONTROL_NAMES, 2, { value: 'transaccion' });
+  } catch {
+    // A frozen copy refuses in strict mode; that is the same answer as the assertions below.
+  }
+  assert.equal(Object.isFrozen(SETTLEMENT_CONTROL_NAMES), true, 'the copy is still frozen');
+  assert.deepEqual([...SETTLEMENT_CONTROL_NAMES].sort(), [
+    'authorization', 'exactAmount', 'invocation', 'payer', 'prepared', 'source', 'transfer',
+  ], 'and it still carries exactly the catalog');
+  const inventado = await runOnce(fakePorts({
+    verifySettlement: async () => ({ verified: true, checks: { transaccion: true }, reason: 'the transaction is in the ledger' }),
+  }));
+  assert.equal(inventado.receipt.status, 'not_verified', 'a name a host wrote for itself is still refused');
+  assert.equal(
+    inventado.receipt.verification.reason,
+    'the settlement port did not verify the declared effect (VERIFIER_FAILED)',
+  );
+});
+
+test('HX-15 the version of the effect key is exported, and it is the version in the hash', async () => {
+  const { EFFECT_KEY_VERSION, createX402Payment } = kernel();
+  assert.equal(Number.isInteger(EFFECT_KEY_VERSION), true, 'a host compares a stored key without guessing');
+  assert.ok(EFFECT_KEY_VERSION >= 1, 'and the version is a number a host can keep in a register');
+  const ports = fakePorts();
+  const op = operation();
+  const payment = createX402Payment(spec(), ports);
+  // The requirements are the ones the payment declares for this operation: a host builds the key from
+  // the same three public shapes (declaration, requirement, operation identity).
+  const requirements = payment.required(op).spend;
+  const res = await payment.run(op, { now: () => CLOCK_MS });
+  assert.equal(res.receipt.status, 'verified', `got ${res.receipt?.verification?.reason}`);
+  assert.equal(ports.seen.keys.length, 1, 'the store received one key');
+  assert.equal(
+    hostEffectKey(EFFECT_KEY_VERSION, op, requirements),
+    ports.seen.keys[0],
+    'a host recomputes the very key the store reserved, out of the process',
+  );
+  // A key of another version is a different key. A host on a stale version therefore does not
+  // collide with a stored one either way: it cannot pay the same effect twice believing it did not.
+  assert.notEqual(hostEffectKey(EFFECT_KEY_VERSION + 1, op, requirements), ports.seen.keys[0]);
+  assert.notEqual(hostEffectKey(EFFECT_KEY_VERSION - 1, op, requirements), ports.seen.keys[0], 'a key stored before the version moved is not this one');
 });
 
 test('HX-09 the reason a control was refused names the control, not only the port', {
-  todo: "decision of the owner: a port that reports a control outside the catalog is refused with `the settlement port did not verify the declared effect (VERIFIER_FAILED)`, which names the port and not the name. Naming the rejected control would carry host-written text into a sealed receipt, which is exactly what the closed catalog exists to prevent, so the fix is not free. The alternative — exporting the catalog, see HX-08 — lets a host check its own vocabulary before it seals anything. The owner's call.",
+  todo: "deferred to 0.1.5 by the coordinator's decision: a port that reports a control outside the catalog is refused with `the settlement port did not verify the declared effect (VERIFIER_FAILED)`, which names the port and not the name. Naming the rejected control would carry host-written text into a sealed receipt, which is exactly what the closed catalog exists to prevent, so the fix is not free and it stays out. What 0.1.4 does is the alternative this reason already named: `SETTLEMENT_CONTROL_NAMES` is exported (HX-08), so a host checks its own vocabulary before it seals anything, and HX-10 keeps the gate green either way.",
 }, async () => {
   const res = await runOnce(fakePorts({
     verifySettlement: async () => ({ verified: true, checks: { transaccion: true }, reason: 'the transaction is in the ledger' }),
@@ -293,7 +385,7 @@ test('HX-10 a control outside the closed catalog never reaches a sealed receipt'
 });
 
 test('HX-11 the receipt says which version of the effect key deduplicated this payment', {
-  todo: "decision of the owner: the effect key moved to version 2 of its canonical content, so every stored key is old, and an old key never collides with a new one. What is missing is the version itself: a host that keeps those keys outside the process (a register, a reconciliation table) has nothing to compare them with, and the reason does not name it. `effectKeyVersion` in the receipt means touching `receipt.js` and `operation.js`, which this charge does not touch, and it changes the digest of every receipt a payment already seals. Whether the receipt carries the version, the reason names it, or a host reconciles by its own convention is the owner's call.",
+  todo: "deferred to 0.1.5 by the coordinator's decision: the effect key is at version 2 of its canonical content, so every key stored before is old and an old key never collides with a new one. The version itself is now a name a host can read, `EFFECT_KEY_VERSION` (HX-15), which is what a host keeping keys outside the process needed to compare them; putting `effectKeyVersion` on the receipt is the part left, and it means touching `receipt.js` and `operation.js` and changing the digest of every receipt a payment already seals.",
 }, async () => {
   const ports = fakePorts();
   const res = await runOnce(ports);
@@ -301,7 +393,7 @@ test('HX-11 the receipt says which version of the effect key deduplicated this p
 });
 
 test('HX-12 a host can obtain the effect key a receipt deduplicated on', {
-  todo: "decision of the owner: a claims store receives the exact key through `reserveEffect`, so a durable store can persist what it reserved — half of what the finding asks for is already true. What no host can do is recover the key from a receipt afterwards, which is what reconciliation needs. Publishing the key (or a way to recompute it) widens what leaves the process and what a receipt can be matched against; not publishing it keeps the key inside. The owner's call, and the memory-store limit stays as it is written in the module header.",
+  todo: "deferred to 0.1.5 by the coordinator's decision: a claims store receives the exact key through `reserveEffect`, so a durable store can persist what it reserved, and the version it is keyed under is exported (HX-15). What no host can do is recover the key from a receipt afterwards. Publishing the key (or a way to recompute it from a receipt) widens what leaves the process and what a receipt can be matched against; not publishing it keeps the key inside, and the memory-store limit stays as it is written in the module header.",
 }, async () => {
   const ports = fakePorts();
   const res = await runOnce(ports);
@@ -310,7 +402,7 @@ test('HX-12 a host can obtain the effect key a receipt deduplicated on', {
 });
 
 test('HX-13 a host can read the catalog of public codes instead of matching free text', {
-  todo: "decision of the owner: every rejection travels in the reason with a code from a catalog that grows every round, and the constructor throws VESPI_X402_CLAIMS_REQUIRED, VESPI_X402_INVALID_SPEC, VESPI_X402_INVALID_PORT or VESPI_X402_INVALID_IO. A host has to hold those strings to branch on them, and Casa Firme translates them by hand. Exporting the catalog widens the same pinned surface as HX-08, and a reason written in the host's language is a different contract: this kernel writes reasons in its own words on purpose. The owner's call.",
+  todo: "deferred to 0.1.5 by the coordinator's decision: every rejection travels in the reason with a code from a catalog that grows every round, and the constructor throws VESPI_X402_CLAIMS_REQUIRED, VESPI_X402_INVALID_SPEC, VESPI_X402_INVALID_PORT or VESPI_X402_INVALID_IO. A host has to hold those strings to branch on them, and Casa Firme translates them by hand. Exporting the code catalog would widen the same surface `SETTLEMENT_CONTROL_NAMES` widens (HX-08), and the reasons stay in the kernel's own words on purpose. The vocabulary 0.1.4 exports is the one a host writes, not the one a host reads.",
 }, async () => {
   const { X402_CODES } = kernel();
   assert.equal(typeof X402_CODES, 'object');
