@@ -238,6 +238,24 @@ test('D2-04 a malformed claims store fails closed instead of being called', () =
   }
 });
 
+test('D2-05a a store with no prototype, the shape a durable adapter would use, is still a store', async () => {
+  const store = Object.create(null);
+  const onStore = [];
+  store.effects = new Set();
+  store.reserveEffect = function reserve(key) {
+    onStore.push(this === store);
+    if (this.effects.has(key)) return 'duplicate';
+    this.effects.add(key);
+    return 'claimed';
+  };
+  store.claimTransaction = () => 'claimed';
+  const ports = fakePorts();
+  ports.claims = store;
+  const res = await kernel().createX402Payment(spec(), ports).run(operation(), runIo());
+  assert.equal(res.status, 'verified', `got ${res.status}: ${res.receipt?.detail}`);
+  assert.deepEqual(onStore, [true], 'the methods run on the store, not on a receiver without state');
+});
+
 test('D2-05 a claims store that answers through accessors or a proxy is refused before it is called', () => {
   let called = 0;
   const answering = {
