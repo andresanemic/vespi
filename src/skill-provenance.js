@@ -499,8 +499,10 @@ function authorizeSkill(claim, result, requested) {
 
   // A refusal reports the coverage it really has: a request out of scope does not erase the three
   // provenance checks that passed, and a provenance that failed does not invent an `authority_scope`
-  // problem that was never checked.
-  function refuseDecision(status, reason, provenanceValues, extra) {
+  // problem that was never checked. `provenanceStatus` is the provenance on its own and `status` is
+  // what this stage decided, so asking for a capability outside the grant does not turn a verified
+  // provenance into an unverified one (A09).
+  function refuseDecision(status, reason, provenanceValues, extra, provenanceStatus) {
     const values = {};
     for (const key of PROVENANCE_CHECKS) values[key] = provenanceValues[key] === true;
     for (const key of extra) values[key] = false;
@@ -508,7 +510,7 @@ function authorizeSkill(claim, result, requested) {
     const decision = Object.freeze({
       authorized: false,
       status,
-      provenanceStatus: status,
+      provenanceStatus,
       reason: short(reason),
       checks,
       coverage: Object.freeze(coveredKeys(checks)),
@@ -523,17 +525,17 @@ function authorizeSkill(claim, result, requested) {
   }
 
   if (record === null) {
-    return refuseDecision('not_verifiable', 'this skill was not registered in this kernel, so no authority can be granted', {}, []);
+    return refuseDecision('not_verifiable', 'this skill was not registered in this kernel, so no authority can be granted', {}, [], 'not_verifiable');
   }
   if (result === null || typeof result !== 'object' || VERIFIED_FOR.get(result) !== record) {
-    return refuseDecision('not_verifiable', 'this verification result was not produced for this skill by this kernel', {}, []);
+    return refuseDecision('not_verifiable', 'this verification result was not produced for this skill by this kernel', {}, [], 'not_verifiable');
   }
   const provenanceStatus = result.status;
   const provenanceChecks = result.checks !== null && typeof result.checks === 'object' ? result.checks : {};
 
   const capture = captureRequest(requested);
   if (!capture.ok) {
-    return refuseDecision('not_verified', capture.reason, provenanceChecks, ['authority_scope']);
+    return refuseDecision('not_verified', capture.reason, provenanceChecks, ['authority_scope'], provenanceStatus);
   }
   const ask = capture.names;
   let malformed = null;
@@ -562,7 +564,7 @@ function authorizeSkill(claim, result, requested) {
     }
   }
   if (malformed !== null) {
-    return refuseDecision('not_verified', malformed, provenanceChecks, ['authority_scope']);
+    return refuseDecision('not_verified', malformed, provenanceChecks, ['authority_scope'], provenanceStatus);
   }
   const outside = ask.filter((item) => !listedIn(record.authority, item));
   if (outside.length > 0) {
@@ -571,6 +573,7 @@ function authorizeSkill(claim, result, requested) {
       `the person granted ${record.authority.length === 0 ? 'no capability at all' : record.authority.join(', ')}, and ${outside.join(', ')} is not among them`,
       provenanceChecks,
       ['authority_scope'],
+      provenanceStatus,
     );
   }
   if (provenanceStatus !== 'verified') {
@@ -579,6 +582,7 @@ function authorizeSkill(claim, result, requested) {
       `the provenance of this skill is ${provenanceStatus}, so no authority is granted`,
       provenanceChecks,
       [],
+      provenanceStatus,
     );
   }
   const checks = withChecks(provenanceChecks);
@@ -634,7 +638,10 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
   const loaded = Object.freeze({
     authorized: matched === true ? decision.authorized : false,
     status,
-    provenanceStatus: status,
+    // The provenance is the one the decision carried. A load that found different bytes is a
+    // discrepancy of the load, and it says so in `status` and in `loaded_content_digest`; it is not
+    // a claim that the provenance of the skill stopped being what it was (A09).
+    provenanceStatus: decision.provenanceStatus,
     reason: short(reason),
     checks,
     coverage: Object.freeze(coveredKeys(checks)),
