@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedBy": "node scripts/judge-package.mjs",
-  "packageVersion": "0.1.4-rc.6",
-  "gitCommit": "a378e3df7175d1a56079886facb43aead516d7e2",
+  "packageVersion": "0.1.4",
+  "gitCommit": "a4961201e67fc629b6e59938e81e6cdbc04bf56b",
   "fileHashes": {
     "demo/x402/README.md": "056237ad81b5a23deceee84cc260377742d01dfc0a8dda2853320e9f26714405",
     "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
@@ -27,25 +27,28 @@
     "demo/x402/settlement.js": "748561392df0ad80032264ec3d21d06f0aa4d3aeddc98c78d174939f01149119",
     "demo/x402/verify.test.mjs": "71bc83afcf2aa5ea2f34213a9dba4ff29a43cd2591fae5405d269fec3c223116",
     "docs/CAPABILITIES.md": "38cf6155f2aaf3e8a2796428b503c7ca7de586a4f86e67b48c57deeee0fb87cd",
-    "docs/FOR_JUDGES.md": "c70abb3c03b668137320755fcc91f7e6d43dceebec14c20b16dc8f2369cce4a3",
+    "docs/FOR_JUDGES.md": "440b2490cff9614b7b9af0e44c747556a52b2bb5d6eada957cda89a3221a8e39",
     "docs/GENESIS.md": "24c76ec764ddaa54d85781ea894786b45ca80884df20e9e40580148519dd9971",
-    "docs/METHOD.md": "6e78039a298a5b302dc3457e9811c38570778a6c38a3b5e71eb9004c04a42ada",
+    "docs/JUDGES_FINDINGS_0.1.4.md": "19b1919c31648da72b716f4bfabb909d44720b408aa870e59346170fbbef3314",
+    "docs/METHOD.md": "b0fff07e1e75f8c8a64e81a601b813ae145f0d518e48b5446a1f5b166ae25620",
     "docs/PRIOR_ART.md": "cbedc21c29d36d770c32dbb4760838820958410c27b390db3d53dcec9ab5991b",
     "docs/RELEASE_0.0.1_GENESIS.md": "c4a77b6957661ddd8d31063e1a635d894502254eea90556d184660daa8a68ad0",
     "docs/RELEASE_0.1.3_KERNEL.md": "521d39710216dd0da66d17f01346d36f3cb416838c97e7e43923c4f1bb6f320b",
-    "docs/TESTNET_EVIDENCE.md": "973468ba1b0cbb3b55c2b234a784aea7a5bbf0fafbd46c5a1763f1c9d752c94c",
-    "docs/VERIFICATION.md": "18bafb413c1a4d502ba9b37dcc0a8da9d7e85f81942f6f0713d897e8ba3742ce",
+    "docs/RELEASE_0.1.4_KERNEL.md": "3bfab2de5779de0bc25f8215223508d3c9d19e75f78a3fcd61fc17aaca6cec5a",
+    "docs/TESTNET_EVIDENCE.md": "55de1b2c2567825b3eef69bc83990ef976b226dd7b5eb87a599bcf4bc849d167",
+    "docs/VERIFICATION.md": "003118f46ebe9dceb0a918b33b1b6570fa0c038aabb3cc5ed4c7813fe2dbbba7",
     "docs/WALKTHROUGH.md": "dd70ab7b30d1e9f5db69abad2f6cac969ce3f7dec506a445015cdc1d283f1d88",
     "docs/archive/README-v0.1.2-bilingual.md": "cbc0b135a805274a0b2f69bf6b660c5625954af962a1c2c725436c890eff2a0e",
     "docs/testnet-evidence.json": "a857c4f3e20947ff3f33e83519f3af18ff2add3cdbc231b193f34b8fefcabd0d",
     "scripts/judge-package.mjs": "53e99ddfe2ee34df2ddc184cf1e1f9207a9d22b54d011bbe49aebcd45f0fe523",
-    "scripts/verify-testnet-evidence.mjs": "3c3549082b5e39d4d1bb20571fcacd14510bc9f78cc199e05ba177f24612b887",
-    "src/authority.js": "56ce8adf6f414fbbb419d64ea9f1f498d7dc4d798d5b20a318ed84336f0c9cc2",
-    "src/continuity.js": "073ecacdf099b0af53e49f3cecf1ba7e9e3ea910a4505ee422034857ac9d8d81",
-    "src/delegation.js": "0e25972cbd53dd84c15c60d933240cd967682257d42e3bfd782dbdef68363f65",
-    "src/operation.js": "2cebe4ab5a9a6a98294a8aa2e57872bb070440419b109df4c6ecaf9f449744d0",
-    "src/receipt.js": "adc5cabcf31d5ca77ab5fbef904287c3a1662a98c6b3e0ddf9c4265d4bfad8a6",
-    "docs/JUDGE_PACKAGE.json": "30fa8625546d99456387ae036eb2f6530927010d05677fde4a416a49553f0a3b"
+    "scripts/verify-testnet-evidence.mjs": "79c738380a1a7858cc2cea6392695756fdfe50640f5d43681fafbdcac5f4d6ef",
+    "src/authority.js": "defde75b56de3883690f00dd12588de7f487393d028f7e2ba2dfabb6b5067d2b",
+    "src/continuity.js": "7e8187d27bf956febcdb4464449db7dd2682326006e023a99c3a8bb871e610ba",
+    "src/delegation.js": "53ccab1e1224a817f65edb145b282c58bf61f575009e5a0226865c7cd43f8eef",
+    "src/operation.js": "8dd7484a50eb8685069cdbfa4780754a92fc436a5a0fcda1025c886f95b5e8c9",
+    "src/receipt.js": "25743f044a487bd682594cd8cec68128bf1d519aaa8e97ab070effa89d80bc7d",
+    "src/time.js": "1021a9d4bd921763d6e09a35af850c2c39afb14cb1ad73d3fa93485045595d31",
+    "docs/JUDGE_PACKAGE.json": "f665355a6ef5d59944b73472c42fd654f3d105c21e1e21f77286f721045f1ead"
   },
   "excludedPaths": [
     "**/node_modules/**",
@@ -53,8 +56,8 @@
   ],
   "tests": {
     "command": "node --test test/*.test.js",
-    "tests": 207,
-    "passed": 207,
+    "tests": 277,
+    "passed": 277,
     "failed": 0
   },
   "publicProjectRepositories": [
@@ -110,5 +113,5 @@
     }
   ],
   "hashNote": "Ordinary hashes use SHA-256 over exact bytes. Generated dependencies under node_modules and Git metadata under .git are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
-  "manifestSelfHash": "30fa8625546d99456387ae036eb2f6530927010d05677fde4a416a49553f0a3b"
+  "manifestSelfHash": "f665355a6ef5d59944b73472c42fd654f3d105c21e1e21f77286f721045f1ead"
 }
