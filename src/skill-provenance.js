@@ -89,6 +89,12 @@ function seal(record) {
   })));
 }
 
+// A commit is a fixed object id, never a moving reference. `HEAD`, `main` and a seven-character
+// abbreviation all name something whose content can change tomorrow while the string on the claim
+// stays the same, and a registry that accepted them would hand out provenance for bytes nobody pinned.
+// Git prints full lowercase hex; the two accepted lengths are sha-1 and sha-256.
+const COMMIT_ID = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
+
 function text(value) {
   return typeof value === 'string' && value.valueOf().trim().length > 0;
 }
@@ -133,6 +139,9 @@ function registerSkillProvenance(spec) {
   if (name === null) throw new Error('a skill needs a name');
   if (repository === null) throw new Error('a skill needs the repository it comes from');
   if (commit === null) throw new Error('a skill needs the exact commit it was read at');
+  if (!COMMIT_ID.test(commit)) {
+    throw new Error(`a skill needs a fixed commit id, not a moving reference: ${commit.slice(0, 64)}`);
+  }
   if (author === null) throw new Error('a skill needs the author of that commit');
   let content;
   try {
@@ -212,6 +221,16 @@ function coverageOf(checks) {
 
 function notCoveredOf(checks) {
   return PROVENANCE_CHECKS.filter((key) => checks[key] !== true);
+}
+
+// Coverage read off every key, for the stages that add checks of their own (the load re-hash). The
+// receipt shows what was covered, so a check that ran and passed has to be in the list.
+function coveredKeys(checks) {
+  return Object.keys(checks).filter((key) => checks[key] === true).sort();
+}
+
+function uncoveredKeys(checks) {
+  return Object.keys(checks).filter((key) => checks[key] !== true).sort();
 }
 
 function refuse(record, reason) {
@@ -397,10 +416,13 @@ function authorizeSkill(claim, result, requested) {
   const provenance = record === null ? null : provenanceOf(record);
   const base = { provenance, name: record === null ? null : record.name, granted: record === null ? [] : [...record.authority] };
 
-  function refuseDecision(status, reason, extraChecks, notCovered) {
-    const listed = [...new Set([...extraChecks, ...notCovered])].sort();
+  // A refusal reports the coverage it really has: a request out of scope does not erase the three
+  // provenance checks that passed, and a provenance that failed does not invent an `authority_scope`
+  // problem that was never checked.
+  function refuseDecision(status, reason, provenanceValues, extra) {
     const values = {};
-    for (const key of listed) values[key] = false;
+    for (const key of PROVENANCE_CHECKS) values[key] = provenanceValues[key] === true;
+    for (const key of extra) values[key] = false;
     const checks = withChecks(values);
     const decision = Object.freeze({
       authorized: false,
@@ -408,8 +430,8 @@ function authorizeSkill(claim, result, requested) {
       provenanceStatus: status,
       reason,
       checks,
-      coverage: Object.freeze(coverageOf(checks)),
-      notCovered: Object.freeze(listed),
+      coverage: Object.freeze(coveredKeys(checks)),
+      notCovered: Object.freeze(uncoveredKeys(checks)),
       provenance: base.provenance,
       name: base.name,
       granted: Object.freeze([...base.granted]),
@@ -420,14 +442,13 @@ function authorizeSkill(claim, result, requested) {
   }
 
   if (record === null) {
-    return refuseDecision('not_verifiable', 'this skill was not registered in this kernel, so no authority can be granted', [], []);
+    return refuseDecision('not_verifiable', 'this skill was not registered in this kernel, so no authority can be granted', {}, []);
   }
   if (result === null || typeof result !== 'object' || VERIFIED_FOR.get(result) !== record) {
-    return refuseDecision('not_verifiable', 'this verification result was not produced for this skill by this kernel', [], []);
+    return refuseDecision('not_verifiable', 'this verification result was not produced for this skill by this kernel', {}, []);
   }
   const provenanceStatus = result.status;
   const provenanceChecks = result.checks !== null && typeof result.checks === 'object' ? result.checks : {};
-  const failedProvenance = PROVENANCE_CHECKS.filter((key) => provenanceChecks[key] !== true);
 
   let ask;
   try {
@@ -455,14 +476,14 @@ function authorizeSkill(claim, result, requested) {
     }
   }
   if (malformed !== null) {
-    return refuseDecision('not_verified', malformed, failedProvenance, ['authority_scope']);
+    return refuseDecision('not_verified', malformed, provenanceChecks, ['authority_scope']);
   }
   const outside = ask.filter((item) => !record.authority.includes(item));
   if (outside.length > 0) {
     return refuseDecision(
       'not_verified',
       `the person granted ${record.authority.length === 0 ? 'no capability at all' : record.authority.join(', ')}, and ${outside.join(', ')} is not among them`,
-      failedProvenance,
+      provenanceChecks,
       ['authority_scope'],
     );
   }
@@ -470,7 +491,7 @@ function authorizeSkill(claim, result, requested) {
     return refuseDecision(
       provenanceStatus,
       `the provenance of this skill is ${provenanceStatus}, so no authority is granted`,
-      failedProvenance,
+      provenanceChecks,
       [],
     );
   }
@@ -481,8 +502,8 @@ function authorizeSkill(claim, result, requested) {
     provenanceStatus: 'verified',
     reason: result.reason,
     checks,
-    coverage: Object.freeze(coverageOf(checks)),
-    notCovered: Object.freeze(notCoveredOf(checks)),
+    coverage: Object.freeze(coveredKeys(checks)),
+    notCovered: Object.freeze(uncoveredKeys(checks)),
     provenance: base.provenance,
     name: base.name,
     granted: Object.freeze([...base.granted]),
@@ -506,30 +527,27 @@ function loadSkill(claim, result, content, requested) {
     loaded = null;
   }
   if (loaded === null) {
-    return withLoad(decision, record, loaded, 'discrepant', 'the content offered for loading is not text, so no digest can be compared');
+    return withLoad(decision, record, loaded, false, 'discrepant', 'the content offered for loading is not text, so no digest can be compared');
   }
   if (record !== null && loaded !== record.contentDigest) {
-    return withLoad(decision, record, loaded, 'discrepant', `the content offered for loading hashes to ${loaded.slice(0, 12)}, not to the verified digest ${record.contentDigest.slice(0, 12)}: it changed between the check and the load`);
+    return withLoad(decision, record, loaded, false, 'discrepant', `the content offered for loading hashes to ${loaded.slice(0, 12)}, not to the verified digest ${record.contentDigest.slice(0, 12)}: it changed between the check and the load`);
   }
-  return withLoad(decision, record, loaded, decision.status, decision.reason);
+  return withLoad(decision, record, loaded, true, decision.status, decision.reason);
 }
 
 // A load is the decision plus what the bytes turned out to hash to. The digest is recomputed from the
 // bytes in hand and nothing is carried over from the verification, so the receipt says what was
 // loaded rather than what was checked.
-function withLoad(decision, record, loadedDigest, status, reason) {
-  const listed = [...new Set([...decision.notCovered, ...(status === 'discrepant' ? ['loaded_content_digest'] : [])])].sort();
-  const values = {};
-  for (const key of listed) values[key] = false;
-  const checks = Object.keys(values).length > 0 ? withChecks(values) : decision.checks;
+function withLoad(decision, record, loadedDigest, matched, status, reason) {
+  const checks = withChecks({ ...decision.checks, loaded_content_digest: matched === true });
   const loaded = Object.freeze({
-    authorized: status === 'discrepant' ? false : decision.authorized,
+    authorized: matched === true ? decision.authorized : false,
     status,
     provenanceStatus: status,
     reason,
     checks,
-    coverage: decision.coverage,
-    notCovered: Object.freeze(listed),
+    coverage: Object.freeze(coveredKeys(checks)),
+    notCovered: Object.freeze(uncoveredKeys(checks)),
     provenance: decision.provenance,
     name: decision.name,
     granted: decision.granted,

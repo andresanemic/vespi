@@ -20,7 +20,7 @@ const {
   listSkillProvenance,
   SKILL_PROVENANCE_STATUSES,
 } = require('../src/skill-provenance.js');
-const { buildReceipt, verifyReceipt, computeDigest } = require('../src/receipt.js');
+const { buildReceipt, verifyReceipt, computeDigest, anchorReceiptAsync } = require('../src/receipt.js');
 
 const CONTENT = '# ponytail\nUse the smallest sufficient change.\n';
 const REPOSITORY = 'https://example.test/obra/ponytail.git';
@@ -123,6 +123,26 @@ test('the registry refuses content that is not text and an authority that is not
   assert.throws(() => register({ content: undefined }), /content/i);
   assert.throws(() => register({ authority: 'read:project' }), /authority/i);
   assert.throws(() => register({ authority: ['read:project', 7] }), /authority/i);
+});
+
+test('the registry refuses a moving reference where a commit belongs', () => {
+  // `HEAD` and `main` keep their name while their content changes, so a claim built on them would be
+  // provenance for bytes nobody pinned.
+  for (const moving of ['HEAD', 'main', 'refs/heads/main', 'v1.2.3', 'abc1234', 'A'.repeat(40), `${COMMIT} `]) {
+    assert.throws(() => register({ commit: moving }), /fixed commit/i, moving);
+  }
+  assert.doesNotThrow(() => register({ commit: 'a'.repeat(64) }));
+});
+
+test('a claim whose fields are getters that throw is refused, not read', () => {
+  assert.throws(() => registerSkillProvenance({
+    get name() { throw new Error('hostile'); },
+    repository: REPOSITORY,
+    commit: COMMIT,
+    author: AUTHOR,
+    content: CONTENT,
+    authority: GRANTED,
+  }), /name/i);
 });
 
 test('listing the registry reports identity and digests, never the skill content', () => {
@@ -362,6 +382,27 @@ test('a deadline that is not a positive integer is refused instead of ignored', 
   await assert.rejects(() => verifySkillProvenance(claim, resolverFor(), { timeoutMs: 1.5 }), /timeoutMs/);
 });
 
+test('with no deadline given the resolver is waited for: the kernel sets no time of its own', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, () => new Promise((resolve) => {
+    setTimeout(() => resolve(evidence()), 25).unref();
+  }));
+  assert.equal(result.status, 'verified');
+});
+
+test('evidence whose getters throw is not verifiable and never crashes the caller', async () => {
+  const claim = register();
+  const hostile = {
+    exists: true,
+    get repository() { throw new Error('hostile repository'); },
+    author: AUTHOR,
+    content: CONTENT,
+  };
+  const result = await verifySkillProvenance(claim, async () => hostile);
+  assert.equal(result.status, 'not_verifiable');
+  assert.equal(authorizeSkill(claim, result, ['read:project']).authorized, false);
+});
+
 // --- 5. Adversarial: time-of-check to time-of-use ---
 
 test('bytes loaded after verification are hashed again and a mutation is refused', () => {
@@ -456,7 +497,19 @@ test('refuted provenance keeps its own status in the decision and its reason', (
     assert.equal(decision.authorized, false);
     assert.equal(decision.status, 'discrepant');
     assert.equal(decision.provenanceStatus, 'discrepant');
-    assert.ok(decision.notCovered.includes('author'));
+    assert.deepEqual([...decision.notCovered], ['author']);
+    // A refuted author is not an authority problem, and the three checks that did pass stay covered.
+    assert.deepEqual([...decision.coverage].sort(), ['commit_exists', 'content_digest', 'repository']);
+  });
+});
+
+test('a request out of scope does not erase the provenance coverage that was achieved', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const decision = authorizeSkill(claim, verified, ['delete:repository']);
+    assert.equal(decision.authorized, false);
+    assert.deepEqual([...decision.notCovered], ['authority_scope']);
+    assert.deepEqual([...decision.coverage].sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
   });
 });
 
@@ -561,6 +614,42 @@ test('the same decision and the same clock seal the same receipt twice', () => {
 
 test('a receipt is refused for a decision this kernel did not produce', () => {
   assert.throws(() => buildSkillReceipt(receiptSpec(), { status: 'verified', authorized: true }), /decision/i);
+});
+
+test('a load receipt says the bytes were re-checked at load time', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const loaded = loadSkill(claim, verified, CONTENT, ['read:project']);
+    const receipt = buildSkillReceipt(receiptSpec(), loaded);
+    assert.equal(receipt.status, 'verified');
+    // Five checks now: the four from verification and the one the load itself ran.
+    assert.deepEqual([...receipt.coverage].sort(), ['author', 'commit_exists', 'content_digest', 'loaded_content_digest', 'repository']);
+    assert.equal(receipt.skill.loadedDigest, sha256(CONTENT));
+    assert.equal(verifyReceipt(receipt).ok, true, verifyReceipt(receipt).reason);
+  });
+});
+
+test('a load receipt for bytes that changed says so in the status and in what was not covered', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const loaded = loadSkill(claim, verified, `${CONTENT}# swapped in the gap\n`, ['read:project']);
+    const receipt = buildSkillReceipt(receiptSpec(), loaded);
+    assert.equal(receipt.status, 'failed');
+    assert.equal(receipt.skill.status, 'discrepant');
+    assert.ok(receipt.notCovered.includes('loaded_content_digest'));
+    assert.equal(receipt.skill.loadedDigest, sha256(`${CONTENT}# swapped in the gap\n`));
+    assert.equal(verifyReceipt(receipt).ok, true);
+  });
+});
+
+test('a skill receipt travels through the anchor machinery the kernel already had', async () => {
+  const claim = register();
+  const verified = await verifySkillProvenance(claim, resolverFor());
+  const receipt = buildSkillReceipt(receiptSpec(), authorizeSkill(claim, verified, ['read:project']));
+  const anchored = await anchorReceiptAsync(receipt, async (digest) => ({ txHash: `tx-${digest.slice(0, 8)}` }), async () => true);
+  assert.equal(anchored.anchor.status, 'anchored');
+  assert.equal(anchored.skill.provenance.commit, COMMIT);
+  assert.equal(verifyReceipt(anchored).ok, true, verifyReceipt(anchored).reason);
 });
 
 // --- 8. Compatibility ---
