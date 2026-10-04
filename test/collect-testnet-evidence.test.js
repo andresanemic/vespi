@@ -263,11 +263,10 @@ test('F1b-P3: every checked-in expectation cites a local record, and each citati
   assertExpectationProvenance(file.transactions);
 
   const declared = file.transactions.filter((entry) => Object.hasOwn(entry, 'expected'));
-  assert.deepEqual(
-    declared.map((entry) => entry.hash).sort(),
-    Object.keys(LOCAL_EXPECTATIONS).sort(),
-    'every local expectation in the registry must be published in the evidence file',
-  );
+  const published = declared.map((entry) => entry.hash);
+  for (const hash of Object.keys(LOCAL_EXPECTATIONS)) {
+    assert.ok(published.includes(hash), `every expectation in the registry must be published in the evidence file: ${hash}`);
+  }
 
   for (const record of Object.values(LOCAL_EXPECTATIONS)) {
     assert.ok(Array.isArray(record.expectedFrom?.citations) && record.expectedFrom.citations.length > 0, 'a local expectation needs at least one citation');

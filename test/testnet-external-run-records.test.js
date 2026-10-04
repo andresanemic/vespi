@@ -630,7 +630,9 @@ test('F1c-P1: every published case carries a record, and the undeclared fields a
       assert.ok(typeof citation.contains === 'string' && citation.contains.length > 0, `${entry.hash} needs a fragment to look for`);
       const root = roots.get(citation.repository);
       if (!root) continue;
-      const text = await readFile(path.join(root.directory, citation.file), 'utf8');
+      const local = root.files.find((file) => file.file === citation.file);
+      assert.ok(local, `${citation.repository}:${citation.file} must be one of the files the evidence file lists for that repository`);
+      const text = await readFile(path.join(root.directory, local.local_path), 'utf8');
       const line = text.split(/\r?\n/)[citation.line - 1];
       assert.equal(typeof line, 'string', `${citation.repository}:${citation.file}:${citation.line} must exist`);
       assert.ok(line.includes(citation.contains), `${citation.repository}:${citation.file}:${citation.line} must contain ${JSON.stringify(citation.contains)}`);

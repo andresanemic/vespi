@@ -22,6 +22,8 @@ const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 750;
 const LOCAL_RECORD_CLASSIFICATION = 'local_run_record';
 
+const KERNEL_REPOSITORY = 'vespi-kernel';
+
 const X402_LIVE_HASH = 'abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5';
 
 // One entry per transaction whose run record lives in this repository. A transaction
@@ -39,6 +41,7 @@ export const LOCAL_EXPECTATIONS = Object.freeze({
     },
     expectedFrom: {
       classification: LOCAL_RECORD_CLASSIFICATION,
+      repository: KERNEL_REPOSITORY,
       recorded_at: '2026-10-02T18:06:33.958Z',
       record: 'demo/x402/receipts/live-testnet-2026-10-02.json',
       citations: [
@@ -75,7 +78,6 @@ export function localExpectation(hash, registry = LOCAL_EXPECTATIONS) {
 // record does not declare stays undeclared: it is reported, never filled in.
 export const DECLARED_FACTS = Object.freeze(['operation', 'memo', 'asset', 'amount', 'recipient']);
 
-const KERNEL_REPOSITORY = 'vespi-kernel';
 const DISPLAY_DECIMALS = 7;
 
 // The scale the kernel's own adapter declares for atomic amounts of the demo token, and
@@ -460,7 +462,7 @@ export async function loadRunRecords(roots = []) {
       const text = await readFile(full, 'utf8');
       const record = JSON.parse(text);
       const format = RUN_RECORD_FORMATS.find((candidate) => { try { return candidate.detect(record); } catch { return false; } });
-      files.push({ repository: root.repository, file, format: format?.name ?? null });
+      files.push({ repository: root.repository, file, local_path: relative, format: format?.name ?? null });
       if (!format) continue;
       const declarationsForFile = format.read({ record, repository: root.repository, file, cite: citationReader(root.repository, file, locator(text)) });
       for (const declaration of declarationsForFile) {
@@ -660,7 +662,7 @@ export async function collectEvidence({
           repository: root.repository,
           directory: root.directory,
           ...(root.prefix ? { prefix: root.prefix } : {}),
-          files: recordFiles.filter((file) => file.repository === root.repository).map((file) => file.file),
+          files: recordFiles.filter((file) => file.repository === root.repository),
           formats: [...new Set(recordFiles.filter((file) => file.repository === root.repository).map((file) => file.format))],
         })),
       } : {}),
@@ -686,25 +688,33 @@ async function readHorizonTransaction(hash, timeoutMs = READ_TIMEOUT_MS) {
 // repository it points into.
 export function parseRecordRoots(argv) {
   const roots = [];
-  for (const argument of argv.filter((value) => value.startsWith('--record-root='))) {
-    const separator = argument.indexOf('=');
-    const repository = argument.slice('--record-root='.length, separator);
-    const directory = argument.slice(separator + 1);
+  const valuesOf = (flag) => argv.flatMap((argument, index) => {
+    if (argument === flag) return [argv[index + 1]];
+    return argument.startsWith(`${flag}=`) ? [argument.slice(flag.length + 1)] : [];
+  });
+  for (const value of valuesOf('--record-root')) {
+    const separator = value.indexOf('=');
+    const repository = value.slice(0, separator);
+    const directory = value.slice(separator + 1);
     roots.push({ repository, directory, prefix: undefined });
   }
-  for (const argument of argv.filter((value) => value.startsWith('--record-prefix='))) {
-    const separator = argument.indexOf('=');
-    const repository = argument.slice('--record-prefix='.length, separator);
+  for (const value of valuesOf('--record-prefix')) {
+    const separator = value.indexOf('=');
+    const repository = value.slice(0, separator);
     const target = roots.find((root) => root.repository === repository);
     if (!target) throw new Error(`--record-prefix=${repository} names no --record-root`);
-    target.prefix = argument.slice(separator + 1);
+    target.prefix = value.slice(separator + 1);
   }
   return roots;
 }
 
 async function main(argv) {
-  const flags = new Set(argv.filter((arg) => arg.startsWith('--')));
-  const filename = argv.find((arg) => !arg.startsWith('--')) || DEFAULT_EVIDENCE;
+  const positional = argv.filter((argument, index) => {
+    if (argument === '--record-root' || argument === '--record-prefix') return false;
+    if (argv[index - 1] === '--record-root' || argv[index - 1] === '--record-prefix') return false;
+    return !argument.startsWith('--');
+  });
+  const filename = positional[0] || DEFAULT_EVIDENCE;
   const evidence = JSON.parse(await readFile(filename, 'utf8'));
   const collected = await collectEvidence({
     evidence,
@@ -725,7 +735,6 @@ async function main(argv) {
   }
   const { summary } = collected;
   process.stdout.write(`${summary.transactions_found} cases collected: ${summary.local_expectation} with all five facts locally declared, ${summary.local_partial_declaration} with a partial declaration, ${summary.no_local_expectation} without one; ${summary.readback_read} readbacks read, ${summary.readback_failed} not read\n`);
-  void flags;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
