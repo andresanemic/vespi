@@ -324,11 +324,10 @@ async function askResolver(resolve, question, timeoutMs) {
 
 // One check, one reason. Every comparator is exact: no URL normalization, no case folding, no author
 // parsing. Two spellings of the same repository are two claims until the person writes one, and the
-// disagreement is visible in the receipt instead of resolved silently here.
+// disagreement is visible in the receipt instead of resolved silently here. A field the resolver left
+// unanswered is not a disagreement: the check stays undefined and is reported as not covered.
 function compare(label, declared, found, checks) {
-  if (found === null) {
-    return `the resolver did not report ${label}`;
-  }
+  if (found === null) return null;
   if (found !== declared) {
     checks[label] = false;
     return `the ${label} the resolver reported (${String(found).slice(0, 120)}) is not the one declared (${String(declared).slice(0, 120)})`;
@@ -376,6 +375,16 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const checks = {};
   const refuted = [];
 
+  // A stage that stops early must not erase a refutation an earlier stage already found: `exists:
+  // false` is still `discrepant` when the resolver also left the repository out of its answer
+  // (A07). What was refuted stays refuted, whatever came up unanswered after it.
+  function stoppedAt(reason) {
+    if (refuted.length > 0) {
+      return settle(record, 'discrepant', `${refuted.join('; ')}; ${reason}`, checks);
+    }
+    return refuse(record, reason);
+  }
+
   // Every field is read once, inside one guard, so a hostile evidence record either yields all of
   // itself or none of it.
   let exists;
@@ -392,7 +401,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     contentDigest = readString(evidence, 'contentDigest');
     evidenceCommit = readString(evidence, 'commit');
   } catch {
-    return refuse(record, 'the evidence could not be read');
+    return stoppedAt('the evidence could not be read');
   }
 
   // The commit has to be there at all, and the evidence has to be about *this* commit. `exists: true`
@@ -423,7 +432,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const hasContent = typeof content === 'string';
   const hasDigest = contentDigest !== null;
   if (!hasContent && !hasDigest) {
-    return refuse(record, 'the resolver reported neither the content at that commit nor its digest');
+    return stoppedAt('the resolver reported neither the content at that commit nor its digest');
   }
   const resolvedDigest = hasContent ? sha256(content) : contentDigest;
   if (resolvedDigest !== record.contentDigest) {
@@ -433,14 +442,16 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     checks.content_digest = true;
   }
 
+  // An explicit false outranks an unanswered field: a resolver that refuted the author and left the
+  // repository out has discrepant provenance, not merely unverifiable provenance.
   const known = PROVENANCE_CHECKS.filter((key) => checks[key] !== undefined);
   const unknown = notCoveredOf(checks).filter((key) => !known.includes(key));
-  if (unknown.length > 0) {
-    return settle(record, 'not_verifiable', `the resolver left ${unknown.join(', ')} unanswered, so nothing can be covered there`, checks);
-  }
-  const failures = Object.keys(checks).filter((key) => checks[key] !== true);
+  const failures = Object.keys(checks).filter((key) => checks[key] === false);
   if (failures.length > 0) {
     return settle(record, 'discrepant', refuted.join('; '), checks);
+  }
+  if (unknown.length > 0) {
+    return settle(record, 'not_verifiable', `the resolver left ${unknown.join(', ')} unanswered, so nothing can be covered there`, checks);
   }
   return settle(record, 'verified', 'the resolver reported this repository, commit, author and content, and all four match', checks);
 }
