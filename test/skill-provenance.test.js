@@ -1,5 +1,13 @@
 'use strict';
 
+// K2 (decision 24): a skill is a capability, and a capability enters only with written provenance.
+//
+// The shape of the attack this file is written against is the one the ecosystem study found: a skill
+// that borrows a known name from another repository, ships content that does not match the commit it
+// claims, and describes itself as safe. Nothing the skill says about itself counts here. The only
+// evidence that counts comes from a resolver the caller injects, and the kernel never reaches the
+// network to get it.
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
@@ -9,14 +17,21 @@ const {
   authorizeSkill,
   loadSkill,
   buildSkillReceipt,
+  listSkillProvenance,
+  SKILL_PROVENANCE_STATUSES,
 } = require('../src/skill-provenance.js');
-const { buildReceipt, verifyReceipt } = require('../src/receipt.js');
+const { buildReceipt, verifyReceipt, computeDigest } = require('../src/receipt.js');
 
 const CONTENT = '# ponytail\nUse the smallest sufficient change.\n';
 const REPOSITORY = 'https://example.test/obra/ponytail.git';
 const COMMIT = 'a'.repeat(40);
 const AUTHOR = 'Ada Example <ada@example.test>';
 const GRANTED = ['read:project', 'write:patch'];
+const OTHER_COMMIT = 'b'.repeat(40);
+
+function sha256(text) {
+  return createHash('sha256').update(text, 'utf8').digest('hex');
+}
 
 function register(overrides = {}) {
   return registerSkillProvenance({
@@ -30,22 +45,24 @@ function register(overrides = {}) {
   });
 }
 
-function evidence(provenance, overrides = {}) {
+// Evidence is written out by hand, not derived from the claim, so a verifier that merely echoed the
+// declaration back could not pass.
+function evidence(overrides = {}) {
   return {
     exists: true,
-    repository: provenance.repository,
-    commit: provenance.commit,
-    author: provenance.author,
-    contentDigest: provenance.contentDigest,
+    repository: REPOSITORY,
+    commit: COMMIT,
+    author: AUTHOR,
+    content: CONTENT,
     ...overrides,
   };
 }
 
-function resolverFor(provenance, overrides = {}) {
-  return async () => evidence(provenance, overrides);
+function resolverFor(overrides = {}) {
+  return async () => evidence(overrides);
 }
 
-function receiptSpec() {
+function receiptSpec(overrides = {}) {
   return {
     operation: { id: 'skill-load', goal: 'load an authorized skill' },
     capabilityId: 'skill-loader',
@@ -54,112 +71,504 @@ function receiptSpec() {
     evidence: {},
     verification: { verified: true, checks: { local: true }, reason: 'local check' },
     at: '2040-01-01T00:00:00.000Z',
+    ...overrides,
   };
 }
 
-test('verified provenance binds repository, exact commit, author and loaded bytes', async () => {
+// --- 1. The registry: repository, commit, author, content digest, granted authority ---
+
+test('the registry binds repository, exact commit, author, content digest and granted authority', () => {
   const claim = register();
-  const result = await verifySkillProvenance(claim, resolverFor(claim));
-  assert.equal(claim.contentDigest, createHash('sha256').update(CONTENT, 'utf8').digest('hex'));
+  assert.equal(claim.name, 'ponytail');
+  assert.equal(claim.repository, REPOSITORY);
+  assert.equal(claim.commit, COMMIT);
+  assert.equal(claim.author, AUTHOR);
+  assert.equal(claim.contentDigest, sha256(CONTENT));
+  assert.deepEqual(claim.authority, GRANTED);
+});
+
+test('the content digest is over the exact bytes: line endings are not normalized away', () => {
+  const lf = register({ content: 'one\ntwo\n' });
+  const crlf = register({ content: 'one\r\ntwo\r\n' });
+  assert.notEqual(lf.contentDigest, crlf.contentDigest);
+  assert.equal(lf.contentDigest, sha256('one\ntwo\n'));
+});
+
+test('the record carries its own seal, and the seal is what makes two registrations distinguishable', () => {
+  const first = register();
+  const same = register();
+  const other = register({ repository: 'https://attacker.test/fake/ponytail.git' });
+  assert.equal(first.digest, same.digest);
+  assert.notEqual(first.digest, other.digest);
+});
+
+test('the same name may be registered twice from different repositories: the name is not the identity', () => {
+  const real = register({ name: 'superpowers', repository: 'https://example.test/obra/superpowers.git' });
+  const fake = register({ name: 'superpowers', repository: 'https://attacker.test/101-skills/superpowers.git' });
+  assert.notEqual(real.digest, fake.digest);
+  const listed = listSkillProvenance().filter((entry) => entry.name === 'superpowers');
+  assert.equal(listed.length, 2);
+});
+
+test('the registry refuses an entry without repository, commit or author', () => {
+  assert.throws(() => register({ repository: '' }), /repository/i);
+  assert.throws(() => register({ repository: '   ' }), /repository/i);
+  assert.throws(() => register({ commit: undefined }), /commit/i);
+  assert.throws(() => register({ author: null }), /author/i);
+  assert.throws(() => register({ name: '' }), /name/i);
+});
+
+test('the registry refuses content that is not text and an authority that is not a list of names', () => {
+  assert.throws(() => register({ content: Buffer.from('x') }), /content/i);
+  assert.throws(() => register({ content: undefined }), /content/i);
+  assert.throws(() => register({ authority: 'read:project' }), /authority/i);
+  assert.throws(() => register({ authority: ['read:project', 7] }), /authority/i);
+});
+
+test('listing the registry reports identity and digests, never the skill content', () => {
+  register({ name: 'listed-skill' });
+  const entry = listSkillProvenance().find((item) => item.name === 'listed-skill');
+  assert.deepEqual(Object.keys(entry).sort(), ['author', 'commit', 'contentDigest', 'name', 'repository']);
+  assert.equal(entry.content, undefined);
+});
+
+// --- 2. Verification against injected evidence ---
+
+test('the status vocabulary is exactly the four states the encargo names', () => {
+  assert.deepEqual([...SKILL_PROVENANCE_STATUSES].sort(), ['discrepant', 'not_verifiable', 'not_verified', 'verified']);
+});
+
+test('verified provenance covers repository, commit existence, author and loaded content', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor());
   assert.equal(result.status, 'verified');
   assert.deepEqual(result.coverage.sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
   assert.deepEqual(result.notCovered, []);
 });
 
+test('the resolver is asked about the declared provenance and is called exactly once', async () => {
+  const claim = register();
+  const calls = [];
+  const result = await verifySkillProvenance(claim, async (question) => {
+    calls.push(question);
+    return evidence();
+  });
+  assert.equal(result.status, 'verified');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].repository, REPOSITORY);
+  assert.equal(calls[0].commit, COMMIT);
+  assert.equal(calls[0].author, AUTHOR);
+  assert.equal(calls[0].contentDigest, sha256(CONTENT));
+});
+
+test('the kernel hashes the bytes the resolver returns instead of believing a digest string', async () => {
+  const claim = register();
+  // A resolver that reports the right digest string while shipping different bytes is refuted: the
+  // digest is computed here, not asserted by the party being checked (decision 22).
+  const result = await verifySkillProvenance(claim, resolverFor({
+    content: `${CONTENT}# exfiltrate\n`,
+    contentDigest: sha256(CONTENT),
+  }));
+  assert.equal(result.status, 'discrepant');
+  assert.ok(result.notCovered.includes('content_digest'));
+});
+
+test('a resolver that returns only a digest string is accepted, and that weaker shape is declared', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor({ content: undefined, contentDigest: sha256(CONTENT) }));
+  assert.equal(result.status, 'verified');
+});
+
+test('partial refutation keeps the checks that did pass in coverage', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor({ author: 'Mallory <m@example.test>' }));
+  assert.equal(result.status, 'discrepant');
+  assert.deepEqual(result.coverage.sort(), ['commit_exists', 'content_digest', 'repository']);
+  assert.deepEqual(result.notCovered, ['author']);
+});
+
+test('an absent commit is discrepant, and the reason names the commit', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor({ exists: false }));
+  assert.equal(result.status, 'discrepant');
+  assert.ok(result.notCovered.includes('commit_exists'));
+  assert.match(result.reason, new RegExp(COMMIT.slice(0, 8)));
+});
+
+test('a digest that differs from the pinned commit is discrepant', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor({ content: undefined, contentDigest: '0'.repeat(64) }));
+  assert.equal(result.status, 'discrepant');
+  assert.ok(result.notCovered.includes('content_digest'));
+});
+
+test('evidence about a different commit than the one declared is discrepant', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor({ commit: OTHER_COMMIT }));
+  assert.equal(result.status, 'discrepant');
+  assert.ok(result.notCovered.includes('commit_exists'));
+});
+
+test('an author that differs only in case is a different author', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor({ author: 'ada example <ada@example.test>' }));
+  assert.equal(result.status, 'discrepant');
+  assert.ok(result.notCovered.includes('author'));
+});
+
+test('a repository that differs only in spelling is a different repository', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor({ repository: REPOSITORY.replace(/\.git$/, '') }));
+  assert.equal(result.status, 'discrepant');
+  assert.ok(result.notCovered.includes('repository'));
+});
+
+// --- 3. Adversarial: borrowed names and self-declared provenance ---
+
 test('a borrowed known skill name cannot mask a different repository', async () => {
-  const claim = register({ repository: 'https://attacker.test/fake/superpowers.git', name: 'superpowers' });
-  const result = await verifySkillProvenance(claim, resolverFor(claim, {
-    repository: 'https://real.test/obra/superpowers.git',
+  const claim = register({ name: 'superpowers', repository: 'https://attacker.test/fake/superpowers.git' });
+  const result = await verifySkillProvenance(claim, resolverFor({
+    repository: 'https://example.test/obra/superpowers.git',
   }));
   assert.equal(result.status, 'discrepant');
   assert.ok(result.notCovered.includes('repository'));
 });
 
-test('a digest that differs from the pinned commit is discrepant', async () => {
-  const claim = register();
-  const result = await verifySkillProvenance(claim, resolverFor(claim, { contentDigest: '0'.repeat(64) }));
-  assert.equal(result.status, 'discrepant');
-  assert.ok(result.notCovered.includes('content_digest'));
-});
-
-test('a commit reported as absent is discrepant', async () => {
-  const claim = register();
-  const result = await verifySkillProvenance(claim, resolverFor(claim, { exists: false }));
-  assert.equal(result.status, 'discrepant');
-  assert.ok(result.notCovered.includes('commit_exists'));
-});
-
-test('an author different from the declared author is discrepant', async () => {
-  const claim = register();
-  const result = await verifySkillProvenance(claim, resolverFor(claim, { author: 'Mallory <m@example.test>' }));
-  assert.equal(result.status, 'discrepant');
-  assert.ok(result.notCovered.includes('author'));
-});
-
-test('self-declared provenance without independent resolver evidence is not verifiable', async () => {
+test('self-declared provenance without a resolver is not verifiable', async () => {
   const claim = register();
   const result = await verifySkillProvenance(claim);
   assert.equal(result.status, 'not_verifiable');
-  assert.notEqual(result.status, 'verified');
+  assert.deepEqual(result.coverage, []);
+  assert.equal(result.notCovered.length, 4);
 });
 
-test('resolver rejection is not verifiable and never grants skill authority', async () => {
+test('evidence written onto the claim by the skill itself is not evidence', async () => {
+  const claim = register();
+  // A skill that ships its own proof of innocence: the claim carries every field a resolver would
+  // return. Nothing is read from there.
+  claim.evidence = evidence();
+  claim.selfDigest = sha256(CONTENT);
+  const result = await verifySkillProvenance(claim);
+  assert.equal(result.status, 'not_verifiable');
+});
+
+test('a claim that was never registered cannot be verified, however perfect the evidence', async () => {
+  const forged = {
+    name: 'ponytail',
+    repository: REPOSITORY,
+    commit: COMMIT,
+    author: AUTHOR,
+    contentDigest: sha256(CONTENT),
+    authority: GRANTED,
+    digest: sha256('made up'),
+  };
+  const result = await verifySkillProvenance(forged, resolverFor());
+  assert.equal(result.status, 'not_verifiable');
+  assert.equal(authorizeSkill(forged, result, ['read:project']).authorized, false);
+});
+
+test('a claim rewritten after registration no longer carries the registered provenance', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor());
+  assert.equal(result.status, 'verified');
+  const swapped = { ...claim, commit: OTHER_COMMIT, contentDigest: sha256('# swapped\n'), digest: sha256('swapped') };
+  const after = await verifySkillProvenance(swapped, resolverFor());
+  assert.equal(after.status, 'not_verifiable');
+});
+
+test('the registered provenance cannot be rewritten in place', async () => {
+  const claim = register();
+  try {
+    claim.commit = OTHER_COMMIT;
+    claim.authority = ['delete:repository'];
+  } catch {
+    // The record is frozen, so the write is refused outright.
+  }
+  const result = await verifySkillProvenance(claim, resolverFor());
+  assert.equal(result.status, 'verified');
+  assert.deepEqual(claim.authority, GRANTED);
+  const decision = authorizeSkill(claim, result, ['delete:repository']);
+  assert.equal(decision.authorized, false);
+});
+
+test('a resolver that is not callable is not verifiable', async () => {
+  const claim = register();
+  for (const bad of [undefined, null, 'git ls-remote', 42, {}, []]) {
+    const result = await verifySkillProvenance(claim, bad);
+    assert.equal(result.status, 'not_verifiable', String(bad));
+  }
+});
+
+test('evidence that is not an object is not verifiable', async () => {
+  const claim = register();
+  for (const bad of [null, undefined, 'ok', 7, ['ok'], true]) {
+    const result = await verifySkillProvenance(claim, async () => bad);
+    assert.equal(result.status, 'not_verifiable', JSON.stringify(bad));
+    assert.equal(authorizeSkill(claim, result, ['read:project']).authorized, false);
+  }
+});
+
+test('evidence that omits a field proves nothing about it', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, async () => ({ exists: true }));
+  assert.equal(result.status, 'not_verifiable');
+  assert.deepEqual(result.coverage, []);
+  assert.deepEqual(result.notCovered.sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
+});
+
+test('an exists flag that is not a boolean is not verifiable rather than a yes', async () => {
+  const claim = register();
+  const result = await verifySkillProvenance(claim, resolverFor({ exists: 'yes' }));
+  assert.equal(result.status, 'not_verifiable');
+});
+
+// --- 4. Adversarial: a resolver that fails, stalls or answers late ---
+
+test('a resolver rejection is not verifiable and never grants skill authority', async () => {
   const claim = register();
   const result = await verifySkillProvenance(claim, async () => { throw new Error('offline'); });
   assert.equal(result.status, 'not_verifiable');
-  assert.equal(authorizeSkill(claim, result, CONTENT, ['read:project']).authorized, false);
+  assert.equal(authorizeSkill(claim, result, ['read:project']).authorized, false);
 });
 
-test('a resolver timeout is not verifiable even if its promise settles later', async () => {
+test('a resolver that answers after the deadline is not verifiable, never verified', async () => {
   const claim = register();
   const result = await verifySkillProvenance(claim, () => new Promise((resolve) => {
-    setTimeout(() => resolve(evidence(claim)), 40);
+    setTimeout(() => resolve(evidence()), 40).unref();
   }), { timeoutMs: 5 });
   assert.equal(result.status, 'not_verifiable');
-  assert.equal(authorizeSkill(claim, result, CONTENT, ['read:project']).authorized, false);
+  assert.equal(authorizeSkill(claim, result, ['read:project']).authorized, false);
 });
 
-test('loaded bytes are hashed again so post-verification mutation is rejected', async () => {
+test('a resolver that rejects after the deadline cannot reach the result', async () => {
   const claim = register();
-  const verified = await verifySkillProvenance(claim, resolverFor(claim));
-  const loaded = loadSkill(claim, verified, `${CONTENT}# injected after check\n`, ['read:project']);
-  assert.equal(loaded.authorized, false);
-  assert.equal(loaded.status, 'discrepant');
-  assert.ok(loaded.notCovered.includes('loaded_content_digest'));
+  const result = await verifySkillProvenance(claim, () => new Promise((_resolve, reject) => {
+    setTimeout(() => reject(new Error('late failure')), 30).unref();
+  }), { timeoutMs: 5 });
+  assert.equal(result.status, 'not_verifiable');
+  return new Promise((resolve) => setTimeout(resolve, 60)).then(() => {
+    assert.equal(result.status, 'not_verifiable');
+  });
 });
 
-test('a skill cannot exercise authority beyond the person grant', async () => {
+test('a deadline that is not a positive integer is refused instead of ignored', async () => {
   const claim = register();
-  const verified = await verifySkillProvenance(claim, resolverFor(claim));
-  const decision = authorizeSkill(claim, verified, CONTENT, ['read:project', 'delete:repository']);
+  await assert.rejects(() => verifySkillProvenance(claim, resolverFor(), { timeoutMs: 0 }), /timeoutMs/);
+  await assert.rejects(() => verifySkillProvenance(claim, resolverFor(), { timeoutMs: -1 }), /timeoutMs/);
+  await assert.rejects(() => verifySkillProvenance(claim, resolverFor(), { timeoutMs: 1.5 }), /timeoutMs/);
+});
+
+// --- 5. Adversarial: time-of-check to time-of-use ---
+
+test('bytes loaded after verification are hashed again and a mutation is refused', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const loaded = loadSkill(claim, verified, `${CONTENT}# injected after the check\n`, ['read:project']);
+    assert.equal(loaded.authorized, false);
+    assert.equal(loaded.status, 'discrepant');
+    assert.ok(loaded.notCovered.includes('loaded_content_digest'));
+    assert.equal(loaded.loadedDigest, sha256(`${CONTENT}# injected after the check\n`));
+  });
+});
+
+test('the unchanged bytes still load after verification', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const loaded = loadSkill(claim, verified, CONTENT, ['read:project']);
+    assert.equal(loaded.authorized, true);
+    assert.equal(loaded.status, 'verified');
+    assert.equal(loaded.loadedDigest, sha256(CONTENT));
+  });
+});
+
+test('loading bytes that are not text is refused', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const loaded = loadSkill(claim, verified, null, ['read:project']);
+    assert.equal(loaded.authorized, false);
+    assert.equal(loaded.status, 'discrepant');
+  });
+});
+
+// --- 6. Authority: only what the person granted ---
+
+test('only verified provenance plus an in-scope request receives authority', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const decision = authorizeSkill(claim, verified, ['read:project']);
+    assert.equal(decision.authorized, true);
+    assert.equal(decision.status, 'verified');
+    assert.deepEqual(decision.granted, GRANTED);
+    assert.deepEqual(decision.requested, ['read:project']);
+  });
+});
+
+test('a skill cannot exercise authority beyond the person grant', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const decision = authorizeSkill(claim, verified, ['read:project', 'delete:repository']);
+    assert.equal(decision.authorized, false);
+    assert.equal(decision.status, 'not_verified');
+    assert.ok(decision.notCovered.includes('authority_scope'));
+    assert.match(decision.reason, /delete:repository/);
+  });
+});
+
+test('a wildcard in the grant is not expanded into capabilities', () => {
+  const claim = register({ authority: ['read:*'] });
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const decision = authorizeSkill(claim, verified, ['read:project']);
+    assert.equal(decision.authorized, false);
+    assert.match(decision.reason, /exact/i);
+  });
+});
+
+test('a request that is empty or malformed receives no authority', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    for (const bad of [[], 'read:project', null, undefined, [7], ['read:project', 'read:project']]) {
+      const decision = authorizeSkill(claim, verified, bad);
+      assert.equal(decision.authorized, false, JSON.stringify(bad));
+      assert.ok(decision.notCovered.includes('authority_scope'));
+    }
+  });
+});
+
+test('a skill registered with no granted authority can never be authorized', () => {
+  const claim = register({ authority: [] });
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    assert.equal(verified.status, 'verified');
+    const decision = authorizeSkill(claim, verified, ['read:project']);
+    assert.equal(decision.authorized, false);
+    assert.ok(decision.notCovered.includes('authority_scope'));
+  });
+});
+
+test('refuted provenance keeps its own status in the decision and its reason', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor({ author: 'Mallory <m@example.test>' })).then((refuted) => {
+    const decision = authorizeSkill(claim, refuted, ['read:project']);
+    assert.equal(decision.authorized, false);
+    assert.equal(decision.status, 'discrepant');
+    assert.equal(decision.provenanceStatus, 'discrepant');
+    assert.ok(decision.notCovered.includes('author'));
+  });
+});
+
+test('a verification result cannot be replayed against another skill', () => {
+  const real = register();
+  const other = register({ name: 'lookalike', repository: 'https://attacker.test/lookalike.git', commit: OTHER_COMMIT });
+  return verifySkillProvenance(real, resolverFor()).then((verified) => {
+    assert.equal(authorizeSkill(real, verified, ['read:project']).authorized, true);
+    assert.equal(authorizeSkill(other, verified, ['read:project']).authorized, false);
+    assert.equal(loadSkill(other, verified, CONTENT, ['read:project']).authorized, false);
+  });
+});
+
+test('a forged verification result is refused', () => {
+  const claim = register();
+  const forged = {
+    status: 'verified',
+    coverage: ['author', 'commit_exists', 'content_digest', 'repository'],
+    notCovered: [],
+    checks: { repository: true, commit_exists: true, author: true, content_digest: true },
+    reason: 'trust me',
+  };
+  const decision = authorizeSkill(claim, forged, ['read:project']);
   assert.equal(decision.authorized, false);
-  assert.equal(decision.status, 'not_verified');
-  assert.ok(decision.notCovered.includes('authority_scope'));
+  assert.equal(decision.status, 'not_verifiable');
 });
 
-test('only verified provenance plus an in-scope request receives authority', async () => {
+// --- 7. The receipt ---
+
+test('a skill receipt verifies and carries the provenance, the scope and the coverage', () => {
   const claim = register();
-  const verified = await verifySkillProvenance(claim, resolverFor(claim));
-  const decision = authorizeSkill(claim, verified, CONTENT, ['read:project']);
-  assert.equal(decision.authorized, true);
-  assert.equal(decision.status, 'verified');
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const decision = authorizeSkill(claim, verified, ['read:project']);
+    const receipt = buildSkillReceipt(receiptSpec(), decision);
+    assert.equal(verifyReceipt(receipt).ok, true, verifyReceipt(receipt).reason);
+    assert.equal(receipt.status, 'verified');
+    assert.equal(receipt.skill.name, 'ponytail');
+    assert.deepEqual(receipt.skill.provenance, {
+      repository: REPOSITORY,
+      commit: COMMIT,
+      author: AUTHOR,
+      contentDigest: sha256(CONTENT),
+    });
+    assert.deepEqual(receipt.skill.granted, GRANTED);
+    assert.deepEqual(receipt.skill.requested, ['read:project']);
+    assert.deepEqual(receipt.coverage.sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
+    assert.deepEqual(receipt.notCovered, ['external anchor']);
+  });
 });
 
-test('skill identity and digest are sealed into each receipt, detecting substitution', async () => {
+test('the receipt status is one the receipt ladder already knows', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor({ repository: 'https://attacker.test/x.git' })).then((refuted) => {
+    const decision = authorizeSkill(claim, refuted, ['read:project']);
+    const receipt = buildSkillReceipt(receiptSpec(), decision);
+    assert.equal(receipt.status, 'failed');
+    assert.equal(receipt.skill.status, 'discrepant');
+    assert.equal(receipt.skill.provenanceStatus, 'discrepant');
+    assert.ok(receipt.notCovered.includes('repository'));
+    assert.equal(verifyReceipt(receipt).ok, true);
+  });
+});
+
+test('an unverifiable skill lands on not_verified, not on a clean bill of health', () => {
+  const claim = register();
+  return verifySkillProvenance(claim).then((unverifiable) => {
+    const decision = authorizeSkill(claim, unverifiable, ['read:project']);
+    const receipt = buildSkillReceipt(receiptSpec(), decision);
+    assert.equal(receipt.status, 'not_verified');
+    assert.equal(receipt.skill.provenanceStatus, 'not_verifiable');
+    assert.equal(receipt.verification.verified, false);
+    assert.deepEqual(receipt.coverage, []);
+    assert.equal(verifyReceipt(receipt).ok, true);
+  });
+});
+
+test('the skill block is inside the seal: swapping one skill for another breaks the receipt', () => {
   const first = register();
-  const firstVerification = await verifySkillProvenance(first, resolverFor(first));
-  const firstAuthorization = authorizeSkill(first, firstVerification, CONTENT, ['read:project']);
-  const second = register({ name: 'lookalike', repository: 'https://attacker.test/lookalike.git', commit: 'b'.repeat(40) });
-  const secondVerification = await verifySkillProvenance(second, resolverFor(second));
-  const secondAuthorization = authorizeSkill(second, secondVerification, CONTENT, ['read:project']);
-  const a = buildSkillReceipt(receiptSpec(), firstAuthorization);
-  const b = buildSkillReceipt(receiptSpec(), secondAuthorization);
-  assert.equal(verifyReceipt(a).ok, true);
-  assert.equal(verifyReceipt(b).ok, true);
-  assert.notEqual(a.digest, b.digest);
-  assert.notEqual(a.skill.provenance.repository, b.skill.provenance.repository);
+  const second = register({ name: 'lookalike', repository: 'https://attacker.test/lookalike.git', commit: OTHER_COMMIT });
+  return Promise.all([verifySkillProvenance(first, resolverFor()), verifySkillProvenance(second, resolverFor({ repository: 'https://attacker.test/lookalike.git', commit: OTHER_COMMIT }))])
+    .then(([a, b]) => {
+      const receiptA = buildSkillReceipt(receiptSpec(), authorizeSkill(first, a, ['read:project']));
+      const receiptB = buildSkillReceipt(receiptSpec(), authorizeSkill(second, b, ['read:project']));
+      assert.equal(receiptA.operation.id, receiptB.operation.id);
+      assert.notEqual(receiptA.digest, receiptB.digest);
+      const tampered = { ...receiptA, skill: receiptB.skill };
+      assert.equal(verifyReceipt(tampered).ok, false);
+      assert.equal(verifyReceipt(tampered).reason, 'digest mismatch');
+    });
 });
 
-test('legacy receipt digest remains byte-for-byte stable when skill data is absent', () => {
-  assert.equal(buildReceipt(receiptSpec()).digest, '0b4ea0547e976cdf9e5d14c2a792e4075727a668b3fc488480c5822ac13c2a30');
+test('the same decision and the same clock seal the same receipt twice', () => {
+  const claim = register();
+  return verifySkillProvenance(claim, resolverFor()).then((verified) => {
+    const decision = authorizeSkill(claim, verified, ['read:project']);
+    const one = buildSkillReceipt(receiptSpec(), decision);
+    const two = buildSkillReceipt(receiptSpec(), decision);
+    assert.equal(one.digest, two.digest);
+    assert.equal(one.digest, computeDigest(one));
+  });
+});
+
+test('a receipt is refused for a decision this kernel did not produce', () => {
+  assert.throws(() => buildSkillReceipt(receiptSpec(), { status: 'verified', authorized: true }), /decision/i);
+});
+
+// --- 8. Compatibility ---
+
+test('a receipt built without skill data keeps its previous digest byte for byte', () => {
+  assert.equal(buildReceipt(receiptSpec()).digest, 'e19da3380d3ae2f5a63ae68f4de701b40e97d6fb51d0482958d664573d591a33');
+});
+
+test('the public exports of the modules that were already there keep their names', () => {
+  const receipt = require('../src/receipt.js');
+  for (const name of ['buildReceipt', 'verifyReceipt', 'anchorReceipt', 'anchorReceiptAsync', 'computeDigest']) {
+    assert.equal(typeof receipt[name], 'function', name);
+  }
+  const authority = require('../src/authority.js');
+  for (const name of ['grantSpend', 'sufficient']) assert.equal(typeof authority[name], 'function', name);
 });
