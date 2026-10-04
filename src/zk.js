@@ -196,7 +196,10 @@ function readProof(value) {
 }
 
 function readPublicInputs(value, ceiling) {
-  if (!isDenseArray(value) || value.length > ceiling) return null;
+  // The length first, so a list longer than anything a circuit declares is refused before it is
+  // walked. A proxy whose `length` lies is still caught by the density gate below.
+  if (!Array.isArray(value) || value.length > ceiling) return null;
+  if (!isDenseArray(value)) return null;
   const out = [];
   for (let i = 0; i < value.length; i += 1) {
     const scalar = scalarInRange(value[i], SCALAR_MODULUS);
