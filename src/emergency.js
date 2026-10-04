@@ -486,10 +486,26 @@ async function createEmergencyPermission(grant, { authorizeGrantor, resolveVerif
   } catch {
     throw new Error('the grantor authority could not be verified');
   }
-  if (!granted || typeof granted !== 'object' || granted.verified !== true) {
+  // The host's answer is read once per field and inside one error boundary. An answer whose
+  // `verified` or `grantor` cannot be read has authorized nothing, and the text of whatever it threw
+  // on the way belongs to the host: the caller is told a fixed sentence and nothing else (R204,
+  // R205). A failing read never leaves a half-granted permission behind, because nothing has been
+  // bound yet.
+  let verified;
+  let grantor;
+  let rawReason;
+  try {
+    const answered = granted && typeof granted === 'object' ? granted : null;
+    verified = answered ? answered.verified : undefined;
+    grantor = answered ? answered.grantor : undefined;
+    rawReason = answered ? answered.reason : undefined;
+  } catch {
+    throw new Error('the grantor authority answer could not be read safely');
+  }
+  if (verified !== true) {
     throw new Error('the grantor authority check did not verify this grant');
   }
-  if (granted.grantor !== snapshot.owner) {
+  if (grantor !== snapshot.owner) {
     throw new Error(`grantor authority does not name the owner of this emergency permission (${snapshot.owner})`);
   }
   if (typeof resolveVerifier !== 'function') throw new Error('an injected trigger verifier resolver is required: the kernel cannot know what verifies a signal');
@@ -501,13 +517,26 @@ async function createEmergencyPermission(grant, { authorizeGrantor, resolveVerif
     } catch {
       throw new Error(`the independent verifier for trigger ${trigger.id} could not be resolved`);
     }
-    if (!verifier || typeof verifier !== 'object' || verifier.id !== trigger.verifierId || typeof verifier.verify !== 'function') {
+    // Same rule for the resolved verifier: read `id` and `verify` once each, validate those
+    // variables, and bind exactly those. A getter that answers a good id first and a different
+    // `verify` afterwards must not leave the kernel validating one function and calling another
+    // (R203).
+    let verifierId;
+    let verify;
+    try {
+      const resolved = verifier && typeof verifier === 'object' ? verifier : null;
+      verifierId = resolved ? resolved.id : undefined;
+      verify = resolved ? resolved.verify : undefined;
+    } catch {
+      throw new Error(`the resolved verifier for trigger ${trigger.id} could not be read safely`);
+    }
+    if (verifierId !== trigger.verifierId || typeof verify !== 'function') {
       throw new Error(`the resolved verifier is not the independent verifier ${trigger.verifierId} declared for trigger ${trigger.id}`);
     }
-    verifiers.set(trigger.id, { id: verifier.id, verify: verifier.verify });
+    verifiers.set(trigger.id, { id: verifierId, verify });
   }
   const bound = {
-    snapshot: { ...snapshot, approval: safeText(granted.reason) || 'the grantor authority check named the owner of this permission' },
+    snapshot: { ...snapshot, approval: safeText(rawReason) || 'the grantor authority check named the owner of this permission' },
     verifiers,
     // A renewal grows the authority a person signed, so it needs a fresh answer from the host. The
     // approver is bound here and never chosen by whoever renews; when the host supplies none, the
@@ -836,23 +865,49 @@ function renewEmergencyPermission(permission, changes) {
   } catch {
     throw new Error('the renewal authorization could not be read');
   }
+  // Whether this host answered asynchronously is a fact about this call, not a word to look for in
+  // somebody else's exception: a private error that happens to contain `asynchronously` used to be
+  // recognized, republished and escape to the caller (R207). An internal flag decides it, and the
+  // promise is drained and refused rather than awaited.
+  let asynchronous = false;
   try {
-    if (answer && (typeof answer === 'object' || typeof answer === 'function') && typeof answer.then === 'function') {
-      Promise.resolve(answer).catch(() => {});
-      throw new Error('the renewal authorization answered asynchronously, which this kernel does not wait for');
-    }
-  } catch (err) {
-    if (err && err.message && err.message.includes('asynchronously')) throw err;
+    asynchronous = Boolean(answer) && (typeof answer === 'object' || typeof answer === 'function')
+      && typeof answer.then === 'function';
+  } catch {
     throw new Error('the renewal authorization could not be read');
   }
-  if (!answer || typeof answer !== 'object' || answer.verified !== true) {
+  if (asynchronous) {
+    try {
+      Promise.resolve(answer).catch(() => {});
+    } catch {
+      // A thenable that throws on the second read is still a refusal, not a reason to keep waiting.
+    }
+    throw new Error('the renewal authorization answered asynchronously, which this kernel does not wait for');
+  }
+  // One read per field, inside one error boundary, and one reason: the sentence that seals the
+  // public permission and the one the private binding remembers are the same value, read once. A
+  // read that throws refuses the renewal and leaves the original grant exactly as usable as it was
+  // (R206, R208).
+  let verified;
+  let grantor;
+  let rawReason;
+  try {
+    const answered = answer && typeof answer === 'object' ? answer : null;
+    verified = answered ? answered.verified : undefined;
+    grantor = answered ? answered.grantor : undefined;
+    rawReason = answered ? answered.reason : undefined;
+  } catch {
+    throw new Error('the renewal authorization could not be read');
+  }
+  if (verified !== true) {
     throw new Error(`the renewal authorization did not approve extending this emergency permission`);
   }
-  if (answer.grantor !== snapshot.owner) {
+  if (grantor !== snapshot.owner) {
     throw new Error(`the renewal authorization does not name the owner of this emergency permission (${snapshot.owner})`);
   }
-  const renewed = freeze({ ...clone(candidate), grantVerification: { verified: true, reason: safeText(answer.reason) || snapshot.approval } });
-  BINDINGS.set(renewed, { ...bound, snapshot: { ...snapshot, expiresAt, approval: safeText(answer.reason) || snapshot.approval } });
+  const approval = safeText(rawReason) || snapshot.approval;
+  const renewed = freeze({ ...clone(candidate), grantVerification: { verified: true, reason: approval } });
+  BINDINGS.set(renewed, { ...bound, snapshot: { ...snapshot, expiresAt, approval } });
   return renewed;
 }
 
