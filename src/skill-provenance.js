@@ -63,6 +63,16 @@ function sha256(text) {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
+// SHA-256 is computed over UTF-8 bytes, and UTF-8 cannot carry an unpaired surrogate: the encoder
+// replaces it with U+FFFD. So `'head\ud800tail'` and `'head\ufffdtail'` are two different strings that
+// hash to the same digest, and a load offering the second one would pass a check that was made on the
+// first. The module documents the digest as being over the exact bytes, so the content has to be text
+// that survives its own encoding round trip; nothing that used to be refused is refused now, and text
+// that a person can read is untouched (A18, review H12).
+function wellFormedText(value) {
+  return Buffer.from(value, 'utf8').toString('utf8') === value;
+}
+
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value !== null && typeof value === 'object') {
@@ -211,6 +221,9 @@ function registerSkillProvenance(spec) {
     content = null;
   }
   if (typeof content !== 'string') throw new Error('a skill needs the content that will be loaded');
+  if (!wellFormedText(content)) {
+    throw new Error('a skill needs content that is well-formed UTF-8 text, not text carrying unpaired surrogates');
+  }
   const authority = Object.freeze(grantedList(readValue(source, 'authority'), 'authority'));
   const parts = {
     name,
@@ -701,13 +714,23 @@ function loadSkill(claim, result, content, requested) {
   const record = recordOf(claim);
   const decision = authorizeSkill(claim, result, requested);
   let loaded = null;
+  let loadReason = 'the content offered for loading is not text, so no digest can be compared';
   try {
-    loaded = typeof content === 'string' ? sha256(content) : null;
+    if (typeof content !== 'string') {
+      loaded = null;
+    } else if (!wellFormedText(content)) {
+      // Refused for the same reason it cannot be registered: two different strings hash alike here, so
+      // a matching digest would not say which of them was the text that was verified.
+      loaded = null;
+      loadReason = 'the content offered for loading carries unpaired surrogates, so it cannot be the text whose digest was verified';
+    } else {
+      loaded = sha256(content);
+    }
   } catch {
     loaded = null;
   }
   if (loaded === null) {
-    return withLoad(decision, record, loaded, false, 'discrepant', 'the content offered for loading is not text, so no digest can be compared');
+    return withLoad(decision, record, loaded, false, 'discrepant', loadReason);
   }
   if (record === null) {
     // The bytes were hashed, and that is all that happened. Hashing is not a comparison: with no

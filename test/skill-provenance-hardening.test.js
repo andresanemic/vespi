@@ -245,9 +245,9 @@ test('H11 a receipt spec whose own key enumeration throws is contained', async (
 // away. UTF-8 cannot carry an unpaired surrogate, so two different strings can hash to the same
 // digest: a load that offers text nobody verified passes the check under the name of text that was.
 
-test('H12 content that collides with the verified bytes only through invalid UTF-8 cannot load', async () => {
-  const registered = 'head\uD800tail';
-  const lookalike = 'head\uFFFDtail';
+test('H12 text that hashes like the verified bytes but is not that text cannot load', async () => {
+  const registered = 'head\uFFFDtail';
+  const lookalike = 'head\uD800tail';
   assert.notEqual(registered, lookalike);
   // The premise of the attack, measured: the two strings are different and hash the same.
   assert.equal(sha256(registered), sha256(lookalike));
@@ -256,10 +256,15 @@ test('H12 content that collides with the verified bytes only through invalid UTF
   const verified = await verifySkillProvenance(claim, () => proof({ content: registered }));
   assert.equal(verified.status, 'verified');
 
+  // Both sides are refused, so this is the form the attack takes once the registry will not hold
+  // text carrying unpaired surrogates (H13): the load offers the other string that hashes alike.
   const loaded = loadSkill(claim, verified, lookalike, ['read']);
   assert.equal(loaded.authorized, false);
   assert.equal(loaded.status, 'discrepant');
   assert.equal(loaded.checks.loaded_content_digest, false);
+  assert.equal(loaded.loadedDigest, null);
+  // The honest spelling of the same content still loads, surrogates and all.
+  assert.equal(loadSkill(claim, verified, registered, ['read']).authorized, true);
 });
 
 test('H13 unpaired surrogates cannot enter the registry in the first place', () => {
