@@ -1552,3 +1552,59 @@ test('K4-H5 two runs of the same payment at once keep their own private context'
   assert.equal(verifyReceipt(a.receipt).ok, true);
   assert.equal(verifyReceipt(b.receipt).ok, true);
 });
+// =====================================================================================
+// Group I — the shape of the reference bridge, checked without running it
+// (the demo package has its own dependencies and they are not installed in this checkout)
+// =====================================================================================
+
+const DEMO = path.join(__dirname, '..', 'demo', 'x402');
+
+function readDemo(name) {
+  return fs.readFileSync(path.join(DEMO, name), 'utf8');
+}
+
+test('K4-I1 the bridge implements the six ports the contract asks for and imports the kernel only through the contract', () => {
+  const ports = readDemo('ports.js');
+  for (const port of ['discover', 'sendPaid', 'prepare', 'inspectPrepared', 'verifySettlement', 'validateOutput']) {
+    assert.match(ports, new RegExp(`\\b${port}\\b`), `ports.js declares ${port}`);
+  }
+  assert.match(ports, /createRequire\(import\.meta\.url\)/);
+  assert.match(ports, /require\('\.\.\/\.\.\/src\/x402\.js'\)/, 'the bridge reaches the kernel through x402.js');
+  for (const forbidden of [/require\('\.\.\/\.\.\/src\/(operation|receipt|authority|continuity)\.js'\)/, /from '\.\.\/\.\.\/src\//]) {
+    assert.doesNotMatch(ports, forbidden, 'the bridge does not reach into kernel internals');
+  }
+  // It carries the network, the SDK and the horizon: that is what stayed outside the kernel.
+  assert.match(ports, /@stellar\/stellar-sdk/);
+  assert.match(ports, /@x402\/fetch/);
+  assert.match(ports, /verifySettlement/);
+  assert.match(ports, /isMarketingPlan/, 'the body is validated against the marketing-plan schema');
+  assert.match(ports, /MAX_BODY_BYTES/, 'the body is bounded before it is parsed');
+});
+
+test('K4-I2 the demo runner consumes the contract and the historical adapter stays where its own tests find it', () => {
+  const runner = readDemo('run.js');
+  assert.match(runner, /createMarketingPlanPayment/);
+  assert.match(runner, /payment\.run\(/);
+  assert.doesNotMatch(runner, /x402Capability/, 'the runner no longer drives the adapter capability directly');
+  assert.doesNotMatch(runner, /verifySettlement/, 'the runner no longer supplies its own verifier');
+  const adapter = readDemo('capability.js');
+  assert.match(adapter, /export function x402Capability/, 'the historical adapter is untouched');
+  assert.match(adapter, /export \{ claimSettlement, claimTransaction/);
+  const manifest = JSON.parse(readDemo('package.json'));
+  for (const suite of ['capability.adversarial.mjs', 'verify.test.mjs', 'settlement-finalization.test.mjs', 'settlement-response.test.mjs', 'idempotency.test.mjs']) {
+    assert.ok(manifest.scripts.test.includes(suite), `${suite} is still in the demo suite`);
+  }
+  assert.equal(manifest.dependencies['@stellar/stellar-sdk'].startsWith('^'), true);
+  assert.equal(Object.keys(manifest.dependencies).length, 6, 'the six demo dependencies are untouched');
+});
+
+test('K4-I3 the kernel package gains no dependency and no export surface', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+  assert.equal(manifest.private, true);
+  assert.equal(manifest.dependencies, undefined);
+  assert.equal(manifest.exports, undefined);
+  assert.equal(manifest.version, '0.1.4');
+  const lockfile = path.join(DEMO, 'package-lock.json');
+  assert.equal(fs.existsSync(lockfile), true, 'the demo lockfile is in place');
+  assert.match(fs.readFileSync(lockfile, 'utf8'), /@stellar\/stellar-sdk/);
+});
