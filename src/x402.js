@@ -27,7 +27,10 @@
 // therefore needs a synchronous primitive, and a durable adapter is work this version does not have.
 // `createMemoryPaymentClaims()` lives in the memory of one process: a restart empties it and a second
 // attempt at the same payment becomes possible. Releasing a reservation is not offered either, so a
-// run refused before the wire keeps its key until the store is gone.
+// run refused before the wire keeps its key until the store is gone. The delivery validator is awaited
+// like the other five ports, but it is the one port that is not handed the abort signal: a validator
+// that never settles is stopped by the run's own budget (`performTimeoutMs`), and the run then ends
+// with the effect on the wire and an unknown outcome, not as a failure with nothing exercised.
 
 const { sufficient } = require('./authority.js');
 const { runOperation } = require('./operation.js');
@@ -939,6 +942,15 @@ function exceedsBodyLimit(value) {
 // digest of it. Without the digest there is nothing to put on the receipt, nothing for a later run
 // to compare against and nothing that binds this run's output to the bytes that were paid for. The
 // validator's answer is read once inside the guard: a getter cannot answer twice.
+//
+// The validator is awaited, like the other five ports and like `readBody`. This is the choice, and it
+// is the other one that was available: a port could be declared synchronous instead. Awaiting wins
+// because the shape of a port is host code and this module cannot enforce either shape — a promise
+// is refused by the guard below exactly as silently as a port that answered wrongly, and the payment
+// then ends in DELIVERY_REJECTED blaming a delivery that was never the problem. Awaiting a plain
+// value costs nothing, so the ports already written synchronously keep the receipts they have today,
+// and a port written async, the natural form when five neighbours are async, is answered instead of
+// discarded. A port that rejects lands in the same catch as a port that throws.
 async function readDelivery(response, ctx) {
   let raw;
   try {
@@ -951,7 +963,7 @@ async function readDelivery(response, ctx) {
   if (exceedsBodyLimit(copy)) return { ok: false, output: null, digest: null };
   let validated;
   try {
-    validated = ctx.ports.validateOutput(copy);
+    validated = await ctx.ports.validateOutput(copy);
   } catch {
     return { ok: false, output: null, digest: null };
   }

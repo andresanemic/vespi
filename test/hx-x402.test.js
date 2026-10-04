@@ -12,14 +12,17 @@
 //     other five ports were awaited. An `async` port — the natural choice when five neighbours are
 //     async — was read as a promise and discarded, so the payment ended in DELIVERY_REJECTED with a
 //     reason that blamed the delivery instead of the port. The port is awaited now, and these tests
-//     pin that, including a port that rejects, a port whose promise never settles and a port that
-//     answers twice.
+//     pin that, including a port that rejects, a thenable whose `then` is a trap, a promise that
+//     never settles and a port called twice.
 //
-//   Group B (additive API): the closed catalog of settlement control names is exported, frozen, so a
-//     host can ask which control names this kernel admits instead of reading the file.
+//   Group B (the closed settlement control catalog): the gap is real — a host that writes the
+//     settlement port has no way to learn the vocabulary — and the fix is one line, but it turns the
+//     three tests that pin the exports of `src/x402.js` red. It is left for the owner, written down
+//     as a todo, with the hostile case kept green so the gate cannot be lost in the meantime.
 //
-//   Group C (owner decisions, left as todos): the effect key version in the receipt, the effect key
-//     itself as something a host can reconcile with, and a public catalog of codes.
+//   Group C (owner decisions, left as todos): the reason a control name was refused, the version of
+//     the effect key in the receipt, the effect key itself as something a host can reconcile with,
+//     and a public catalog of codes.
 //
 // Out of scope by instruction: the identity of the operation in `createOperation` (hallazgo 4). That
 // is `operation.js`, shared core, verified elsewhere; it is described in the report and not touched.
@@ -39,9 +42,6 @@ const AUTH_DIGEST = createHash('sha256').update(AUTHORIZATION, 'utf8').digest('h
 const PLAN = { title: 'Queen Marketing Plan', summary: 'A 90-day plan.', deliverables: ['Landing page'], nextSteps: ['Launch week 1'] };
 const PLAN_DIGEST = createHash('sha256').update(JSON.stringify(PLAN), 'utf8').digest('hex');
 const TX = 'c'.repeat(64);
-// A 64-character token with the shape of a Stellar seed. It is what the closed catalog refuses and
-// what a host must not be able to unseal by widening the catalog it was just handed.
-const SEED_SHAPED = 'S'.repeat(56);
 
 function spec(over = {}) {
   return {
@@ -118,7 +118,6 @@ function fakePorts(over = {}) {
     async verifySettlement(evidence, request) {
       calls.verifySettlement += 1;
       if (over.verifySettlement) return over.verifySettlement(evidence, request);
-      const calza = evidence.txHash === TX || evidence.txHash !== undefined;
       return { verified: true, checks: { transfer: true, payer: true }, reason: 'independent readback' };
     },
     validateOutput(body) {
@@ -147,6 +146,16 @@ async function runOnce(ports, over = {}, io = { now: () => CLOCK_MS }) {
   return kernel.createX402Payment(spec(), ports).run(operation(), { ...io, ...over });
 }
 
+// Two runs that are comparable receipt by receipt: the same declared effect, the same settled
+// transaction and the same operation identity, so the only thing left that can differ is how the
+// validator port was written. The identity is fixed by hand because `createOperation` mints its own.
+async function comparableRun(validateOutput) {
+  const op = operation();
+  op.id = 'op-comparable';
+  const ports = fakePorts({ transaction: TX, validateOutput });
+  return require('../src/x402.js').createX402Payment(spec(), ports).run(op, { now: () => CLOCK_MS });
+}
+
 function kernel() {
   return require('../src/x402.js');
 }
@@ -169,11 +178,12 @@ test('HX-01 an async validateOutput port is awaited, so the delivered body is co
 });
 
 test('HX-02 the same port written synchronously verifies exactly the same way', async () => {
-  // The compatibility half: awaiting a plain value changes nothing, so a host that wrote the port
-  // as it is written today keeps the receipt it has today.
-  const sincrono = await runOnce(fakePorts({ validateOutput: (body) => ({ ok: true, output: body, digest: PLAN_DIGEST }) }));
-  const asincrono = await runOnce(fakePorts({ validateOutput: async (body) => ({ ok: true, output: body, digest: PLAN_DIGEST }) }));
+  // The compatibility half: awaiting a plain value changes nothing, so a host that wrote the port as
+  // it is written today keeps the receipt it has today, digest included.
+  const sincrono = await comparableRun((body) => ({ ok: true, output: body, digest: PLAN_DIGEST }));
+  const asincrono = await comparableRun(async (body) => ({ ok: true, output: body, digest: PLAN_DIGEST }));
   assert.equal(sincrono.receipt.status, 'verified');
+  assert.equal(asincrono.receipt.status, 'verified');
   assert.deepEqual(sincrono.receipt.evidence, asincrono.receipt.evidence, 'same evidence');
   assert.deepEqual(sincrono.receipt.verification.checks, asincrono.receipt.verification.checks, 'same checks');
   assert.equal(sincrono.receipt.digest, asincrono.receipt.digest, 'and the same sealed digest');
@@ -224,49 +234,66 @@ test('HX-07 the validator is called exactly once per run', async () => {
 });
 
 // =====================================================================================
-// Group B — the closed catalog of settlement controls is part of what a host may ask
+// Group B — the closed catalog of settlement controls: read from a host, decided by the owner
+//
+// The finding is right about the gap: a host that writes the `verifySettlement` port has to know
+// which control names are admitted, and the only place to read them is this repository. The fix is
+// one line (`SETTLEMENT_CONTROL_NAMES` next to the set, exported frozen) — and it collides with a
+// contract that was already reviewed and is already pinned: three tests (D2-16, K4-A1, K4-G2)
+// assert that `src/x402.js` exports exactly `createX402Payment`, `selectX402Terms` and
+// `createMemoryPaymentClaims`. Adding a fourth export is not removing or renaming anything, but it
+// does widen a surface a previous round closed on purpose, so it is the owner's word and not this
+// charge's. What is left here is the observation, pinned so it is not lost, and the hostile case
+// that must keep failing either way.
 // =====================================================================================
 
-test('HX-08 the catalog of settlement controls is exported and frozen', () => {
+test('HX-08 a host can ask which settlement control names this kernel admits', {
+  todo: "decision of the owner: `SETTLEMENT_CONTROLS` is closed and not exported, so a host that writes `verifySettlement` cannot learn the vocabulary except by reading the file. Exporting a frozen copy of the names is one line, and it was written and measured on this branch: it turns D2-16, K4-A1 and K4-G2 red, the three tests that pin the exports of `src/x402.js` to exactly three names. Widening a surface a previous round closed on purpose is the owner's call, and the three lines move with the word.",
+}, () => {
   const { SETTLEMENT_CONTROL_NAMES } = kernel();
   assert.equal(Array.isArray(SETTLEMENT_CONTROL_NAMES), true, 'a host can read it without the file');
-  assert.equal(Object.isFrozen(SETTLEMENT_CONTROL_NAMES), true, 'and it is frozen, so reading it cannot widen it');
+  assert.equal(Object.isFrozen(SETTLEMENT_CONTROL_NAMES), true, 'and it is frozen: reading it cannot widen it');
   // The names the one settlement reader in this tree emits (demo/x402/settlement.js).
   assert.deepEqual([...SETTLEMENT_CONTROL_NAMES].sort(), [
     'authorization', 'exactAmount', 'invocation', 'payer', 'prepared', 'source', 'transfer',
   ]);
 });
 
-test('HX-09 the exported catalog is the one the kernel judges with', async () => {
-  const { SETTLEMENT_CONTROL_NAMES } = kernel();
-  const control = SETTLEMENT_CONTROL_NAMES[0];
-  const res = await runOnce(fakePorts({
-    verifySettlement: async () => ({ verified: true, checks: { [control]: true }, reason: 'independent readback' }),
-  }));
-  assert.equal(res.receipt.status, 'verified');
-  assert.equal(res.receipt.verification.checks[`settlement_${control}`], true, 'a name of the catalog is sealed on the receipt');
-});
-
-test('HX-10 a host cannot widen the catalog it was handed', async () => {
-  const { SETTLEMENT_CONTROL_NAMES } = kernel();
-  assert.throws(() => SETTLEMENT_CONTROL_NAMES.push('transaccion'), TypeError, 'the array is frozen');
-  assert.throws(() => SETTLEMENT_CONTROL_NAMES.push(SEED_SHAPED), TypeError, 'and stays frozen');
-  assert.equal(SETTLEMENT_CONTROL_NAMES.length, 7, 'nothing was added');
-  // A name outside the catalog is still refused, with the reason that says what happened.
+test('HX-09 the reason a control was refused names the control, not only the port', {
+  todo: "decision of the owner: a port that reports a control outside the catalog is refused with `the settlement port did not verify the declared effect (VERIFIER_FAILED)`, which names the port and not the name. Naming the rejected control would carry host-written text into a sealed receipt, which is exactly what the closed catalog exists to prevent, so the fix is not free. The alternative — exporting the catalog, see HX-08 — lets a host check its own vocabulary before it seals anything. The owner's call.",
+}, async () => {
   const res = await runOnce(fakePorts({
     verifySettlement: async () => ({ verified: true, checks: { transaccion: true }, reason: 'the transaction is in the ledger' }),
   }));
-  assert.equal(res.receipt.verification.checks.settlement, false);
-  assert.equal(res.receipt.verification.reason, 'the settlement port did not verify the declared effect (VERIFIER_FAILED)');
-  assert.equal(res.receipt.evidence.txHash, TX, 'the settlement evidence stays for the person');
+  assert.match(res.receipt.verification.reason, /transaccion/);
 });
 
-// =====================================================================================
-// Group C — questions that are the owner's to answer, written down and not decided here
-// =====================================================================================
+// Not a todo: whatever is decided, this is the behaviour that has to survive. A control outside the
+// closed catalog is refused, the verdict never reaches the receipt, and the settlement evidence stays
+// with the person who reconciles.
+test('HX-10 a control outside the closed catalog never reaches a sealed receipt', async () => {
+  const SEED_SHAPED = 'S'.repeat(56);
+  for (const control of ['transaccion', SEED_SHAPED, '__proto__', 'constructor', 'toString']) {
+    const res = await runOnce(fakePorts({
+      transaction: TX,
+      verifySettlement: async () => ({ verified: true, checks: { [control]: true }, reason: 'the transaction is in the ledger' }),
+    }));
+    assert.equal(res.receipt.status, 'not_verified', `control: ${control.slice(0, 12)}`);
+    assert.equal(res.receipt.verification.checks.settlement, false, `control: ${control.slice(0, 12)}`);
+    assert.equal(res.receipt.verification.reason, 'the settlement port did not verify the declared effect (VERIFIER_FAILED)');
+    assert.equal(Object.keys(res.receipt.verification.checks).some((key) => key.startsWith('settlement_')), false, `control: ${control.slice(0, 12)}`);
+    assert.equal(res.receipt.evidence.txHash, TX, 'the settlement evidence stays for the person');
+  }
+  // A control of the catalog still verifies, so the gate is the catalog and not a broken port.
+  const dentro = await runOnce(fakePorts({
+    verifySettlement: async () => ({ verified: true, checks: { transfer: true, payer: true }, reason: 'independent readback' }),
+  }));
+  assert.equal(dentro.receipt.status, 'verified');
+  assert.equal(dentro.receipt.verification.checks.settlement_transfer, true);
+});
 
 test('HX-11 the receipt says which version of the effect key deduplicated this payment', {
-  todo: "decision of the owner: the effect key moved to version 2 of its canonical content, so every stored key is old and an old key never collides with a new one. What is missing is the version itself: a host that keeps those keys outside the process (a register, a reconciliation table) has nothing to compare them with, and the reason does not name it. Putting the version in the receipt or in the duplicate reason changes the receipt every payment already seals, and `receipt.js` and `operation.js` are not this charge's to touch. Whether the receipt carries the version, the reason names it, or a host reconciles by its own convention is the owner's call.",
+  todo: "decision of the owner: the effect key moved to version 2 of its canonical content, so every stored key is old, and an old key never collides with a new one. What is missing is the version itself: a host that keeps those keys outside the process (a register, a reconciliation table) has nothing to compare them with, and the reason does not name it. `effectKeyVersion` in the receipt means touching `receipt.js` and `operation.js`, which this charge does not touch, and it changes the digest of every receipt a payment already seals. Whether the receipt carries the version, the reason names it, or a host reconciles by its own convention is the owner's call.",
 }, async () => {
   const ports = fakePorts();
   const res = await runOnce(ports);
@@ -274,7 +301,7 @@ test('HX-11 the receipt says which version of the effect key deduplicated this p
 });
 
 test('HX-12 a host can obtain the effect key a receipt deduplicated on', {
-  todo: "decision of the owner: a claims store receives the exact key through reserveEffect, so a durable store can persist what it reserved. What no host can do is recover the key from a receipt afterwards, which is what reconciliation needs. Publishing the key (or a way to recompute it) widens what leaves the process and what a receipt can be matched against; not publishing it keeps the key inside. The owner's call, and the memory store limit stays as it is written in the module header.",
+  todo: "decision of the owner: a claims store receives the exact key through `reserveEffect`, so a durable store can persist what it reserved — half of what the finding asks for is already true. What no host can do is recover the key from a receipt afterwards, which is what reconciliation needs. Publishing the key (or a way to recompute it) widens what leaves the process and what a receipt can be matched against; not publishing it keeps the key inside. The owner's call, and the memory-store limit stays as it is written in the module header.",
 }, async () => {
   const ports = fakePorts();
   const res = await runOnce(ports);
@@ -283,7 +310,7 @@ test('HX-12 a host can obtain the effect key a receipt deduplicated on', {
 });
 
 test('HX-13 a host can read the catalog of public codes instead of matching free text', {
-  todo: "decision of the owner: every rejection travels in the reason with a code from a catalog that grows every round, and the constructor throws VESPI_X402_CLAIMS_REQUIRED, VESPI_X402_INVALID_SPEC, VESPI_X402_INVALID_PORT or VESPI_X402_INVALID_IO. A host has to hold those strings to branch on them, and Casa Firme translates them by hand. Exporting the catalog, or a reason written in the host's language, is a promise about the public surface: each new exported name is one more. The owner's call, and the codes already travel where they have to.",
+  todo: "decision of the owner: every rejection travels in the reason with a code from a catalog that grows every round, and the constructor throws VESPI_X402_CLAIMS_REQUIRED, VESPI_X402_INVALID_SPEC, VESPI_X402_INVALID_PORT or VESPI_X402_INVALID_IO. A host has to hold those strings to branch on them, and Casa Firme translates them by hand. Exporting the catalog widens the same pinned surface as HX-08, and a reason written in the host's language is a different contract: this kernel writes reasons in its own words on purpose. The owner's call.",
 }, async () => {
   const { X402_CODES } = kernel();
   assert.equal(typeof X402_CODES, 'object');
