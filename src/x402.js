@@ -806,6 +806,10 @@ function exceedsBodyLimit(value) {
   return Buffer.byteLength(serialized, 'utf8') > MAX_BODY_BYTES;
 }
 
+// Delivery is covered only when the validator says the body is acceptable AND hands back a SHA-256
+// digest of it. Without the digest there is nothing to put on the receipt, nothing for a later run
+// to compare against and nothing that binds this run's output to the bytes that were paid for. The
+// validator's answer is read once inside the guard: a getter cannot answer twice.
 async function readDelivery(response, ctx) {
   let raw;
   try {
@@ -822,14 +826,17 @@ async function readDelivery(response, ctx) {
   } catch {
     return { ok: false, output: null, digest: null };
   }
-  if (!isPlainObject(validated) || validated.ok !== true) return { ok: false, output: null, digest: null };
-  let digest = null;
+  let ok;
+  let digest;
+  let output;
   try {
-    digest = typeof validated.digest === 'string' && validated.digest.length > 0 ? validated.digest : null;
+    ok = isPlainObject(validated) && validated.ok === true;
+    digest = typeof validated.digest === 'string' && HASH.test(validated.digest) ? validated.digest : null;
+    output = validated.output === undefined ? null : validated.output;
   } catch {
-    digest = null;
+    return { ok: false, output: null, digest: null };
   }
-  const output = validated.output === undefined ? null : validated.output;
+  if (!ok || digest === null) return { ok: false, output: null, digest: null };
   return { ok: true, output, digest };
 }
 
