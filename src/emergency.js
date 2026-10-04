@@ -69,8 +69,16 @@ function freeze(value) {
 
 // The canonical form of data this kernel is willing to hash and seal: JSON primitives, plain objects
 // and arrays, keys sorted. Anything else — a function, a symbol, a bigint, an infinite number, a
-// cycle, a class instance, a sparse hole — is refused rather than half-copied, because a receipt
-// whose fingerprint cannot be recomputed is a receipt nobody can check later.
+// cycle, a class instance, an object from another realm — is refused rather than half-copied, because
+// a receipt whose fingerprint cannot be recomputed is a receipt nobody can check later.
+//
+// The boundary of what travels is stated here and nowhere wider: a body is JSON data, whole. An array
+// has to be dense and nothing but indices (no hole to fill from a prototype, no extra key that would
+// be dropped), and an object may not carry a key of any kind that `Object.keys` cannot see. A symbol
+// key used to be dropped silently: the copy the verifier received simply did not have it, the body
+// was still hashed and the authority still spent on a fingerprint of something the verifier never
+// saw (R303, R304). Non-enumerable properties are the one thing this contract does not speak about:
+// they are outside JSON and this kernel does not claim them either way.
 function canonical(value, seen) {
   if (value === null) return null;
   const kind = typeof value;
@@ -80,18 +88,36 @@ function canonical(value, seen) {
   const path = seen || new Set();
   if (path.has(value)) return NOT_REPRESENTABLE;
   path.add(value);
+  let keys;
+  try {
+    keys = Reflect.ownKeys(value);
+  } catch {
+    path.delete(value);
+    return NOT_REPRESENTABLE;
+  }
   let out;
   if (Array.isArray(value)) {
+    // Only indices 0..length-1, all of them own, and the enumerable keys exactly those. The old count
+    // admitted a sparse array whose hole a custom prototype filled and whose extra key then vanished
+    // from the copy (R303).
     out = [];
     for (let index = 0; index < value.length; index += 1) {
+      if (!Object.prototype.hasOwnProperty.call(value, String(index))) { path.delete(value); return NOT_REPRESENTABLE; }
       const item = canonical(value[index], path);
       if (item === NOT_REPRESENTABLE) { path.delete(value); return NOT_REPRESENTABLE; }
       out.push(item);
     }
-    if (Object.keys(value).length !== value.length) { path.delete(value); return NOT_REPRESENTABLE; }
+    for (const key of Object.keys(value)) {
+      if (!/^(0|[1-9][0-9]*)$/.test(key) || Number(key) >= value.length) { path.delete(value); return NOT_REPRESENTABLE; }
+    }
   } else {
     const proto = Object.getPrototypeOf(value);
     if (proto !== Object.prototype && proto !== null) { path.delete(value); return NOT_REPRESENTABLE; }
+    // A key of its own that no enumeration can see is data this kernel would drop, so a body carrying
+    // one is refused instead of copied (R304).
+    for (const key of keys) {
+      if (typeof key === 'symbol') { path.delete(value); return NOT_REPRESENTABLE; }
+    }
     // The copy is built without a prototype on purpose. Assigning to `{}` runs the inherited
     // `__proto__` setter, so a JSON body carrying that key either changed this copy's prototype and
     // lost the key, or made the copy unrepresentable a second time, which is how a verified signal
