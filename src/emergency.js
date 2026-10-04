@@ -391,6 +391,33 @@ function readRecords(ledger) {
 
 const LEDGER = new WeakMap();
 
+// The ledger a grant family lives in. The cap, the replay sets, the pause, the revocation and the
+// rejected review all live in one record, so a record that a caller can move to a fresh ledger is a
+// record that can be reset: a rejected use and a revoked grant exercised again on the next ledger,
+// with the counter, the review and the cap all left behind (H05). So the ledger is bound to the
+// private family at its first administrative call or exercise and never moves: another ledger is
+// refused, a renewal keeps the same family and therefore the same ledger, and the two guarantees
+// this capability rests on cannot be restarted by choosing a different object. The family, not the
+// handle, is the key, so renewing a permission cannot hand the caller a fresh account.
+//
+// What this does NOT do: keep the ledger across a process. The binding lives in this process's
+// memory, so a host that does not persist and restore its ledger has no counter to restore, and a
+// restart is indistinguishable from a first grant. That is a durability limit, declared as one.
+const FAMILY_LEDGER = new WeakMap();
+const FOREIGN_LEDGER = 'this emergency permission is bound to the ledger it was first used with, and this kernel will not read or change its record through another one';
+
+// Binds the family to the ledger on first sight, or refuses a ledger this family does not live in.
+// Refusal is not an error the caller can retry away: it is the answer, and every reader of a record
+// in the wrong ledger fails closed.
+function bindLedger(ledger, family) {
+  const held = FAMILY_LEDGER.get(family);
+  if (held === undefined) {
+    FAMILY_LEDGER.set(family, ledger);
+    return true;
+  }
+  return held === ledger;
+}
+
 function newRecord() {
   return {
     family: null, uses: 0, paused: false, revoked: false, stopped: false, rejectedUse: null,
@@ -783,6 +810,10 @@ function exerciseEmergency(permission, request, options = {}) {
   if (!records) return fail('a kernel emergency ledger is required to exercise emergency access', at, asked.signal ? asked.signal.id : null);
   // Readable is not granted: only the object the grant path produced carries authority.
   if (!bound) return fail('no grant is bound to this emergency permission: an object that did not come through the grant path exercises nothing', at, asked.signal ? asked.signal.id : null);
+  // And the record only answers in the ledger this grant was first used with. A second ledger is a
+  // record that never saw the cap, the review or the revocation, so it is refused before anything is
+  // looked at and nothing is spent (H05).
+  if (!bindLedger(ledger, bound.family)) return fail(FOREIGN_LEDGER, at, asked.signal ? asked.signal.id : null);
   const claimed = claimRecord(records, snapshot.id, bound.family);
   if (!claimed.ok) return fail(claimed.reason, at, asked.signal ? asked.signal.id : null);
   const record = claimed.record;
@@ -879,6 +910,7 @@ function reviewEmergencyUse(permission, useId, options = {}) {
   if (decision !== 'accept' && decision !== 'reject') throw new Error('review decision must be accept or reject');
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to close an emergency review');
+  if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
   const found = readRecord(records, snapshot.id, bound.family);
   if (!found.ok) throw new Error(found.reason);
   const record = found.record;
@@ -943,6 +975,7 @@ function pauseEmergencyPermission(permission, options = {}) {
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to pause an emergency permission');
+  if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
   const claimed = claimRecord(records, snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   claimed.record.paused = true;
@@ -958,6 +991,7 @@ function resumeEmergencyPermission(permission, options = {}) {
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to resume an emergency permission');
+  if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
   const claimed = claimRecord(records, snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   const record = claimed.record;
@@ -976,6 +1010,7 @@ function revokeEmergencyPermission(permission, options = {}) {
   if (by !== snapshot.owner) throw new Error('only the person who granted this emergency permission may revoke it');
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to revoke an emergency permission');
+  if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
   const claimed = claimRecord(records, snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   claimed.record.revoked = true;
@@ -1077,10 +1112,15 @@ function getEmergencyState(permission, options = {}) {
   if (!snapshot) throw new Error('emergency permission is malformed and has no state');
   const bound = bindingOf(permission);
   const records = readRecords(ledger);
+  // A record this family does not live in is not read at all. Reading it would answer with a counter
+  // that never saw the uses, and refusing to read leaves the honest answer, which is that this kernel
+  // cannot say anything about that other ledger (H05).
+  const foreignLedger = Boolean(records) && Boolean(bound) && FAMILY_LEDGER.get(bound.family) !== undefined
+    && FAMILY_LEDGER.get(bound.family) !== ledger;
   // A ledger that exists but has never seen this id is a permission nobody has touched yet, not a
   // missing one: the reads below need a record either way. A record that belongs to another family
   // is not read at all, so this call can neither reveal nor answer for it.
-  const found = !records || !bound ? { ok: true, record: null } : readRecord(records, snapshot.id, bound.family);
+  const found = !records || !bound || foreignLedger ? { ok: true, record: null } : readRecord(records, snapshot.id, bound.family);
   const foreign = !found.ok;
   const record = found.ok ? (found.record || newRecord()) : null;
   const uses = record ? record.uses : 0;
@@ -1100,6 +1140,12 @@ function getEmergencyState(permission, options = {}) {
   } else if (!bound) {
     status = 'unbound';
     nextUse = 'blocked_unbound';
+  } else if (foreignLedger) {
+    // This grant lives in another ledger, so the record that holds its cap, its revocation and its
+    // rejected review is somewhere this call was not given. The honest answer is that this kernel
+    // cannot answer for it.
+    status = 'ledger_conflict';
+    nextUse = 'blocked_ledger_conflict';
   } else if (foreign) {
     // The id belongs to another grant. The honest answer is that this kernel cannot answer for it,
     // and it says so instead of reporting another person's availability.

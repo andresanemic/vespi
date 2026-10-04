@@ -91,8 +91,17 @@ const REQUEST = (overrides = {}) => {
   };
 };
 
+// One ledger per permission across this file. A grant is bound to the ledger it was first used with
+// (H05), so exercising the same permission twice hands it the same ledger instead of a fresh one: a
+// test that wants a particular ledger still passes it in `extra`.
+const LEDGERS = new WeakMap();
+const ledgerFor = (permission) => {
+  if (!LEDGERS.has(permission)) LEDGERS.set(permission, emergency.createEmergencyLedger());
+  return LEDGERS.get(permission);
+};
+
 const use = (permission, request, now, extra = {}) => emergency.exerciseEmergency(permission, request, {
-  ledger: emergency.createEmergencyLedger(), now, ...extra,
+  ledger: ledgerFor(permission), now, ...extra,
 });
 const review = (permission, useId, ledger, decision, now) => emergency.reviewEmergencyUse(permission, useId, {
   ledger, by: 'person-1', decision, now,
@@ -626,7 +635,7 @@ test('a signal the kernel cannot represent is refused before a single use is spe
     assert.equal(verifyReceipt(result.receipt).ok, true);
     assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 0);
   }
-  const spoken = use(permission, REQUEST({ triggerSignal: { id: 'signal-use-1', source: 'triage-service', critical: true } }), AT);
+  const spoken = use(permission, REQUEST({ triggerSignal: { id: 'signal-use-1', source: 'triage-service', critical: true } }), AT, { ledger });
   assert.equal(spoken.state, 'review_pending', 'a plain signal still works after the refusals');
 });
 
