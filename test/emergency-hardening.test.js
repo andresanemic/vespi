@@ -107,8 +107,16 @@ test('H02 a review deadline past the whole calendar is refused when the grant is
   await assert.rejects(() => granted({ reviewDueMs: span + 1 }),
     /reviewDueMs|review|range|calendar|integer/i);
   // One millisecond inside the widest span the calendar holds is still a deadline it can measure, so
-  // the fix may not refuse it.
-  const permission = await granted({ id: 'h02-wide', reviewDueMs: span });
+  // the fix may not refuse it. The fixture of that boundary moved when R305 was fixed: the widest
+  // span only belongs to a permission that opens at the beginning of the calendar. A grant that opens
+  // in 2026 and asks for all of recorded time as its review delay has no instant of its own interval
+  // that could stamp one, and is refused for that reason instead (R305, below).
+  const permission = await granted({
+    id: 'h02-wide',
+    startsAt: '0000-01-01T00:00:00.000Z',
+    expiresAt: '9999-12-31T23:59:59.999Z',
+    reviewDueMs: span,
+  });
   assert.equal(typeof permission.reviewDueMs, 'number');
   // And the ordinary deadlines keep working.
   assert.equal((await granted({ id: 'h02-small', reviewDueMs: 30 * 24 * HOUR })).reviewDueMs, 30 * 24 * HOUR);

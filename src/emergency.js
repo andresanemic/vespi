@@ -273,6 +273,15 @@ function snapshotPermission(permission) {
     // a signature on a permission that can never be exercised is refused here instead (H02).
     if (reviewDueMs > CALENDAR_SPAN_MS) return { ok: false, reason: `reviewDueMs is longer than the whole calendar (${CALENDAR_SPAN_MS} ms), so no use of this permission could ever stamp its review` };
     if (startsAt === null || expiresAt === null || expiresAt <= startsAt) return { ok: false, reason: 'it needs a valid clock interval' };
+    // The same question inside this permission's own interval, which is the one that matters. A span
+    // the calendar holds in general can still be longer than every instant between this grant's
+    // `startsAt` and its `expiresAt`: a grant that opens in October 2026 and asks for the whole of
+    // recorded time as its review delay has no instant at which its review could be stamped, so every
+    // one of its uses would be refused and nothing would ever reach the verifier. Refused before the
+    // host is asked, because a deadline this permission can never meet is not authority (R305).
+    if (parseTime(startsAt + reviewDueMs) === null) {
+      return { ok: false, reason: `reviewDueMs (${reviewDueMs} ms) is a deadline no instant of this permission's own interval can stamp, so none of its uses could ever open a review` };
+    }
     // The signal has to come from somebody who is neither the agent that will exercise the
     // permission nor the person who granted it. Independence is structural, not a promise.
     for (const trigger of triggers) {
