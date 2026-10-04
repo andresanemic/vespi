@@ -235,7 +235,8 @@ function extraIsSupported(extra) {
 
 // One offer is acceptable only when it is the declared effect, exactly. A smaller amount is not a
 // discount this kernel accepts, and a larger one is not covered by the ceiling: the amount is
-// compared as a canonical decimal, never as a bound.
+// compared as a canonical decimal, never as a bound. The signing window has to fit inside the one
+// the declaration asked for, so a declared ceiling governs something and not only the global bounds.
 function offerIsExact(offer, spec) {
   if (!isPlainObject(offer)) return false;
   if (offer.scheme !== SUPPORTED_SCHEME) return false;
@@ -245,6 +246,7 @@ function offerIsExact(offer, spec) {
   if (typeof offer.amount !== 'string' || !ATOMIC.test(offer.amount) || offer.amount !== spec.amount) return false;
   if (!Number.isInteger(offer.maxTimeoutSeconds)) return false;
   if (offer.maxTimeoutSeconds < MIN_WINDOW_SECONDS || offer.maxTimeoutSeconds > MAX_WINDOW_SECONDS) return false;
+  if (offer.maxTimeoutSeconds > spec.maxTimeoutSeconds) return false;
   return extraIsSupported(offer.extra);
 }
 
