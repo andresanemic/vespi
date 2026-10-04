@@ -23,9 +23,15 @@ const { types: utilTypes } = require('node:util');
 // A canonical positive decimal amount, at most 78 digits, no sign, no exponent, no leading zero.
 const ATOMIC = /^[1-9][0-9]{0,77}$/;
 const HASH = /^[0-9a-f]{64}$/;
-// The name of a control a port reports. It ends up on a sealed receipt, so it admits an identifier
-// and nothing else: no spaces, no separators, no free text of any length beyond the identifier.
-const CONTROL_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
+// The control names the settlement reader is allowed to report. A control name is host-written text
+// that ends up on a sealed receipt, and the identifier shape is not enough: it admits a 64-character
+// token with the shape of a Stellar seed, and that text was sealed in as `settlement_<name>`. The
+// receipt knows this closed set of names, so anything else a port invents is refused instead of
+// carried. A new control is a change to this catalog and to the receipt that carries it, not
+// something a host may add at run time.
+const SETTLEMENT_CONTROLS = new Set([
+  'invocation', 'authorization', 'prepared', 'transfer', 'payer', 'source', 'exactAmount',
+]);
 const MAX_TEXT = 512;
 const MIN_WINDOW_SECONDS = 1;
 const MAX_WINDOW_SECONDS = 300;
@@ -554,9 +560,9 @@ async function verifySettlementEffect(ctx, evidence) {
 // exactly true, a reason in words, and at least one control, every control a boolean and every
 // control true. An invalid control is never dropped: a dropped control leaves a shorter set, and a
 // shorter set that happens to be empty reads as complete. A control name is host-written text and
-// this receipt admits no free text, so only a plain identifier is allowed to travel. Everything is
-// read once inside the guard, so a getter cannot answer twice and the verdict returned here is the
-// verdict that was validated.
+// this receipt admits no free text, so only a name of the closed catalog travels (SETTLEMENT_CONTROLS).
+// Everything is read once inside the guard, so a getter cannot answer twice and the verdict returned
+// here is the verdict that was validated.
 function readVerdict(verdict) {
   const out = { ok: false, checks: {} };
   try {
@@ -568,7 +574,7 @@ function readVerdict(verdict) {
     const keys = Object.keys(controls);
     if (keys.length === 0) return out;
     for (const key of keys) {
-      if (!CONTROL_NAME.test(key)) return out;
+      if (!SETTLEMENT_CONTROLS.has(key)) return out;
       const value = controls[key];
       if (typeof value !== 'boolean') return out;
       out.checks[key] = value;

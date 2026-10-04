@@ -390,11 +390,13 @@ test('H14 a settlement asset of null is a contradiction, not an absent field', a
 
 test('H15 a control name written by a port cannot travel into a sealed receipt', async () => {
   // The settlement port names its own controls. The receipt admits kernel-written codes, so a control
-  // name is port-written text and has to be refused rather than carried.
+  // name is port-written text and has to be refused rather than carried. `SYNTHETIC_PRIVATE_MARKER`
+  // is a legal identifier, so it is the hardest spelling of the case and the one that matters: before
+  // the closed catalog of control names, any identifier of that shape was sealed into the receipt.
   const ports = fakePorts({
     verifySettlement: async () => ({
       verified: true,
-      checks: { transfer: true, [`note: ${PRIVATE_MARKER} lives here`]: true },
+      checks: { transfer: true, [PRIVATE_MARKER]: true },
       reason: 'independent readback',
     }),
   });
@@ -402,7 +404,7 @@ test('H15 a control name written by a port cannot travel into a sealed receipt',
   assert.equal(
     JSON.stringify(res.receipt).includes(PRIVATE_MARKER),
     false,
-    'no free text written by a port travels into a receipt',
+    'no text written by a port travels into a receipt',
   );
   assert.notEqual(res.status, 'verified', 'a verdict is admitted whole or not at all');
 });
