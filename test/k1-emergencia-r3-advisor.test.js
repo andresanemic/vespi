@@ -118,6 +118,19 @@ test('R304 a signal with an enumerable symbol key is refused instead of silently
   assert.equal(calls, 0);
 });
 
+// R304 said "an object"; this round closed the array too, because an array is the other shape the
+// canonical walk copies and a symbol key on one used to be dropped from it exactly the same way.
+test('R304 a signal whose samples array carries a symbol key is refused as well', async () => {
+  let calls = 0;
+  const permission = await granted({}, () => { calls += 1; return { verified: true }; });
+  const ledger = emergency.createEmergencyLedger();
+  const samples = [1, 2];
+  samples[Symbol('hidden-evidence')] = 'not JSON';
+  assert.equal(run(permission, ledger, REQUEST({ triggerSignal: { id: 's', source: 'sensor', samples } })).state, 'blocked');
+  assert.equal(calls, 0);
+  assert.equal(state(permission, ledger).uses, 0);
+});
+
 test('R305 a grant with no representable review deadline anywhere in its own interval is refused before authorization', async () => {
   let approvals = 0;
   const span = Date.parse('9999-12-31T23:59:59.999Z') - Date.parse('0000-01-01T00:00:00.000Z');

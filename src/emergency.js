@@ -98,7 +98,6 @@ function freeze(value) {
 const MAX_DEPTH = 32;
 const MAX_NODES = 4096;
 
-
 // The canonical form of data this kernel is willing to hash and seal: JSON primitives, plain objects
 // and arrays, keys sorted. Anything else — a function, a symbol, a bigint, an infinite number, a
 // cycle, a class instance, an object from another realm — is refused rather than half-copied, because
@@ -141,6 +140,11 @@ function canonical(value, seen, budget, depth) {
     path.delete(value);
     return NOT_REPRESENTABLE;
   }
+  // A key of its own that no enumeration can see is data this kernel would drop, so a body carrying
+  // one is refused instead of copied, array or object alike (R304).
+  for (const key of keys) {
+    if (typeof key === 'symbol') { path.delete(value); return NOT_REPRESENTABLE; }
+  }
   let out;
   if (Array.isArray(value)) {
     // Only indices 0..length-1, all of them own, and the enumerable keys exactly those. The old count
@@ -159,11 +163,6 @@ function canonical(value, seen, budget, depth) {
   } else {
     const proto = Object.getPrototypeOf(value);
     if (proto !== Object.prototype && proto !== null) { path.delete(value); return NOT_REPRESENTABLE; }
-    // A key of its own that no enumeration can see is data this kernel would drop, so a body carrying
-    // one is refused instead of copied (R304).
-    for (const key of keys) {
-      if (typeof key === 'symbol') { path.delete(value); return NOT_REPRESENTABLE; }
-    }
     // The copy is built without a prototype on purpose. Assigning to `{}` runs the inherited
     // `__proto__` setter, so a JSON body carrying that key either changed this copy's prototype and
     // lost the key, or made the copy unrepresentable a second time, which is how a verified signal
