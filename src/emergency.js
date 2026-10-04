@@ -1174,7 +1174,11 @@ function emergencyState(permission, ledger, now) {
   const found = !records || !bound || foreignLedger ? { ok: true, record: null } : readRecord(records, snapshot.id, bound.family);
   const foreign = !found.ok;
   const record = found.ok ? (found.record || newRecord()) : null;
-  const uses = record ? record.uses : 0;
+  // `null` when this family's record lives in another ledger and was not read: zero would be a number
+  // nobody measured, and a caller reading a capacity out of it would be reading a counter that never
+  // saw the uses. A record of another family is a different case and keeps its honest zero: this
+  // family's own count in this ledger really is zero, the other family's stays unrevealed.
+  const uses = foreignLedger ? null : (record ? record.uses : 0);
   const clock = readClock(now);
   // A clock nobody injected and nobody could read is not replaced with wall time to decide whether
   // the permission is available: the honest answer is that this kernel does not know.
@@ -1237,9 +1241,12 @@ function emergencyState(permission, ledger, now) {
   return {
     id: snapshot.id,
     status,
+    // A record this kernel did not read has no count, and zero would be a number nobody measured: a
+    // caller reading a capacity out of it would be reading a counter that never saw the uses. Null
+    // is the honest answer, and `status` says why (H05).
     uses,
     maxUses: snapshot.maxUses,
-    remainingUses: Math.max(0, snapshot.maxUses - uses),
+    remainingUses: uses === null ? null : Math.max(0, snapshot.maxUses - uses),
     expiresAt: iso(snapshot.expiresAt),
     paused: Boolean(record && record.paused),
     revoked: Boolean(record && record.revoked),

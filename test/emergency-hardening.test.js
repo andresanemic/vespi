@@ -204,7 +204,10 @@ test('H05 the ledger binding survives a renewal, so the clock cannot buy a fresh
   assert.equal(result.state, 'blocked');
   assert.match(result.reason, /ledger/i);
   assert.equal(emergency.getEmergencyState(renewed, { ledger: first, now: AT }).uses, 1);
-  assert.equal(emergency.getEmergencyState(renewed, { ledger: other, now: AT }).uses, 0);
+  // A record this kernel did not read has no count to report: `uses` is null, not zero, so nobody can
+  // read a capacity into a record this call never saw.
+  assert.equal(emergency.getEmergencyState(renewed, { ledger: other, now: AT }).uses, null);
+  assert.equal(emergency.getEmergencyState(renewed, { ledger: other, now: AT }).remainingUses, null);
   assert.equal(emergency.getEmergencyState(renewed, { ledger: other, now: AT }).status, 'ledger_conflict');
   // And it refuses on the administrative side too, so the binding cannot be moved by pausing first.
   assert.throws(() => emergency.pauseEmergencyPermission(renewed, { ledger: other, by: 'person', now: AT }), /ledger/i);
