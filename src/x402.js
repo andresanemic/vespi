@@ -854,12 +854,14 @@ async function performStages(ctx, spec, ports, io) {
   // Without a usable transaction hash there is nothing to verify and nothing to reconcile against:
   // the outcome is unknown, and the receipt says so instead of calling it a failure.
   if (settlement.txHash === null) return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
+  // The transaction is claimed as soon as there is a hash to claim, before anything is exposed: a
+  // settlement the run then refuses is still a transaction this process has already seen.
+  const claim = ctx.claims.claimTransaction(ctx.expected.network, settlement.txHash);
+  ctx.transactionUnique = claim === 'claimed';
+
   // A hash that contradicts the declaration keeps its evidence on the receipt: the person reconciles
   // it. It is not verified and no output is exposed.
   if (!settlement.ok) return { ok: true, evidence: ctx.evidence, output: null };
-
-  const claim = ctx.claims.claimTransaction(ctx.expected.network, settlement.txHash);
-  ctx.transactionUnique = claim === 'claimed';
 
   const delivery = await readDelivery(response, ctx);
   // A delivery on a cancelled run is not a delivery: the answer arrived after the run was called

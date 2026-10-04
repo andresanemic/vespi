@@ -12,6 +12,7 @@ const path = require('node:path');
 const { createOperation } = require('../src/operation.js');
 const { verifyReceipt } = require('../src/receipt.js');
 const { resumeFromReceipts } = require('../src/continuity.js');
+const { buildReceipt } = require('../src/receipt.js');
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
 
@@ -1257,4 +1258,192 @@ test('K4-F6 the claims capacity is an integer within bounds and anything else fa
   const small = createMemoryPaymentClaims({ capacity: 1 });
   assert.equal(small.reserveEffect('f'.repeat(64)), 'claimed');
   assert.equal(small.reserveEffect('0'.repeat(64)), 'capacity');
+});
+// =====================================================================================
+// Group G — compatibility, continuity and the settlement verdict over a synthetic readback
+// (cases 22, 23 and 24)
+// =====================================================================================
+
+const SEALED_RECEIPT = path.join(__dirname, '..', 'demo', 'x402', 'receipts', 'live-testnet-2026-10-02.json');
+const SEALED_DIGEST = '0276794d68e0eb0fc25f4db3ed3991252c59d29c317277067e75cc02df8c4265';
+const SEALED_TX = 'abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5';
+const USDC = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
+const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+
+test('K4-G1 the sealed live receipt keeps its digest, and a receipt rebuilt from it has the same one', () => {
+  const sealed = JSON.parse(fs.readFileSync(SEALED_RECEIPT, 'utf8'));
+  assert.equal(sealed.digest, SEALED_DIGEST);
+  assert.equal(sealed.evidence.txHash, SEALED_TX);
+  assert.equal(verifyReceipt(sealed).ok, true);
+  assert.equal(sealed.anchor.status, 'pending');
+  assert.deepEqual(sealed.notCovered, ['external anchor']);
+  const rebuilt = buildReceipt({
+    operation: { id: 'op-mur9yczl-0', goal: 'obtain-marketing-plan (demo)' },
+    capabilityId: 'x402-marketing-plan',
+    authority: {
+      spend: [{ asset: `USDC:${USDC}`, maxAmount: '500000', to: 'GD7MPNDYJO6YOQJ2NTSWDN2QDPZWORG2J7L7SCVIXU3IGVOMJNGZUV6J' }],
+      approval: 'preauthorized',
+    },
+    outcome: {
+      status: 'verified',
+      exercised: [{ asset: `USDC:${USDC}`, amount: '100000', to: 'GD7MPNDYJO6YOQJ2NTSWDN2QDPZWORG2J7L7SCVIXU3IGVOMJNGZUV6J' }],
+    },
+    evidence: sealed.evidence,
+    verification: sealed.verification,
+    at: sealed.at,
+  });
+  assert.equal(rebuilt.digest, SEALED_DIGEST, 'a receipt built without the new module keeps its previous digest');
+  assert.deepEqual(rebuilt, sealed);
+});
+
+test('K4-G2 no public export was removed or renamed by the new module', () => {
+  const operation = require('../src/operation.js');
+  const authority = require('../src/authority.js');
+  const receipt = require('../src/receipt.js');
+  const continuity = require('../src/continuity.js');
+  const time = require('../src/time.js');
+  const delegation = require('../src/delegation.js');
+  assert.deepEqual(Object.keys(operation).sort(), ['DEFAULT_EXIT', 'STATES', 'createOperation', 'pauseOperation', 'resumeOperation', 'runOperation']);
+  assert.deepEqual(Object.keys(authority).sort(), ['grantSpend', 'sufficient']);
+  assert.deepEqual(Object.keys(receipt).sort(), ['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt']);
+  assert.deepEqual(Object.keys(continuity), ['resumeFromReceipts']);
+  assert.deepEqual(Object.keys(time), ['parseTime']);
+  assert.ok(Object.keys(delegation).length > 0);
+  assert.deepEqual(Object.keys(require('../src/x402.js')).sort(), ['createMemoryPaymentClaims', 'createX402Payment', 'selectX402Terms']);
+});
+
+test('K4-G3 continuity: an exercised not_verified asks for reconciliation and an unanchored verified is not resumable', async () => {
+  const uncertainPorts = fakePorts({
+    sendPaid: async () => paidResponse({ settlement: { success: false, transaction: TX_HASH, payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }),
+  });
+  const uncertain = await runOnce(uncertainPorts);
+  assert.equal(uncertain.status, 'not_verified');
+  assert.equal(uncertainPorts.calls.claimTransaction, 1);
+  const agreement = { approved: [{ action: 'pay', maxAttempts: 3 }] };
+  const pending = resumeFromReceipts([uncertain.receipt], agreement, { verifyExternal: () => true });
+  assert.equal(pending.needsPerson, true);
+  assert.equal(pending.reason, 'reconciliation_required');
+  assert.equal(pending.nextAction, null);
+
+  const settled = await runOnce(fakePorts());
+  assert.equal(settled.status, 'verified');
+  assert.equal(settled.receipt.anchor.status, 'pending');
+  const withoutAnchor = resumeFromReceipts([settled.receipt], agreement, { verifyExternal: () => true });
+  assert.equal(withoutAnchor.needsPerson, true, 'a verified payment with no external anchor does not continue by itself');
+  assert.match(withoutAnchor.reason, /returns to the person/);
+  const local = resumeFromReceipts([settled.receipt], { approved: [{ action: 'pay', localReversible: true }] }, { verifyLocal: () => true });
+  assert.equal(local.needsPerson, false, 'only an explicitly local, reversible action may use the local receipt');
+});
+
+// A synthetic readback with the shape the reference bridge reads: an invocation, its authorization
+// entry, the ledger sequence and the balance changes. Synthetic on purpose — no envelope, no XDR and
+// no historical transaction is reproduced here, and nothing in this file proves a live payment.
+function readback(over = {}) {
+  const entry = {
+    payer: over.payer || 'PAYER',
+    expiration: over.expiration === undefined ? 1010 : over.expiration,
+    signature: over.signature === undefined ? ['sig'] : over.signature,
+    subInvocations: over.subInvocations || [],
+    assetContract: over.assetContract || 'TOKEN',
+    payTo: over.payTo || 'RECIPIENT',
+    amount: over.amount || '100000',
+  };
+  return {
+    successful: over.successful === undefined ? true : over.successful,
+    ledger: over.ledger === undefined ? 1000 : over.ledger,
+    hash: over.hash === undefined ? TX_HASH : over.hash,
+    entry,
+    changes: over.changes === undefined ? [{
+      asset_code: 'USDC', asset_issuer: ISSUER, from: 'TOKEN', to: entry.payTo, amount: '0.0100000',
+    }] : over.changes,
+    pageIncomplete: over.pageIncomplete === true,
+  };
+}
+
+// The rules the reference settlement verification applies, expressed without any SDK: an invocation
+// of `transfer` on the asset contract, an authorization entry for the payer with a signature and no
+// sub-invocations inside the window, an exactly one balance change to the recipient, and a complete
+// page. The contract has to carry this verdict and nothing else.
+function simulatedSettlementPort(data, expected) {
+  return async (evidence, request) => {
+    const want = request.expected || expected;
+    const fail = (reason, checks = {}) => ({ verified: false, checks, reason });
+    if (data.hash !== evidence.txHash) return fail('Horizon transaction hash does not match requested hash');
+    if (data.successful !== true) return fail('transaction not successful');
+    if (!Number.isSafeInteger(data.ledger) || data.ledger < 0) return fail('transaction ledger is missing or invalid');
+    if (data.pageIncomplete) return fail('Horizon operation page is not complete');
+    const entry = data.entry;
+    if (entry.expiration <= data.ledger) return fail('payer authorization expiration is outside the permitted window');
+    if (entry.subInvocations.length !== 0) return fail('payer authorization contains sub-invocations');
+    if (entry.signature.length === 0) return fail('authorization signature is missing or unsupported');
+    if (entry.payer !== want.payer) return fail('payer authorization entry is missing', { authorization: false });
+    if (entry.assetContract !== want.asset) return fail('invocation contract does not match the asset contract', { invocation: false });
+    if (entry.payTo !== want.payTo || entry.amount !== want.amount) return fail('payer authorization does not match the transfer', { invocation: false });
+    if (request.authDigest !== AUTH_DIGEST) return fail('authorization digest does not match the current payload', { authorization: false });
+    const changes = data.changes.filter((change) => change.asset_code === 'USDC' && change.asset_issuer === ISSUER && change.to === want.payTo);
+    if (changes.length !== 1) return fail('expected exactly one USDC transfer to recipient', { transfer: false });
+    const atomic = BigInt(changes[0].amount.replace('.', '').padEnd(7, '0').replace(/(\d+)0*$/, '$1'));
+    if (atomic !== BigInt(want.amount)) return fail('transfer amount does not match exact amount', { exactAmount: false });
+    return {
+      verified: true,
+      checks: { invocation: true, authorization: true, transfer: true, payer: true, source: true, exactAmount: true },
+      reason: 'settlement matches exact declared effect',
+    };
+  };
+}
+
+test('K4-G4 the settlement verdict decides the receipt, and a negative readback is never a verified payment', async () => {
+  const refusals = {
+    'classic invocation with an equal event on another payer': readback({ payer: 'SOMEONE-ELSE' }),
+    'a sub-invocation inside the authorization': readback({ subInvocations: ['transfer'] }),
+    'a pending signature': readback({ signature: [] }),
+    'a different payer': readback({ payer: 'OTHER' }),
+    'a different asset contract': readback({ assetContract: 'OTHER' }),
+    'a different recipient': readback({ payTo: 'OTHER' }),
+    'a different amount': readback({ amount: '400000' }),
+    'a different hash': readback({ hash: 'b'.repeat(64) }),
+    'an unsuccessful transaction': readback({ successful: false }),
+    'an incomplete operation page': readback({ pageIncomplete: true }),
+    'no ledger sequence': readback({ ledger: null }),
+    'no transfer to the recipient': readback({ changes: [] }),
+    'two transfers to the recipient': readback({ changes: [
+      { asset_code: 'USDC', asset_issuer: ISSUER, from: 'TOKEN', to: 'RECIPIENT', amount: '0.0100000' },
+      { asset_code: 'USDC', asset_issuer: ISSUER, from: 'TOKEN', to: 'RECIPIENT', amount: '0.0100000' },
+    ] }),
+  };
+  for (const [label, data] of Object.entries(refusals)) {
+    const ports = fakePorts({ sendPaid: async () => paidResponse(), verifySettlement: simulatedSettlementPort(data) });
+    const res = await runOnce(ports);
+    assert.equal(res.status, 'not_verified', label);
+    assert.equal(res.output, null, label);
+    assert.equal(res.receipt.verification.checks.settlement, false, label);
+    assert.ok(res.receipt.notCovered.some((name) => name.startsWith('settlement')), label);
+  }
+  const positive = fakePorts({ sendPaid: async () => paidResponse(), verifySettlement: simulatedSettlementPort(readback()) });
+  const res = await runOnce(positive);
+  assert.equal(res.status, 'verified');
+  assert.equal(res.receipt.verification.checks.settlement, true);
+  assert.equal(res.receipt.verification.checks.settlement_invocation, true);
+  assert.equal(res.receipt.verification.checks.settlement_exactAmount, true);
+  assert.deepEqual(res.receipt.coverage.sort(), [
+    'delivery', 'prepared', 'settlement', 'settlement_authorization', 'settlement_exactAmount',
+    'settlement_invocation', 'settlement_payer', 'settlement_source', 'settlement_transfer',
+    'terms', 'transactionUnique',
+  ]);
+});
+
+test('K4-G5 the settlement port is asked about the declared effect, never about what the answer said', async () => {
+  let seen = null;
+  const ports = fakePorts({
+    sendPaid: async () => paidResponse(),
+    verifySettlement: async (evidence, request) => {
+      seen = request;
+      return { verified: true, checks: { invocation: true }, reason: 'settlement matches exact declared effect' };
+    },
+  });
+  await runOnce(ports);
+  assert.deepEqual(seen.expected, { network: 'stellar:testnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000' });
+  assert.equal(seen.authDigest, AUTH_DIGEST);
+  assert.equal(typeof seen.signal.aborted, 'boolean');
+  assert.equal(seen.expected.grantAsset, undefined, 'the grant asset is not part of the protocol effect');
 });
