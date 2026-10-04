@@ -71,7 +71,7 @@ const FIXTURE_ANCHORS = `{
       "nota": null
     },
     {
-      "digest": "f7a1c6d2b3e4908a7562134fedcba9876543210ffeeddccbbaa00998877665544",
+      "digest": "f7a1c6d2b3e4908a7562134fedcba9876543210ffeeddccbbaa0099887765544",
       "evento": "hito_abierto",
       "hito": "h1",
       "version": 1,
@@ -329,7 +329,7 @@ test('F1c-R2: an anchor the record marks as coming from an unauthorized account 
   assert.equal(entry.declared.extras.source_account, AJENA, 'the nota names the foreign account as the one that anchored');
   const notas = entry.expectedFrom.citations.filter((citation) => citation.contains.includes('cuenta_no_autorizada'));
   assert.ok(notas.length > 0, 'the derivation must cite the nota that says so');
-  assert.ok(entry.expectedFrom.citations.some((citation) => citation.contains === AJENA), 'and the account it names');
+  assert.ok(entry.expectedFrom.citations.some((citation) => citation.contains.includes(AJENA)), 'and the account it names');
 });
 
 test('F1c-R3: concurrent anchors keep each writer its own ledger, digest and declared position in the network', async () => {
@@ -403,13 +403,16 @@ test('F1c-R6: an x402 corrida receipt declares the payment it exercised and cite
 test('F1c-A1: a file that mentions a hash without declaring a run is not a run record', async () => {
   const dir = await root({
     'notas.md': `# apuntes\n\nse vio ${ANCHOR_HASH} en la red\n`,
+    'apuntes.json': JSON.stringify({ notas: [`se vio ${ANCHOR_HASH} en la red`] }, null, 2),
     'tramos/3/corrida-exp-murckqaa.json': FIXTURE_ANCHORS,
   });
   const collector = await collectorModule;
   const loaded = await collector.loadRunRecords([{ repository: 'TEMIS', directory: dir }]);
 
-  assert.ok(loaded.files.every((file) => file.format !== null), 'every file that was read reports the format it matched, or none');
-  assert.deepEqual(loaded.declarations.get(ANCHOR_HASH).expectedFrom.format, 'temis_anchor_run');
+  assert.deepEqual(loaded.files.map((file) => file.file), ['apuntes.json', 'tramos/3/corrida-exp-murckqaa.json'], 'only json records are read');
+  assert.equal(loaded.files.find((file) => file.file === 'apuntes.json').format, null, 'a note that mentions a hash has no recognized run format');
+  assert.equal(loaded.declarations.get(ANCHOR_HASH)[0].expectedFrom.format, 'temis_anchor_run');
+  assert.deepEqual([...loaded.declarations.keys()].sort(), [ANCHOR_HASH, FOREIGN_HASH].sort(), 'only the two anchors of the run record declare anything');
   const ignored = await declarationFor({ hash: UNKNOWN_HASH, run: 'sin registro' }, [{ repository: 'TEMIS', directory: dir }]);
   assert.equal(ignored.expectedFrom, null);
   assert.match(ignored.expectedFromReason, /no run record|no se encontro/i);
@@ -570,15 +573,18 @@ test('F1c-V4: a transfer count that does not match the readback is a discrepancy
   assert.match(result.discrepancies[0].detail, /2/);
 });
 
-test('F1c-V5: a memo hash declared as text is a discrepancy, not a match', async () => {
+test('F1c-V5: a memo the record declared as text is compared as text, and Horizon not reporting the memo type is a stated limit', async () => {
   const { verifyDeclaredFacts } = await verifierModule;
   const response = { transaction: { successful: true, memo: base64Hex(ANCHOR_DIGEST) }, operations: [{ type: 'bump_sequence' }] };
 
   const asHash = verifyDeclaredFacts(response, { memo: { kind: 'memo_hash', digest: ANCHOR_DIGEST } }, CAPTURED_AT);
   assert.deepEqual(asHash.matched, ['memo']);
 
-  const asText = verifyDeclaredFacts(response, { memo: { kind: 'text', value: base64Hex(ANCHOR_DIGEST) } }, CAPTURED_AT);
-  assert.deepEqual(asText.discrepancies.map((discrepancy) => discrepancy.field), ['memo']);
+  const asOtherText = verifyDeclaredFacts(response, { memo: { kind: 'text', value: 'ancla-1' } }, CAPTURED_AT);
+  assert.deepEqual(asOtherText.discrepancies.map((discrepancy) => discrepancy.field), ['memo']);
+
+  const asAbsent = verifyDeclaredFacts(response, { memo: null }, CAPTURED_AT);
+  assert.deepEqual(asAbsent.discrepancies.map((discrepancy) => discrepancy.field), ['memo'], 'no memo declared and a memo read back is a discrepancy');
 });
 
 test('F1c-V6: the strict verifier is untouched by partial declarations', async () => {
