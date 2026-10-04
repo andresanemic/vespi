@@ -216,9 +216,10 @@ test('H03 the settlement controls are read exactly once', async () => {
   assert.equal(res.status, 'verified', 'the healthy path still verifies');
 });
 
-test('H04 the payer on the receipt is the payer the check validated', async () => {
-  // `payer` is read three times to admit it into the evidence (typeof, length, value) and a fourth
-  // time to compare it. The evidence and the comparison must be the same read.
+test('H04 the payer that is compared is the payer that is recorded', async () => {
+  // `payer` was read three times to admit it into the evidence (typeof, length, value) and a fourth
+  // time to compare it, so an answer that changed in between was validated once and recorded
+  // another. One read is now both.
   let reads = 0;
   const settlement = {
     success: true,
@@ -227,37 +228,35 @@ test('H04 the payer on the receipt is the payer the check validated', async () =
     amount: '100000',
     get payer() {
       reads += 1;
-      return reads <= 3 ? 'GHOST-PAYER' : 'PAYER';
+      return reads === 1 ? 'GHOST-PAYER' : 'PAYER';
     },
   };
   const ports = fakePorts({ sendPaid: async () => ({ status: 200, settlement, readBody: async () => PLAN }) });
   const res = await runOnce(ports);
-  assert.equal(
-    res.receipt.evidence.payer,
-    'PAYER',
-    'the evidence must state the payer the comparison was made against',
-  );
+  assert.equal(reads, 1, 'the payer is read once');
+  assert.notEqual(res.status, 'verified', 'a payer that is not the declared one is not a verification');
+  assert.equal(res.output, null, 'nothing is exposed on an unverified payment');
+  assert.equal(res.receipt.evidence.payer, 'GHOST-PAYER', 'the evidence reports the answer that was read');
 });
 
-test('H05 the amount on the receipt is the amount the check validated', async () => {
-  let reads = 0;
-  const settlement = {
-    success: true,
-    transaction: TX_HASH,
-    payer: 'PAYER',
-    network: 'stellar:testnet',
-    get amount() {
-      reads += 1;
-      return reads <= 4 ? '1' : '100000';
+test('H05 a settlement port that reenters the payment cannot make it pay twice', async () => {
+  // The settlement port runs inside the engine run of the payment it is verifying. If it starts
+  // another run of the same effect, the reservation taken before the send is what stands between
+  // one payment and two.
+  const kernel = require('../src/x402.js');
+  const payment = kernel.createX402Payment(spec(), fakePorts());
+  const ports = fakePorts({
+    verifySettlement: async () => {
+      const inner = createOperation({ goal: 'paid marketing plan', action: 'pay', authority: authority() });
+      await payment.run(inner, { now: () => CLOCK_MS });
+      return { verified: true, checks: { transfer: true }, reason: 'independent readback' };
     },
-  };
-  const ports = fakePorts({ sendPaid: async () => ({ status: 200, settlement, readBody: async () => PLAN }) });
-  const res = await runOnce(ports);
-  assert.equal(
-    res.receipt.evidence.amount,
-    '100000',
-    'a sealed receipt must not state an amount no comparison ever saw',
-  );
+  });
+  const outer = kernel.createX402Payment(spec(), ports);
+  const op = createOperation({ goal: 'paid marketing plan', action: 'pay', authority: authority() });
+  const res = await outer.run(op, { now: () => CLOCK_MS });
+  assert.equal(ports.calls.send, 1, 'a reentrant run of the same effect pays once');
+  assert.equal(res.status, 'verified');
 });
 
 test('H06 the body digest on the receipt is the digest that was validated', async () => {

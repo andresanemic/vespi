@@ -777,16 +777,26 @@ function readSettlement(settlement, expected) {
   };
   if (!isPlainObject(settlement)) return answer;
   try {
-    answer.checks.success = settlement.success === true;
-    if (typeof settlement.payer === 'string' && settlement.payer.length > 0) answer.evidence.payer = settlement.payer;
-    if (typeof settlement.network === 'string' && settlement.network.length > 0) answer.evidence.network = settlement.network;
-    if (typeof settlement.amount === 'string' && settlement.amount.length > 0) answer.evidence.amount = settlement.amount;
-    answer.checks.payer = settlement.payer === expected.payer;
-    answer.checks.network = settlement.network === expected.network;
-    answer.checks.amount = settlement.amount === undefined ? true : settlement.amount === expected.amount;
-    if (settlement.asset !== undefined) answer.checks.asset = settlement.asset === expected.asset;
-    if (settlement.payTo !== undefined) answer.checks.payTo = settlement.payTo === expected.payTo;
-    const txHash = typeof settlement.transaction === 'string' ? settlement.transaction.trim().toLowerCase() : '';
+    // Every field is read once, into a local, and that local is both what the evidence records and
+    // what the comparison is made against: an answer that differs between the check and the use has
+    // nothing left to differ with.
+    const success = settlement.success;
+    const payer = settlement.payer;
+    const network = settlement.network;
+    const amount = settlement.amount;
+    const asset = settlement.asset;
+    const payTo = settlement.payTo;
+    const transaction = settlement.transaction;
+    answer.checks.success = success === true;
+    if (typeof payer === 'string' && payer.length > 0) answer.evidence.payer = payer;
+    if (typeof network === 'string' && network.length > 0) answer.evidence.network = network;
+    if (typeof amount === 'string' && amount.length > 0) answer.evidence.amount = amount;
+    answer.checks.payer = payer === expected.payer;
+    answer.checks.network = network === expected.network;
+    answer.checks.amount = amount === undefined ? true : amount === expected.amount;
+    if (asset !== undefined) answer.checks.asset = asset === expected.asset;
+    if (payTo !== undefined) answer.checks.payTo = payTo === expected.payTo;
+    const txHash = typeof transaction === 'string' ? transaction.trim().toLowerCase() : '';
     if (HASH.test(txHash)) {
       answer.txHash = txHash;
       answer.evidence.txHash = txHash;
