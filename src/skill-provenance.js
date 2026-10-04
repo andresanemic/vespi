@@ -22,6 +22,11 @@
 //     is computed here. A resolver that reports a matching digest string while shipping different
 //     bytes is refuted, not believed (decision 22: the verification record is computed by the code,
 //     not asserted by the agent).
+//   - What a receipt seals says which of the two things it is. The provenance block in a receipt is the
+//     declaration; `provenanceSource` says so, and says `verified` only when each of the four
+//     comparisons came out equal — which is when the block is also, string for string, what the
+//     resolver observed. Nothing the resolver wrote is copied into a sealed receipt (A18, reviews
+//     H06-H08, N01, H19), so a refutation is reported as a refutation and not as a value.
 //   - Nothing on the claim is trusted, including fields written after registration. The registered
 //     values live in a private binding, the way the bound orchestrator lives in `delegation.js` (S11):
 //     a claim that anyone can rewrite is not a grant, it is a suggestion.
@@ -336,6 +341,28 @@ function uncoveredKeys(checks) {
   return Object.keys(checks).filter((key) => checks[key] !== true).sort();
 }
 
+// Which of the two things a receipt's `provenance` block is, said out loud instead of left to the
+// field name. The block itself is the declaration — it is `provenanceOf(record)`, the values the skill
+// was registered with — and a receipt could not say so, so a host that persists receipts had no way
+// to tell a verified provenance from a refuted one except by reading the status next to it. That is
+// what `provenanceSource` is for, and it is one word:
+//
+//   'verified'  the four values were each compared and each one matched. Each check is an equality
+//               (`found === declared`), so in this state the block is *also* what the resolver
+//               observed: the observed value and the declared value are the same string. A verified
+//               receipt therefore seals the value that was checked, which is what a reader expects
+//               from a field named `provenance`, and it says here that this is the case.
+//   'declared'  the values are what the skill claimed and nothing more. Whatever the resolver
+//               observed is not in the receipt: this module does not copy the resolver's text into a
+//               sealed record (A18, reviews H06-H08, N01, H19), so the refutation lives in `checks`,
+//               in `reason` and in `notCovered`, and this word is what keeps the block from reading
+//               as evidence.
+//
+// What this does not buy, stated plainly: 'verified' is a statement about four string comparisons
+// against an injected resolver, not about the repository. The resolver's independence is the host's
+// (see the header), and nothing here narrows that.
+const PROVENANCE_SOURCES = Object.freeze({ verified: 'verified', declared: 'declared' });
+
 function refuse(record, reason) {
   // No record means nothing can be covered: a claim this kernel never registered has no provenance to
   // check, so all four checks are reported as not covered rather than quietly passing. Nothing was
@@ -432,6 +459,47 @@ function compare(label, declared, found, checks) {
   }
   checks[label] = true;
   return null;
+}
+
+// What arrived where the contract asks for text. A host whose resolver reads the file out of a
+// repository hands over a `Buffer`, a typed array, or the spread of one, and all three read from here
+// as exactly what a resolver that said nothing reads as: `the resolver reported neither the content
+// at that commit nor its digest`. That sentence is true and it is useless — it cost the P2b
+// integration an hour of debugging for a refusal that was correct from the start (P2b finding 4.2).
+//
+// The bytes are not decoded. Decoding is an interpretation and this module does not pick one on the
+// resolver's behalf: two decodings of one buffer disagree about what the skill is. The verdict was
+// never in question either — nothing was hashed, so nothing could be covered on the digest — only the
+// sentence was. Every read here is contained, so a payload that throws while being inspected is
+// reported, not raised.
+//
+// None of the three checks below reaches user code: `Buffer.isBuffer` and `ArrayBuffer.isView` read an
+// internal slot and answer false for a proxy, so a proxied buffer is named as the object it is.
+function byteShapeOf(value) {
+  if (value === null || value === undefined) return null;
+  if (Buffer.isBuffer(value)) return 'a Buffer';
+  if (ArrayBuffer.isView(value)) return 'a typed array of bytes';
+  if (!Array.isArray(value)) {
+    return typeof value === 'object' ? 'an object that is not text' : `a ${typeof value}`;
+  }
+  try {
+    const length = value.length;
+    if (!Number.isSafeInteger(length) || length <= 0) return 'an array that is not text';
+    for (let index = 0; index < length; index += 1) {
+      if (typeof value[index] !== 'number') return 'an array that is not text';
+    }
+    return 'an array of bytes';
+  } catch {
+    return 'an array that could not be read';
+  }
+}
+
+// The refusal for a content field that is not text. `null` is not a shape: nothing arrived, and that
+// is the sentence this module has always used for it.
+function contentRefusal(content) {
+  const shape = byteShapeOf(content);
+  if (shape === null) return 'the resolver reported neither the content at that commit nor its digest';
+  return `the content arrived as ${shape} and this contract is text, so no digest could be compared`;
 }
 
 async function verifySkillProvenance(claim, resolve, options = {}) {
@@ -556,7 +624,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const hasContent = typeof content === 'string';
   const hasDigest = contentDigest !== null;
   if (!hasContent && !hasDigest) {
-    return stoppedAt('the resolver reported neither the content at that commit nor its digest');
+    return stoppedAt(contentRefusal(content));
   }
   const resolvedDigest = hasContent ? sha256(content) : contentDigest;
   const contentRecomputed = hasContent;
@@ -841,6 +909,12 @@ function buildSkillReceipt(spec, decision) {
     throw new Error('a skill receipt needs a decision this kernel produced');
   }
   const status = Object.prototype.hasOwnProperty.call(RECEIPT_STATUS, decision.status) ? decision.status : 'not_verified';
+  // The same mapping for the provenance verdict, written out instead of left to be remembered:
+  // `not_verifiable` and `not_verified` both write `not_verified` in the ladder, so a host reading
+  // `status` alone cannot tell which layer it is looking at. `provenanceStatus` keeps the exact
+  // verdict and this field says how that verdict lands in the status ladder, so neither has to be
+  // guessed from the other (P2b finding 4.4).
+  const provenanceVerdict = Object.prototype.hasOwnProperty.call(RECEIPT_STATUS, decision.provenanceStatus) ? decision.provenanceStatus : 'not_verified';
   const rawOutcome = receiptField(spec, 'outcome');
   const outcome = rawOutcome !== null && typeof rawOutcome === 'object' ? rawOutcome : {};
   const receipt = buildReceipt({
@@ -873,10 +947,18 @@ function buildSkillReceipt(spec, decision) {
     name: decision.name,
     status,
     provenanceStatus: decision.provenanceStatus,
+    provenanceReceiptStatus: RECEIPT_STATUS[provenanceVerdict],
+    // Which of the two things `provenance` is, so the block stops being read as evidence in every case
+    // but the one where it is (P2b finding 4.1). Derived from the verdict, so nothing the decision or
+    // the resolver wrote can promote a declaration to a verified one.
+    provenanceSource: provenanceVerdict === 'verified'
+      ? PROVENANCE_SOURCES.verified
+      : PROVENANCE_SOURCES.declared,
     coverage: [...decision.coverage].sort(),
     notCovered: [...decision.notCovered].sort(),
     granted: [...decision.granted],
     requested: [...decision.requested],
+    // The declaration, sealed as the declaration: `provenanceSource` is what says so.
     provenance: { ...decision.provenance },
     reason: decision.reason,
     loadedDigest: decision.loadedDigest === undefined ? null : decision.loadedDigest,
