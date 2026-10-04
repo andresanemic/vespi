@@ -447,17 +447,30 @@ function readConfigChecked(raw) {
   return read;
 }
 
-// Whether a verification object claims a zk at all, read without trusting a getter on it.
-function claimsZk(verification) {
+// The one read of a zk claim, made from the descriptor and never from a getter. `claimed` is true
+// when the object had a non-null `zk` property, including one that is an accessor or one that cannot
+// be read at all: a claim that did not survive cannot leave a `verified` receipt behind, and an
+// accessor is a claim whose value this kernel refuses to evaluate. The value is handed over exactly
+// once, so no caller has to dereference the property a second time and run a getter by accident.
+function readZkClaim(verification) {
   try {
-    if (!verification || typeof verification !== 'object' || Array.isArray(verification)) return false;
+    if (!verification || typeof verification !== 'object' || Array.isArray(verification)) {
+      return { claimed: false, value: null };
+    }
     const descriptor = Object.getOwnPropertyDescriptor(verification, 'zk');
-    if (descriptor === undefined) return false;
-    if (typeof descriptor.get === 'function' || typeof descriptor.set === 'function') return true;
-    return descriptor.value !== undefined && descriptor.value !== null;
+    if (descriptor === undefined) return { claimed: false, value: null };
+    if (typeof descriptor.get === 'function' || typeof descriptor.set === 'function') {
+      return { claimed: true, value: undefined };
+    }
+    if (descriptor.value === undefined || descriptor.value === null) return { claimed: false, value: null };
+    return { claimed: true, value: descriptor.value };
   } catch {
-    return true;
+    return { claimed: true, value: undefined };
   }
+}
+
+function claimsZk(verification) {
+  return readZkClaim(verification).claimed;
 }
 
 // --- the verifier ---
@@ -584,6 +597,7 @@ module.exports = {
   createZkVerifier,
   digestZkVerificationKey,
   readZkEvidence,
+  readZkClaim,
   reconcileZk,
   claimsZk,
   VK_SCHEMA,

@@ -16,7 +16,7 @@
 
 const { sufficient } = require('./authority.js');
 const { buildReceipt } = require('./receipt.js');
-const { claimsZk, reconcileZk, ZK_INCONSISTENT_REASON } = require('./zk.js');
+const { readZkClaim, reconcileZk, ZK_INCONSISTENT_REASON } = require('./zk.js');
 const { createHash } = require('node:crypto');
 const { parseTime } = require('./time.js');
 
@@ -1037,8 +1037,8 @@ async function runOperationOnce(op, capability, io) {
     // from the evidence. It is validated with the closed schema and reconciled with the verdict and
     // the checks, so an operation cannot end `succeeded` on a claim that does not hold up — which
     // would leave the state disagreeing with the receipt it just wrote.
-    const zkClaimed = claimsZk(verifierResult);
-    const reconciled = reconcileZk({ verified, checks, claimed: zkClaimed, zk: zkClaimed ? verifierResult.zk : null });
+    const zkClaim = readZkClaim(verifierResult);
+    const reconciled = reconcileZk({ verified, checks, claimed: zkClaim.claimed, zk: zkClaim.value });
     if (reconciled.zk !== null) normalizedVerification.zk = reconciled.zk;
     if (!reconciled.consistent) {
       normalizedVerification.verified = false;
