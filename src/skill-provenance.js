@@ -93,6 +93,10 @@ function seal(record) {
 // Git prints full lowercase hex; the two accepted lengths are sha-1 and sha-256.
 const COMMIT_ID = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 
+// The largest delay a timer can hold on this platform. Node stores a timer in a signed 32-bit
+// millisecond count, so anything above this wraps instead of waiting (A14).
+const MAX_TIMER_MS = 2147483647;
+
 function text(value) {
   return typeof value === 'string' && value.valueOf().trim().length > 0;
 }
@@ -303,7 +307,9 @@ function settle(record, status, reason, checks) {
 // A resolver that is handed more than that can be talked into more than that.
 //
 // The deadline rejects with a value this module made, so a missed deadline can be told apart from
-// anything the resolver threw without reading what it threw.
+// anything the resolver threw without reading what it threw. The timer is not `unref`'d: this
+// function owes an answer, and a process whose only handle is this deadline would otherwise exit
+// before printing one (A15).
 const DEADLINE = Object.freeze({ deadline: true });
 
 async function askResolver(resolve, question, timeoutMs) {
@@ -314,7 +320,6 @@ async function askResolver(resolve, question, timeoutMs) {
       Promise.resolve(resolve(question)),
       new Promise((_resolve, reject) => {
         timer = setTimeout(() => reject(DEADLINE), timeoutMs);
-        if (timer && typeof timer.unref === 'function') timer.unref();
       }),
     ]);
   } finally {
@@ -342,9 +347,17 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     return refuse(null, 'this skill was not registered in this kernel: there is no provenance to verify');
   }
   const settings = options !== null && typeof options === 'object' ? options : {};
-  const timeoutMs = settings.timeoutMs;
-  if (timeoutMs !== undefined && (!Number.isInteger(timeoutMs) || timeoutMs <= 0)) {
-    throw new Error('timeoutMs must be a positive integer');
+  let timeoutMs;
+  try {
+    timeoutMs = settings.timeoutMs;
+  } catch {
+    throw new Error(`timeoutMs must be a whole number of milliseconds between 1 and ${MAX_TIMER_MS}`);
+  }
+  // The range is the platform's, not this module's preference: a timer set outside it does not keep
+  // the value that was asked for, it becomes 1 ms and warns (A14). A deadline that silently becomes
+  // another deadline is a deadline nobody granted.
+  if (timeoutMs !== undefined && (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_TIMER_MS)) {
+    throw new Error(`timeoutMs must be a whole number of milliseconds between 1 and ${MAX_TIMER_MS}`);
   }
   if (typeof resolve !== 'function') {
     return refuse(record, 'no resolver was injected: nothing outside the skill has answered yet');
