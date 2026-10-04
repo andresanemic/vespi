@@ -1,6 +1,6 @@
 # Judge Vespi in five minutes
 
-**Vespi is a small JavaScript kernel that keeps a person's authority, a verifiable receipt and the next agreed action together when work changes hands.** This checkout is `0.1.4-rc.6`; the published kernel is `v0.1.3-kernel`.
+**Vespi is a small JavaScript kernel that keeps a person's authority, a verifiable receipt and the next agreed action together when work changes hands.** Kernel `0.1.4` was published on 2026-10-05 as `v0.1.4-kernel`.
 
 From the repository root, run the offline proof:
 
@@ -12,13 +12,13 @@ node scripts/judge-package.mjs
 
 The first command runs a full operation and prints its receipt and the next action selected by a second process. The second runs the kernel suite. The third runs that suite to record its counts, hashes the cut and writes [`JUDGE_PACKAGE.json`](./JUDGE_PACKAGE.json). It uses no network. For the operation's source, exact output and limits, see the bilingual [walkthrough](./WALKTHROUGH.md). For recorded Stellar testnet evidence, check `--offline` first, then decide whether to query Horizon as described below.
 
-Five-minute route: (1) run the three commands above; (2) read `status`, `coverage` and `notCovered` in the printed receipt; (3) inspect `packageVersion`, `gitCommit`, `tests` and `fileHashes` in the JSON; (4) follow the published v0.1.3/v0.1.4 boundary below; (5) check the stated limits before weighing the testnet and project evidence.
+Five-minute route: (1) run the three commands above; (2) read `status`, `coverage` and `notCovered` in the printed receipt; (3) inspect `packageVersion`, `gitCommit`, `tests` and `fileHashes` in the JSON; (4) review the v0.1.4 release and historical v0.1.3 boundary below; (5) check the stated limits before weighing the testnet and project evidence.
 
-## Version boundary: published 0.1.3 and candidate 0.1.4
+## Version boundary: published 0.1.4 and historical 0.1.3
 
-The published `v0.1.3-kernel` limits an operation to one execution in one process and refuses to replay its terminal receipt within that same in-memory operation. Its receipt can say `not_verified` when settlement or verification is uncertain. **Its `resumeFromReceipts` can still select that action again from receipts**, so a host must reconcile an uncertain external effect before it creates or runs another operation. The v0.1.3 authority predicate uses the current system clock where an expiry is checked; callers cannot inject `now` through `runOperation`. Idempotency in the x402 demo is adapter-level and in-process, not a durable kernel key or crash recovery.
+The published `v0.1.4-kernel` adds reconciliation before receipt-based continuation after an exercised uncertain effect, a stable idempotency key passed to `perform`, consultative delegation deadlines, per-action attempt limits, and an injectable operation clock. The destination must honor the key to deduplicate external effects. `v0.1.3-kernel` is the previous release; its historical behavior and evidence remain in [`RELEASE_0.1.3_KERNEL.md`](./RELEASE_0.1.3_KERNEL.md).
 
-The planned `0.1.4` scope is a continuity gate for an uncertain receipt, a stable idempotency key passed to `perform`, an injectable clock through expiry and receipt creation, a deadline for delegations and a cap on attempts. The release is planned for Monday, 2026-10-05; it is not published at this cut. This walkthrough demonstrates the local verified path only. It does not prove those planned changes, nor does it supply durable cross-process storage, a scheduler or external identity authentication.
+The walkthrough demonstrates the local verified path only. It does not prove durable cross-process storage, a scheduler or external identity authentication. See the complete release scope and limits in [`RELEASE_0.1.4_KERNEL.md`](./RELEASE_0.1.4_KERNEL.md).
 
 ## What cannot be checked from this package yet
 

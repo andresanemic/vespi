@@ -36,6 +36,10 @@ The loop is the coordinator's side of an operation; the operation's side is alre
 | Stop after three failed cycles | An impossible task comes back `blocked` with its exit, not retried blindly |
 | Resume from the checkpoint, not from a summary | Continuity by receipts: the last verified state, the next action, and whether a person must step in |
 
+## Stop and search after repeated failures
+
+Stop when the same normalized failure signature repeats three times in a row without a success between attempts. Before searching, document each attempt and what it tried in the operation observations. Search with the host's tools in official documentation, relevant repositories, and available skills; the CLI never searches by itself. If search access is unavailable, leave the operation blocked and record the condition for resuming in its receipt. Integrate only findings that apply. If a finding conflicts with the Lore or the agreement, flag the conflict and propose arbitration instead of applying it.
+
 ## Roles and routing
 
 The coordinator runs the whole loop. It may hand a stretch of work to a role: **Daimon** investigates and synthesizes (measures, does not conclude), **Advisor** gives an independent critique of a decision before it is fixed, and a **worker** executes a bounded task. Each role gets only its question, its allowed sources and its limits, and returns an artifact with a receipt; the coordinator integrates and verifies apart. Roles are functions, not model names: pick the cheapest model, tool and effort that can meet the evidence standard, and escalate only when evidence asks for it. A delegate's «done», a green exit code and a plausible summary are claims until their evidence is checked.
@@ -87,6 +91,10 @@ El ciclo es el lado del coordinador de una operación; el lado de la operación 
 | Una sorpresa vuelve a un paso anterior | Una premisa material que cae abre revalidación antes de continuar |
 | Detenerse tras tres ciclos fallidos | Una tarea imposible vuelve `blocked` con su salida, no se reintenta a ciegas |
 | Retomar desde el punto de control, no desde un resumen | Continuidad por recibos: el último estado verificado, la siguiente acción y si una persona debe intervenir |
+
+## Detenerse y buscar tras fallos repetidos
+
+Detente cuando la misma firma de fallo normalizada se repite tres veces seguidas sin un éxito entre los intentos. Antes de buscar, documenta cada intento y qué probó en las observaciones de la operación. Busca con las herramientas del host en la documentación oficial, los repositorios pertinentes y las skills disponibles; el CLI nunca busca por sí mismo. Si no hay acceso para buscar, deja la operación bloqueada y registra en su recibo la condición para reanudarla. Integra solo lo que aplique. Si un hallazgo contradice el Lore o el acuerdo, señala el conflicto y propone un arbitraje en lugar de aplicarlo.
 
 ## Roles y enrutamiento
 

@@ -1,5 +1,5 @@
 'use strict';
-// T1: TDD adversarial final del candidato 0.1.3 (plan de construcción, 2026-09-28).
+// T1: pasada adversarial final antes del kernel 0.1.4 (plan de construcción, 2026-09-28).
 // La pregunta no es si el código anda, sino qué NO puede hacer. Cada `test` verde fija una
 // propiedad segura que el kernel respeta hoy. T1-D2, T1-X5 y T1-X7 son propiedades que hoy se
 // cumplen; T1-X1 a T1-X4 y T1-X6 conservan hallazgos de frontera por resolver.
@@ -109,8 +109,13 @@ test('T1-B2: a network this kernel cannot anchor on leaves the receipt pending',
 
 test('T1-B3: only a verifier that confirms it turns "submitted" into "anchored"', () => {
   const r = receipt.buildReceipt(spec());
-  const confirmed = receipt.anchorReceipt(r, () => ({ network: 'stellar:testnet', txHash: 'tx1' }), (txHash, digest) => txHash === 'tx1' && digest === r.digest);
+  let submittedDigest;
+  const confirmed = receipt.anchorReceipt(r, (digest) => {
+    submittedDigest = digest;
+    return { network: 'stellar:testnet', txHash: 'tx1' };
+  }, (txHash, digest) => txHash === 'tx1' && digest === submittedDigest);
   assert.equal(confirmed.anchor.status, 'anchored');
+  assert.equal(confirmed.digest, submittedDigest);
   assert.ok(!confirmed.notCovered.includes('external anchor'));
   const denied = receipt.anchorReceipt(r, () => ({ network: 'stellar:testnet', txHash: 'tx1' }), () => false);
   assert.equal(denied.anchor.status, 'submitted');

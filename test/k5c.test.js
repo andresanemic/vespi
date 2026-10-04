@@ -1,5 +1,5 @@
 'use strict';
-// K5c (orchestrator, Raven review + K6): corrections the R1 review asked of the 0.1.3 kernel.
+// K5c (orchestrator, Raven review + K6): corrections requested by R1 before kernel 0.1.4.
 // Every test here was written first and watched fail.
 const { test } = require('node:test');
 const assert = require('node:assert');

@@ -1,6 +1,6 @@
 {
   "name": "vespi-kernel",
-  "version": "0.1.4-rc.6",
+  "version": "0.1.4",
   "private": true,
   "description": "Source checkout metadata for the Vespi kernel judge package"
 }

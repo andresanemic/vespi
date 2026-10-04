@@ -1,61 +1,118 @@
 #!/usr/bin/env node
-// Re-checks, against Horizon, every transaction listed in docs/testnet-evidence.json.
-// It only READS: no keys, no signing, no writes to the network. Dependency-free (Node 18+ for fetch).
-//   node scripts/verify-testnet-evidence.mjs            checks all of them against Horizon testnet
-//   node scripts/verify-testnet-evidence.mjs --offline  only checks the shape of the file
-// Exit code 0 only if every listed hash is a successful transaction on the network.
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
-const HORIZON = process.env.HORIZON_TESTNET_URL || 'https://horizon-testnet.stellar.org';
-const file = fileURLToPath(new URL('../docs/testnet-evidence.json', import.meta.url));
-const offline = process.argv.includes('--offline');
+import { readFile, writeFile } from 'node:fs/promises';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import path from 'node:path';
 
-export function readEvidence(path = file) {
-  const data = JSON.parse(readFileSync(path, 'utf8'));
-  const list = data.transactions;
-  if (!Array.isArray(list) || list.length === 0) throw new Error('docs/testnet-evidence.json has no transactions');
-  const seen = new Set();
-  for (const t of list) {
-    if (!/^[0-9a-f]{64}$/.test(t.hash)) throw new Error(`not a transaction hash: ${t.hash}`);
-    if (seen.has(t.hash)) throw new Error(`duplicate hash: ${t.hash}`);
-    seen.add(t.hash);
-  }
-  return data;
+const DEFAULT_EVIDENCE = fileURLToPath(new URL('../docs/testnet-evidence.json', import.meta.url));
+const HORIZON = 'https://horizon-testnet.stellar.org';
+const EXPECTED_FIELDS = ['operation', 'memo', 'asset', 'amount', 'recipient'];
+
+function validHash(hash) {
+  return typeof hash === 'string' && /^[a-f0-9]{64}$/i.test(hash);
 }
 
-async function check(hash) {
-  try {
-    const r = await fetch(`${HORIZON}/transactions/${hash}`, { headers: { accept: 'application/json' } });
-    if (r.status === 404) return { ok: false, why: 'not found on this network' };
-    if (!r.ok) return { ok: false, why: `Horizon answered ${r.status}` };
-    const j = await r.json();
-    return j.successful ? { ok: true, ledger: j.ledger, at: j.created_at } : { ok: false, why: 'transaction failed on the network' };
-  } catch (e) {
-    return { ok: false, why: String(e && e.message ? e.message : e) };
-  }
+function validateShape(evidence) {
+  const transactions = evidence?.transactions;
+  if (!Array.isArray(transactions)) throw new Error('evidence.transactions must be an array');
+  const hashes = transactions.map((entry) => entry?.hash);
+  if (hashes.some((hash) => !validHash(hash))) throw new Error('every transaction hash must be 64 hexadecimal characters');
+  if (new Set(hashes.map((hash) => hash.toLowerCase())).size !== hashes.length) throw new Error('transaction hashes must be unique');
+  return transactions;
 }
 
-async function main() {
-  const data = readEvidence();
-  const list = data.transactions;
+function expectedShape(expected) {
+  if (!expected || typeof expected !== 'object' || Array.isArray(expected)) return false;
+  return EXPECTED_FIELDS.every((field) => Object.hasOwn(expected, field));
+}
+
+function sameAsset(operation, expected) {
+  if (!expected || typeof expected !== 'object') return false;
+  if (operation.asset_type !== expected.type) return false;
+  if (expected.type === 'native') return true;
+  return operation.asset_code === expected.code && operation.asset_issuer === expected.issuer;
+}
+
+export function verifyTransactionEvidence(response, expected, capturedAt = new Date().toISOString()) {
+  const transaction = response?.transaction;
+  const operations = response?.operations;
+  if (!transaction || typeof transaction !== 'object' || !Array.isArray(operations)) {
+    return { ok: false, field: 'response', reason: 'transaction response and operation records are required' };
+  }
+  const historical_response = {
+    classification: 'historical_readback',
+    captured_at: capturedAt,
+    transaction,
+    operations,
+  };
+  const fail = (field, reason) => ({ ok: false, field, reason, historical_response });
+  if (!expectedShape(expected)) return fail('expected', 'case must declare operation, memo, asset, amount, and recipient');
+  if (transaction.successful !== true) return fail('successful', 'transaction is not successful');
+  const operation = operations.find((candidate) => candidate?.type === expected.operation);
+  if (!operation) return fail('operation', 'operation type does not match expected value');
+  if ((transaction.memo ?? null) !== expected.memo) return fail('memo', 'memo does not match expected value');
+  if (!sameAsset(operation, expected.asset)) return fail('asset', 'asset does not match expected value');
+  if (operation.amount !== expected.amount) return fail('amount', 'amount does not match expected value');
+  if (operation.to !== expected.recipient) return fail('recipient', 'recipient does not match expected value');
+  return { ok: true, historical_response };
+}
+
+export async function verifyEvidence(entries, fetchTransaction, capturedAt = new Date().toISOString()) {
+  if (typeof fetchTransaction !== 'function') throw new TypeError('fetchTransaction must be a function');
+  const missing = entries.filter((entry) => !expectedShape(entry?.expected));
+  if (missing.length) throw new Error(`${missing.length} evidence case(s) lack expected operation, memo, asset, amount, and recipient`);
+  return Promise.all(entries.map(async (entry) => {
+    const result = verifyTransactionEvidence(await fetchTransaction(entry.hash), entry.expected, capturedAt);
+    return { hash: entry.hash, ...result };
+  }));
+}
+
+async function json(fetcher, url) {
+  const response = await fetcher(url, { headers: { accept: 'application/json' } });
+  if (!response.ok) throw new Error(`Horizon ${response.status} for ${url}`);
+  return response.json();
+}
+
+async function readHorizonTransaction(hash, fetcher = fetch) {
+  const transaction = await json(fetcher, `${HORIZON}/transactions/${hash}`);
+  const page = await json(fetcher, `${HORIZON}/transactions/${hash}/operations?limit=200`);
+  return { transaction, operations: page?._embedded?.records ?? [] };
+}
+
+async function main(argv) {
+  const offline = argv.includes('--offline');
+  const filename = argv.find((arg) => !arg.startsWith('--')) || DEFAULT_EVIDENCE;
+  const evidence = JSON.parse(await readFile(filename, 'utf8'));
+  const entries = validateShape(evidence);
+
   if (offline) {
-    console.log(`shape ok: ${list.length} unique transaction hashes listed (not checked against the network)`);
+    process.stdout.write(`shape ok: ${entries.length} unique transaction hashes listed (not checked against the network or expected transaction facts)\n`);
     return;
   }
-  let good = 0;
-  const failed = [];
-  for (let i = 0; i < list.length; i += 6) {
-    const batch = list.slice(i, i + 6);
-    const results = await Promise.all(batch.map((t) => check(t.hash)));
-    results.forEach((r, k) => { if (r.ok) good += 1; else failed.push({ hash: batch[k].hash, why: r.why }); });
+
+  const missing = entries.filter((entry) => !expectedShape(entry.expected));
+  if (missing.length) throw new Error(`${missing.length} evidence case(s) lack declared operation, memo, asset, amount, and recipient expectations`);
+  const capturedAt = new Date().toISOString();
+  const results = await verifyEvidence(entries, (hash) => readHorizonTransaction(hash), capturedAt);
+  const failures = results.filter((result) => !result.ok);
+  for (const result of results) {
+    const detail = result.ok ? 'verified' : `mismatch: ${result.field}`;
+    process.stdout.write(`${result.hash}: ${detail}\n`);
   }
-  console.log(`${good} of ${list.length} listed transactions are successful on Horizon testnet (${HORIZON})`);
-  for (const f of failed) console.log(`  FAILED ${f.hash} ${f.why}`);
-  if (failed.length) {
-    console.log('A failure can mean the testnet was reset since these were written (Stellar resets it a few times a year); the receipts in this repository stay as the record.');
-    process.exitCode = 1;
-  }
+  const responseByHash = new Map(results.map((result) => [result.hash, result.historical_response]));
+  const resultByHash = new Map(results.map((result) => [result.hash, result]));
+  evidence.transactions = entries.map((entry) => {
+    const result = resultByHash.get(entry.hash);
+    return { ...entry, historical_response: responseByHash.get(entry.hash), verification: { ok: result.ok, ...(result.field ? { field: result.field, reason: result.reason } : {}) } };
+  });
+  await writeFile(filename, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
+  if (failures.length) throw new Error(`${failures.length} transaction evidence case(s) failed semantic verification; historical responses were saved for review`);
+  process.stdout.write(`verified ${results.length} successful transactions; historical Horizon responses saved\n`);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) main();
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main(process.argv.slice(2)).catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exitCode = 1;
+  });
+}

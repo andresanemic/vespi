@@ -16,6 +16,8 @@
 
 const { sufficient } = require('./authority.js');
 const { buildReceipt } = require('./receipt.js');
+const { createHash } = require('node:crypto');
+const { parseTime } = require('./time.js');
 
 const STATES = {
   NEEDS_DECISION: 'needs_human_decision',
@@ -92,7 +94,7 @@ function readDecideTimeoutMs(io) {
 
 // Jev, Paper2Agent or any decision model: an optional connection (decision 20 of Vespi). It ADVISES:
 // a confident suggestion is shown to the person on the ask payload, and it never consents for them
-// (decisions 16 and 19; orchestrator review R42 of the 0.1.3 build).
+// (decisions 16 and 19; orchestrator review R42 before the 0.1.4 release).
 async function consultDecisionModel(io, question) {
   try {
     const decideFn = io && typeof io.decide === 'function' ? io.decide : null;
@@ -213,7 +215,8 @@ function snapshotAuthority(authority) {
     const spend = rawSpend.map((grant) => {
       if (!grant || typeof grant !== 'object') return grant;
       const copy = { asset: grant.asset, maxAmount: grant.maxAmount, to: grant.to };
-      if (typeof grant.expiresAt === 'string' && grant.expiresAt.length > 0) copy.expiresAt = grant.expiresAt;
+      if ((typeof grant.expiresAt === 'string' && grant.expiresAt.length > 0)
+        || (typeof grant.expiresAt === 'number' && Number.isFinite(grant.expiresAt))) copy.expiresAt = grant.expiresAt;
       return copy;
     });
     const snapshot = { spend };
@@ -279,6 +282,75 @@ function safeBuildReceipt(spec) {
       at: new Date().toISOString(),
     };
   }
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === 'object') {
+    const out = {};
+    for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
+    return out;
+  }
+  return value;
+}
+
+function operationIdempotencyKey(op, requirements) {
+  // Hash the canonical effect, never renewable permission metadata.
+  const content = {
+    goal: op.goal,
+    action: op.action,
+    requirements: Array.isArray(requirements) ? requirements.map((requirement) => {
+      const amount = requirement?.amount;
+      let canonicalAmount = amount;
+      try {
+        if (typeof amount === 'string' && /^\d+$/.test(amount)) canonicalAmount = BigInt(amount).toString();
+      } catch {}
+      return { asset: requirement?.asset, amount: canonicalAmount, to: requirement?.to };
+    }) : requirements,
+  };
+  return createHash('sha256').update(JSON.stringify(canonicalize(content)), 'utf8').digest('hex');
+}
+
+// An injected clock is a synchronous contract; asynchronous clocks cannot authorize an effect.
+function readInjectedTime(io) {
+  let clock;
+  try {
+    clock = io?.now;
+  } catch {
+    return { present: true, valid: false };
+  }
+  if (typeof clock !== 'function') return { present: false, valid: true };
+
+  let value;
+  try {
+    value = clock.call(io);
+  } catch {
+    return { present: true, valid: false };
+  }
+  if (value !== null && (typeof value === 'object' || typeof value === 'function')) {
+    try {
+      if (typeof value.then === 'function') {
+        // Consume any eventual rejection while refusing to wait for an asynchronous clock.
+        Promise.resolve(value).catch(() => {});
+        return { present: true, valid: false };
+      }
+    } catch {
+      return { present: true, valid: false };
+    }
+  }
+  const now = parseTime(value);
+  return now === null ? { present: true, valid: false } : { present: true, valid: true, now };
+}
+
+function checkSufficient(requirements, authority, io) {
+  const clock = readInjectedTime(io);
+  if (!clock.present) return sufficient(requirements, authority);
+  if (!clock.valid) {
+    return { ok: false, reason: 'injected clock returned an invalid or unrepresentable time', invalidClock: true };
+  }
+  const now = clock.now;
+  if (now === null) return { ok: false, reason: 'injected clock returned an invalid or unrepresentable time', invalidClock: true };
+  return sufficient(requirements, authority, { now });
 }
 
 function createOperation({ goal, authority, agent, exit, action }) {
@@ -436,6 +508,28 @@ async function runOperation(op, capability, io) {
 }
 
 async function runOperationOnce(op, capability, io) {
+  const buildReceiptForRun = (spec) => {
+    // Preserve the legacy receipt body unless the host injects a clock.
+    let at;
+    let clockFailure = false;
+    try {
+      const clock = readInjectedTime(io);
+      if (!clock.present) return safeBuildReceipt(spec);
+      if (!clock.valid) throw new Error('invalid injected time');
+      at = new Date(clock.now).toISOString();
+    } catch {
+      at = new Date(Date.now()).toISOString();
+      clockFailure = true;
+    }
+    const receiptSpec = clockFailure
+      ? { ...spec, outcome: { ...spec.outcome, detail: [spec.outcome?.detail, 'receipt time used system clock after an invalid injected clock'].filter(Boolean).join('; ') } }
+      : spec;
+    try {
+      return buildReceipt({ ...receiptSpec, at });
+    } catch {
+      return safeBuildReceipt({ ...receiptSpec, at });
+    }
+  };
   const capabilityId = safeCapabilityId(capability);
   if (op.state === STATES.PAUSED) return { status: STATES.PAUSED, receipt: op.receipt, output: op.output };
   if (op.state === STATES.RUNNING) throw new Error('operation is already running');
@@ -448,7 +542,7 @@ async function runOperationOnce(op, capability, io) {
     if (impossible) {
       const exit = impossible.exit || operationExit(op);
       op.state = STATES.BLOCKED;
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: op.authority,
@@ -464,7 +558,7 @@ async function runOperationOnce(op, capability, io) {
     requirements = snapshotRequirements(declared.spend);
   } catch (err) {
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: op.authority,
@@ -476,7 +570,7 @@ async function runOperationOnce(op, capability, io) {
   }
   if (!Array.isArray(requirements)) {
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: op.authority,
@@ -488,14 +582,26 @@ async function runOperationOnce(op, capability, io) {
   }
   let check;
   try {
-    check = sufficient(requirements, op.authority);
+    check = checkSufficient(requirements, op.authority, io);
   } catch (err) {
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId,
       authority: op.authority,
       outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+      evidence: null,
+      verification: null,
+    });
+    return finish(op, receipt);
+  }
+  if (check.invalidClock) {
+    op.state = STATES.FAILED;
+    const receipt = buildReceiptForRun({
+      operation: op,
+      capabilityId,
+      authority: op.authority,
+      outcome: { status: 'failed', exercised: [], detail: check.reason },
       evidence: null,
       verification: null,
     });
@@ -508,7 +614,7 @@ async function runOperationOnce(op, capability, io) {
   if (signersCfg && signersCfg.present && !signersCfg.valid) {
     const gateExit = operationExit(op);
     op.state = STATES.NEEDS_DECISION;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval: 'human_gate_no_decision' },
@@ -579,7 +685,7 @@ async function runOperationOnce(op, capability, io) {
       } else {
         detail = missingSignersDetail(signersCfg.required, have);
       }
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval: gateRejected ? 'human_gate_rejected' : 'human_gate_no_decision' },
@@ -599,7 +705,7 @@ async function runOperationOnce(op, capability, io) {
         });
       } catch (err) {
         op.state = STATES.FAILED;
-        const receipt = safeBuildReceipt({
+        const receipt = buildReceiptForRun({
           operation: op,
           capabilityId: capabilityId,
           authority: { ...op.authority, approval: 'human_gate_approved' },
@@ -618,10 +724,10 @@ async function runOperationOnce(op, capability, io) {
         signers: { required: signersCfg.required, allowed: [...signersCfg.allowed] },
         ...(pausers.length > 0 ? { pausers } : {}),
       };
-      check = sufficient(requirements, op.authority);
+      check = checkSufficient(requirements, op.authority, io);
       if (!check.ok) {
         op.state = STATES.FAILED;
-        const receipt = safeBuildReceipt({
+        const receipt = buildReceiptForRun({
           operation: op,
           capabilityId: capabilityId,
           authority: { ...op.authority, approval: 'human_gate_approved' },
@@ -723,7 +829,7 @@ async function runOperationOnce(op, capability, io) {
         // that does not reach the declared scope — indistinguishable in the receipt (T2-R1).
         detail = check.reason;
       }
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval: gateRejected ? 'human_gate_rejected' : 'human_gate_no_decision' },
@@ -742,7 +848,7 @@ async function runOperationOnce(op, capability, io) {
       });
     } catch (err) {
       op.state = STATES.FAILED;
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval: 'human_gate_approved' },
@@ -757,11 +863,11 @@ async function runOperationOnce(op, capability, io) {
     // authority survives (R1 finding M4).
     const pausers = readPausers(op);
     op.authority = { spend: approvedGrants, ...(pausers.length > 0 ? { pausers } : {}) };
-    check = sufficient(requirements, op.authority);
+    check = checkSufficient(requirements, op.authority, io);
     approval = 'human_gate_approved';
     if (!check.ok) {
       op.state = STATES.FAILED;
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval },
@@ -776,14 +882,19 @@ async function runOperationOnce(op, capability, io) {
 
   op.state = STATES.RUNNING;
   let result;
+  let finalCheck = null;
   const controller = new AbortController();
   try {
-    const performPromise = Promise.resolve().then(() => capability.perform({ operation: op, authority: op.authority, signal: controller.signal }));
+    const performPromise = Promise.resolve().then(() => {
+      finalCheck = checkSufficient(requirements, op.authority, io);
+      if (!finalCheck.ok) return undefined;
+      return capability.perform({ operation: op, authority: op.authority, signal: controller.signal, idempotencyKey: operationIdempotencyKey(op, requirements) });
+    });
     result = await withTimeout(performPromise, readTimeout(io, 'performTimeoutMs'), 'capability perform', () => controller.abort());
   } catch (err) {
     if (isTimeout(err)) {
       op.state = STATES.NOT_VERIFIED;
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId,
         authority: { ...op.authority, approval },
@@ -795,7 +906,7 @@ async function runOperationOnce(op, capability, io) {
       return finish(op, receipt);
     }
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId,
       authority: { ...op.authority, approval },
@@ -807,12 +918,30 @@ async function runOperationOnce(op, capability, io) {
     return finish(op, receipt);
   }
 
+  if (finalCheck && !finalCheck.ok) {
+    op.state = finalCheck.invalidClock ? STATES.FAILED : STATES.NEEDS_DECISION;
+    const receipt = buildReceiptForRun({
+      operation: op,
+      capabilityId,
+      authority: { ...op.authority },
+      outcome: {
+        status: finalCheck.invalidClock ? 'failed' : 'needs_human_decision',
+        exercised: [],
+        detail: finalCheck.reason,
+        ...(finalCheck.invalidClock ? {} : { exit: operationExit(op) }),
+      },
+      evidence: null,
+      verification: null,
+    });
+    return finish(op, receipt);
+  }
+
   const capabilityResult = readCapabilityResult(result);
   if (capabilityResult.impossible) {
     const reason = capabilityResult.reason || capabilityResult.error || 'impossible';
     const exit = capabilityResult.exit || operationExit(op);
     op.state = STATES.BLOCKED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval },
@@ -825,7 +954,7 @@ async function runOperationOnce(op, capability, io) {
   }
   if (capabilityResult.settlementUnknown) {
     op.state = STATES.NOT_VERIFIED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval },
@@ -843,7 +972,7 @@ async function runOperationOnce(op, capability, io) {
 
   if (!capabilityResult.ok) {
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval },
@@ -857,7 +986,7 @@ async function runOperationOnce(op, capability, io) {
 
   if (!hasEvidence(capabilityResult.evidence)) {
     op.state = STATES.NOT_VERIFIED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId,
       authority: { ...op.authority, approval },
@@ -912,7 +1041,7 @@ async function runOperationOnce(op, capability, io) {
     verified = false;
   }
   op.state = verified ? STATES.SUCCEEDED : STATES.NOT_VERIFIED;
-  const receipt = safeBuildReceipt({
+  const receipt = buildReceiptForRun({
     operation: op,
     capabilityId: capabilityId,
     authority: { ...op.authority, approval },
