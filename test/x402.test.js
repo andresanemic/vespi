@@ -85,7 +85,6 @@ function fakePorts(over = {}) {
     discover: 0, prepare: 0, inspect: 0, send: 0, readBody: 0,
     validateOutput: 0, verifySettlement: 0, reserveEffect: 0, claimTransaction: 0,
   };
-  const claims = over.claims;
   const seen = [];
   const ports = {
     trace,
@@ -156,7 +155,22 @@ function fakePorts(over = {}) {
       return { ok: true, output: body, digest: createHash('sha256').update(JSON.stringify(body), 'utf8').digest('hex') };
     },
   };
-  if (claims) ports.claims = claims;
+  // A simulated claims store, always present and always fresh, so each test starts with empty
+  // sets. Its counters and order are observable like every other port.
+  ports.claims = over.claims || {
+    reserveEffect(key) {
+      calls.reserveEffect += 1;
+      trace.push('reserve');
+      seen.push({ reserveEffect: key });
+      return over.reserveEffect ? over.reserveEffect(key) : 'claimed';
+    },
+    claimTransaction(network, txHash) {
+      calls.claimTransaction += 1;
+      trace.push('claimTransaction');
+      seen.push({ claimTransaction: { network, txHash } });
+      return over.claimTransaction ? over.claimTransaction(network, txHash) : 'claimed';
+    },
+  };
   return ports;
 }
 
@@ -838,4 +852,232 @@ test('K4-D8 a grant that expires while the run is in flight blocks before sendin
   assert.equal(ports.calls.send, 0);
   assert.deepEqual(op.authority.pausers, ['ana']);
   assert.deepEqual(op.authority.signers, { required: 1, allowed: ['ana'] });
+});
+// =====================================================================================
+// Group E — send, delivery, settlement verification, evidence and receipt verdict
+// (cases 12, 13, 17, 18, 19, 20, 21)
+// =====================================================================================
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function paidResponse(over = {}) {
+  return {
+    status: 200,
+    settlement: { success: true, transaction: TX_HASH, payer: 'PAYER', network: 'stellar:testnet', amount: '100000' },
+    readBody: async () => BODY,
+    ...over,
+  };
+}
+
+test('K4-E1 the paid effect is verified, the output stays out of the receipt and the anchor is still pending', async () => {
+  const ports = fakePorts({ sendPaid: async () => paidResponse() });
+  const res = await runOnce(ports);
+  assert.equal(res.status, 'verified');
+  assert.equal(res.receipt.status, 'verified');
+  assert.deepEqual(res.output, BODY);
+  assert.equal(res.receipt.evidence.planDigest, PLAN_DIGEST);
+  assert.equal(res.receipt.evidence.authDigest, AUTH_DIGEST);
+  assert.equal(res.receipt.evidence.txHash, TX_HASH);
+  assert.equal(res.receipt.evidence.payer, 'PAYER');
+  assert.equal(res.receipt.evidence.network, 'stellar:testnet');
+  assert.equal(res.receipt.evidence.amount, '100000');
+  assert.equal(JSON.stringify(res.receipt).includes(res.output.title), false, 'the body never travels in the receipt');
+  assert.equal(verifyReceipt(res.receipt).ok, true);
+  for (const [key, value] of Object.entries(res.receipt.verification.checks)) {
+    assert.equal(typeof value, 'boolean', key);
+    assert.equal(value, true, key);
+  }
+  assert.equal(res.receipt.anchor.status, 'pending');
+  assert.ok(res.receipt.notCovered.includes('external anchor'));
+  assert.equal(res.receipt.coverage.includes('external anchor'), false);
+  assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT' }]);
+});
+
+test('K4-E2 the ports are called in the declared order and the digest exists before the send', async () => {
+  const ports = fakePorts({ sendPaid: async () => paidResponse() });
+  await runOnce(ports, {}, spec(), authority());
+  const order = ports.trace;
+  const at = (label) => order.indexOf(label);
+  assert.ok(at('discover') < at('reserve'), 'discover before reserve');
+  assert.ok(at('reserve') < at('prepare'), 'reserve before prepare');
+  assert.ok(at('prepare') < at('inspect'), 'prepare before inspect');
+  assert.ok(at('inspect') < at('send'), 'inspect before send');
+  assert.ok(at('send') < at('body'), 'send before the body is read');
+  assert.ok(at('body') < at('validateOutput'), 'the body is validated');
+  assert.ok(at('validateOutput') < at('verifySettlement'), 'delivery is judged before the settlement');
+  const inspectIndex = ports.seenRequests.findIndex((r) => r && r.authorization !== undefined);
+  const sendIndex = ports.seenRequests.findIndex((r) => r && r.terms && r.authorization !== undefined);
+  assert.ok(inspectIndex >= 0 && sendIndex > inspectIndex, 'the authorization is inspected before it is sent');
+  const sendRequest = ports.seenRequests[sendIndex];
+  assert.equal(sendRequest.redirect, 'error');
+  assert.equal(sendRequest.idempotencyKey.length, 64);
+  assert.match(sendRequest.idempotencyKey, /^[0-9a-f]{64}$/);
+});
+
+test('K4-E3 a host verifier is ignored: only the settlement port can verify this payment', async () => {
+  const trusting = fakePorts({ sendPaid: async () => paidResponse(), verifySettlement: async () => ({ verified: false, checks: { invocation: false }, reason: 'settlement does not match' }) });
+  const res = await runOnce(trusting, { verify: () => ({ verified: true, checks: { host: true }, reason: 'the host says yes' }) });
+  assert.equal(res.status, 'not_verified');
+  assert.equal(res.output, null);
+  assert.equal(res.receipt.verification.checks.settlement, false);
+  assert.equal(res.receipt.verification.checks.host, undefined);
+  assert.ok(res.receipt.notCovered.includes('settlement'));
+});
+
+test('K4-E4 after the send starts, a failure is not_verified and there is never a second send', async () => {
+  const cases = {
+    'the port throws': async () => { throw new Error('facilitator exploded: SECRET-marker'); },
+    'not an object': async () => 'ok',
+    'no settlement': async () => ({ status: 200, readBody: async () => BODY }),
+    'paid again with 402': async () => paidResponse({ status: 402, settlement: undefined }),
+    'redirected': async () => paidResponse({ status: 302 }),
+    'settlement without hash': async () => paidResponse({ settlement: { success: true, payer: 'PAYER', network: 'stellar:testnet' } }),
+    'settlement not successful': async () => paidResponse({ settlement: { success: false, transaction: TX_HASH } }),
+    'payer differs': async () => paidResponse({ settlement: { success: true, transaction: TX_HASH, payer: 'SOMEONE-ELSE', network: 'stellar:testnet', amount: '100000' } }),
+    'network differs': async () => paidResponse({ settlement: { success: true, transaction: TX_HASH, payer: 'PAYER', network: 'stellar:pubnet', amount: '100000' } }),
+    'amount differs': async () => paidResponse({ settlement: { success: true, transaction: TX_HASH, payer: 'PAYER', network: 'stellar:testnet', amount: '400000' } }),
+    'hash not a hash': async () => paidResponse({ settlement: { success: true, transaction: 'not-a-hash', payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }),
+  };
+  for (const [label, sendPaid] of Object.entries(cases)) {
+    const ports = fakePorts({ sendPaid });
+    const res = await runOnce(ports);
+    assert.equal(res.status, 'not_verified', label);
+    assert.equal(res.output, null, label);
+    assert.equal(res.receipt.status, 'not_verified', label);
+    assert.equal(ports.calls.send, 1, label);
+    assert.doesNotMatch(JSON.stringify(res.receipt), /SECRET-marker/, label);
+    assert.equal(res.receipt.evidence.authDigest, AUTH_DIGEST, `${label} keeps the digest`);
+    assert.equal(ports.calls.verifySettlement <= 1, true, label);
+  }
+});
+
+test('K4-E5 a settlement without a usable hash is not verified and the engine is told the outcome is unknown', async () => {
+  for (const [label, sendPaid] of Object.entries({
+    'throws': async () => { throw new Error('timeout after 15000ms'); },
+    'unusable': async () => ({ status: 500 }),
+  })) {
+    const ports = fakePorts({ sendPaid });
+    const res = await runOnce(ports);
+    assert.equal(res.status, 'not_verified', label);
+    assert.equal(res.receipt.evidence.settlementUnknown, true, label);
+    assert.equal(res.receipt.detail, 'SEND_UNKNOWN', label);
+    assert.equal(res.receipt.verification.verified, false, label);
+    assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT' }], label);
+    assert.equal(ports.calls.send, 1, label);
+  }
+});
+
+test('K4-E6 a verifier that throws, hangs, lies or returns an empty reason never verifies', async () => {
+  const outcomes = {
+    throws: async () => { throw new Error('horizon down: SECRET-marker'); },
+    truthy: async () => 'verified',
+    'empty reason': async () => ({ verified: true, checks: { invocation: true }, reason: '' }),
+    'a false check': async () => ({ verified: true, checks: { invocation: true, transfer: false }, reason: 'looks fine' }),
+    'not an object': async () => 42,
+    'no verified': async () => ({ checks: { invocation: true }, reason: 'forgot the verdict' }),
+  };
+  for (const [label, verifySettlement] of Object.entries(outcomes)) {
+    const ports = fakePorts({ sendPaid: async () => paidResponse(), verifySettlement });
+    const res = await runOnce(ports);
+    assert.equal(res.status, 'not_verified', label);
+    assert.equal(res.output, null, label);
+    assert.equal(res.receipt.verification.verified, false, label);
+    assert.doesNotMatch(JSON.stringify(res.receipt), /SECRET-marker/, label);
+  }
+});
+
+test('K4-E7 a verifier that hangs is cut off with its own signal, and the payment stays not verified', async () => {
+  let observed = null;
+  const ports = fakePorts({
+    sendPaid: async () => paidResponse(),
+    verifySettlement: async (evidence, request) => new Promise((resolve) => {
+      observed = request.signal;
+    }),
+  });
+  const res = await runOnce(ports, { verifyTimeoutMs: 40 });
+  assert.equal(res.status, 'not_verified');
+  assert.equal(res.output, null);
+  await delay(120);
+  assert.ok(observed, 'the port received a signal it could honour');
+  assert.equal(observed.aborted, true, 'the signal was cancelled when the budget ran out');
+});
+
+test('K4-E8 a broken body, an oversized body or a status other than 200 still leaves the payment verifiable', async () => {
+  const cases = {
+    'body throws': { response: paidResponse({ readBody: async () => { throw new Error('stream closed: SECRET-marker'); } }) },
+    'body is not json': { response: paidResponse({ readBody: async () => 'not json at all' }) },
+    'no readBody': { response: paidResponse({ readBody: undefined }) },
+    'oversized': { response: paidResponse({ readBody: async () => ({ title: 'x'.repeat(1_100_000), summary: 's', deliverables: [], nextSteps: [] }) }) },
+    'wrong schema': { response: paidResponse({ readBody: async () => ({ title: 'only a title' }) }) },
+    'status 500': { response: paidResponse({ status: 500 }) },
+  };
+  for (const [label, { response }] of Object.entries(cases)) {
+    const ports = fakePorts({ sendPaid: async () => response });
+    const res = await runOnce(ports);
+    assert.equal(ports.calls.verifySettlement, 1, `${label}: the settlement is still verified`);
+    assert.equal(res.status, 'not_verified', label);
+    assert.equal(res.output, null, label);
+    assert.equal(res.receipt.verification.checks.delivery, false, label);
+    assert.equal(res.receipt.verification.checks.settlement, true, `${label}: the payment itself may be covered`);
+    assert.equal(res.receipt.evidence.txHash, TX_HASH, label);
+    assert.equal(res.receipt.evidence.planDigest, undefined, label);
+    assert.doesNotMatch(JSON.stringify(res.receipt), /SECRET-marker/, label);
+    assert.ok(res.receipt.notCovered.includes('delivery'), label);
+  }
+});
+
+test('K4-E9 an abort before the send sends nothing, and an abort after it never resends', async () => {
+  const beforeSend = fakePorts({
+    prepare: async (request) => {
+      request.signal.dispatchEvent(new Event('abort'));
+      return { authorization: 'PUBLIC-AUTH' };
+    },
+  });
+  const early = await runOnce(beforeSend);
+  assert.equal(early.status, 'failed');
+  assert.equal(early.receipt.detail, 'ABORTED');
+  assert.equal(beforeSend.calls.send, 0);
+  assert.deepEqual(early.receipt.authority.exercised, []);
+
+  const latePrepare = fakePorts({
+    prepare: async () => new Promise((resolve) => setTimeout(() => resolve({ authorization: 'PUBLIC-AUTH' }), 5)),
+    inspectPrepared: async () => {
+      throw new Error('must not be reached');
+    },
+  });
+  const late = await runOnce(latePrepare);
+  assert.equal(late.status, 'failed');
+  assert.equal(late.receipt.detail, 'ABORTED');
+  assert.equal(latePrepare.calls.send, 0);
+
+  const afterSend = fakePorts({
+    sendPaid: async (request) => {
+      request.signal.dispatchEvent(new Event('abort'));
+      return paidResponse();
+    },
+  });
+  const post = await runOnce(afterSend);
+  assert.equal(post.status, 'not_verified');
+  assert.equal(afterSend.calls.send, 1);
+  assert.equal(post.output, null);
+});
+
+test('K4-E10 the evidence carries only admitted keys and never the body, the authorization or headers', async () => {
+  const ports = fakePorts({
+    sendPaid: async () => paidResponse({
+      headers: { authorization: 'Bearer SECRET-header-marker' },
+      body: 'SECRET-body-marker',
+      settlement: { success: true, transaction: TX_HASH, payer: 'PAYER', network: 'stellar:testnet', amount: '100000', facilitator: 'SECRET-facilitator-marker' },
+    }),
+    validateOutput: (body) => ({ ok: true, output: body, digest: PLAN_DIGEST, secret: 'SECRET-validate-marker' }),
+  });
+  const res = await runOnce(ports);
+  assert.equal(res.status, 'verified');
+  const json = JSON.stringify(res.receipt);
+  for (const marker of ['SECRET-header-marker', 'SECRET-body-marker', 'SECRET-facilitator-marker', 'SECRET-validate-marker', AUTHORIZATION]) {
+    assert.equal(json.includes(marker), false, marker);
+  }
+  assert.deepEqual(Object.keys(res.receipt.evidence).sort(), ['amount', 'authDigest', 'network', 'payer', 'planDigest', 'txHash'].sort());
 });
