@@ -845,11 +845,11 @@ async function performStages(ctx, spec) {
   if (!beforeSend.ok) return beforeSend.result;
 
   ctx.evidence = { authDigest: ctx.authDigest };
-  let response;
-  // The send is on the wire from this line on: nothing below may report a plain failure with
-  // nothing exercised, and nothing below may send a second time.
+  // The send is on the wire from this line on. Nothing below may report a plain failure with nothing
+  // exercised, nothing below may send a second time, and no message a port wrote may travel into
+  // the receipt: every remaining step lives inside this one guard.
   try {
-    response = await ctx.ports.sendPaid({
+    const response = await ctx.ports.sendPaid({
       url: spec.url,
       method: spec.method,
       redirect: 'error',
@@ -858,34 +858,37 @@ async function performStages(ctx, spec) {
       idempotencyKey: ctx.operationKey,
       signal: ctx.signal,
     });
+    if (!isPlainObject(response)) return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
+
+    const settlement = readSettlement(response.settlement, ctx.expected);
+    ctx.settlement = settlement;
+    ctx.evidence = { ...ctx.evidence, ...settlement.evidence };
+    // Without a usable transaction hash there is nothing to verify and nothing to reconcile
+    // against: the outcome is unknown, and the receipt says so instead of calling it a failure.
+    if (settlement.txHash === null) return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
+    // The transaction is claimed as soon as there is a hash to claim, before anything is exposed: a
+    // settlement the run then refuses is still a transaction this process has already seen.
+    const claim = ctx.claims.claimTransaction(ctx.expected.network, settlement.txHash);
+    ctx.transactionUnique = claim === 'claimed';
+    if (!ctx.transactionUnique) ctx.claimCode = claim === 'duplicate' ? CODES.DUPLICATE_TRANSACTION : CODES.CLAIMS_CAPACITY;
+
+    // A hash that contradicts the declaration keeps its evidence on the receipt: the person
+    // reconciles it. It is not verified and no output is exposed.
+    if (!settlement.ok) return { ok: true, evidence: ctx.evidence, output: null };
+
+    const delivery = await readDelivery(response, ctx);
+    // A delivery on a cancelled run is not a delivery: the answer arrived after the run was called
+    // off, so the settlement may still be verified while the delivery stays uncovered.
+    ctx.delivery = delivery.ok && response.status === 200 && !aborted(ctx);
+    if (!ctx.delivery) return { ok: true, evidence: ctx.evidence, output: null };
+    ctx.evidence = { ...ctx.evidence, planDigest: delivery.digest };
+    return { ok: true, evidence: ctx.evidence, output: delivery.output };
   } catch {
+    // A property of the answer that throws, a claims store that throws, a body that cannot be
+    // read: whatever it was, the effect may be on the wire. The run reports uncertainty, keeps the
+    // evidence it already has and the permission it already spent, and a person reconciles.
     return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
   }
-  if (!isPlainObject(response)) return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
-
-  const settlement = readSettlement(response.settlement, ctx.expected);
-  ctx.settlement = settlement;
-  ctx.evidence = { ...ctx.evidence, ...settlement.evidence };
-  // Without a usable transaction hash there is nothing to verify and nothing to reconcile against:
-  // the outcome is unknown, and the receipt says so instead of calling it a failure.
-  if (settlement.txHash === null) return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
-  // The transaction is claimed as soon as there is a hash to claim, before anything is exposed: a
-  // settlement the run then refuses is still a transaction this process has already seen.
-  const claim = ctx.claims.claimTransaction(ctx.expected.network, settlement.txHash);
-  ctx.transactionUnique = claim === 'claimed';
-  if (!ctx.transactionUnique) ctx.claimCode = claim === 'duplicate' ? CODES.DUPLICATE_TRANSACTION : CODES.CLAIMS_CAPACITY;
-
-  // A hash that contradicts the declaration keeps its evidence on the receipt: the person reconciles
-  // it. It is not verified and no output is exposed.
-  if (!settlement.ok) return { ok: true, evidence: ctx.evidence, output: null };
-
-  const delivery = await readDelivery(response, ctx);
-  // A delivery on a cancelled run is not a delivery: the answer arrived after the run was called
-  // off, so the settlement may still be verified while the delivery stays uncovered.
-  ctx.delivery = delivery.ok && response.status === 200 && !aborted(ctx);
-  if (!ctx.delivery) return { ok: true, evidence: ctx.evidence, output: null };
-  ctx.evidence = { ...ctx.evidence, planDigest: delivery.digest };
-  return { ok: true, evidence: ctx.evidence, output: delivery.output };
 }
 
 // The last gate before the wire. A permission is only good for the moment it was checked, and the
