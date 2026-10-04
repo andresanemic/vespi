@@ -359,31 +359,41 @@ function sha256(text) {
 // somewhere, not to pay this particular counterparty, so it does not authorize this payment. The
 // authority has to be plain data too: a getter or a proxy there could answer once to the check and
 // once to the spend, and the check is the only thing standing between the two.
+//
+// Coverage is a question about one entry, never about the list. An authority usually carries the old
+// grant next to the renewal that replaced it, and one expired entry used to end the loop for all of
+// them, so renewing a permission could not unblock a payment the person had already renewed. What is
+// left after the loop is only about entries that name this recipient: if one of them covers, the
+// payment is authorized; if none covers and some named entry had expired, the answer is that the
+// permission ran out; otherwise the terms were never authorized.
 function liveGrant(authority, spec, now) {
   if (!isPlainData(authority)) return { ok: false, code: CODES.TERMS_REJECTED };
   const requirement = requirementOf(spec);
   const grants = Array.isArray(authority?.spend) ? authority.spend : [];
   let named = false;
   let expired = false;
-  let wideEnough = false;
   for (const entry of grants) {
     if (!isPlainObject(entry)) continue;
     if (entry.asset !== requirement.asset || entry.to !== requirement.to) continue;
     named = true;
     const live = entry.expiresAt === undefined || (parseTime(entry.expiresAt) !== null && parseTime(entry.expiresAt) > now);
-    if (!live) expired = true;
     // A ceiling that no longer reaches the declared amount is not a grant for this payment, however
-    // generously it reads: an amount is compared as a canonical decimal, never as a bound.
+    // generously it reads: an amount is compared as a canonical decimal, never as a bound. An expired
+    // ceiling covers nothing either, so this entry only counts when it is live and wide enough.
+    if (!live) {
+      expired = true;
+      continue;
+    }
     try {
       if (ATOMIC.test(String(entry.maxAmount)) && BigInt(String(entry.maxAmount)) >= BigInt(requirement.amount)) {
-        wideEnough = true;
+        return { ok: true };
       }
     } catch {
     }
   }
+  if (!named) return { ok: false, code: CODES.TERMS_REJECTED };
   if (expired) return { ok: false, code: CODES.AUTHORITY_EXPIRED };
-  if (!named || !wideEnough) return { ok: false, code: CODES.TERMS_REJECTED };
-  return { ok: true };
+  return { ok: false, code: CODES.TERMS_REJECTED };
 }
 
 function readAccepts(required, spec) {
