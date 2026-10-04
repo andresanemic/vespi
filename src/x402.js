@@ -10,9 +10,24 @@
 // facilitation or Horizon reads. Without ports there is no payment: importing this module performs
 // no I/O and produces no receipt.
 //
+// Two of those ports carry the weight of this module and have to be passed by whoever builds the
+// contract. The `claims` store is where deduplication lives: there is no process-wide store, because a
+// shared one couples operations nobody decided to couple and gives the host a set it cannot inspect.
+// The operation identity is what deduplication is about: the effect key names the operation, so two
+// operations that want the same thing are two effects and a retry of one operation is its duplicate.
+// The idempotency key handed to the provider is only a hint: it is a function of the declared effect,
+// it is the same for two different operations, and no claim here rests on it.
+//
 // Every port is trusted host code, not a sandbox. A port that ignores its signal can keep acting
 // after this module gave up, and a port that lies is believed only after an independent check
 // returned true; that limit belongs to whoever writes the ports.
+//
+// Known limits. The claims store has to be synchronous, because the reservation is indivisible: there
+// is no await between deciding and inserting, so two concurrent runs cannot both win. A durable store
+// therefore needs a synchronous primitive, and a durable adapter is work this version does not have.
+// `createMemoryPaymentClaims()` lives in the memory of one process: a restart empties it and a second
+// attempt at the same payment becomes possible. Releasing a reservation is not offered either, so a
+// run refused before the wire keeps its key until the store is gone.
 
 const { sufficient } = require('./authority.js');
 const { runOperation } = require('./operation.js');
@@ -62,6 +77,7 @@ const CODES = {
   ABORTED: 'ABORTED',
   DUPLICATE_EFFECT: 'DUPLICATE_EFFECT',
   DUPLICATE_TRANSACTION: 'DUPLICATE_TRANSACTION',
+  OPERATION_IDENTITY: 'OPERATION_IDENTITY',
   CLAIMS_CAPACITY: 'CLAIMS_CAPACITY',
   SEND_UNKNOWN: 'SEND_UNKNOWN',
   SETTLEMENT_REJECTED: 'SETTLEMENT_REJECTED',
@@ -80,6 +96,15 @@ function specError() {
 function portError() {
   const error = new Error('x402 ports are invalid');
   error.code = 'VESPI_X402_INVALID_PORT';
+  return error;
+}
+
+// Deduplication lives wherever the host put it, and the host has to say so. A contract with no claims
+// store is not built: there is no store this module may reach for on its own, because a store nobody
+// chose couples operations nobody agreed to couple and reads as deduplication where there is none.
+function claimsRequiredError() {
+  const error = new Error('x402 requires an explicit claims store: pass ports.claims (createMemoryPaymentClaims() is a factory for tests and demos, and it lives in the memory of one process, so a restart allows a second attempt)');
+  error.code = 'VESPI_X402_CLAIMS_REQUIRED';
   return error;
 }
 
@@ -186,6 +211,26 @@ function readPorts(raw) {
   if (!isPlainObject(raw)) throw portError();
   let ports;
   try {
+    // The store is read first, before anything else about the ports is judged: a contract with no store
+    // is refused as a contract with no store, and not as whatever else about it is also wrong. There is
+    // no store this module may reach for on its own, because a store nobody chose couples operations
+    // nobody agreed to couple and reads as deduplication where there is none.
+    const claimsRaw = raw.claims;
+    if (claimsRaw === undefined || claimsRaw === null) throw claimsRequiredError();
+    // A store is plain data with two methods: no proxy, no accessor of its own, no symbol key. The
+    // check reads descriptors, never values, so a store whose methods are getters is refused before
+    // one of them is ever called, and a proxy is refused before it is asked anything.
+    if (!isPlainContainer(claimsRaw)) throw portError();
+    if (typeof claimsRaw.reserveEffect !== 'function' || typeof claimsRaw.claimTransaction !== 'function') {
+      throw portError();
+    }
+    // Read once here, already validated, and then bound to the store it came from. Copied out and
+    // called detached, the simplest durable store in the world, a plain object with two methods
+    // that use `this`, answered on a receiver that carries no state at all.
+    const claims = {
+      reserveEffect: claimsRaw.reserveEffect.bind(claimsRaw),
+      claimTransaction: claimsRaw.claimTransaction.bind(claimsRaw),
+    };
     const http = raw.http;
     const signer = raw.signer;
     if (!isPlainObject(http) || typeof http.discover !== 'function' || typeof http.sendPaid !== 'function') throw portError();
@@ -193,20 +238,6 @@ function readPorts(raw) {
     if (typeof raw.inspectPrepared !== 'function') throw portError();
     if (typeof raw.verifySettlement !== 'function') throw portError();
     if (typeof raw.validateOutput !== 'function') throw portError();
-    let claims = null;
-    if (raw.claims !== undefined && raw.claims !== null) {
-      const claimsRaw = raw.claims;
-      if (!isPlainObject(claimsRaw) || typeof claimsRaw.reserveEffect !== 'function' || typeof claimsRaw.claimTransaction !== 'function') {
-        throw portError();
-      }
-      // Read once here, already validated, and then bound to the store it came from. Copied out and
-      // called detached, the simplest durable store in the world, a plain object with two methods
-      // that use `this`, answered on a receiver that carries no state at all.
-      claims = {
-        reserveEffect: claimsRaw.reserveEffect.bind(claimsRaw),
-        claimTransaction: claimsRaw.claimTransaction.bind(claimsRaw),
-      };
-    }
     ports = {
       // The same for the http container and for the signer: read once, then bound.
       discover: http.discover.bind(http),
@@ -218,7 +249,7 @@ function readPorts(raw) {
       claims,
     };
   } catch (error) {
-    if (error instanceof Error && error.code === 'VESPI_X402_INVALID_PORT') throw error;
+    if (error instanceof Error && (error.code === 'VESPI_X402_INVALID_PORT' || error.code === 'VESPI_X402_CLAIMS_REQUIRED')) throw error;
     throw portError();
   }
   return ports;
@@ -468,12 +499,17 @@ function selectX402Terms(required, rawSpec, authority, now) {
   return { ok: false, code: CODES.TERMS_REJECTED };
 }
 
-// The effect key is a hash over the canonical effect and nothing else: no renewable permission, no
-// time, no signature, no operation id. Two different networks, payers or resources that share one
-// grant therefore do not collide, and the same operation key retried with a renewed grant does.
+// The effect key is a hash over the canonical effect, the identity of the operation that asked for it
+// and the operation's own idempotency key, and nothing else: no renewable permission, no time, no
+// signature. The identity is what makes two operations two effects, so the legitimate second payment
+// (the same donor, the same amount, the same action) is not a duplicate, while a retry of one
+// operation, rebuilt with the identity it had, is. The idempotency key stays in the hash because it
+// binds the goal and the action: the same operation id with a different intent is a different effect.
+// Two different networks, payers or resources that share one grant do not collide either way.
 function effectKey(ctx, spec) {
   const content = canonicalize({
-    version: 1,
+    version: 2,
+    operation: ctx.operationId,
     operationKey: ctx.operationKey,
     request: { url: spec.url, method: spec.method },
     expected: expectedEffect(spec),
@@ -481,10 +517,29 @@ function effectKey(ctx, spec) {
   return sha256(JSON.stringify(content));
 }
 
-// Claims live in this process and nowhere else. The reservation is synchronous and indivisible:
+// The identity of the operation, read once and read here: a payment that cannot say which operation it
+// is cannot say which effect it is claiming, so nothing is reserved and nothing goes out. The value
+// is read inside a guard, once, and that answer is the one the key is built from. An operation is
+// host code and the engine cannot tell a proxy from a plain one, so an identity that lies is still the
+// identity this payment runs under; refusing an unreadable one is what the kernel can do.
+function readOperationIdentity(operation) {
+  let id;
+  try {
+    id = operation?.id;
+  } catch {
+    return null;
+  }
+  if (typeof id !== 'string' || id.length === 0 || id.length > MAX_TEXT) return null;
+  return id;
+}
+
+// Claims live wherever the host put them; this factory is one explicit choice of store, kept for tests
+// and demos, and it lives in the memory of one process. The reservation is synchronous and indivisible:
 // there is no await between deciding and inserting, so two concurrent runs cannot both win. There is
 // no release and no eviction: a reserved effect that never reached the wire stays reserved, and a
-// person reconciles it. A restart empties the store, which is a limit, not a guarantee.
+// person reconciles it. A restart empties the store, so a second attempt at the same payment becomes
+// possible: that is a limit, not a guarantee, and a durable store is the answer this version does not
+// ship yet.
 function createMemoryPaymentClaims(options = {}) {
   const effects = new Set();
   const transactions = new Set();
@@ -521,10 +576,6 @@ function readClaimCapacity(options) {
     return DEFAULT_CLAIM_CAPACITY;
   }
 }
-
-// Without a port the contract uses one store shared by every payment in this process, so two
-// factories are not handed the same empty set and both proceed.
-const SHARED_CLAIMS = createMemoryPaymentClaims();
 
 // The verifier belongs to this contract and to nobody else. It is separate from `perform`: it runs
 // after the effect, it reads the private expectation and digest instead of trusting the settlement
@@ -971,6 +1022,12 @@ async function performStages(ctx, spec) {
   const cover = liveGrant(ctx.authority, spec, now);
   if (!cover.ok) return blocked(cover.code);
 
+  // Before discovery, before a single port: an operation whose identity cannot be read cannot claim
+  // its effect, and a payment nobody can deduplicate is not one this kernel makes.
+  const identity = readOperationIdentity(ctx.operation);
+  if (identity === null) return blocked(CODES.OPERATION_IDENTITY);
+  ctx.operationId = identity;
+
   const discovered = await discoverRequired(ctx, spec);
   if (!discovered.ok) return failed(discovered.code);
 
@@ -1021,6 +1078,9 @@ async function performStages(ctx, spec) {
       redirect: 'error',
       authorization: prepared.authorization,
       terms: ctx.terms,
+      // A hint, not a claim: the provider may use it to recognise its own retry, and two different
+      // operations with the same goal, action and requirements send the same hint. Nothing this module
+      // deduplicates rests on it; the effect key does, and the effect key never leaves the process.
       idempotencyKey: ctx.operationKey,
       signal: ctx.signal,
     });
@@ -1126,9 +1186,10 @@ function createX402Payment(rawSpec, rawPorts) {
         now: null,
         authority: null,
         operation: null,
+        operationId: null,
         operationKey: null,
         signal: null,
-        claims: ports.claims || SHARED_CLAIMS,
+        claims: ports.claims,
         terms: null,
         authDigest: null,
         prepared: false,
