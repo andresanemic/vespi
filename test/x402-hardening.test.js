@@ -171,29 +171,25 @@ test('H01 the authorization digest on the receipt is the one the inspector valid
   );
 });
 
-test('H02 a false inspection control cannot disappear by answering twice', async () => {
-  // ADV01 requires every reported control to be exactly true. The guard reads `checks` four times:
-  // plainness, the mandatory `prepared`, the key list, then each value.
-  const answers = [
-    { prepared: true, authorization: true },
-    { prepared: true, authorization: false },
-    { authorization: false },
-    { authorization: true },
-  ];
+test('H02 the inspection controls are read exactly once', async () => {
+  // ADV01 requires every reported control to be exactly true. Before the fix the guard read `checks`
+  // four times (plainness, the mandatory `prepared`, the key list, each value), so an object that
+  // answers differently to each read could pass a `false` authorization control and still send. With
+  // one read there is no second answer left to decide anything.
   let reads = 0;
   const result = inspection();
   Object.defineProperty(result, 'checks', {
     enumerable: true,
     get() {
-      const answer = answers[Math.min(reads, answers.length - 1)];
       reads += 1;
-      return answer;
+      return { prepared: true, authorization: true };
     },
   });
   const ports = fakePorts({ inspectPrepared: async () => result });
   const res = await runOnce(ports);
-  assert.equal(ports.calls.send, 0, 'an inspection whose authorization control is false must stop the send');
-  assert.notEqual(res.status, 'verified');
+  assert.equal(reads, 1, 'the controls are read once, inside the guard that validates them');
+  assert.equal(ports.calls.send, 1, 'the healthy path still sends');
+  assert.equal(res.status, 'verified');
 });
 
 // =====================================================================================

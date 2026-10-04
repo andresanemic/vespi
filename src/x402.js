@@ -718,17 +718,22 @@ async function prepareAuthorization(ctx) {
 // exactly `true`: one false or non-boolean control stops the send, because an inspector that says
 // "the authorization was not what I checked" has not cleared the payment.
 function inspectionIsAcceptable(result, expected) {
-  if (!isPlainObject(result)) return false;
-  if (result.verified !== true) return false;
-  if (typeof result.reason !== 'string' || result.reason.length === 0) return false;
-  if (typeof result.authDigest !== 'string' || !HASH.test(result.authDigest)) return false;
-  if (!isPlainObject(result.checks)) return false;
-  if (result.checks.prepared !== true) return false;
-  const keys = Object.keys(result.checks);
+  if (!isPlainObject(result)) return null;
+  if (result.verified !== true) return null;
+  if (typeof result.reason !== 'string' || result.reason.length === 0) return null;
+  // Read once, inside the guard, and handed back to the caller: a getter that answers the check with
+  // one digest and the use with another must not decide what the receipt carries.
+  const authDigest = result.authDigest;
+  if (typeof authDigest !== 'string' || !HASH.test(authDigest)) return null;
+  const controls = result.checks;
+  if (!isPlainObject(controls)) return null;
+  if (controls.prepared !== true) return null;
+  const keys = Object.keys(controls);
   for (const key of keys) {
-    if (result.checks[key] !== true) return false;
+    if (controls[key] !== true) return null;
   }
-  return sameEffect(result.effect, expected);
+  if (!sameEffect(result.effect, expected)) return null;
+  return { authDigest };
 }
 
 async function inspectAuthorization(ctx, authorization) {
@@ -740,20 +745,14 @@ async function inspectAuthorization(ctx, authorization) {
     return { ok: false, code: CODES.PREPARED_REJECTED, failure: true };
   }
   if (aborted(ctx)) return { ok: false, code: CODES.ABORTED, failure: true };
-  let acceptable = false;
+  let accepted = null;
   try {
-    acceptable = inspectionIsAcceptable(result, ctx.expected);
+    accepted = inspectionIsAcceptable(result, ctx.expected);
   } catch {
-    acceptable = false;
+    accepted = null;
   }
-  if (!acceptable) return { ok: false, code: CODES.PREPARED_REJECTED };
-  let digest = null;
-  try {
-    digest = HASH.test(result.authDigest) ? result.authDigest : null;
-  } catch {
-    digest = null;
-  }
-  return { ok: true, authDigest: digest };
+  if (accepted === null) return { ok: false, code: CODES.PREPARED_REJECTED };
+  return { ok: true, authDigest: accepted.authDigest };
 }
 
 // A settlement answer is read apart from the body it carries, and only the parts the receipt admits
