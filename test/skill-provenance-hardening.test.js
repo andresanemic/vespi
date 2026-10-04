@@ -197,15 +197,21 @@ test('H08 a resolver-reported commit is not echoed into the reason', async () =>
 
 // --- Group 4: the receipt spec is hostile input too (H09, H10, H11) ---
 
-test('H09 a revoked proxy as the receipt spec is refused, not thrown at the caller', async () => {
+test('H09 a revoked proxy as the receipt spec is contained, and the receipt says it knows nothing', async () => {
+  // A receipt can be built from no spec at all, so an unreadable one degrades the same way: an
+  // ordinary receipt that names nothing it cannot know. Registration is the opposite case, because a
+  // record with no name is not a record and `registerSkillProvenance` refuses (H01).
   const [claim, result] = await registeredAndVerified();
   const decision = authorizeSkill(claim, result, ['read']);
   const revoked = Proxy.revocable({ ...RECEIPT_SPEC }, {});
   revoked.revoke();
-  assert.throws(() => buildSkillReceipt(revoked.proxy, decision), (err) => {
-    assert.equal(err.constructor, Error, `a TypeError escaped: ${err && err.message}`);
-    return true;
-  });
+  let receipt;
+  assert.doesNotThrow(() => { receipt = buildSkillReceipt(revoked.proxy, decision); });
+  assert.equal(receipt.operation.id, 'unknown');
+  assert.equal(receipt.capability, 'unknown');
+  assert.equal(receipt.status, 'verified');
+  assert.equal(receipt.skill.name, SPEC.name);
+  assert.equal(verifyReceipt(receipt).ok, true, verifyReceipt(receipt).reason);
 });
 
 test('H10 a throwing getter in the receipt spec is contained instead of escaping the API', async () => {

@@ -751,16 +751,39 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
 // come from the same place they come from for any other receipt, and then sealed again with the skill
 // block attached — the block is inside the seal, which is what makes a skill swapped between two
 // receipts of the same operation visible instead of plausible.
+//
+// The spec is caller-supplied data like any other, so it is read field by field under guards and never
+// spread: `{...spec}` enumerates keys the caller controls, and a revoked proxy or a throwing getter in
+// any of the seven fields `buildReceipt` reads threw out of this function into someone else's control
+// flow. Naming the seven fields is what `buildReceipt` destructures anyway, so nothing else the caller
+// wrote could have reached the receipt through the spread (A18, review H09).
+// One field of the receipt spec, read once, under its own guard. `undefined` for a field that is
+// absent, that is not an object, or that could not be read: `buildReceipt` already substitutes a safe
+// value for every one of the seven, so an unreadable field produces an ordinary receipt that says
+// nothing rather than a crash in the caller's face.
+function receiptField(spec, key) {
+  try {
+    return spec !== null && typeof spec === 'object' ? spec[key] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function buildSkillReceipt(spec, decision) {
   const record = deciderRecord(decision);
   if (record === null) {
     throw new Error('a skill receipt needs a decision this kernel produced');
   }
   const status = Object.prototype.hasOwnProperty.call(RECEIPT_STATUS, decision.status) ? decision.status : 'not_verified';
-  const source = spec !== null && typeof spec === 'object' ? spec : {};
-  const outcome = source.outcome !== null && typeof source.outcome === 'object' ? source.outcome : {};
+  const rawOutcome = receiptField(spec, 'outcome');
+  const outcome = rawOutcome !== null && typeof rawOutcome === 'object' ? rawOutcome : {};
   const receipt = buildReceipt({
-    ...source,
+    operation: receiptField(spec, 'operation'),
+    capabilityId: receiptField(spec, 'capabilityId'),
+    authority: receiptField(spec, 'authority'),
+    evidence: receiptField(spec, 'evidence'),
+    decidedBy: receiptField(spec, 'decidedBy'),
+    at: receiptField(spec, 'at'),
     outcome: { ...outcome, status: RECEIPT_STATUS[status] },
     verification: {
       verified: status === 'verified',
