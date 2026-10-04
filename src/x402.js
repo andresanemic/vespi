@@ -51,6 +51,10 @@ const HASH = /^[0-9a-f]{64}$/;
 const SETTLEMENT_CONTROLS = new Set([
   'invocation', 'authorization', 'prepared', 'transfer', 'payer', 'source', 'exactAmount',
 ]);
+// A frozen copy of the catalog's names, exported so a host that writes the settlement port can learn
+// the vocabulary without reading this repository. A copy and not the set the gate reads: what a host
+// can read then cannot become what the gate accepts, and the closed catalog stays closed in here.
+const SETTLEMENT_CONTROL_NAMES = Object.freeze([...SETTLEMENT_CONTROLS]);
 const MAX_TEXT = 512;
 const MIN_WINDOW_SECONDS = 1;
 const MAX_WINDOW_SECONDS = 300;
@@ -509,9 +513,15 @@ function selectX402Terms(required, rawSpec, authority, now) {
 // operation, rebuilt with the identity it had, is. The idempotency key stays in the hash because it
 // binds the goal and the action: the same operation id with a different intent is a different effect.
 // Two different networks, payers or resources that share one grant do not collide either way.
+// The version is a name and not a literal inside the hash, because a host that keeps these keys
+// outside the process (a register, a reconciliation table) has to compare them and can only do that
+// with the version in hand. Version 2 is the second form of the canonical content; a key of any
+// other version is a different key, so an old stored key never collides with a new effect.
+const EFFECT_KEY_VERSION = 2;
+
 function effectKey(ctx, spec) {
   const content = canonicalize({
-    version: 2,
+    version: EFFECT_KEY_VERSION,
     operation: ctx.operationId,
     operationKey: ctx.operationKey,
     request: { url: spec.url, method: spec.method },
@@ -703,6 +713,15 @@ const ALLOWED_IO_KEYS = [
   'ask', 'decide', 'decideThreshold', 'decideTimeoutMs', 'now',
   'askTimeoutMs', 'performTimeoutMs', 'verifyTimeoutMs',
 ];
+// Node's timers are 32-bit and a delay of 2^31 ms or more is armed as 1 ms, so a budget a host meant
+// as a long wait aborts the settlement reader on the spot and seals a paid effect as not_verified.
+// The module does not clamp it: a clamp answers with a budget the host did not ask for, and the
+// payment would carry a verdict produced under a deadline that was never agreed. The budget is
+// refused instead, when the run options are built, with the same fixed code as options that cannot
+// be read. `askTimeoutMs` and `performTimeoutMs` are the engine's own deadlines and are passed
+// through untouched: this module arms no timer for them.
+const MAX_TIMER_MS = 2 ** 31 - 1;
+const TIMER_DEADLINES = ['verifyTimeoutMs'];
 const DEFAULT_VERIFY_TIMEOUT_MS = 15_000;
 
 // The run clock is a synchronous contract, the same one the engine uses. An injected clock that is
@@ -943,6 +962,13 @@ function exceedsBodyLimit(value) {
 // to compare against and nothing that binds this run's output to the bytes that were paid for. The
 // validator's answer is read once inside the guard: a getter cannot answer twice.
 //
+// The `output` it hands back has to be a plain body, the same rule every other port answers to, and
+// it is not copied with JSON. A copy would be a second reading of host-written data by this module
+// and would hand back something the port never said; instead an output that is not plain data — a
+// list, a class instance, an accessor, a proxy — refuses the delivery like any other malformed
+// answer. A validator that reports no body at all is not malformed: nothing to hand back is an
+// answer, and the delivery stays covered.
+//
 // The validator is awaited, like the other five ports and like `readBody`. This is the choice, and it
 // is the other one that was available: a port could be declared synchronous instead. Awaiting wins
 // because the shape of a port is host code and this module cannot enforce either shape — a promise
@@ -975,11 +1001,19 @@ async function readDelivery(response, ctx) {
     // Read once: the digest that was checked for shape is the digest that goes on the receipt.
     const reported = validated.digest;
     digest = typeof reported === 'string' && HASH.test(reported) ? reported : null;
-    output = validated.output === undefined ? null : validated.output;
+    const body = validated.output;
+    output = body === undefined || body === null ? null : body;
   } catch {
     return { ok: false, output: null, digest: null };
   }
   if (!ok || digest === null) return { ok: false, output: null, digest: null };
+  // Plainness here is stricter than the container check the ports answer to: a body has to be a
+  // plain object, and its own descriptors have to be plain as well. A list is not a body, an
+  // accessor is refused without ever being called, and a proxy is refused without being asked
+  // anything. Both checks read descriptors and never values.
+  if (output !== null && (!isPlainObject(output) || !isPlainContainer(output))) {
+    return { ok: false, output: null, digest: null };
+  }
   return { ok: true, output, digest };
 }
 
@@ -1174,6 +1208,13 @@ function buildRunIo(io, ctx) {
   for (const key of Object.keys(runIo)) {
     if (!ALLOWED_IO_KEYS.includes(key)) delete runIo[key];
   }
+  // A deadline this module cannot arm is refused here, before the discovery and before the
+  // reservation, so a payment is never sent under a budget the module was going to shorten by
+  // itself. Only a readable number is judged: anything else keeps the fallback below, as it always did.
+  for (const key of TIMER_DEADLINES) {
+    const budget = runIo[key];
+    if (typeof budget === 'number' && Number.isFinite(budget) && budget > MAX_TIMER_MS) throw ioError();
+  }
   runIo.verify = (evidence) => verifySettlementEffect(ctx, evidence);
   return runIo;
 }
@@ -1233,4 +1274,4 @@ function createX402Payment(rawSpec, rawPorts) {
   };
 }
 
-module.exports = { createX402Payment, selectX402Terms, createMemoryPaymentClaims };
+module.exports = { createX402Payment, selectX402Terms, createMemoryPaymentClaims, SETTLEMENT_CONTROL_NAMES, EFFECT_KEY_VERSION };
