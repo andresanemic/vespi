@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedBy": "node scripts/judge-package.mjs",
   "packageVersion": "0.1.4",
-  "gitCommit": "a4961201e67fc629b6e59938e81e6cdbc04bf56b",
+  "gitCommit": "dbe92bd8e3afb4cae62daaf74910791059d3601f",
   "fileHashes": {
     "demo/x402/README.md": "056237ad81b5a23deceee84cc260377742d01dfc0a8dda2853320e9f26714405",
     "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
@@ -31,7 +31,7 @@
     "docs/GENESIS.md": "24c76ec764ddaa54d85781ea894786b45ca80884df20e9e40580148519dd9971",
     "docs/JUDGES_FINDINGS_0.1.4.md": "19b1919c31648da72b716f4bfabb909d44720b408aa870e59346170fbbef3314",
     "docs/METHOD.md": "b0fff07e1e75f8c8a64e81a601b813ae145f0d518e48b5446a1f5b166ae25620",
-    "docs/PRIOR_ART.md": "cbedc21c29d36d770c32dbb4760838820958410c27b390db3d53dcec9ab5991b",
+    "docs/PRIOR_ART.md": "26b71f7476553d74a596e63e839c4e8cdd5637bef1922c54514ef4251681a9d4",
     "docs/RELEASE_0.0.1_GENESIS.md": "c4a77b6957661ddd8d31063e1a635d894502254eea90556d184660daa8a68ad0",
     "docs/RELEASE_0.1.3_KERNEL.md": "521d39710216dd0da66d17f01346d36f3cb416838c97e7e43923c4f1bb6f320b",
     "docs/RELEASE_0.1.4_KERNEL.md": "3bfab2de5779de0bc25f8215223508d3c9d19e75f78a3fcd61fc17aaca6cec5a",
@@ -48,7 +48,7 @@
     "src/operation.js": "8dd7484a50eb8685069cdbfa4780754a92fc436a5a0fcda1025c886f95b5e8c9",
     "src/receipt.js": "25743f044a487bd682594cd8cec68128bf1d519aaa8e97ab070effa89d80bc7d",
     "src/time.js": "1021a9d4bd921763d6e09a35af850c2c39afb14cb1ad73d3fa93485045595d31",
-    "docs/JUDGE_PACKAGE.json": "f665355a6ef5d59944b73472c42fd654f3d105c21e1e21f77286f721045f1ead"
+    "docs/JUDGE_PACKAGE.json": "7e7b934a3604d1dc79bf7da797a052f5afb935f9adf3ebc147ef68243014f515"
   },
   "excludedPaths": [
     "**/node_modules/**",
@@ -113,5 +113,5 @@
     }
   ],
   "hashNote": "Ordinary hashes use SHA-256 over exact bytes. Generated dependencies under node_modules and Git metadata under .git are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
-  "manifestSelfHash": "f665355a6ef5d59944b73472c42fd654f3d105c21e1e21f77286f721045f1ead"
+  "manifestSelfHash": "7e7b934a3604d1dc79bf7da797a052f5afb935f9adf3ebc147ef68243014f515"
 }
