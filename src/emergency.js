@@ -6,7 +6,7 @@ const { parseTime } = require('./time.js');
 
 // Emergency access (decision 27): authority a person grants IN ADVANCE, with a declared trigger,
 // exercised against a signal somebody other than the exercising agent verified, sealed in an
-// immediate receipt, and always leaving a post-use review that only a declared reviewer can close.
+// immediate receipt, and always leaving a post-use review that only somebody else may close.
 //
 // Everything a grant binds lives outside the values, because every one of them is an identity claim
 // the kernel cannot check on its own and must therefore receive from the host exactly once. One
@@ -15,6 +15,10 @@ const { parseTime } = require('./time.js');
 //                to authorize and what the kernel binds. Never read back from a caller afterwards.
 //   · verifiers — the independent verifier of each declared trigger, bound when the person granted.
 //   · approver  — the host callback that has to answer again before the clock may be extended.
+//   · people    — the principal of the owner, the grantee, every reviewer, every pauser and every
+//                verifier, as the injected `authenticate` port answered for each name when the grant
+//                was made. Every `by` a caller supplies is compared against these and against nothing
+//                else. See "the host's door" below.
 //   · family    : the private identity of this one grant. Records are kept by the public id, which is
 //                not an identity, so this is what says a counter, a review or a revocation belongs
 //                to this grant and not to another person who happened to use the same id. It is also
@@ -23,26 +27,40 @@ const { parseTime } = require('./time.js');
 // carries no authority at all: its shape proves nothing, and nothing in this module may treat a
 // readable object as a granted one.
 //
-// What the kernel does NOT do, and says so: it cannot tell a real host from a lying one. Whoever
-// supplies `authorizeGrantor`, `resolveVerifier` and `authorizeRenewal` decides who may grant, what
-// counts as the independent signal, and whether the clock may grow. The kernel's part is that an
+// WHAT THIS KERNEL DOES NOT KNOW: who anybody is. It reads no name and believes it, because a name is
+// exactly what a caller holding the permission and its ledger can write. It checks relations between
+// principals the host vouched for, and its whole part is refusing everything else: a self-declared
+// `by`, an alias, an object nobody issued, a port that is missing, malformed, slow or contradictory.
+// The guarantees below are therefore exactly as strong as the host that issued those principals, and
+// no stronger: a host that hands the reviewer principal to the exercising agent has broken them, and
+// this kernel cannot tell. See "the host's door" below for the whole contract and for what remains
+// the consumer's to provide.
+//
+// What the kernel does NOT do, and says so: it cannot tell a real host from a lying one, and it does
+// not know who is holding the permission handle it was given. Whoever supplies `authenticate`,
+// `authorizeGrantor`, `resolveVerifier` and `authorizeRenewal` decides who may grant, who is who,
+// what counts as the independent signal, and whether the clock may grow. The kernel's part is that an
 // agent exercising the permission can never be the source of any of them, that a permission which
-// did not come through this path holds nothing, and that a caller cannot get the kernel to bind one
-// value and seal another by answering twice. Every field it hands over, nested triggers included,
-// is read once, and what is validated is what gets bound. A barrier against the common forgery, not
-// a proof against a Proxy that lies about its own descriptors.
+// did not come through this path holds nothing, that a caller's `by` is a principal the host issued
+// rather than a name it wrote, and that a caller cannot get the kernel to bind one value and seal
+// another by answering twice. Every field it hands over, nested triggers included, is read once, and
+// what is validated is what gets bound. A barrier against the common forgery, not a proof against a
+// Proxy that lies about its own descriptors.
 //
 // Two guarantees hold the surface up, and both are structural rather than promised:
 //   · One record per grant family, in one ledger. A grant family is bound to the ledger it was first
 //     used with, the binding is keyed by the family and not by the handle, and it survives a renewal.
 //     The cap, the replay sets, the pause, the revocation and a rejected review all live in that one
 //     record, so none of them can be restarted by handing the kernel a different ledger (H05).
-//   · The post-use review is signed by somebody other than the agent that spent the authority. A
-//     grant that names the grantee among the reviewers of its own use is refused at the door, and
-//     what was spent is never verified either way (H04).
-// What no code here can give the two: a ledger that survives its process, a reviewer whose identity
-// was actually checked, and a human who reads the effect. Durability and identity are the host's to
-// provide, and a receipt that says `not_verified` is this kernel saying exactly that.
+//   · The post-use review is signed by a principal that is not the one that spent the authority.
+//     A grant that names the grantee among the reviewers of its own use is refused at the door by
+//     name, and so is an ALIAS of it, because the host's port answered with one principal for two
+//     names (H04, A01). The same refusal covers pausing, resuming and revoking, and what was spent
+//     is never verified either way.
+// What no code here can give the three: a ledger that survives its process, a principal that was
+// really authenticated (the host's promise, not this module's proof), and a human who reads the
+// effect. Durability and identity are the host's to provide, and a receipt that says `not_verified`
+// is this kernel saying exactly that.
 
 const BINDINGS = new WeakMap();
 
