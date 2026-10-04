@@ -615,7 +615,12 @@ function loadSkill(claim, result, content, requested) {
   if (loaded === null) {
     return withLoad(decision, record, loaded, false, 'discrepant', 'the content offered for loading is not text, so no digest can be compared');
   }
-  if (record !== null && loaded !== record.contentDigest) {
+  if (record === null) {
+    // The bytes were hashed, and that is all that happened. Hashing is not a comparison: with no
+    // registered digest there is nothing to compare against, so the check is not covered (A08).
+    return withLoad(decision, record, loaded, false, decision.status, decision.reason);
+  }
+  if (loaded !== record.contentDigest) {
     return withLoad(decision, record, loaded, false, 'discrepant', `the content offered for loading hashes to ${loaded.slice(0, 12)}, not to the verified digest ${record.contentDigest.slice(0, 12)}: it changed between the check and the load`);
   }
   return withLoad(decision, record, loaded, true, decision.status, decision.reason);
