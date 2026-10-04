@@ -97,6 +97,24 @@ function freeze(value) {
 // (H08, H20).
 const MAX_DEPTH = 32;
 const MAX_NODES = 4096;
+// Bytes, and separately from values on purpose. A body can be enormous without being deep or wide:
+// one string of a megabyte is a single value, so the value budget admitted it whole, it was then
+// copied, serialized and hashed at this kernel's expense, and nothing in the receipt said so. The
+// bound is on the total UTF-8 length of every key and every string of one walk, checked before the
+// value is copied or hashed, so an oversized body is refused while it still costs a length and not a
+// walk (A02, R412). 64 KiB is far past any signal this capability is built for: a hospital trigger
+// carries a triage verdict, not a document.
+const MAX_BYTES = 65536;
+
+// Charges bytes against one walk and answers whether the walk may go on. The first reason recorded is
+// the one kept: a body that is both over the value bound and over the byte bound is refused once, and
+// the sentence that travels names the first bound it went past.
+function chargeBytes(counted, length) {
+  counted.bytes += length;
+  if (counted.bytes <= MAX_BYTES) return true;
+  if (!counted.reason) counted.reason = `it carries more than the ${MAX_BYTES} bytes of keys and text this kernel walks of one body`;
+  return false;
+}
 
 // The canonical form of data this kernel is willing to hash and seal: JSON primitives, plain objects
 // and arrays, keys sorted. Anything else — a function, a symbol, a bigint, an infinite number, a
@@ -111,10 +129,10 @@ const MAX_NODES = 4096;
 // of something the verifier never saw (R303, R304). Non-enumerable properties are the one thing this
 // contract does not speak about: they are outside JSON and this kernel does not claim them either way.
 function canonical(value, seen, budget, depth) {
-  // One budget per walk, and both bounds are checked before anything of this value is read or copied,
+  // One budget per walk, and every bound is checked before anything of this value is read or copied,
   // so nothing of an oversized body is ever built. Every value counts, a scalar included: a body can
-  // be enormous without being deep (H20).
-  const counted = budget || { nodes: 0, reason: null };
+  // be enormous without being deep (H20). And every byte of it counts too (A02).
+  const counted = budget || { nodes: 0, bytes: 0, reason: null };
   const level = depth || 0;
   if (level > MAX_DEPTH) {
     if (!counted.reason) counted.reason = `it is nested deeper than the ${MAX_DEPTH} levels this kernel walks`;
@@ -127,7 +145,13 @@ function canonical(value, seen, budget, depth) {
   counted.nodes += 1;
   if (value === null) return null;
   const kind = typeof value;
-  if (kind === 'string' || kind === 'boolean') return value;
+  if (kind === 'string') {
+    // Charged before it is copied and long before anything is serialized: `Buffer.byteLength` is an
+    // exact length of a value already in hand, not a walk and not a second read of a caller's field.
+    if (!chargeBytes(counted, Buffer.byteLength(value, 'utf8'))) return NOT_REPRESENTABLE;
+    return value;
+  }
+  if (kind === 'boolean') return value;
   if (kind === 'number') return Number.isFinite(value) ? value : NOT_REPRESENTABLE;
   if (kind !== 'object') return NOT_REPRESENTABLE;
   const path = seen || new Set();
@@ -171,6 +195,9 @@ function canonical(value, seen, budget, depth) {
     // string this returns for an ordinary body is byte for byte the one a plain object gave.
     out = Object.create(null);
     for (const key of Object.keys(value).sort()) {
+      // A key is carried in the sealed text too, so it is charged like a string value: an object whose
+      // keys alone are a megabyte is as oversized as one whose values are (A02).
+      if (!chargeBytes(counted, Buffer.byteLength(key, 'utf8'))) { path.delete(value); return NOT_REPRESENTABLE; }
       const item = canonical(value[key], path, counted, level + 1);
       if (item === NOT_REPRESENTABLE) { path.delete(value); return NOT_REPRESENTABLE; }
       out[key] = item;
@@ -188,6 +215,16 @@ function fingerprint(value) {
   const canonicalValue = canonical(value);
   if (canonicalValue === NOT_REPRESENTABLE) return null;
   return createHash('sha256').update(JSON.stringify(canonicalValue), 'utf8').digest('hex');
+}
+
+// Which bound a value went past, so a refusal can name it instead of only saying there is no
+// fingerprint. The walk is repeated with a budget of its own and its first recorded reason is read
+// back, which is only paid on the refusing path.
+function fingerprintFailure(value) {
+  const counted = { nodes: 0, bytes: 0, reason: null };
+  return canonical(value, null, counted) === NOT_REPRESENTABLE
+    ? counted.reason || 'it is data this kernel cannot represent as JSON'
+    : null;
 }
 
 // A caller object that carries its own accessors cannot be read exactly once: the kernel reads each
@@ -388,7 +425,7 @@ function snapshotRequest(request) {
     // Which bound a body went past, so a refusal can name it instead of only saying it was unreadable.
     let problem = null;
     if (signal && typeof signal === 'object' && !Array.isArray(signal)) {
-      const budget = { nodes: 0, reason: null };
+      const budget = { nodes: 0, bytes: 0, reason: null };
       body = ownDataOnly(signal) ? canonical(signal, null, budget) : NOT_REPRESENTABLE;
       if (body === NOT_REPRESENTABLE) {
         problem = budget.reason || 'it carries something this kernel cannot represent as JSON data';
@@ -689,6 +726,15 @@ async function createEmergencyPermission(grant, options = {}) {
   // would let the grantor answer about one scope while the kernel binds another (ADV05).
   const candidate = freeze(grantView(snapshot));
   const grantDigest = fingerprint(candidate);
+  // A grant this kernel cannot fingerprint is refused at the door, before the host is asked and
+  // before anything is bound. The authority a receipt carries is a digest of the normalized grant, and
+  // a null one is not a weaker proof: it is no proof, while the permission, the ledger and the counter
+  // behind it behave exactly as if the grant had been signed. 4096 actions fit the value budget of
+  // this walk only to be refused by it, and used to be authorized with `grantDigest: null` in every
+  // receipt the permission ever sealed (A03, R413).
+  if (!grantDigest) {
+    throw new Error(`this emergency grant is refused because ${fingerprintFailure(candidate)}, and a grant this kernel cannot fingerprint carries no authority: no receipt of it could name what was granted`);
+  }
   let granted;
   try {
     granted = await authorizeGrantor(candidate);
@@ -1132,6 +1178,13 @@ function renewEmergencyPermission(permission, changes) {
     throw new Error(`no renewal approver is bound to this emergency permission: extending the clock needs a fresh authorization from ${snapshot.owner}, and this kernel cannot stand in for it`);
   }
   const candidate = freeze(grantView({ ...snapshot, expiresAt }));
+  // The same door as at the grant, for the same reason. With `expiresAt` the only field a renewal may
+  // touch, a candidate that fingerprints here fingerprinted when the person signed it, so this cannot
+  // be reached without the first door having been passed; it is here so that neither path to a wider
+  // clock can reach the approver with an authorization it cannot be sealed against (A03).
+  if (!fingerprint(candidate)) {
+    throw new Error(`this emergency renewal is refused because ${fingerprintFailure(candidate)}, and a grant this kernel cannot fingerprint carries no authority`);
+  }
   let answer;
   try {
     answer = bound.approver(candidate);

@@ -19,6 +19,9 @@ const { verifyReceipt } = require('../src/receipt.js');
 const { createHost } = require('./emergency-host.js');
 
 const AT = '2026-10-04T12:00:00Z';
+// Only text. Nothing here touches a disk: the delegation is created to show that this kernel cannot
+// read one.
+const SYNTHETIC = process.platform === 'win32' ? 'C:/synthetic' : '/srv/synthetic';
 // One simulated host for this file. Its aliases are set inside the cases that need one.
 const host = createHost();
 
@@ -104,7 +107,7 @@ test('A01-R403 delegating a self-review does not make the agent independent of i
   run(permission, ledger);
   const chain = delegation.createDelegation({
     task: 'accept my emergency use',
-    medium: { cwd: 'C:/synthetic', material: [], forbidden: [] },
+    medium: { cwd: SYNTHETIC, material: [], forbidden: [] },
     delegate: 'agent-helper',
     orchestrator: 'agent',
     now: () => AT,
