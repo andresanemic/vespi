@@ -446,7 +446,7 @@ function bindLedger(ledger, family) {
 function newRecord() {
   return {
     family: null, uses: 0, paused: false, revoked: false, stopped: false, rejectedUse: null,
-    pending: null, useIds: new Set(), signalIds: new Set(), receipts: new Map(), busy: false,
+    pending: null, useIds: new Set(), signalIds: new Set(), busy: false,
   };
 }
 
@@ -910,8 +910,10 @@ function exerciseEmergency(permission, request, options = {}) {
     record.uses += 1;
     record.useIds.add(asked.useId);
     record.signalIds.add(asked.signal.id);
-    record.pending = { useId: asked.useId, triggerId: trigger.id, dueAtMs };
-    record.receipts.set(asked.useId, receipt);
+    // Only the open review keeps its receipt. A closed one was already handed to whoever exercised
+    // the permission, and the record used to keep every receipt it ever sealed for the life of the
+    // ledger, which is retention this kernel has no use for and no bound on.
+    record.pending = { useId: asked.useId, triggerId: trigger.id, dueAtMs, receipt };
     return { state: 'review_pending', reason: null, nextUse: 'blocked_until_review', receipt };
   } finally {
     record.busy = false;
@@ -951,7 +953,7 @@ function reviewEmergencyUse(permission, useId, options = {}) {
   const clock = readClock(now);
   if (!clock.ok) throw new Error(clock.reason);
   const reviewedAt = iso(clock.now);
-  const original = record.receipts.get(useId);
+  const original = record.pending.receipt;
   if (!original || !original.review) throw new Error('the receipt for this use is not in the record, so nothing can be closed over it');
   // A review cannot predate the use it closes. A clock that walked backwards would stamp the
   // decision before the event, and the ledger and the open review stay exactly as they were.
@@ -976,7 +978,6 @@ function reviewEmergencyUse(permission, useId, options = {}) {
     notCovered: original.notCovered.filter((key) => key !== 'post_use_review'),
     review: { ...original.review, status: 'reviewed', decision, by, reviewedAt },
   });
-  record.receipts.set(useId, closed);
   record.pending = null;
   // A rejection is the person saying the use was not hers. It stops the permission: it cannot be
   // resumed, and undoing the effect is not something this kernel can do.
@@ -1007,7 +1008,7 @@ function pauseEmergencyPermission(permission, options = {}) {
   const claimed = claimRecord(records, snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   claimed.record.paused = true;
-  return getEmergencyState(permission, { ledger, now });
+  return emergencyState(permission, ledger, now);
 }
 
 function resumeEmergencyPermission(permission, options = {}) {
@@ -1026,7 +1027,7 @@ function resumeEmergencyPermission(permission, options = {}) {
   if (record.revoked) throw new Error('a revoked emergency permission cannot be resumed');
   if (record.stopped) throw new Error(`this emergency permission was stopped by the rejected review of ${record.rejectedUse}; resuming it is not what the person decided, so it needs a new grant`);
   record.paused = false;
-  return getEmergencyState(permission, { ledger, now });
+  return emergencyState(permission, ledger, now);
 }
 
 function revokeEmergencyPermission(permission, options = {}) {
@@ -1042,7 +1043,7 @@ function revokeEmergencyPermission(permission, options = {}) {
   const claimed = claimRecord(records, snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   claimed.record.revoked = true;
-  return getEmergencyState(permission, { ledger, now });
+  return emergencyState(permission, ledger, now);
 }
 
 // Renewal moves the clock and nothing else. The grant a person signed does not grow because time
@@ -1135,7 +1136,15 @@ function renewEmergencyPermission(permission, changes) {
 function getEmergencyState(permission, options = {}) {
   const deps = readOptions(options, ['ledger', 'now']);
   if (!deps) throw new Error(UNREADABLE_OPTIONS);
-  const { ledger, now } = deps;
+  return emergencyState(permission, deps.ledger, deps.now);
+}
+
+// The state, read from a ledger and a clock this module already holds. The three administrative calls
+// below answer with it too, and they used to reach it by calling the public function with an options
+// bag they had just invented: one public entry point was entering another through a shape no caller
+// ever passes. The options of a caller are now read exactly once, in one place, and everything below
+// reads the record and the clock directly.
+function emergencyState(permission, ledger, now) {
   const snapshot = readPermission(permission);
   if (!snapshot) throw new Error('emergency permission is malformed and has no state');
   const bound = bindingOf(permission);
