@@ -458,3 +458,42 @@ test('H18 a wide grant binds exactly the fields the host was asked about', async
   assert.equal(result.receipt.trigger.id, 't499');
   assert.equal(result.receipt.trigger.verifierId, 'v499');
 });
+
+// ─── H19 · `null` where the options go is a crash, not a refusal ───────────────────────────────
+
+// The class: an exception that escapes with nothing of the kernel's in it. Every entry point here
+// takes an options object with a default, and a default only answers for `undefined`. A caller
+// that passes `null` gets a raw `TypeError` out of the module, while `0`, `'x'` and `true` in the
+// same position are all handled and produce the documented blocked receipt. The module already has
+// a test named "a missing or hostile ledger blocks the exercise instead of throwing"; this is the
+// same promise with the one value the default does not cover. In `createEmergencyPermission` it is
+// worse than a throw: the function is async, so the `TypeError` leaves as a rejected promise whose
+// message is not one of the module's own sentences.
+test('H19 a null options object is refused the way every other unusable one is', async () => {
+  const permission = await granted({ id: 'h19' });
+  const ledger = ledgerFor();
+  await assert.rejects(() => emergency.createEmergencyPermission(GRANT({ id: 'h19-other' }), null),
+    (err) => err instanceof Error && /authorizeGrantor|grantor|malformed|emergency/i.test(err.message),
+    'a null options object must not escape as a raw TypeError');
+  // The exercise answers blocked, with a receipt that verifies, exactly as it does for `0`.
+  const blocked = emergency.exerciseEmergency(permission, REQUEST(), null);
+  assert.equal(blocked.state, 'blocked');
+  assert.equal(verifyReceipt(blocked.receipt).ok, true);
+  for (const options of [0, 'x', true, [], undefined]) {
+    const other = emergency.exerciseEmergency(permission, REQUEST({ useId: `u-${String(options)}` }), options);
+    assert.equal(other.state, 'blocked');
+  }
+  // And the four that take `{ ledger, by, decision, now }` answer the same way.
+  assert.throws(() => emergency.getEmergencyState(permission, null), /malformed|state/i);
+  for (const call of [
+    () => emergency.pauseEmergencyPermission(permission, null),
+    () => emergency.resumeEmergencyPermission(permission, null),
+    () => emergency.revokeEmergencyPermission(permission, null),
+    () => emergency.reviewEmergencyUse(permission, 'u', null),
+  ]) {
+    assert.throws(call, (err) => err instanceof Error && !/TypeError/.test(err.constructor.name)
+      && /ledger|emergency/i.test(err.message), 'a null options object must not escape as a raw TypeError');
+  }
+  // A real ledger still works, so nothing was loosened on the way.
+  assert.equal(emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT }).state, 'review_pending');
+});
