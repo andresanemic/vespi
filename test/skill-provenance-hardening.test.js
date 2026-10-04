@@ -275,7 +275,7 @@ test('H13 unpaired surrogates cannot enter the registry in the first place', () 
 
 // --- Group 6: two attacks whose repair is a contract decision, not a bug fix ---
 
-test('H12d a refused request is not recorded in the decision it refuses', { todo: "decisión del dueño: `requested` hoy significa «la petición concedida» y sale vacío en toda negativa, así que un recibo de alcance denegado no registra qué se pidió. Reportarlo en toda negativa cambiaría el significado de un campo público de la decisión y del recibo, y no lo decide este ataque." }, async () => {
+test('H12d a refused request is not recorded in the decision it refuses', { todo: "diferido al 0.1.5 por decisión del coordinador" }, async () => {
   const [claim, result] = await registeredAndVerified();
   const decision = authorizeSkill(claim, result, ['delete']);
   const receipt = buildSkillReceipt(RECEIPT_SPEC, decision);
@@ -285,7 +285,7 @@ test('H12d a refused request is not recorded in the decision it refuses', { todo
   assert.deepEqual([...receipt.skill.requested], ['delete']);
 });
 
-test('H13d a receipt cannot show when the provenance behind it was verified', { todo: "decisión del dueño: el resultado de la verificación no lleva hora y `spec.at` viaja al recibo sin validarse, así que nada en el recibo separa una verificación de hace un año de una de hace un segundo. Añadir un reloj al resultado es un campo nuevo en un valor público; validar `at` es un cambio en receipt.js, fuera de esta rama." }, async () => {
+test('H13d a receipt cannot show when the provenance behind it was verified', { todo: "diferido al 0.1.5 por decisión del coordinador" }, async () => {
   const [claim, result] = await registeredAndVerified();
   const decision = authorizeSkill(claim, result, ['read']);
   const earlier = buildSkillReceipt({ ...RECEIPT_SPEC, at: '1970-01-01T00:00:00.000Z' }, decision);

@@ -138,13 +138,13 @@ test('N05 the resolver is not handed the answers it is asked to produce (author,
 
 // --- Still red on purpose, with the reason written down ---
 
-test('N07 resolver bytes carrying unpaired surrogates are not verified bytes (H12 symmetry)', { todo: "el informe lo marca opcional y fuera de la lista de arreglos de hoy: `hasContent` pasaría a exigir texto bien formado, que es un cambio de comportamiento que este encargo no pide. La asimetría con H12 queda anotada en el informe." }, async () => {
+test('N07 resolver bytes carrying unpaired surrogates are not verified bytes (H12 symmetry)', { todo: "diferido al 0.1.5 por decisión del coordinador" }, async () => {
   const claim = registered({ content: '# r3 \ufffd' });
   const result = await verifySkillProvenance(claim, () => proof({ content: '# r3 \ud800' }));
   assert.notEqual(result.status, 'verified', 'text that is not the registered text was verified by its lossy encoding');
 });
 
-test('N08 a hostile nested receipt field is contained as the builder comment promises', { todo: "arreglo de comentario, no de código: los valores anidados los lee `buildReceipt` en receipt.js, que es base del release y esta rama no lo toca. La promesa del comentario se corrigió para que nombre ese límite en vez de afirmar una contención que el código no tiene." }, async () => {
+test('N08 a hostile nested receipt field is contained as the builder comment promises', { todo: "diferido al 0.1.5 por decisión del coordinador" }, async () => {
   const [claim, result] = await registeredAndVerified();
   const operation = { get id() { throw new Error('PRIVATE_operation_getter'); } };
   assert.doesNotThrow(() => buildSkillReceipt({ ...RECEIPT_SPEC, operation }, authorizeSkill(claim, result, ['read'])));
