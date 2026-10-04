@@ -635,9 +635,16 @@ function authorizeSkill(claim, result, requested) {
   const provenanceChecks = result.checks !== null && typeof result.checks === 'object' ? result.checks : {};
   contentRecomputed = result.contentRecomputed === true;
 
+  // The scope of the request cannot decide the status on its own. A refuted provenance stays a
+  // refutation whichever capability is asked for: otherwise the rule that runs first in this
+  // function gets to pick the receipt, and whoever holds a refuted skill picks the softer one by
+  // asking for something nobody granted. `provenanceStatus` keeps saying `discrepant` either way, so
+  // this only aligns the status of the decision and of the receipt with it (review N04).
+  const scopeStatus = provenanceStatus === 'discrepant' ? 'discrepant' : 'not_verified';
+
   const capture = captureRequest(requested);
   if (!capture.ok) {
-    return refuseDecision('not_verified', capture.reason, provenanceChecks, ['authority_scope'], provenanceStatus);
+    return refuseDecision(scopeStatus, capture.reason, provenanceChecks, ['authority_scope'], provenanceStatus);
   }
   const ask = capture.names;
   let malformed = null;
@@ -666,12 +673,12 @@ function authorizeSkill(claim, result, requested) {
     }
   }
   if (malformed !== null) {
-    return refuseDecision('not_verified', malformed, provenanceChecks, ['authority_scope'], provenanceStatus);
+    return refuseDecision(scopeStatus, malformed, provenanceChecks, ['authority_scope'], provenanceStatus);
   }
   const outside = ask.filter((item) => !listedIn(record.authority, item));
   if (outside.length > 0) {
     return refuseDecision(
-      'not_verified',
+      scopeStatus,
       `the person granted ${record.authority.length === 0 ? 'no capability at all' : record.authority.join(', ')}, and ${outside.join(', ')} is not among them`,
       provenanceChecks,
       ['authority_scope'],
