@@ -430,6 +430,40 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
 
 // The authority question, kept apart from the load question: may this skill act, and within what the
 // person granted. Bytes belong to `loadSkill`, where the time-of-check gap actually opens.
+// Membership by plain loop. The lists compared here are built by this module, and no method handed
+// over by the caller ever decides whether authority widens.
+function listedIn(list, value) {
+  for (let index = 0; index < list.length; index += 1) {
+    if (list[index] === value) return true;
+  }
+  return false;
+}
+
+// One capture, one truth. A caller-supplied array can be re-read: a getter, an iterator and an
+// overridden `filter` are free to answer differently every time, so a scope check over the original
+// array and a snapshot of it are two different lists, and the second one wins. The request is
+// therefore read exactly once, into an array this function owns, and names, duplicates, scope and the
+// `requested` the decision reports all read only that copy. A capture that cannot be completed (a
+// length that is not a length, a getter that throws) is refused with a fixed reason: nothing the
+// caller did is repeated back at them (A02, A03, A16).
+function captureRequest(value) {
+  if (!Array.isArray(value)) {
+    return { ok: false, names: [], reason: 'the requested authority must be an array of capability names' };
+  }
+  const names = [];
+  let length;
+  try {
+    length = value.length;
+    if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) {
+      return { ok: false, names: [], reason: 'the requested authority could not be read as a list of names' };
+    }
+    for (let index = 0; index < length; index += 1) names.push(value[index]);
+  } catch {
+    return { ok: false, names: [], reason: 'the requested authority could not be read as a list of names' };
+  }
+  return { ok: true, names, reason: null };
+}
+
 function authorizeSkill(claim, result, requested) {
   const record = recordOf(claim);
   const provenance = record === null ? null : provenanceOf(record);
@@ -469,35 +503,40 @@ function authorizeSkill(claim, result, requested) {
   const provenanceStatus = result.status;
   const provenanceChecks = result.checks !== null && typeof result.checks === 'object' ? result.checks : {};
 
-  let ask;
-  try {
-    ask = requested;
-  } catch {
-    ask = undefined;
+  const capture = captureRequest(requested);
+  if (!capture.ok) {
+    return refuseDecision('not_verified', capture.reason, provenanceChecks, ['authority_scope']);
   }
+  const ask = capture.names;
   let malformed = null;
-  if (!Array.isArray(ask)) {
-    malformed = 'the requested authority must be an array of capability names';
-  } else if (ask.length === 0) {
+  if (ask.length === 0) {
     // Nothing asked for is nothing granted. A decision that says `authorized` for an empty request
     // would be a receipt with no authority in it, which reads like a clean bill of health.
     malformed = 'no capability was requested, so there is no authority to grant';
   } else {
-    for (const item of ask) {
-      if (capabilityName(item) === null) {
-        malformed = 'the requested authority must hold capability names without wildcards';
-        break;
+    const seen = [];
+    for (let index = 0; index < ask.length && malformed === null; index += 1) {
+      let name = null;
+      try {
+        name = capabilityName(ask[index]);
+      } catch {
+        malformed = 'the requested authority could not be read as a list of names';
       }
-      if (ask.indexOf(item) !== ask.lastIndexOf(item)) {
+      if (malformed !== null) break;
+      if (name === null) {
+        malformed = 'the requested authority must hold capability names without wildcards';
+      } else if (listedIn(seen, name)) {
         malformed = 'the requested authority repeats a capability';
-        break;
+      } else {
+        ask[index] = name;
+        seen.push(name);
       }
     }
   }
   if (malformed !== null) {
     return refuseDecision('not_verified', malformed, provenanceChecks, ['authority_scope']);
   }
-  const outside = ask.filter((item) => !record.authority.includes(item));
+  const outside = ask.filter((item) => !listedIn(record.authority, item));
   if (outside.length > 0) {
     return refuseDecision(
       'not_verified',
