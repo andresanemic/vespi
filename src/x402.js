@@ -23,12 +23,13 @@ const { types: utilTypes } = require('node:util');
 // A canonical positive decimal amount, at most 78 digits, no sign, no exponent, no leading zero.
 const ATOMIC = /^[1-9][0-9]{0,77}$/;
 const HASH = /^[0-9a-f]{64}$/;
-// The control names the settlement reader is allowed to report. A control name is host-written text
-// that ends up on a sealed receipt, and the identifier shape is not enough: it admits a 64-character
-// token with the shape of a Stellar seed, and that text was sealed in as `settlement_<name>`. The
-// receipt knows this closed set of names, so anything else a port invents is refused instead of
-// carried. A new control is a change to this catalog and to the receipt that carries it, not
-// something a host may add at run time.
+// The control names the settlement reader is allowed to report, and they are the names the one
+// reader in this tree emits (demo/x402/settlement.js): invocation, authorization, prepared, transfer,
+// payer, source, exactAmount. A control name is host-written text that ends up on a sealed receipt,
+// and an identifier shape is not enough as a gate: it admits a 64-character token with the shape of
+// a Stellar seed, and that text was sealed in as `settlement_<name>`. With a closed catalog, anything
+// else a port invents is refused instead of carried. A new control is a change to this catalog and to
+// the receipt that carries it, not something a host may add at run time.
 const SETTLEMENT_CONTROLS = new Set([
   'invocation', 'authorization', 'prepared', 'transfer', 'payer', 'source', 'exactAmount',
 ]);
