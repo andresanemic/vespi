@@ -36,7 +36,11 @@ const BINDINGS = new WeakMap();
 const CAPABILITY = 'emergency-access';
 const DEFAULT_GOAL = 'emergency access under prior authority';
 const PENDING_ANCHOR = { status: 'pending', network: 'stellar:testnet' };
-const MAX_REASON = 512;
+// Every text this kernel seals whole answers to the bound the common receipt applies (`receipt.js`
+// refuses anything over 512 characters). A grant or a request that names something longer is refused
+// rather than shortened: two different identifiers that share their first 512 characters would seal
+// the same receipt text, and the honest answer is that this kernel will not carry them (H06).
+const MAX_TEXT = 512;
 // A subject reaches a receipt, so it has to be a reference and not content: letters, digits and
 // separators, bounded. What this kernel will not do is seal a piece of the patient's record into an
 // object that travels.
@@ -51,8 +55,14 @@ function text(value) {
   return typeof value === 'string' && value.length > 0;
 }
 
-function safeText(value, max = MAX_REASON) {
-  return typeof value === 'string' && value.length > 0 ? value.slice(0, max) : null;
+// A text this kernel can seal whole: non-empty and within the bound above. A reason is shortened
+// instead, because the kernel writes those; anything a caller names is refused rather than cut.
+function bounded(value, max = MAX_TEXT) {
+  return text(value) && value.length <= max;
+}
+
+function safeText(value, max = MAX_TEXT) {
+  return text(value) ? value.slice(0, max) : null;
 }
 
 function reference(value) {
@@ -188,13 +198,13 @@ function readOptions(options, fields) {
 // hostile object said while it happened.
 const UNREADABLE_OPTIONS = 'the options this call was given could not be read safely';
 
-// A non-empty list of unique non-empty strings, or null. Null is what every reader below treats as
-// "this permission cannot be trusted with anything".
+// A non-empty list of unique non-empty strings within the receipt bound, or null. Null is what every
+// reader below treats as "this permission cannot be trusted with anything".
 function stringList(value) {
   if (!Array.isArray(value) || value.length === 0) return null;
   const out = [];
   for (const item of value) {
-    if (!text(item)) return null;
+    if (!bounded(item)) return null;
     out.push(item);
   }
   return new Set(out).size === out.length ? out : null;
@@ -218,7 +228,7 @@ function triggerList(value) {
     } catch {
       return null;
     }
-    if (!text(id) || !text(verifierId)) return null;
+    if (!bounded(id) || !bounded(verifierId)) return null;
     if (ids.has(id)) return null;
     ids.add(id);
     out.push({ id, verifierId });
@@ -257,11 +267,17 @@ function snapshotPermission(permission) {
     if (!text(grantee)) return { ok: false, reason: 'it names nobody allowed to exercise it' };
     if (!text(destination)) return { ok: false, reason: 'it names no destination' };
     if (!text(purpose)) return { ok: false, reason: 'it declares no motive, and an emergency without a declared motive is not a grant' };
-    if (!actions) return { ok: false, reason: 'its actions must be a non-empty list of unique strings' };
-    if (!scope) return { ok: false, reason: 'its scope must be a non-empty list of unique strings' };
+    // And nothing a caller names is longer than the bound a receipt answers to. This is a refusal and
+    // not a shortening: an identifier this kernel cannot carry whole is not one it will seal, and two
+    // long identifiers sharing their first 512 characters would seal the same text (H06).
+    for (const field of [['id', id], ['owner', owner], ['grantee', grantee], ['destination', destination], ['purpose', purpose]]) {
+      if (!bounded(field[1])) return { ok: false, reason: `its ${field[0]} is ${field[1].length} characters long, and this kernel seals no text longer than ${MAX_TEXT} characters` };
+    }
+    if (!actions) return { ok: false, reason: `its actions must be a non-empty list of unique strings of at most ${MAX_TEXT} characters` };
+    if (!scope) return { ok: false, reason: `its scope must be a non-empty list of unique strings of at most ${MAX_TEXT} characters` };
     if (!triggers) return { ok: false, reason: 'its triggers must be a non-empty list, each naming a trigger and its independent verifier' };
-    if (!reviewers) return { ok: false, reason: 'its reviewers must be a non-empty list of unique strings' };
-    if (!pausers) return { ok: false, reason: 'its pausers must be a non-empty list of unique strings' };
+    if (!reviewers) return { ok: false, reason: `its reviewers must be a non-empty list of unique strings of at most ${MAX_TEXT} characters` };
+    if (!pausers) return { ok: false, reason: `its pausers must be a non-empty list of unique strings of at most ${MAX_TEXT} characters` };
     // Safe integers, not merely integers: a deadline or a cap past the range a Date can hold is not
     // a permission this kernel can schedule, and accepting it would move the failure to the moment
     // the review falls due.
@@ -338,7 +354,16 @@ function snapshotRequest(request) {
       body = ownDataOnly(signal) ? canonical(signal) : NOT_REPRESENTABLE;
       if (body === NOT_REPRESENTABLE) body = null;
     }
+    // Nothing a request names is longer than the bound a receipt answers to either. The fields are
+    // still read once, and the caller is told which of them was over the line instead of being given
+    // a shorter identifier that would collide with another one (H06).
+    const over = [];
+    for (const field of [['useId', useId], ['actor', actor], ['action', action], ['destination', destination], ['triggerId', triggerId]]) {
+      if (text(field[1]) && !bounded(field[1])) over.push(field[0]);
+    }
+    if (body && text(body.id) && !bounded(body.id)) over.push('triggerSignal.id');
     return {
+      oversized: over,
       useId: text(useId) ? useId : null,
       actor: text(actor) ? actor : null,
       action: text(action) ? action : null,
@@ -806,6 +831,9 @@ function exerciseEmergency(permission, request, options = {}) {
   const at = iso(clock.now);
   if (!snapshot) return fail(`the emergency permission could not be read safely: ${read.reason}`, at);
   if (!asked) return fail('the emergency request could not be read safely', at);
+  if (asked.oversized.length) {
+    return fail(`the emergency request names ${asked.oversized.join(', ')} with more than ${MAX_TEXT} characters, and this kernel seals no text longer than that`, at);
+  }
   const records = readRecords(ledger);
   if (!records) return fail('a kernel emergency ledger is required to exercise emergency access', at, asked.signal ? asked.signal.id : null);
   // Readable is not granted: only the object the grant path produced carries authority.
