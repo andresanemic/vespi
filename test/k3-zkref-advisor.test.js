@@ -77,6 +77,22 @@ test('ADV-10 the reference reads each key field once: a key whose gamma changes 
   assert.equal(reads, 1, `gamma was read ${reads} times; the later read skipped the subgroup check`);
 });
 
+// ADV-10 / fix 2, second half: the proof was read twice for the same reason.
+test('ADV-10b the reference reads proof.a once', () => {
+  const proof = fx.proof();
+  const bad = advisor.nonSubgroupG2[0].q;
+  let reads = 0;
+  const proxy = new Proxy(proof, {
+    get(target, prop, recv) {
+      if (prop === 'a') { reads += 1; return reads === 1 ? target.a : ['0', '0']; }
+      return Reflect.get(target, prop, recv);
+    },
+  });
+  // The poisoned read is the second one, so a single read means it never reached the equation.
+  assert.equal(ref.verifyGroth16(fx.verificationKey(), proxy, ['35']), true);
+  assert.equal(reads, 1, `proof.a was read ${reads} times`);
+});
+
 // ADV-09 / fix 3: no accessors anywhere in the key, including on the indices of IC.
 test('ADV-09 the reference refuses an accessor on an IC index (design 4: no getters)', () => {
   const vk = fx.verificationKey();
@@ -102,4 +118,46 @@ test('ADV-11b an out of range coordinate at any IC index above zero is refused, 
   assert.throws(() => ref.createReferenceBackend({ ...vk, ic: [vk.ic[0], [vk.ic[1][0], String(B(vk.ic[1][1]) + P)]] }), TypeError);
   assert.throws(() => ref.createReferenceBackend({ ...vk, ic: [[String(P), vk.ic[0][1]], vk.ic[1]] }), TypeError);
   assert.throws(() => ref.createReferenceBackend({ ...vk, ic: [vk.ic[0], [String(P), vk.ic[1][1], '0']] }), TypeError);
+});
+
+// ADV-11 / fix 4, at the reader. `createReferenceBackend` already refused the key on its own, but only
+// because the port's digest refuses it too: the reader itself used to hand back a key whose bad entry
+// had quietly become the identity, and any other caller of `readVerificationKey` would have believed it.
+test('ADV-11c readVerificationKey refuses an out of range IC coordinate instead of reporting the identity', () => {
+  const vk = fx.verificationKey();
+  assert.equal(ref.readVerificationKey({ ...vk, ic: [vk.ic[0], [String(P), vk.ic[1][1]]] }), null);
+  assert.equal(ref.readVerificationKey({ ...vk, ic: [vk.ic[0], [vk.ic[1][0], String(B(vk.ic[1][1]) + P)]] }), null);
+  assert.equal(ref.readVerificationKey({ ...vk, ic: [[String(P), vk.ic[0][1]], vk.ic[1]] }), null);
+  assert.equal(ref.readVerificationKey({ ...vk, ic: ['35', vk.ic[1][1]] }), null);
+  // In range is not the same as on the curve: the reader's job is the range and the shape, and the
+  // curve and the subgroup are judged by whoever spends the CPU. Both layers refuse the same key.
+  const offCurve = ref.readVerificationKey({ ...vk, ic: [['0', vk.ic[0][1]], vk.ic[1]] });
+  assert.notEqual(offCurve, null);
+  assert.throws(() => ref.createReferenceBackend({ ...vk, ic: [['0', vk.ic[0][1]], vk.ic[1]] }), TypeError);
+  // The identity stays allowed when the key declares it with an explicit null (design 4).
+  const declared = ref.readVerificationKey({ ...vk, ic: [null, vk.ic[1]] });
+  assert.equal(declared.ic[0], null);
+  assert.deepEqual(declared.ic[1], { x: B(vk.ic[1][0]), y: B(vk.ic[1][1]) });
+});
+
+// ADV-09 / fix 3, at the reader: the same refusal for a symbol, a hole or an extra index, which the
+// plain array walk this replaces would have walked over.
+test('ADV-09b readVerificationKey refuses an IC that is not dense data all the way down', () => {
+  const vk = fx.verificationKey();
+  const sparse = [vk.ic[0]];
+  sparse.length = 2;
+  assert.equal(ref.readVerificationKey({ ...vk, ic: sparse }), null);
+  const extra = [vk.ic[0], vk.ic[1]];
+  extra.extra = '0';
+  assert.equal(ref.readVerificationKey({ ...vk, ic: extra }), null);
+  const symboled = [vk.ic[0], vk.ic[1]];
+  symboled[Symbol('s')] = '0';
+  assert.equal(ref.readVerificationKey({ ...vk, ic: symboled }), null);
+  const accessor = [vk.ic[0]];
+  Object.defineProperty(accessor, '1', { get: () => vk.ic[1], enumerable: true, configurable: true });
+  assert.equal(ref.readVerificationKey({ ...vk, ic: accessor }), null);
+  // The honest key still reads, and says exactly what it read.
+  const good = ref.readVerificationKey(vk);
+  assert.equal(good.ic.length, 2);
+  assert.deepEqual(good.ic[0], { x: B(vk.ic[0][0]), y: B(vk.ic[0][1]) });
 });

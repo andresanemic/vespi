@@ -461,12 +461,21 @@ function readVerificationKey(raw) {
     const gamma = readG2Point(raw.gamma);
     const delta = readG2Point(raw.delta);
     if (alpha === null || beta === null || gamma === null || delta === null) return null;
-    const icRaw = raw.ic;
-    if (!Array.isArray(icRaw) || icRaw.length !== nPublic + 1) return null;
+    // `dataArray`, not a plain index walk: an accessor on an IC index is refused here like on every
+    // other array in this module (design 4). The catch below turns that into "key not readable".
+    let icRaw;
+    try {
+      icRaw = dataArray(raw.ic, nPublic + 1);
+    } catch {
+      return null;
+    }
     const ic = [];
     for (let i = 0; i < icRaw.length; i += 1) {
       const point = readIdentityG1Point(icRaw[i]);
-      if (i === 0 ? point === null && icRaw[i] !== null : false) return null;
+      // The identity in IC is only the identity when the key says so with an explicit null. A point
+      // the reader cannot read is invalid input, at index zero or anywhere else: reading it as the
+      // identity would turn a misconfigured key into one that looks configured.
+      if (point === null && icRaw[i] !== null) return null;
       ic.push(point);
     }
     return { nPublic, alpha, beta, gamma, delta, ic };
@@ -513,24 +522,53 @@ function readPublicSignals(raw, nPublic) {
   }
 }
 
-// vk_x = IC[0] + sum(publicInputs[i] * IC[i+1]), in the kernel's shape. An identity entry
-// contributes nothing, as an explicit identity should. Signals may be canonical decimals or BigInts;
-// anything else makes this return null rather than guess.
+// vk_x = IC[0] + sum(publicInputs[i] * IC[i+1]), from an IC that has already been read and validated,
+// in the internal point shape. Signals are the canonical BigInts readPublicSignals produced. An
+// identity entry contributes nothing, as an explicit identity should.
+//
+// This takes parsed structures, never raw input: reading the raw IC here would be a second read of
+// the caller's key, and a second read is a way in (see verifyGroth16).
+function vkXFromParsedIc(ic, signals) {
+  let running = ic[0];
+  for (let i = 0; i < signals.length; i += 1) {
+    const entry = ic[i + 1];
+    if (entry === null) continue;
+    const term = g1.mul(entry, signals[i]);
+    running = running === null ? term : g1.add(running, term);
+  }
+  return running;
+}
+
+// The four pairs of the Groth16 equation, from structures that have already been read. Internal point
+// shape, which is what pairingProduct consumes.
+function termsFromParsed(key, proof, signals) {
+  return [
+    { p: g1.neg(proof.a), q: proof.b },
+    { p: key.alpha, q: key.beta },
+    { p: vkXFromParsedIc(key.ic, signals), q: key.gamma },
+    { p: proof.c, q: key.delta },
+  ];
+}
+
+// vk_x in the kernel's shape, for a caller that wants the point rather than the four pairs. Signals may
+// be canonical decimals or BigInts; anything else makes this return null rather than guess. Exposed
+// for the tests that compare it with the oracle's own vk_x.
 function accumulateIc(rawIc, publicInputs) {
   if (!Array.isArray(rawIc) || rawIc.length === 0 || !Array.isArray(publicInputs)) return null;
   if (publicInputs.length > rawIc.length - 1) return null;
-  let running = readIdentityG1Point(rawIc[0]);
-  if (running === null && rawIc[0] !== null) return null;
+  const ic = [];
+  for (let i = 0; i < rawIc.length; i += 1) {
+    const entry = readIdentityG1Point(rawIc[i]);
+    if (entry === null && rawIc[i] !== null) return null;
+    ic.push(entry);
+  }
+  const signals = [];
   for (let i = 0; i < publicInputs.length; i += 1) {
     const scalar = readCanonicalScalar(publicInputs[i], R);
     if (scalar === null) return null;
-    const entry = readIdentityG1Point(rawIc[i + 1]);
-    if (entry === null && rawIc[i + 1] !== null) return null;
-    if (entry === null) continue;
-    const term = g1.mul(entry, scalar);
-    running = running === null ? term : g1.add(running, term);
+    signals.push(scalar);
   }
-  return g1Shape(running);
+  return g1Shape(vkXFromParsedIc(ic, signals));
 }
 
 // The four pairs of the Groth16 equation, exposed so a test can compare them with the oracle's own
@@ -543,20 +581,16 @@ function equationTerms(rawVerificationKey, rawProof, rawPublicInputs) {
   if (proof === null) return null;
   const publicInputs = readPublicSignals(rawPublicInputs, key.nPublic);
   if (publicInputs === null) return null;
-  const vkX = accumulateIc(rawVerificationKey.ic, publicInputs);
-  if (vkX === null) return null;
-  // The terms come back in the internal point shape, which is what pairingProduct consumes.
-  const vkXInternal = vkX === null ? null : { x: vkX[0], y: vkX[1] };
-  return [
-    { p: g1.neg(proof.a), q: proof.b },
-    { p: key.alpha, q: key.beta },
-    { p: vkXInternal, q: key.gamma },
-    { p: proof.c, q: key.delta },
-  ];
+  return termsFromParsed(key, proof, publicInputs);
 }
 
 // e(-A,B) * e(alpha,beta) * e(vk_x,gamma) * e(C,delta) == 1, with one single final exponentiation
 // over the product of the four Miller values.
+//
+// Every input is read exactly once. A second read of the verification key or of the proof would be
+// a way in: whoever supplies the second read decides which points reach the pairing, and the checks
+// below only ever ran on the first one. So the key, the proof and the signals are read here, judged
+// here, and the terms are assembled from those same parsed structures.
 //
 // The answer is a boolean about an equation. It is not a statement about the presenter, about the
 // institution that produced the key, or about freshness: the same proof verifies again for the same
@@ -571,10 +605,11 @@ function verifyGroth16(rawVerificationKey, rawProof, rawPublicInputs) {
     for (const entry of key.ic) {
       if (entry !== null && !isValidG1(entry)) return false;
     }
-    if (readProof(rawProof) === null) return false;
-    const terms = equationTerms(rawVerificationKey, rawProof, rawPublicInputs);
-    if (terms === null) return false;
-    return fp12.eq(pairingProduct(terms), fp12.ONE);
+    const proof = readProof(rawProof);
+    if (proof === null) return false;
+    const publicInputs = readPublicSignals(rawPublicInputs, key.nPublic);
+    if (publicInputs === null) return false;
+    return fp12.eq(pairingProduct(termsFromParsed(key, proof, publicInputs)), fp12.ONE);
   } catch {
     return false;
   }
