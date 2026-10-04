@@ -815,7 +815,13 @@ async function performStages(ctx, spec) {
   const afterDiscovery = liveGrant(ctx.authority, spec, now);
   if (!afterDiscovery.ok) return blocked(afterDiscovery.code);
 
-  const reserved = ctx.claims.reserveEffect(effectKey(ctx, spec));
+  // A store that cannot answer is a run that cannot deduplicate, so nothing goes out.
+  let reserved;
+  try {
+    reserved = ctx.claims.reserveEffect(effectKey(ctx, spec));
+  } catch {
+    return failed(CODES.CLAIMS_CAPACITY);
+  }
   if (reserved === 'duplicate') return blocked(CODES.DUPLICATE_EFFECT);
   if (reserved !== 'claimed') return blocked(CODES.CLAIMS_CAPACITY);
 
@@ -830,9 +836,13 @@ async function performStages(ctx, spec) {
   ctx.authDigest = inspected.authDigest;
   ctx.prepared = true;
 
-  // Immediately before sending, with the same clock the run started with.
-  const beforeSend = liveGrant(ctx.authority, spec, now);
-  if (!beforeSend.ok) return blocked(beforeSend.code);
+  // Immediately before the send, on a clock read again and on the permission the operation still
+  // carries. Preparing and inspecting took time, so the moment that authorized this payment may
+  // have passed, and whoever holds the operation may have replaced its authority while a port was
+  // busy: an expired grant, an authority that is no longer the one that was checked, or a clock
+  // that cannot be read stops the payment here, with nothing exercised and nothing sent.
+  const beforeSend = revalidateBeforeSend(ctx);
+  if (!beforeSend.ok) return beforeSend.result;
 
   ctx.evidence = { authDigest: ctx.authDigest };
   let response;
@@ -878,6 +888,36 @@ async function performStages(ctx, spec) {
   return { ok: true, evidence: ctx.evidence, output: delivery.output };
 }
 
+// The last gate before the wire. A permission is only good for the moment it was checked, and the
+// operation is the object that carries it: the clock is read again here, the authority the operation
+// holds right now has to be the very one that was checked, and the grant has to cover the declared
+// amount at this new moment. Any of the three returns a public code and sends nothing.
+function revalidateBeforeSend(ctx) {
+  const spec = ctx.spec;
+  const moment = readRunNow(ctx.io);
+  if (moment === null) return { ok: false, result: failed(CODES.INVALID_CLOCK) };
+  let current;
+  try {
+    current = ctx.operation === null || ctx.operation === undefined ? ctx.authority : ctx.operation.authority;
+  } catch {
+    return { ok: false, result: blocked(CODES.TERMS_REJECTED) };
+  }
+  // A different object is a different permission: whoever holds the operation replaced what was
+  // authorized while a port was busy, and nothing that was checked applies to what is there now.
+  if (current !== ctx.authority) return { ok: false, result: blocked(CODES.TERMS_REJECTED) };
+  const cover = liveGrant(current, spec, moment);
+  if (!cover.ok) return { ok: false, result: blocked(cover.code) };
+  let enough;
+  try {
+    enough = sufficient([requirementOf(spec)], current, { now: moment });
+  } catch {
+    return { ok: false, result: blocked(CODES.TERMS_REJECTED) };
+  }
+  if (!enough || enough.ok !== true) return { ok: false, result: blocked(CODES.TERMS_REJECTED) };
+  ctx.now = moment;
+  return { ok: true };
+}
+
 function buildRunIo(io, ctx) {
   let runIo = {};
   if (io !== null && typeof io === 'object') runIo = { ...io };
@@ -907,6 +947,7 @@ function createX402Payment(rawSpec, rawPorts) {
         expected: expectedEffect(spec),
         now: null,
         authority: null,
+        operation: null,
         operationKey: null,
         signal: null,
         claims: ports.claims || SHARED_CLAIMS,
@@ -925,6 +966,9 @@ function createX402Payment(rawSpec, rawPorts) {
         required: (operation) => requiredFor(spec, operation),
         perform: async (performCtx) => {
           ctx.authority = performCtx?.authority ?? null;
+          // The operation is kept so the gate before the send can read the authority the operation
+          // carries right now and compare it with the one that was checked.
+          ctx.operation = performCtx?.operation ?? null;
           ctx.operationKey = performCtx?.idempotencyKey ?? null;
           ctx.signal = performCtx?.signal ?? null;
           const now = readRunNow(io);
