@@ -54,7 +54,12 @@ const CHECK_KEYS = [
   'zk.transport-privacy',
 ];
 const COVERED_CHECKS = new Set(CHECK_KEYS.slice(0, 3));
-const LIMIT_CHECKS = CHECK_KEYS.slice(3);
+const LIMIT_CHECKS = Object.freeze(CHECK_KEYS.slice(3));
+
+// The vocabulary is fixed and cannot be edited from outside the module. Anything in the process that
+// can require this file could otherwise widen what `checksWith` credits and empty what
+// `reconcileZk` refuses, and mint a receipt whose coverage claims a limit no proof ever grants.
+Object.freeze(CHECK_KEYS);
 
 // What each result may claim as its code. A closed vocabulary, so a receipt cannot carry a result
 // and a code that tell different stories.
@@ -196,7 +201,10 @@ function readProof(value) {
 }
 
 function readPublicInputs(value, ceiling) {
-  if (!isDenseArray(value) || value.length > ceiling) return null;
+  // The length first, so a list longer than anything a circuit declares is refused before it is
+  // walked. A proxy whose `length` lies is still caught by the density gate below.
+  if (!Array.isArray(value) || value.length > ceiling) return null;
+  if (!isDenseArray(value)) return null;
   const out = [];
   for (let i = 0; i < value.length; i += 1) {
     const scalar = scalarInRange(value[i], SCALAR_MODULUS);
@@ -294,9 +302,10 @@ function readConfig(raw) {
   try {
     if (!isPlainObject(raw) || !hasOnlyKeys(raw, CONFIG_KEYS)) return null;
     if (isAccessor(raw, 'backend')) return null;
-    const maxPublicInputs = raw.maxPublicInputs === undefined
-      ? DEFAULT_MAX_PUBLIC_INPUTS
-      : raw.maxPublicInputs;
+    // Read through the descriptor like every other field, so an accessor here is refused instead of
+    // being the one place where a getter on the configuration gets to run.
+    const maxRaw = readData(raw, 'maxPublicInputs');
+    const maxPublicInputs = maxRaw === undefined ? DEFAULT_MAX_PUBLIC_INPUTS : maxRaw;
     if (typeof maxPublicInputs !== 'number' || !Number.isInteger(maxPublicInputs)
       || maxPublicInputs < 1 || maxPublicInputs > MAX_PUBLIC_INPUTS_CEILING) return null;
 
@@ -371,6 +380,10 @@ function readZkEvidence(value) {
     if (typeof result !== 'string' || !Object.prototype.hasOwnProperty.call(RESULT_CODES, result)) return null;
     if (typeof code !== 'string' || code.length === 0 || code.length > 64) return null;
     if (!RESULT_CODES[result].has(code)) return null;
+    // One shape, fixed by the design: `proofDigest` is null for a malformed request, where there is
+    // no proof to name, and present for every other outcome. A verdict that names no proof is a
+    // verdict nobody can look up later, so it is refused here rather than reconciled away later.
+    if ((code === 'malformed_input') !== (proofDigestRaw === null)) return null;
     return {
       schema: EVIDENCE_SCHEMA,
       system: 'groth16',
@@ -395,17 +408,33 @@ function readZkEvidence(value) {
 //
 // `claimed` is true when the object had a non-null `zk` property, including one that is malformed:
 // a claim that did not survive cannot leave a `verified` receipt behind.
+// Reading the seven checks a claim has to agree with. A check counts only when the object itself
+// carries it: an inherited value is not a check that ran, an accessor is not a boolean anybody can
+// read twice, and a container that throws while being read is not a container at all. Every failure
+// here is the same failure, `consistent: false`, because none of them says the check did not pass.
+function readChecksForClaim(checks) {
+  if (!checks || typeof checks !== 'object' || Array.isArray(checks)) return null;
+  const read = {};
+  for (const key of CHECK_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(checks, key)) return null;
+    const value = readData(checks, key);
+    if (typeof value !== 'boolean') return null;
+    read[key] = value;
+  }
+  return read;
+}
+
 function reconcileZk({ verified, checks, claimed, zk }) {
   if (!claimed) return { verified, zk: null, consistent: true };
   const read = readZkEvidence(zk);
   if (read === null) return { verified: false, zk: null, consistent: false };
-  const checksAre = {};
-  for (const key of CHECK_KEYS) {
-    if (!checks || typeof checks !== 'object' || Array.isArray(checks)) return { verified: false, zk: null, consistent: false };
-    const value = checks[key];
-    if (typeof value !== 'boolean') return { verified: false, zk: null, consistent: false };
-    checksAre[key] = value;
+  let checksAre;
+  try {
+    checksAre = readChecksForClaim(checks);
+  } catch {
+    checksAre = null;
   }
+  if (checksAre === null) return { verified: false, zk: null, consistent: false };
   for (const key of LIMIT_CHECKS) if (checksAre[key] !== false) return { verified: false, zk: null, consistent: false };
   if (read.result === 'verified') {
     if (verified !== true) return { verified: false, zk: null, consistent: false };
@@ -422,17 +451,30 @@ function readConfigChecked(raw) {
   return read;
 }
 
-// Whether a verification object claims a zk at all, read without trusting a getter on it.
-function claimsZk(verification) {
+// The one read of a zk claim, made from the descriptor and never from a getter. `claimed` is true
+// when the object had a non-null `zk` property, including one that is an accessor or one that cannot
+// be read at all: a claim that did not survive cannot leave a `verified` receipt behind, and an
+// accessor is a claim whose value this kernel refuses to evaluate. The value is handed over exactly
+// once, so no caller has to dereference the property a second time and run a getter by accident.
+function readZkClaim(verification) {
   try {
-    if (!verification || typeof verification !== 'object' || Array.isArray(verification)) return false;
+    if (!verification || typeof verification !== 'object' || Array.isArray(verification)) {
+      return { claimed: false, value: null };
+    }
     const descriptor = Object.getOwnPropertyDescriptor(verification, 'zk');
-    if (descriptor === undefined) return false;
-    if (typeof descriptor.get === 'function' || typeof descriptor.set === 'function') return true;
-    return descriptor.value !== undefined && descriptor.value !== null;
+    if (descriptor === undefined) return { claimed: false, value: null };
+    if (typeof descriptor.get === 'function' || typeof descriptor.set === 'function') {
+      return { claimed: true, value: undefined };
+    }
+    if (descriptor.value === undefined || descriptor.value === null) return { claimed: false, value: null };
+    return { claimed: true, value: descriptor.value };
   } catch {
-    return true;
+    return { claimed: true, value: undefined };
   }
+}
+
+function claimsZk(verification) {
+  return readZkClaim(verification).claimed;
 }
 
 // --- the verifier ---
@@ -559,12 +601,13 @@ module.exports = {
   createZkVerifier,
   digestZkVerificationKey,
   readZkEvidence,
+  readZkClaim,
   reconcileZk,
   claimsZk,
   VK_SCHEMA,
   EVIDENCE_SCHEMA,
   ZK_CHECK_KEYS: CHECK_KEYS,
-  COVERED_CHECKS,
+  COVERED_CHECKS: new Set(COVERED_CHECKS),
   LIMIT_CHECKS,
   ZK_INCONSISTENT_REASON,
   FP_MODULUS,
