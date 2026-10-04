@@ -135,6 +135,28 @@ function capabilityName(value) {
   return name.includes('*') ? null : name;
 }
 
+// One field, one read, under its own guard, for the fields that are neither text nor a flag. A
+// getter that throws on `authority` used to escape the registry as the caller's own error object.
+function readValue(source, key) {
+  try {
+    return source[key];
+  } catch {
+    return undefined;
+  }
+}
+
+// The shape check is inside a guard for the same reason `Array.isArray` is inside the request
+// capture (review R206): it reads the value's target, so a caller who revoked the spec before handing
+// it over would get a `TypeError` out of the registry instead of the refusal the module owes them
+// (A18, review H01).
+function registrationSource(spec) {
+  try {
+    return spec !== null && typeof spec === 'object' && !Array.isArray(spec) ? spec : {};
+  } catch {
+    return {};
+  }
+}
+
 function grantedList(value, label) {
   if (!Array.isArray(value)) throw new Error(`${label} must be an array of capability names`);
   const names = [];
@@ -147,7 +169,7 @@ function grantedList(value, label) {
 }
 
 function registerSkillProvenance(spec) {
-  const source = spec !== null && typeof spec === 'object' && !Array.isArray(spec) ? spec : {};
+  const source = registrationSource(spec);
   const name = readString(source, 'name');
   const repository = readString(source, 'repository');
   const commit = readString(source, 'commit');
