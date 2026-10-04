@@ -54,7 +54,12 @@ const CHECK_KEYS = [
   'zk.transport-privacy',
 ];
 const COVERED_CHECKS = new Set(CHECK_KEYS.slice(0, 3));
-const LIMIT_CHECKS = CHECK_KEYS.slice(3);
+const LIMIT_CHECKS = Object.freeze(CHECK_KEYS.slice(3));
+
+// The vocabulary is fixed and cannot be edited from outside the module. Anything in the process that
+// can require this file could otherwise widen what `checksWith` credits and empty what
+// `reconcileZk` refuses, and mint a receipt whose coverage claims a limit no proof ever grants.
+Object.freeze(CHECK_KEYS);
 
 // What each result may claim as its code. A closed vocabulary, so a receipt cannot carry a result
 // and a code that tell different stories.
@@ -584,7 +589,7 @@ module.exports = {
   VK_SCHEMA,
   EVIDENCE_SCHEMA,
   ZK_CHECK_KEYS: CHECK_KEYS,
-  COVERED_CHECKS,
+  COVERED_CHECKS: new Set(COVERED_CHECKS),
   LIMIT_CHECKS,
   ZK_INCONSISTENT_REASON,
   FP_MODULUS,

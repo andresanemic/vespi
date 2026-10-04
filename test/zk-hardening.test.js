@@ -351,11 +351,27 @@ test('K3H.13 the exported check vocabulary cannot be edited into a forged covera
   assert.equal(out.consistent, false, 'a claim that counts a limit as covered is still refused');
   assert.equal(out.verified, false);
   assert.equal(receipt.status, 'not_verified');
-  assert.ok(!receipt.coverage.includes('zk.presenter-authentication'),
-    'no receipt claims a limit as coverage');
+  assert.equal(receipt.verification.verified, false);
+  assert.ok(!('zk' in receipt.verification), 'the unsubstantiated claim is removed, not repaired');
   assert.deepEqual(zk.ZK_CHECK_KEYS, CHECK_KEYS, 'the exported vocabulary still has the seven keys');
   assert.deepEqual([...zk.COVERED_CHECKS], COVERED);
   assert.deepEqual(zk.LIMIT_CHECKS, LIMITS);
+});
+
+// What the fix above does not reach, stated as a limit rather than hidden: `coverage` is derived
+// from the true checks a verifier reported, whatever their name, so a claim the kernel refused can
+// still be listed there. What the fix does guarantee is that it cannot make the receipt read
+// `verified`. Narrowing coverage to the checks a surviving claim supports would change what every
+// receipt means, so it is the owner's call.
+test('K3H.13b a refused zk claim leaves its own check names in coverage', {
+  todo: "decisión del dueño: coverage se deriva de los checks verdaderos que un verificador تقارير, con cualquier nombre; un zk refusado ya no puede volver verified el recibo, pero sus checks siguen listados como coverage",
+}, () => {
+  const forgedChecks = checks({ 'zk.presenter-authentication': true });
+  const receipt = buildReceipt(receiptSpec({ verified: true, checks: forgedChecks, reason: 'forged', zk: evidence() }));
+  assert.equal(receipt.status, 'not_verified');
+  assert.equal(receipt.verification.verified, false);
+  assert.ok(!receipt.coverage.includes('zk.presenter-authentication'),
+    'no receipt lists a limit the claim that produced it did not support');
 });
 
 // C4. `claimsZk` is careful to read the descriptor without invoking a getter, and then both call
