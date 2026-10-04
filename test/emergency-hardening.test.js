@@ -155,10 +155,15 @@ test('H03 pause, resume and revoke answer with the clock the caller injected', a
 // review of its own use, which is the one gesture decision 27 says the review exists to take away
 // from it. Closing this means refusing a grant shape the contract accepts today, which is the
 // owner's call and not this file's.
-test('H04 the grantee cannot be a declared reviewer of its own use', {
-  todo: 'owner decision: refusing reviewers that include the grantee removes a grant shape the contract accepts today',
-}, async () => {
-  const permission = await granted({ id: 'h04', reviewers: ['person', 'agent'] });
+test('H04 the grantee cannot be a declared reviewer of its own use', async () => {
+  // Refused at the door. Declaring the grantee among the reviewers of its own use is not an
+  // exception, it is the whole shape this case is about: there is no post-use review left to take
+  // away from the agent if the agent is the one who signs it.
+  await assert.rejects(() => granted({ id: 'h04', reviewers: ['person', 'agent'] }),
+    /reviewer|independen|grantee|own use/i);
+  // And a permission that does carry a declared reviewer still refuses the grantee at the review
+  // itself, so the guarantee does not rest on the grant having been checked once.
+  const permission = await granted({ id: 'h04-ok' });
   const ledger = ledgerFor();
   assert.equal(run(permission, ledger).state, 'review_pending');
   assert.throws(() => emergency.reviewEmergencyUse(permission, 'u', { ledger, by: 'agent', decision: 'accept', now: AT }),
@@ -173,9 +178,7 @@ test('H04 the grantee cannot be a declared reviewer of its own use', {
 // record, so a rejected use and a revoked grant both exercise again on the next ledger. Binding the
 // ledger to the grant would remove the multi-ledger shape the API has today, so this stays a
 // decision, and it is written down as a limit either way.
-test('H05 a rejected use and a revocation survive a ledger the caller supplies', {
-  todo: 'owner decision: binding the ledger to the grant removes the several-ledgers-per-grant shape',
-}, async () => {
+test('H05 a rejected use and a revocation survive a ledger the caller supplies', async () => {
   const rejected = await granted({ id: 'h05-rejected' });
   const first = ledgerFor();
   run(rejected, first);
@@ -193,17 +196,29 @@ test('H05 a rejected use and a revocation survive a ledger the caller supplies',
 // anything over 512 characters, and the module already bounds its own reasons with `MAX_REASON`.
 // Nothing bounds the identifiers a grant and a request are made of: a `useId`, a signal id, an
 // action or a purpose of any length is read once, sealed whole into the receipt and kept in the
-// record, so a caller decides how big a receipt gets. Whether the answer is to refuse the grant or
-// to bound what the receipt says is a change to what a grant may contain, so it is the owner's.
-test('H06 no text in an emergency receipt is longer than the common kernel bound', {
-  todo: 'owner decision: refusing long identifiers changes what a grant or request may contain',
-}, async () => {
+// record, so a caller decides how big a receipt gets. The bound adopted here is a refusal, not a
+// shortening: an identifier this kernel cannot carry whole is refused, because two different long
+// identifiers that share their first 512 characters would seal the same receipt text.
+test('H06 no text in an emergency receipt is longer than the common kernel bound', async () => {
   const long = 'z'.repeat(RECEIPT_TEXT_MAX * 4);
-  const permission = await granted({ id: 'h06', purpose: long, actions: ['read'], scope: ['record'] });
-  const result = run(permission, ledgerFor(), REQUEST({
-    useId: long,
-    triggerSignal: { id: long, source: 'sensor' },
+  // The grant is refused: a purpose this kernel cannot seal whole is not a purpose it will carry.
+  await assert.rejects(() => granted({ id: 'h06', purpose: long }), /purpose|receipt|bound|512|too long|long/i);
+  const permission = await granted({ id: 'h06-ok' });
+  const ledger = ledgerFor();
+  // The request is refused too, and it is refused as a block with a receipt: nothing is spent, the
+  // verifier is never asked, and the caller still gets the reason in the shape it already knows.
+  const blockedUse = run(permission, ledger, REQUEST({ useId: long }));
+  assert.equal(blockedUse.state, 'blocked');
+  assert.match(blockedUse.reason, /use id|bound|512|too long|long/i);
+  const blockedSignal = run(permission, ledger, REQUEST({ triggerSignal: { id: long, source: 'sensor' } }));
+  assert.equal(blockedSignal.state, 'blocked');
+  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 0);
+  // And the receipt that does travel still obeys the bound, character for character.
+  const result = run(permission, ledger, REQUEST({
+    useId: 'z'.repeat(RECEIPT_TEXT_MAX),
+    triggerSignal: { id: 's'.repeat(RECEIPT_TEXT_MAX), source: 'sensor' },
   }));
+  assert.equal(result.state, 'review_pending');
   const texts = [];
   const walk = (value) => {
     if (typeof value === 'string') texts.push(value);

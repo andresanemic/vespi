@@ -289,6 +289,13 @@ function snapshotPermission(permission) {
         return { ok: false, reason: `the verifier of trigger ${trigger.id} must be independent: it cannot be the grantee (${grantee}) or the owner (${owner})` };
       }
     }
+    // And the post-use review has to be signed by somebody else too, or there is no review left: the
+    // agent that spends the authority is the grantee, so a grant that names the grantee among the
+    // reviewers of its own use lets that agent close it. Declaring it is not an exception, it is the
+    // shape this refuses (H04).
+    if (reviewers.includes(grantee)) {
+      return { ok: false, reason: `the grantee (${grantee}) cannot be a reviewer of its own use: the post-use review is taken away from the agent that exercised the authority, whoever the grant declares` };
+    }
     if (!pausers.includes(owner)) return { ok: false, reason: 'the person who granted it must be allowed to pause it' };
     return {
       ok: true,
