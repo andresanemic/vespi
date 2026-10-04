@@ -1,3 +1,41 @@
+# Judge Vespi in five minutes
+
+**Vespi is a small JavaScript kernel that keeps a person's authority, a verifiable receipt and the next agreed action together when work changes hands.** This checkout is `0.1.4-rc.6`; the published kernel is `v0.1.3-kernel`.
+
+From the repository root, run the offline proof:
+
+```sh
+node examples/walkthrough.js
+node --test test/*.test.js
+node scripts/judge-package.mjs
+```
+
+The first command runs a full operation and prints its receipt and the next action selected by a second process. The second runs the kernel suite. The third runs that suite to record its counts, hashes the cut and writes [`JUDGE_PACKAGE.json`](./JUDGE_PACKAGE.json). It uses no network. For the operation's source, exact output and limits, see the bilingual [walkthrough](./WALKTHROUGH.md). For recorded Stellar testnet evidence, check `--offline` first, then decide whether to query Horizon as described below.
+
+Five-minute route: (1) run the three commands above; (2) read `status`, `coverage` and `notCovered` in the printed receipt; (3) inspect `packageVersion`, `gitCommit`, `tests` and `fileHashes` in the JSON; (4) follow the published v0.1.3/v0.1.4 boundary below; (5) check the stated limits before weighing the testnet and project evidence.
+
+## Version boundary: published 0.1.3 and candidate 0.1.4
+
+The published `v0.1.3-kernel` limits an operation to one execution in one process and refuses to replay its terminal receipt within that same in-memory operation. Its receipt can say `not_verified` when settlement or verification is uncertain. **Its `resumeFromReceipts` can still select that action again from receipts**, so a host must reconcile an uncertain external effect before it creates or runs another operation. The v0.1.3 authority predicate uses the current system clock where an expiry is checked; callers cannot inject `now` through `runOperation`. Idempotency in the x402 demo is adapter-level and in-process, not a durable kernel key or crash recovery.
+
+The planned `0.1.4` scope is a continuity gate for an uncertain receipt, a stable idempotency key passed to `perform`, an injectable clock through expiry and receipt creation, a deadline for delegations and a cap on attempts. The release is planned for Monday, 2026-10-05; it is not published at this cut. This walkthrough demonstrates the local verified path only. It does not prove those planned changes, nor does it supply durable cross-process storage, a scheduler or external identity authentication.
+
+## What cannot be checked from this package yet
+
+- **Functional-project source code and project test suites.** This kernel repository contains evidence and links, not the application source. The [README's project index](../README.md#the-functional-projects) links to the public repositories. The package manifest records those URLs; it does not fetch them or establish their current access state. Escribano's link is listed but needs a live availability check. Permamuseum is described in the README as a study note without code.
+- **Stellar mainnet.** No mainnet transaction is claimed or linked. The verifiable chain evidence is Stellar testnet; no mainnet date or access mechanism is scheduled.
+- **A second payment provider.** Only the recorded x402 facilitator is evidenced. There is no second provider or scheduled access to one.
+- **A real independent superreview.** The repository has simulated judge reports and prior-art notes. No external review run is attached, and no reviewer or date is scheduled. A real review must arrive with its run and artifacts in this repository before it is credited.
+
+## Qué NO se puede comprobar todavía
+
+- **El código de los proyectos funcionales ni sus suites.** Este repositorio del kernel trae evidencia y enlaces, no el código de las aplicaciones. El [índice de proyectos del README](../README.md#the-functional-projects) enlaza a los repositorios públicos. El paquete registra esas URL, pero no las descarga ni confirma su acceso actual. El enlace de Escribano todavía necesita una comprobación en vivo. Permamuseum figura en el README como nota de estudio sin código.
+- **Stellar mainnet.** No se afirma ni enlaza una transacción de mainnet. La evidencia de cadena revisable corresponde a Stellar testnet. No hay fecha ni mecanismo de acceso previsto para mainnet.
+- **Un segundo proveedor de pagos.** Solo hay evidencia del facilitator x402 registrado. No hay otro proveedor ni acceso programado.
+- **Un superreview real e independiente.** El repositorio contiene informes simulados y notas de arte previo. No hay una corrida de revisión externa adjunta, ni revisor o fecha agendados. Para acreditarla, la revisión deberá entrar a este repositorio con su corrida y artefactos.
+
+---
+
 # Verify Vespi
 
 This guide checks the kernel tests, the recorded x402 receipt and Stellar testnet transactions. It uses the same commands in Windows PowerShell, Windows Command Prompt, macOS and Linux. Use Node.js 24 or later and Git. The x402 demo declares Node.js `>=24`; the kernel itself has no package installation step.

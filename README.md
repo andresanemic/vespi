@@ -1,6 +1,28 @@
-[![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
-
 # Vespi
+
+**Vespi is a JavaScript kernel that records a person's authority, an independently checked effect and the next agreed action in receipts.** The published kernel is `v0.1.3`; this checkout is candidate `0.1.4-rc.6`, planned for Monday, 2026-10-05.
+
+Run the live, offline operation and inspect its receipt:
+
+```text
+> node examples/walkthrough.js
+receipt: {"status":"verified","digest":"c77177d686e1d745e39d5877aab742bf09b6c622ff5b206816d9ae1ab17af446","coverage":["effect_present","recipient_matches"],"notCovered":["network_anchor","external anchor"]}
+```
+
+The digest changes on each run. The bilingual [walkthrough](./docs/WALKTHROUGH.md) contains the full transcript, terminal approval, second-process continuation and limits. The [five-minute judge route](./docs/FOR_JUDGES.md) gives the exact verification commands and the version boundary. [Project context and the full narrative](#english) follow below.
+
+**Vespi es un kernel JavaScript que registra en recibos la autoridad de una persona, un efecto comprobado por separado y la siguiente acción acordada.** El kernel publicado es `v0.1.3`; este árbol es el candidato `0.1.4-rc.6`, previsto para el lunes 2026-10-05.
+
+Corre la operación local y revisa su recibo con `node examples/walkthrough.js`. El [recorrido bilingüe](./docs/WALKTHROUGH.md) contiene la salida real, sus límites y la prueba que lo ejecuta. La [ruta de cinco minutos para jueces](./docs/FOR_JUDGES.md) reúne los comandos y distingue lo publicado de lo que trae `0.1.4`.
+
+---
+
+<details>
+<summary><b>Read in English</b></summary>
+
+<a id="english"></a>
+
+[![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
 
 <p align="center">
   <a href="#english"><img src="https://img.shields.io/badge/version-v0.1.3-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.3"></a>
@@ -12,7 +34,7 @@
 
 <p align="center">
   <b>Vespi is the kernel that helps you reach great results with AI without having to know its hardest parts. Its method already covers loops, test-first development, specifications, master plans, blind readers, bounded subagents and independent verification: you say what you want.</b><br><br>
-  The kernel gives the work authority granted by a person, a receipt anyone can check and an operation another agent can resume tomorrow.
+  The kernel gives the work authority granted by a person, a receipt anyone can check and an operation another agent can resume from receipts when the next action is safe to continue.
 </p>
 
 <p align="center">
@@ -22,16 +44,6 @@
 <p align="center">
   Building on Stellar or judging Find Your Way or Meridian? x402 and Stellar are one integrated capability among others. Together with Lore Plugin and Raven MCP, Vespi aims to become the operating system for the Stellar ecosystem.
 </p>
-
-
-
-
----
-
-<details>
-<summary><b>Read in English</b></summary>
-
-<a id="english"></a>
 
 **Vespi keeps an operation alive as the people, agents and tools around it change.**
 
@@ -55,7 +67,7 @@ Use it for writing, software development, graphic design, publishing or another 
 
 When you work with an agent, the session ends and the next one has to begin. What usually survives is a summary, and a summary does not say **who allowed this**, **how much**, **until when**, **to whom**, or **whether it actually happened**. Those are not details of a summary; they are the operation.
 
-So Vespi starts from the operation. It carries a goal and an authority a person granted it (with a clock, a budget and a destination). The kernel permits at most one execution per operation and process; an uncertain result is `not_verified` and is never retried blindly. Verification stays **separate**, and the receipt says what was covered and what was not. When something changes, the operation is read back from its receipts and continues only if the next action still matches the agreement; otherwise it goes back to the person.
+So Vespi starts from the operation. It carries a goal and an authority a person granted it (with a clock, a budget and a destination). In published `0.1.3`, one in-memory operation will not execute again after a terminal `not_verified` result, but `resumeFromReceipts` can still select that uncertain action again. The host must reconcile an uncertain external effect before running a resumed action. Verification stays **separate**, and the receipt says what was covered and what was not. Candidate `0.1.4` adds a continuity gate for that case; it is planned for 2026-10-05 and is not published yet.
 
 ## What it looks like in practice
 
@@ -96,8 +108,9 @@ Not yet. Change Tuesday's hours, then show me the preview again.
 
 ```text
 [NEXT DAY]
-The coordinator reads the receipts, checks the last verified state and continues
-from the approved agreement. It does not restart from a summary.
+The coordinator reads the receipts and checks the last verified state. With the
+published 0.1.3 kernel, it must reconcile an uncertain external effect before
+continuing that action. It does not restart from a summary.
 ```
 
 This applies when Claude Code, Codex or OpenCode has Lore Plugin's skills installed, or when the standalone Vespi skill is available and installed. The standalone skill is not yet published. With only the kernel, clone the repository and use it in your own way.
@@ -112,10 +125,10 @@ Writing an app is the easy part. What takes months, and usually gets skipped, is
 |---|---|---|
 | Permission with limits | A grant with an asset, a ceiling, a destination and an expiry; one budget that cannot be spent twice; an expired grant is refused; several named people can be required | `authority`: `{ asset, maxAmount, to, expiresAt }`, `signers`, `pausers` |
 | Proof of what happened | A receipt with a SHA-256 fingerprint, the checks that came back true, and what was not covered, by name | `buildReceipt`, `verifyReceipt`, `notCovered` |
-| Honest stops | A task with no legitimate exit comes back blocked with its way out; an outcome of uncertain result is never retried blindly | `impossible`, `not_verified`, `resumeFromReceipts` |
+| Honest stops | A task with no legitimate exit comes back blocked with its way out; `0.1.3` stops replay inside the same operation, while its receipt-based resume can still select an uncertain action | `impossible`, `not_verified`, `resumeFromReceipts`; candidate `0.1.4` adds the continuity gate |
 | A human where one is needed | A gate that shows the cost first, never lets the agent consent for the person, and names the exit in every refusal | the human gate and its four gestures |
 | A guided method | The coordinator can run loops, work test first, write specifications and master plans, use blind readers, delegate bounded tasks and verify independently; the kernel records the operation around that work | [docs/METHOD.md](./docs/METHOD.md), the Lore Plugin kit and Vespi skill |
-| Continuing tomorrow | Resuming from receipts: the last verified state, the next action, and whether a person must step in | `resumeFromReceipts(receipts, agreement)` |
+| Continuing tomorrow | Resuming from receipts: the last verified state, the next action, and whether a person must step in; in `0.1.3`, uncertain results still need host reconciliation | `resumeFromReceipts(receipts, agreement)` |
 | An independent check | The verifier is never the executor; blind readers judge without seeing how it was made; a third agent without code access rebuilds the result | [`docs/METHOD.md`](./docs/METHOD.md), [`experiments/`](./experiments/) |
 | Public proof, if you want it | An anchor on Stellar that only counts when a verifier confirms the digest and the network | `anchorReceipt`: `pending` → `submitted` → `anchored` |
 
@@ -161,7 +174,7 @@ Lore Plugin `2.4.9` brings the flow into the kit: one checkpoint per project, ta
 
 ## Evidence you can open
 
-Published as [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (previous: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Everything in it was read in the code, not in a plan; the capabilities are explained one by one in [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md). Historical counts at commit `7dcec77` were 203/203 for `node --test test/*.test.js` and 252/252 for the full `node --test` run. This worktree adds two tests for the testnet evidence list and currently passes 205/205 kernel tests with `node --test test/*.test.js`.
+Published as [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (previous: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Everything in it was read in the code, not in a plan; the capabilities are explained one by one in [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md). Historical counts at commit `7dcec77` were 203/203 for `node --test test/*.test.js` and 252/252 for the full `node --test` run. This checkout has 207/207 kernel tests with `node --test test/*.test.js`, including two tests for the testnet evidence list and two for this judge package and walkthrough.
 
 The newest record is the Stellar testnet evidence below. The first experiments that formed the kernel (RUN 01 to 05) are in [`experiments/`](./experiments/), with their blind reads and verifier reports; RUN 05 is **closed** within its declared local, offline scope. They were the first tests, not the latest work.
 
@@ -236,7 +249,7 @@ We searched so as to offer something new and not repeat what other projects alre
 <details>
 <summary><b>What is not built or not verified</b></summary>
 
-- **`0.1.4` is prepared, not published:** a result of uncertain outcome is never proposed again, `perform` receives a stable idempotency key, delegations get a deadline, attempts get a cap, and the injectable clock reaches the receipt. It comes from the [prior-art study](./docs/PRIOR_ART.md); its code is still under independent verification.
+- **Published `0.1.3` behavior:** an operation cannot replay its terminal result in the same process, but a new continuation from its receipts can propose a `not_verified` action again. Its expiry check uses the system clock; `runOperation` does not accept an injected clock. The x402 demo's idempotency guard is adapter-level, in-process and not crash recovery. **Planned for `0.1.4`, scheduled for Monday 2026-10-05:** a continuity gate for uncertain results, a stable idempotency key passed to `perform`, an injectable clock for expiry checks and receipt creation, a delegation deadline and an attempt cap. This candidate is not published, and the walkthrough does not verify these planned changes. See the [prior-art study](./docs/PRIOR_ART.md) and the [version boundary for judges](./docs/FOR_JUDGES.md#version-boundary-published-013-and-candidate-014).
 - **The receipt is not durable by itself, and its fingerprint proves integrity, not authenticity.** Whoever calls the kernel owns where it lives, and anyone who can rewrite the receipts can recompute the digest; authenticity belongs to whoever stores and hands them over.
 - **No cross-host runtime, scheduler, daemon, migration engine or quota manager.** The continuation semantics are here; what wakes the process is the host's.
 - **Not verified:** x402 on mainnet, with more than one provider, or run by someone else; production readiness, regulatory compliance or a stable protocol.
@@ -297,7 +310,7 @@ Use Node.js 24 or later, matching the version declared by the x402 demo. The quo
 
 Cuando trabajas con un agente, la sesión termina y la siguiente tiene que empezar. Lo que suele sobrevivir es un resumen, y un resumen no dice **quién permitió esto**, **cuánto**, **hasta cuándo**, **a quién** ni **si de verdad ocurrió**. Eso no son detalles de un resumen: son la operación.
 
-Por eso Vespi parte de la operación. Lleva un objetivo y una autoridad que una persona le otorgó (con un reloj, un presupuesto y un destino). El kernel permite como máximo una ejecución por operación y proceso; un resultado incierto queda `not_verified` y nunca se reintenta a ciegas. La verificación sigue **separada**, y el recibo dice qué se cubrió y qué no. Cuando algo cambia, la operación se relee desde sus recibos y continúa solo si la próxima acción sigue de acuerdo con lo pactado; si no, vuelve a la persona.
+Por eso Vespi parte de la operación. Lleva un objetivo y una autoridad que una persona le otorgó (con un reloj, un presupuesto y un destino). En el `0.1.3` publicado, una operación en memoria no vuelve a ejecutarse después de un resultado terminal `not_verified`, pero `resumeFromReceipts` todavía puede volver a seleccionar esa acción incierta. El host debe reconciliar el efecto externo incierto antes de ejecutar una acción retomada. La verificación sigue **separada**, y el recibo dice qué se cubrió y qué no. El candidato `0.1.4` agrega una puerta de continuidad para ese caso; está previsto para el 2026-10-05 y todavía no se publica.
 
 ## Cómo se ve en la práctica
 
@@ -338,8 +351,7 @@ Todavía no. Cambia el horario del martes y vuelve a mostrarme la vista previa.
 
 ```text
 [DÍA SIGUIENTE]
-El coordinador lee los recibos, comprueba el último estado verificado y continúa
-desde el acuerdo aprobado. No vuelve a empezar desde un resumen.
+El coordinador lee los recibos y comprueba el último estado verificado. Con el kernel 0.1.3 publicado, debe reconciliar un efecto externo incierto antes de continuar esa acción. No vuelve a empezar desde un resumen.
 ```
 
 Esto funciona cuando Claude Code, Codex u OpenCode tiene instaladas las skills de Lore Plugin, o cuando la skill independiente de Vespi esté disponible e instalada. La skill independiente aún no se publica. Si trabajas solo con el kernel, clona el repositorio y úsalo a tu manera.
@@ -354,10 +366,10 @@ Escribir una app es la parte fácil. Lo que toma meses, y casi siempre se omite,
 |---|---|---|
 | Permiso con límites | Una autorización con un activo, un tope, un destino y un vencimiento; un solo presupuesto que no se puede gastar dos veces; una autorización vencida se rechaza; se puede exigir a varias personas con nombre | `authority`: `{ asset, maxAmount, to, expiresAt }`, `signers`, `pausers` |
 | Prueba de lo que ocurrió | Un recibo con huella SHA-256, las comprobaciones que dieron verdadero y lo que no se cubrió, por nombre | `buildReceipt`, `verifyReceipt`, `notCovered` |
-| Detenciones honestas | Una tarea sin salida legítima vuelve bloqueada con su salida; un resultado de desenlace incierto nunca se reintenta a ciegas | `impossible`, `not_verified`, `resumeFromReceipts` |
+| Detenciones honestas | Una tarea sin salida legítima vuelve bloqueada con su salida; `0.1.3` detiene la repetición dentro de la misma operación, pero al retomar desde recibos todavía puede seleccionar una acción incierta | `impossible`, `not_verified`, `resumeFromReceipts`; el candidato `0.1.4` agrega la puerta de continuidad |
 | Una persona donde hace falta | Una puerta que muestra el costo primero, nunca deja que el agente consienta por la persona y nombra la salida en cada rechazo | la puerta humana y sus cuatro gestos |
 | Un método guiado | El coordinador puede seguir ciclos, trabajar con pruebas primero, escribir especificaciones y planes maestros, usar lectores ciegos, delegar tareas acotadas y verificar aparte; el kernel registra la operación que rodea ese trabajo | [docs/METHOD.md](./docs/METHOD.md), kit Lore Plugin y skill Vespi |
-| Continuar mañana | Reanudar desde los recibos: el último estado verificado, la próxima acción y si debe intervenir una persona | `resumeFromReceipts(receipts, agreement)` |
+| Continuar mañana | Reanudar desde los recibos: el último estado verificado, la próxima acción y si debe intervenir una persona; en `0.1.3`, el host aún debe reconciliar resultados inciertos | `resumeFromReceipts(receipts, agreement)` |
 | Una verificación independiente | Quien verifica nunca es quien ejecuta; lectores ciegos juzgan sin ver cómo se hizo; un tercer agente sin acceso al código reconstruye el resultado | [`docs/METHOD.md`](./docs/METHOD.md), [`experiments/`](./experiments/) |
 | Prueba pública, si la quieres | Un anclaje en Stellar que solo cuenta cuando un verificador confirma el digest y la red | `anchorReceipt`: `pending` → `submitted` → `anchored` |
 
@@ -403,7 +415,7 @@ Lore Plugin `2.4.9` trae el flujo al kit: un checkpoint por proyecto, tareas por
 
 ## Evidencia que puedes abrir
 
-Publicado como [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (anterior: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Todo lo que trae se leyó en el código, no en un plan; las capacidades están explicadas una por una en [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md). Las cifras históricas del commit `7dcec77` fueron 203/203 para `node --test test/*.test.js` y 252/252 para la corrida completa con `node --test`. Este árbol añade dos pruebas para la lista de evidencia de testnet y hoy pasan 205/205 pruebas del kernel con `node --test test/*.test.js`.
+Publicado como [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (anterior: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Todo lo que trae se leyó en el código, no en un plan; las capacidades están explicadas una por una en [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md). Las cifras históricas del commit `7dcec77` fueron 203/203 para `node --test test/*.test.js` y 252/252 para la corrida completa con `node --test`. Este árbol tiene 207/207 pruebas del kernel con `node --test test/*.test.js`, incluidas dos para la evidencia de testnet y dos para el paquete y el recorrido de jueces.
 
 El registro más nuevo es la evidencia en la testnet de Stellar de más abajo. Los primeros experimentos que formaron el kernel (RUN 01 a 05) están en [`experiments/`](./experiments/), con sus lecturas ciegas y los informes del verificador; el RUN 05 está **cerrado** dentro de su alcance local y sin red declarado. Fueron las primeras pruebas, no lo último que se hizo.
 
@@ -478,7 +490,7 @@ Buscamos para ofrecer algo nuevo y no repetir lo que otros proyectos ya hacen. C
 <details>
 <summary><b>Lo que no está construido o no está verificado</b></summary>
 
-- **`0.1.4` está preparada, sin publicar:** un resultado de desenlace incierto no se vuelve a proponer, `perform` recibe una clave de idempotencia estable, las delegaciones tienen plazo, los intentos tienen tope y el reloj inyectable llega hasta el recibo. Sale del [estudio de arte previo](./docs/PRIOR_ART.md); su código sigue en verificación independiente.
+- **Comportamiento publicado de `0.1.3`:** una operación no repite su resultado terminal dentro del mismo proceso, pero una continuación desde recibos puede volver a proponer una acción `not_verified`. El chequeo de vencimiento usa el reloj del sistema; `runOperation` no acepta un reloj inyectable. La protección de idempotencia de la demo x402 está en el adaptador, funciona dentro del proceso y no recupera fallos. **Previsto para `0.1.4`, con salida programada para el lunes 2026-10-05:** una puerta de continuidad para resultados inciertos, una clave de idempotencia estable que se pasa a `perform`, un reloj inyectable en vencimientos y recibos, un plazo para delegaciones y un tope de intentos. El candidato no está publicado, y el recorrido no verifica estos cambios previstos. Mira el [estudio de arte previo](./docs/PRIOR_ART.md) y la [frontera de versiones para jueces](./docs/FOR_JUDGES.md#version-boundary-published-013-and-candidate-014).
 - **El recibo no es durable por sí solo, y su huella prueba integridad, no autenticidad.** Quien llama al kernel decide dónde vive, y quien pueda reescribir los recibos puede recalcular el digest; la autenticidad es de quien los guarda y los entrega.
 - **No hay runtime entre hosts, scheduler, demonio, motor de migración ni gestor de cuotas.** La semántica de continuación está aquí; lo que despierta el proceso es del host.
 - **No verificado:** x402 en mainnet, con más de un proveedor o corrido por otra persona; preparación para producción, cumplimiento regulatorio o un protocolo estable.

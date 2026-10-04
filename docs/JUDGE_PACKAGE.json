@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "node scripts/judge-package.mjs",
+  "packageVersion": "0.1.4-rc.6",
+  "gitCommit": "a378e3df7175d1a56079886facb43aead516d7e2",
+  "fileHashes": {
+    "demo/x402/README.md": "056237ad81b5a23deceee84cc260377742d01dfc0a8dda2853320e9f26714405",
+    "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
+    "demo/x402/amount.test.mjs": "35904685364e1ce230d0a875c8411b0ddda1b2c56818d8aa264582a425b222fe",
+    "demo/x402/capability.adversarial.mjs": "8328200fbb73bc49fde9a01a3dd89da6c8c2fc2ea9e7215991318db872bee9e0",
+    "demo/x402/capability.js": "0ee8f86c33d004df96e734f68acd5e5604be64d49192a222ff13dd7a7de92678",
+    "demo/x402/cli.js": "ba0cd010e86cfa1920af348c7888846fd86d54bd19927feed944d448117b0587",
+    "demo/x402/cli.test.mjs": "b9bd20a5eebe9262368e9f5ef97a00c036e29163d45df2ec28576e226e13ee98",
+    "demo/x402/config.js": "4a8a41f5bd846e57e6964005c6b625758652789a8432139f1da9f0a79ec8b5d5",
+    "demo/x402/config.test.mjs": "6a0c62981315ba06e98d5dd5c815c447f656f0a1c18cf8f06f17c2885725f1f9",
+    "demo/x402/endpoint.test.mjs": "ad1cf563515ce7fd3428e83a986972ef09d2b0664009a12bdb334975abce01ef",
+    "demo/x402/fetch-timeout.test.mjs": "7cced9904b319fdcb731c9dce63bc64e0c90896617594e2fdb2ac8ee3890068b",
+    "demo/x402/idempotency.js": "3f2509a04a18a4d504a9641d31d4c860d5d76d385c2d3e71368ed069966c955d",
+    "demo/x402/idempotency.test.mjs": "a6fd7e35d38ef4c241b19d65dcd87908f6f9e84027fb8e1bd0450ca3eb92f49e",
+    "demo/x402/package-lock.json": "c827a189d46ca378a862e92b93bb2be77318a69ea121249b7a279da7e882e2b0",
+    "demo/x402/package.json": "211b76d774910004293029a1c40732ebac156d473391ffd9861d4509a63b52f0",
+    "demo/x402/receipts/live-testnet-2026-10-02.json": "ee37e4bd895a1cb16f7e832ef0a2785c16b26f494e5edbd6a572fec283841732",
+    "demo/x402/run.js": "2fb7b6b30bf9c1591074557ff45b889248ad0045b5c98f59fb65eb0a16f731b6",
+    "demo/x402/server.js": "0c0af0702db41b55a9b12e3418f4aafd9cc7f8914f19a95c3e211b6d67e2ec1c",
+    "demo/x402/settlement-finalization.test.mjs": "5262c7f92729d4fd80e35199e5d638e58ea713d7d5e80864ed40fa118535d004",
+    "demo/x402/settlement-response.test.mjs": "52db1adbc15d592115c13177d3e19b05c9b89ee2f0775db12d14b24eef89d510",
+    "demo/x402/settlement.js": "748561392df0ad80032264ec3d21d06f0aa4d3aeddc98c78d174939f01149119",
+    "demo/x402/verify.test.mjs": "71bc83afcf2aa5ea2f34213a9dba4ff29a43cd2591fae5405d269fec3c223116",
+    "docs/CAPABILITIES.md": "38cf6155f2aaf3e8a2796428b503c7ca7de586a4f86e67b48c57deeee0fb87cd",
+    "docs/FOR_JUDGES.md": "c70abb3c03b668137320755fcc91f7e6d43dceebec14c20b16dc8f2369cce4a3",
+    "docs/GENESIS.md": "24c76ec764ddaa54d85781ea894786b45ca80884df20e9e40580148519dd9971",
+    "docs/METHOD.md": "6e78039a298a5b302dc3457e9811c38570778a6c38a3b5e71eb9004c04a42ada",
+    "docs/PRIOR_ART.md": "cbedc21c29d36d770c32dbb4760838820958410c27b390db3d53dcec9ab5991b",
+    "docs/RELEASE_0.0.1_GENESIS.md": "c4a77b6957661ddd8d31063e1a635d894502254eea90556d184660daa8a68ad0",
+    "docs/RELEASE_0.1.3_KERNEL.md": "521d39710216dd0da66d17f01346d36f3cb416838c97e7e43923c4f1bb6f320b",
+    "docs/TESTNET_EVIDENCE.md": "973468ba1b0cbb3b55c2b234a784aea7a5bbf0fafbd46c5a1763f1c9d752c94c",
+    "docs/VERIFICATION.md": "18bafb413c1a4d502ba9b37dcc0a8da9d7e85f81942f6f0713d897e8ba3742ce",
+    "docs/WALKTHROUGH.md": "dd70ab7b30d1e9f5db69abad2f6cac969ce3f7dec506a445015cdc1d283f1d88",
+    "docs/archive/README-v0.1.2-bilingual.md": "cbc0b135a805274a0b2f69bf6b660c5625954af962a1c2c725436c890eff2a0e",
+    "docs/testnet-evidence.json": "a857c4f3e20947ff3f33e83519f3af18ff2add3cdbc231b193f34b8fefcabd0d",
+    "scripts/judge-package.mjs": "53e99ddfe2ee34df2ddc184cf1e1f9207a9d22b54d011bbe49aebcd45f0fe523",
+    "scripts/verify-testnet-evidence.mjs": "3c3549082b5e39d4d1bb20571fcacd14510bc9f78cc199e05ba177f24612b887",
+    "src/authority.js": "56ce8adf6f414fbbb419d64ea9f1f498d7dc4d798d5b20a318ed84336f0c9cc2",
+    "src/continuity.js": "073ecacdf099b0af53e49f3cecf1ba7e9e3ea910a4505ee422034857ac9d8d81",
+    "src/delegation.js": "0e25972cbd53dd84c15c60d933240cd967682257d42e3bfd782dbdef68363f65",
+    "src/operation.js": "2cebe4ab5a9a6a98294a8aa2e57872bb070440419b109df4c6ecaf9f449744d0",
+    "src/receipt.js": "adc5cabcf31d5ca77ab5fbef904287c3a1662a98c6b3e0ddf9c4265d4bfad8a6",
+    "docs/JUDGE_PACKAGE.json": "30fa8625546d99456387ae036eb2f6530927010d05677fde4a416a49553f0a3b"
+  },
+  "excludedPaths": [
+    "**/node_modules/**",
+    "**/.git/**"
+  ],
+  "tests": {
+    "command": "node --test test/*.test.js",
+    "tests": 207,
+    "passed": 207,
+    "failed": 0
+  },
+  "publicProjectRepositories": [
+    {
+      "name": "Queen",
+      "url": "https://github.com/andresanemic/queen",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Casa Firme",
+      "url": "https://github.com/andresanemic/casa-firme",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Ficha Contigo",
+      "url": "https://github.com/andresanemic/ficha-contigo",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Cátedra",
+      "url": "https://github.com/andresanemic/catedra",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Escribano",
+      "url": "https://github.com/andresanemic/escribano",
+      "status": "public repository link in README; availability was not checked by this offline script"
+    },
+    {
+      "name": "Llavero",
+      "url": "https://github.com/andresanemic/llavero",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Farolero",
+      "url": "https://github.com/andresanemic/farolero",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Marea",
+      "url": "https://github.com/andresanemic/marea",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Vela",
+      "url": "https://github.com/andresanemic/vela",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "TEMIS",
+      "url": "https://github.com/andresanemic/temis",
+      "status": "public project repository; code and tests listed in the kernel README"
+    }
+  ],
+  "hashNote": "Ordinary hashes use SHA-256 over exact bytes. Generated dependencies under node_modules and Git metadata under .git are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
+  "manifestSelfHash": "30fa8625546d99456387ae036eb2f6530927010d05677fde4a416a49553f0a3b"
+}
