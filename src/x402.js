@@ -28,6 +28,7 @@ const MAX_WINDOW_SECONDS = 300;
 const DEFAULT_CLAIM_CAPACITY = 10_000;
 const MIN_CLAIM_CAPACITY = 1;
 const MAX_ACCEPTS = 64;
+const MAX_BODY_BYTES = 1024 * 1024;
 const MAX_SPEC_DEPTH = 8;
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
 const SUPPORTED_SCHEME = 'exact';
@@ -359,8 +360,156 @@ function selectX402Terms(required, rawSpec, authority, now) {
   return { ok: false, code: CODES.TERMS_REJECTED };
 }
 
-function createMemoryPaymentClaims() {
-  return { reserveEffect: () => 'capacity', claimTransaction: () => 'capacity' };
+// The effect key is a hash over the canonical effect and nothing else: no renewable permission, no
+// time, no signature, no operation id. Two different networks, payers or resources that share one
+// grant therefore do not collide, and the same operation key retried with a renewed grant does.
+function effectKey(ctx, spec) {
+  const content = canonicalize({
+    version: 1,
+    operationKey: ctx.operationKey,
+    request: { url: spec.url, method: spec.method },
+    expected: expectedEffect(spec),
+  });
+  return sha256(JSON.stringify(content));
+}
+
+// Claims live in this process and nowhere else. The reservation is synchronous and indivisible:
+// there is no await between deciding and inserting, so two concurrent runs cannot both win. There is
+// no release and no eviction: a reserved effect that never reached the wire stays reserved, and a
+// person reconciles it. A restart empties the store, which is a limit, not a guarantee.
+function createMemoryPaymentClaims(options = {}) {
+  const effects = new Set();
+  const transactions = new Set();
+  const capacity = readClaimCapacity(options);
+  return {
+    reserveEffect(key) {
+      if (typeof key !== 'string' || !HASH.test(key)) return 'capacity';
+      if (effects.has(key)) return 'duplicate';
+      if (effects.size >= capacity) return 'capacity';
+      effects.add(key);
+      return 'claimed';
+    },
+    claimTransaction(network, txHash) {
+      if (typeof network !== 'string' || network.length === 0) return 'capacity';
+      if (typeof txHash !== 'string' || !HASH.test(txHash.trim().toLowerCase())) return 'capacity';
+      const key = `${network}:${txHash.trim().toLowerCase()}`;
+      if (transactions.has(key)) return 'duplicate';
+      if (transactions.size >= capacity) return 'capacity';
+      transactions.add(key);
+      return 'claimed';
+    },
+  };
+}
+
+function readClaimCapacity(options) {
+  try {
+    const value = options?.capacity;
+    if (!Number.isInteger(value) || value < MIN_CLAIM_CAPACITY || value > MAX_CLAIM_CAPACITY) return DEFAULT_CLAIM_CAPACITY;
+    return value;
+  } catch {
+    return DEFAULT_CLAIM_CAPACITY;
+  }
+}
+
+// Without a port the contract uses one store shared by every payment in this process, so two
+// factories are not handed the same empty set and both proceed.
+const SHARED_CLAIMS = createMemoryPaymentClaims();
+
+// The verifier belongs to this contract and to nobody else. It is separate from `perform`: it runs
+// after the effect, it reads the private expectation and digest instead of trusting the settlement
+// answer, and it has its own budget and its own cancellation.
+async function verifySettlementEffect(ctx, evidence) {
+  const expected = ctx.expected;
+  const checks = {
+    terms: ctx.terms !== null && ctx.terms !== undefined,
+    prepared: ctx.prepared === true && typeof ctx.authDigest === 'string' && HASH.test(ctx.authDigest),
+    settlement: false,
+    delivery: ctx.delivery === true,
+    transactionUnique: ctx.transactionUnique === true,
+  };
+  let reason = 'the paid effect has not been verified';
+
+  // What can be compared here is compared here: a settlement answer that contradicts the declaration
+  // is refused without asking the port, so a port cannot be handed a contradiction to rubber-stamp.
+  const own = ctx.settlement;
+  if (own && own.ok && isPlainObject(evidence)) {
+    const declared = evidence.txHash === own.txHash
+      && (evidence.payer === undefined || evidence.payer === expected.payer)
+      && (evidence.network === undefined || evidence.network === expected.network)
+      && (evidence.amount === undefined || evidence.amount === expected.amount);
+    if (declared && typeof ctx.authDigest === 'string' && evidence.authDigest === ctx.authDigest) {
+      const verdict = await callSettlementPort(ctx, evidence);
+      const portChecks = readBooleanChecks(verdict.checks);
+      for (const [key, value] of Object.entries(portChecks)) checks[`settlement_${key}`] = value;
+      const portVerified = verdict.verified === true
+        && typeof verdict.reason === 'string' && verdict.reason.length > 0
+        && Object.values(portChecks).every((value) => value === true);
+      checks.settlement = portVerified;
+      reason = typeof verdict.reason === 'string' && verdict.reason.length > 0
+        ? verdict.reason : 'the settlement port returned no reason';
+    } else {
+      reason = 'the settlement evidence does not match the declared effect';
+      checks.settlement = false;
+    }
+  } else if (!checks.prepared) {
+    reason = 'the authorization was not independently inspected';
+  }
+
+  const verified = checks.terms === true
+    && checks.prepared === true
+    && checks.settlement === true
+    && checks.delivery === true
+    && checks.transactionUnique === true;
+  return { verified, checks, reason };
+}
+
+function readBooleanChecks(value) {
+  const out = {};
+  if (!isPlainObject(value)) return out;
+  for (const key of Object.keys(value)) {
+    if (typeof value[key] === 'boolean') out[key] = value[key];
+  }
+  return out;
+}
+
+// The private verifier brings its own AbortController and its own budget. The engine does not hand
+// it a signal, so a port that hangs is cancelled here, and the timer is cleared as soon as the port
+// answers so a finished run leaves nothing pending.
+async function callSettlementPort(ctx, evidence) {
+  const budget = readVerifyTimeout(ctx.io);
+  const controller = new AbortController();
+  let timer = null;
+  let timedOut = false;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        controller.abort();
+      } catch {
+      }
+      resolve({ verified: false, checks: {}, reason: 'the settlement port did not answer within its budget' });
+    }, budget);
+  });
+  try {
+    const call = Promise.resolve().then(() => ctx.ports.verifySettlement(evidence, {
+      expected: ctx.expected,
+      authDigest: ctx.authDigest,
+      signal: controller.signal,
+    }));
+    const settled = await Promise.race([call.catch(() => ({ verified: false, checks: {}, reason: 'the settlement port failed' })), timeout]);
+    return settled;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function readVerifyTimeout(io) {
+  try {
+    const value = io?.verifyTimeoutMs;
+    if (Number.isFinite(value) && value > 0) return value;
+  } catch {
+  }
+  return DEFAULT_VERIFY_TIMEOUT_MS;
 }
 
 // Only these options reach the engine. `verify` is deliberately absent: this contract installs its
@@ -441,14 +590,14 @@ function abortedRead(signal) {
   }
 }
 
-async function discoverRequired(ports, spec, signal) {
+async function discoverRequired(ctx, spec) {
   let discovered;
   try {
-    discovered = await ports.discover({ url: spec.url, method: spec.method, redirect: 'error', signal });
+    discovered = await ctx.ports.discover({ url: spec.url, method: spec.method, redirect: 'error', signal: ctx.signal });
   } catch {
     return { ok: false, code: CODES.DISCOVERY_FAILED };
   }
-  if (abortedRead(signal)) return { ok: false, code: CODES.ABORTED };
+  if (aborted(ctx)) return { ok: false, code: CODES.ABORTED };
   if (!isPlainObject(discovered) || discovered.status !== 402 || !isPlainObject(discovered.paymentRequired)) {
     return { ok: false, code: CODES.DISCOVERY_FAILED };
   }
@@ -465,7 +614,7 @@ async function prepareAuthorization(ctx) {
   } catch {
     return { ok: false, code: CODES.PREPARE_FAILED };
   }
-  if (abortedRead(ctx.signal)) return { ok: false, code: CODES.ABORTED };
+  if (aborted(ctx)) return { ok: false, code: CODES.ABORTED };
   let authorization = null;
   try {
     authorization = typeof prepared?.authorization === 'string' && prepared.authorization.trim().length > 0
@@ -504,7 +653,7 @@ async function inspectAuthorization(ctx, authorization) {
     // An inspector that cannot read the authorization is a failed run, not a refusal of terms.
     return { ok: false, code: CODES.PREPARED_REJECTED, failure: true };
   }
-  if (abortedRead(ctx.signal)) return { ok: false, code: CODES.ABORTED, failure: true };
+  if (aborted(ctx)) return { ok: false, code: CODES.ABORTED, failure: true };
   let acceptable = false;
   try {
     acceptable = inspectionIsAcceptable(result, ctx.expected);
@@ -521,14 +670,134 @@ async function inspectAuthorization(ctx, authorization) {
   return { ok: true, authDigest: digest };
 }
 
-// Group D stops here on purpose: the send, the delivery and the settlement verifier are built by
-// the group that tests them. Nothing past this point reaches a receipt yet.
+// A settlement answer is read apart from the body it carries, and only the parts the receipt admits
+// are kept: the transaction hash, who paid, on which network, how much. A hash is normalized once
+// (trimmed, lowercased) and has to be a hash; a missing or malformed one is never claimed.
+function readSettlement(settlement, expected) {
+  const answer = { ok: false, checks: { success: false, payer: false, network: false, amount: true, transaction: false }, evidence: {}, txHash: null };
+  if (!isPlainObject(settlement)) return answer;
+  try {
+    answer.checks.success = settlement.success === true;
+    if (typeof settlement.payer === 'string' && settlement.payer.length > 0) answer.evidence.payer = settlement.payer;
+    if (typeof settlement.network === 'string' && settlement.network.length > 0) answer.evidence.network = settlement.network;
+    if (typeof settlement.amount === 'string' && settlement.amount.length > 0) answer.evidence.amount = settlement.amount;
+    answer.checks.payer = settlement.payer === expected.payer;
+    answer.checks.network = settlement.network === expected.network;
+    // An amount the server chose to declare has to be exactly the declared one; a silent amount is
+    // left to the settlement port, which reads it from the ledger.
+    answer.checks.amount = settlement.amount === undefined ? true : settlement.amount === expected.amount;
+    const txHash = typeof settlement.transaction === 'string' ? settlement.transaction.trim().toLowerCase() : '';
+    if (HASH.test(txHash)) {
+      answer.txHash = txHash;
+      answer.evidence.txHash = txHash;
+      answer.checks.transaction = true;
+    }
+    answer.ok = answer.checks.success && answer.checks.payer && answer.checks.network && answer.checks.amount && answer.checks.transaction;
+  } catch {
+    return answer;
+  }
+  return answer;
+}
+
+// The body is validated on a plain JSON copy: getters, prototypes and functions cannot reach the
+// port, and nothing from the body travels into the receipt but its digest.
+function jsonCopy(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return null;
+  }
+}
+
+function exceedsBodyLimit(value) {
+  let serialized;
+  try {
+    serialized = JSON.stringify(value);
+  } catch {
+    return true;
+  }
+  if (typeof serialized !== 'string') return true;
+  return Buffer.byteLength(serialized, 'utf8') > MAX_BODY_BYTES;
+}
+
+async function readDelivery(response, ctx) {
+  let raw;
+  try {
+    raw = typeof response.readBody === 'function' ? await response.readBody(ctx.signal) : null;
+  } catch {
+    return { ok: false, output: null, digest: null };
+  }
+  const copy = jsonCopy(raw);
+  if (copy === null || copy === undefined) return { ok: false, output: null, digest: null };
+  if (exceedsBodyLimit(copy)) return { ok: false, output: null, digest: null };
+  let validated;
+  try {
+    validated = ctx.ports.validateOutput(copy);
+  } catch {
+    return { ok: false, output: null, digest: null };
+  }
+  if (!isPlainObject(validated) || validated.ok !== true) return { ok: false, output: null, digest: null };
+  let digest = null;
+  try {
+    digest = typeof validated.digest === 'string' && validated.digest.length > 0 ? validated.digest : null;
+  } catch {
+    digest = null;
+  }
+  const output = validated.output === undefined ? null : validated.output;
+  return { ok: true, output, digest };
+}
+
+// Once the send is on the wire the effect may exist. A failure from here on is never reported as a
+// plain failure with nothing exercised, and it is never retried: the receipt carries the digest, the
+// settlement evidence and the code that stopped it.
+function unknownAfterSend(ctx, code) {
+  return {
+    ok: false,
+    settlementUnknown: true,
+    error: code,
+    evidence: { ...ctx.evidence, settlementUnknown: true },
+  };
+}
+
+// The engine owns the signal, and a host may also signal through it. Watching the event as well as
+// the flag keeps the contract honest with either, and the listener is removed when the run ends.
+function watchAbort(ctx) {
+  const signal = ctx.signal;
+  if (!signal || typeof signal.addEventListener !== 'function') return () => {};
+  const onAbort = () => { ctx.aborted = true; };
+  try {
+    signal.addEventListener('abort', onAbort, { once: true });
+  } catch {
+    return () => {};
+  }
+  return () => {
+    try {
+      signal.removeEventListener('abort', onAbort);
+    } catch {
+    }
+  };
+}
+
+function aborted(ctx) {
+  if (ctx.aborted === true) return true;
+  return abortedRead(ctx.signal);
+}
+
 async function perform(ctx, spec, ports, io) {
+  const stopWatching = watchAbort(ctx);
+  try {
+    return await performStages(ctx, spec, ports, io);
+  } finally {
+    stopWatching();
+  }
+}
+
+async function performStages(ctx, spec, ports, io) {
   const now = ctx.now;
   const cover = liveGrant(ctx.authority, spec, now);
   if (!cover.ok) return blocked(cover.code);
 
-  const discovered = await discoverRequired(ports, spec, ctx.signal);
+  const discovered = await discoverRequired(ctx, spec);
   if (!discovered.ok) return failed(discovered.code);
 
   const chosen = selectX402Terms(discovered.paymentRequired, spec, ctx.authority, now);
@@ -538,8 +807,12 @@ async function perform(ctx, spec, ports, io) {
   const afterDiscovery = liveGrant(ctx.authority, spec, now);
   if (!afterDiscovery.ok) return blocked(afterDiscovery.code);
 
+  const reserved = ctx.claims.reserveEffect(effectKey(ctx, spec));
+  if (reserved === 'duplicate') return blocked(CODES.DUPLICATE_EFFECT);
+  if (reserved !== 'claimed') return blocked(CODES.CLAIMS_CAPACITY);
+
   const prepared = await prepareAuthorization(ctx);
-  if (!prepared.ok) return prepared.code === CODES.ABORTED ? failed(prepared.code) : failed(prepared.code);
+  if (!prepared.ok) return failed(prepared.code);
 
   const inspected = await inspectAuthorization(ctx, prepared.authorization);
   if (!inspected.ok) {
@@ -547,17 +820,51 @@ async function perform(ctx, spec, ports, io) {
     return blocked(inspected.code);
   }
   ctx.authDigest = inspected.authDigest;
+  ctx.prepared = true;
 
+  // Immediately before sending, with the same clock the run started with.
   const beforeSend = liveGrant(ctx.authority, spec, now);
   if (!beforeSend.ok) return blocked(beforeSend.code);
 
-  ctx.trace.push('recheck');
-  throw new Error('x402 contract: the send stage is not built yet');
-}
+  ctx.evidence = { authDigest: ctx.authDigest };
+  let response;
+  ctx.sendStarted = true;
+  try {
+    response = await ctx.ports.sendPaid({
+      url: spec.url,
+      method: spec.method,
+      redirect: 'error',
+      authorization: prepared.authorization,
+      terms: ctx.terms,
+      idempotencyKey: ctx.operationKey,
+      signal: ctx.signal,
+    });
+  } catch {
+    return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
+  }
+  if (!isPlainObject(response)) return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
 
-// Installed by this contract, not by the host. Replaced by the settlement verifier in group E.
-function privateVerifier(ctx) {
-  return { verified: false, checks: {}, reason: `settlement evidence for ${ctx.expected.payTo} is not verified by this build` };
+  const settlement = readSettlement(response.settlement, ctx.expected);
+  ctx.settlement = settlement;
+  ctx.evidence = { ...ctx.evidence, ...settlement.evidence };
+  // Without a usable transaction hash there is nothing to verify and nothing to reconcile against:
+  // the outcome is unknown, and the receipt says so instead of calling it a failure.
+  if (settlement.txHash === null) return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
+  // A hash that contradicts the declaration keeps its evidence on the receipt: the person reconciles
+  // it. It is not verified and no output is exposed.
+  if (!settlement.ok) return { ok: true, evidence: ctx.evidence, output: null };
+
+  const claim = ctx.claims.claimTransaction(ctx.expected.network, settlement.txHash);
+  ctx.transactionUnique = claim === 'claimed';
+
+  const delivery = await readDelivery(response, ctx);
+  // A delivery on a cancelled run is not a delivery: the answer arrived after the run was called
+  // off, so the settlement may still be verified while the delivery stays uncovered.
+  ctx.delivery = delivery.ok && response.status === 200 && !aborted(ctx);
+  if (!ctx.delivery) return { ok: true, evidence: ctx.evidence, output: null };
+  ctx.evidence = { ...ctx.evidence, planDigest: delivery.digest };
+  ctx.output = delivery.output;
+  return { ok: true, evidence: ctx.evidence, output: delivery.output };
 }
 
 function buildRunIo(io, ctx) {
@@ -566,7 +873,7 @@ function buildRunIo(io, ctx) {
   for (const key of Object.keys(runIo)) {
     if (!ALLOWED_IO_KEYS.includes(key)) delete runIo[key];
   }
-  runIo.verify = (evidence) => privateVerifier(ctx, evidence);
+  runIo.verify = (evidence) => verifySettlementEffect(ctx, evidence);
   return runIo;
 }
 
@@ -591,6 +898,15 @@ function createX402Payment(rawSpec, rawPorts) {
         trace: [],
         authDigest: null,
         sendStarted: false,
+        prepared: false,
+        delivery: false,
+        transactionUnique: false,
+        terms: null,
+        output: null,
+        evidence: null,
+        settlement: null,
+        aborted: false,
+        claims: ports.claims || SHARED_CLAIMS,
       };
       const capability = {
         id: spec.id,

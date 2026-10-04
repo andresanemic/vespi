@@ -152,6 +152,13 @@ function fakePorts(over = {}) {
       calls.validateOutput += 1;
       trace.push('validateOutput');
       if (over.validateOutput) return over.validateOutput(body);
+      // The same shape the reference bridge checks: a marketing plan, not any JSON at all.
+      const shaped = body !== null && typeof body === 'object' && !Array.isArray(body)
+        && typeof body.title === 'string' && body.title.length > 0
+        && typeof body.summary === 'string' && body.summary.length > 0
+        && Array.isArray(body.deliverables) && body.deliverables.every((item) => typeof item === 'string')
+        && Array.isArray(body.nextSteps) && body.nextSteps.every((item) => typeof item === 'string');
+      if (!shaped) return { ok: false };
       return { ok: true, output: body, digest: createHash('sha256').update(JSON.stringify(body), 'utf8').digest('hex') };
     },
   };
@@ -896,7 +903,7 @@ test('K4-E1 the paid effect is verified, the output stays out of the receipt and
 });
 
 test('K4-E2 the ports are called in the declared order and the digest exists before the send', async () => {
-  const ports = fakePorts({ sendPaid: async () => paidResponse() });
+  const ports = fakePorts();
   await runOnce(ports, {}, spec(), authority());
   const order = ports.trace;
   const at = (label) => order.indexOf(label);
@@ -1041,15 +1048,20 @@ test('K4-E9 an abort before the send sends nothing, and an abort after it never 
   assert.equal(beforeSend.calls.send, 0);
   assert.deepEqual(early.receipt.authority.exercised, []);
 
+  // A signer that answers late, after the run was cancelled, still never reaches inspection or send.
   const latePrepare = fakePorts({
-    prepare: async () => new Promise((resolve) => setTimeout(() => resolve({ authorization: 'PUBLIC-AUTH' }), 5)),
+    prepare: async (request) => new Promise((resolve) => {
+      request.signal.dispatchEvent(new Event('abort'));
+      setTimeout(() => resolve({ authorization: 'PUBLIC-AUTH' }), 5);
+    }),
     inspectPrepared: async () => {
-      throw new Error('must not be reached');
+      throw new Error('the inspection must not be reached after an abort');
     },
   });
   const late = await runOnce(latePrepare);
   assert.equal(late.status, 'failed');
   assert.equal(late.receipt.detail, 'ABORTED');
+  assert.equal(latePrepare.calls.inspect, 0);
   assert.equal(latePrepare.calls.send, 0);
 
   const afterSend = fakePorts({
