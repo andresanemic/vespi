@@ -112,6 +112,11 @@ async function fetchBounded(url, options, externalSignal) {
 
 // The ports for one paid effect. `serviceUrl` is the canonical url the declaration fixed; the
 // resource the server names has to match it exactly, and the kernel refuses it when it does not.
+//
+// The object returned here is the shape src/x402.js `readPorts` admits: the two network ports under
+// `http`, the signer under `signer`, the three host-owned ports at the root and the optional claims
+// store beside them. Each one is a closure over the same signer, client and prepared authorization,
+// so grouping them changes nothing about what they do.
 export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER, network = NETWORK, rpcUrl = RPC_URL, horizonUrl, claims } = {}) {
   const recipient = requirePublicKey(payTo);
   if (!secret) throw new Error('CLIENT_SECRET is required for the payment path');
@@ -124,130 +129,137 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
   // encode exactly the transaction the kernel inspected, never a freshly built one.
   let prepared = null;
 
-  const ports = {
-    async discover({ url, method, redirect, signal }) {
-      if (redirect !== 'error' || method !== 'GET') throw new Error('discovery is a GET without redirects');
-      const response = await fetchBounded(url, { method: 'GET' }, signal);
-      if (response.status !== 402) return { status: response.status };
-      let paymentRequired;
-      try {
-        paymentRequired = httpClient.getPaymentRequiredResponse((name) => response.headers.get(name));
-      } catch {
-        return { status: response.status };
-      }
-      return { status: response.status, paymentRequired };
-    },
-
-    async prepare({ terms, expected, signal }) {
-      throwIfAborted(signal, 'prepare');
-      let payload = await client.createPaymentPayload({
-        x402Version: 2,
-        resource: { url: serviceUrl },
-        accepts: [terms],
-      });
-      const transaction = new Transaction(payload.payload.transaction, passphrase);
-      const sorobanData = transaction.toEnvelope().v1()?.tx()?.ext()?.sorobanData();
-      if (sorobanData) {
-        payload = {
-          ...payload,
-          payload: {
-            ...payload.payload,
-            transaction: TransactionBuilder
-              .cloneFrom(transaction, { fee: '1', sorobanData, networkPassphrase: passphrase })
-              .build()
-              .toXDR(),
-          },
-        };
-      }
-      throwIfAborted(signal, 'prepare');
-      prepared = { payload, authorization: payload.payload.transaction, expected };
-      return { authorization: payload.payload.transaction };
-    },
-
-    async inspectPrepared(authorization, { expected, signal }) {
-      throwIfAborted(signal, 'inspect');
-      const authDigest = authDigestFromEnvelope(authorization, network);
-      const transaction = new Transaction(authorization, passphrase);
-      // The names are adapted on purpose: the kernel speaks network/asset/payer/payTo/amount, the
-      // settlement code speaks assetContract and issuer.
-      const verdict = verifyPreparedTransaction(transaction, {
-        payer: expected.payer,
-        payTo: expected.payTo,
-        amount: expected.amount,
-        assetContract: expected.asset,
-        authDigest,
-      });
-      if (!verdict.verified) {
-        return { verified: false, authDigest: authDigest || undefined, checks: verdict.checks || {}, reason: verdict.reason };
-      }
-      return {
-        verified: true,
-        authDigest,
-        effect: {
-          network,
-          asset: expected.asset,
-          payer: expected.payer,
-          payTo: expected.payTo,
-          amount: expected.amount,
-        },
-        checks: verdict.checks || { prepared: true },
-        reason: verdict.reason || 'prepared transaction matches declared effect',
-      };
-    },
-
-    async sendPaid({ url, authorization, idempotencyKey, signal }) {
-      throwIfAborted(signal, 'send');
-      if (!prepared || prepared.authorization !== authorization) {
-        throw new Error('the paid request does not carry the authorization that was inspected');
-      }
-      const headers = {
-        ...httpClient.encodePaymentSignatureHeader(prepared.payload),
-        // Only a hint: a provider that does not honour it is not made to honour it here.
-        'idempotency-key': idempotencyKey,
-      };
-      const response = await fetchBounded(url, { headers }, signal);
-      throwIfAborted(signal, 'send');
-      let settlement = null;
-      try {
-        settlement = httpClient.getPaymentSettleResponse((name) => response.headers.get(name));
-      } catch {
-        settlement = null;
-      }
-      return {
-        status: response.status,
-        settlement: settlement ? { ...settlement } : null,
-        readBody: (innerSignal) => readBodyWithLimit(response, innerSignal || signal),
-      };
-    },
-
-    async verifySettlement(evidence, { expected, authDigest, signal }) {
-      throwIfAborted(signal, 'verify settlement');
-      const verdict = await verifySettlement({ ...evidence, authDigest }, {
-        horizon: new (await import('@stellar/stellar-sdk')).Horizon.Server(horizonUrl || 'https://horizon-testnet.stellar.org'),
-        payer: expected.payer,
-        payTo: expected.payTo,
-        amount: expected.amount,
-        issuer,
-        assetContract: expected.asset,
-        network,
-        requireAuthDigest: true,
-      });
-      return { verified: verdict.verified === true, checks: verdict.checks || {}, reason: verdict.reason || 'settlement did not match' };
-    },
-
-    validateOutput(body) {
-      if (!isMarketingPlan(body)) return { ok: false };
-      let serialized;
-      try {
-        serialized = JSON.stringify(body);
-      } catch {
-        return { ok: false };
-      }
-      return { ok: true, output: body, digest: createHash('sha256').update(serialized).digest('hex') };
-    },
+  const discover = async ({ url, method, redirect, signal }) => {
+    if (redirect !== 'error' || method !== 'GET') throw new Error('discovery is a GET without redirects');
+    const response = await fetchBounded(url, { method: 'GET' }, signal);
+    if (response.status !== 402) return { status: response.status };
+    let paymentRequired;
+    try {
+      paymentRequired = httpClient.getPaymentRequiredResponse((name) => response.headers.get(name));
+    } catch {
+      return { status: response.status };
+    }
+    return { status: response.status, paymentRequired };
   };
-  if (claims) ports.claims = claims;
-  return ports;
+
+  const prepare = async ({ terms, expected, signal }) => {
+    throwIfAborted(signal, 'prepare');
+    let payload = await client.createPaymentPayload({
+      x402Version: 2,
+      resource: { url: serviceUrl },
+      accepts: [terms],
+    });
+    const transaction = new Transaction(payload.payload.transaction, passphrase);
+    const sorobanData = transaction.toEnvelope().v1()?.tx()?.ext()?.sorobanData();
+    if (sorobanData) {
+      payload = {
+        ...payload,
+        payload: {
+          ...payload.payload,
+          transaction: TransactionBuilder
+            .cloneFrom(transaction, { fee: '1', sorobanData, networkPassphrase: passphrase })
+            .build()
+            .toXDR(),
+        },
+      };
+    }
+    throwIfAborted(signal, 'prepare');
+    prepared = { payload, authorization: payload.payload.transaction, expected };
+    return { authorization: payload.payload.transaction };
+  };
+
+  const inspectPrepared = async (authorization, { expected, signal }) => {
+    throwIfAborted(signal, 'inspect');
+    const authDigest = authDigestFromEnvelope(authorization, network);
+    const transaction = new Transaction(authorization, passphrase);
+    // The names are adapted on purpose: the kernel speaks network/asset/payer/payTo/amount, the
+    // settlement code speaks assetContract and issuer.
+    const verdict = verifyPreparedTransaction(transaction, {
+      payer: expected.payer,
+      payTo: expected.payTo,
+      amount: expected.amount,
+      assetContract: expected.asset,
+      authDigest,
+    });
+    if (!verdict.verified) {
+      return { verified: false, authDigest: authDigest || undefined, checks: verdict.checks || {}, reason: verdict.reason };
+    }
+    return {
+      verified: true,
+      authDigest,
+      effect: {
+        network,
+        asset: expected.asset,
+        payer: expected.payer,
+        payTo: expected.payTo,
+        amount: expected.amount,
+      },
+      checks: verdict.checks || { prepared: true },
+      reason: verdict.reason || 'prepared transaction matches declared effect',
+    };
+  };
+
+  const sendPaid = async ({ url, authorization, idempotencyKey, signal }) => {
+    throwIfAborted(signal, 'send');
+    if (!prepared || prepared.authorization !== authorization) {
+      throw new Error('the paid request does not carry the authorization that was inspected');
+    }
+    const headers = {
+      ...httpClient.encodePaymentSignatureHeader(prepared.payload),
+      // Only a hint: a provider that does not honour it is not made to honour it here.
+      'idempotency-key': idempotencyKey,
+    };
+    const response = await fetchBounded(url, { headers }, signal);
+    throwIfAborted(signal, 'send');
+    let settlement = null;
+    try {
+      settlement = httpClient.getPaymentSettleResponse((name) => response.headers.get(name));
+    } catch {
+      settlement = null;
+    }
+    return {
+      status: response.status,
+      settlement: settlement ? { ...settlement } : null,
+      readBody: (innerSignal) => readBodyWithLimit(response, innerSignal || signal),
+    };
+  };
+
+  const verifySettlement = async (evidence, { expected, authDigest, signal }) => {
+    throwIfAborted(signal, 'verify settlement');
+    const verdict = await verifySettlement({ ...evidence, authDigest }, {
+      horizon: new (await import('@stellar/stellar-sdk')).Horizon.Server(horizonUrl || 'https://horizon-testnet.stellar.org'),
+      payer: expected.payer,
+      payTo: expected.payTo,
+      amount: expected.amount,
+      issuer,
+      assetContract: expected.asset,
+      network,
+      requireAuthDigest: true,
+    });
+    return { verified: verdict.verified === true, checks: verdict.checks || {}, reason: verdict.reason || 'settlement did not match' };
+  };
+
+  // The same shape the historical adapter checked: a marketing plan, not any JSON at all. The digest
+  // is required by the contract: a body nobody hashed is not a covered delivery.
+  const validateOutput = (body) => {
+    if (!isMarketingPlan(body)) return { ok: false };
+    let serialized;
+    try {
+      serialized = JSON.stringify(body);
+    } catch {
+      return { ok: false };
+    }
+    return { ok: true, output: body, digest: createHash('sha256').update(serialized).digest('hex') };
+  };
+
+  return {
+    http: { discover, sendPaid },
+    signer: { prepare },
+    inspectPrepared,
+    verifySettlement,
+    validateOutput,
+    ...(claims ? { claims } : {}),
+  };
 }
 
 // The reference endpoint serves one operation; the query says which, as it always has.

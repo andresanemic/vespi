@@ -310,36 +310,40 @@ test('ADV17 a hostile settlement property after send keeps exercised uncertainty
 // =====================================================================================
 
 // The demo package has its own dependencies and they are not installed here, so the bridge is read
-// and evaluated with its module declarations stripped and its SDK replaced by stubs. This proves one
-// thing only: the shape the factory returns is the shape the contract accepts. It proves nothing
-// about signing, XDR, HTTP, Horizon or a real payment.
-function loadBridgeWithStubs(kernel) {
+// with its module declarations stripped and its SDK replaced by stubs. It is evaluated in this very
+// realm, so the object the factory returns is a normal object and a cross-realm `Object.prototype`
+// cannot stand in for a port shape the contract refuses. What this proves is one thing only: the
+// shape the factory returns is the shape the contract accepts. It proves nothing about signing, XDR,
+// HTTP, Horizon or a real payment.
+const STUBBED_GLOBALS = [
+  'require', 'requirePublicKey', 'authDigestFromEnvelope', 'verifyPreparedTransaction', 'verifySettlement',
+  'Keypair', 'Transaction', 'TransactionBuilder', 'x402Client', 'x402HTTPClient',
+  'createEd25519Signer', 'getNetworkPassphrase', 'ExactStellarScheme',
+];
+
+function readBridgeBody() {
   const source = fs.readFileSync(path.join(DEMO, 'ports.js'), 'utf8');
   const strips = [
-    [/^import .*;\r?\n/gm, 'import declarations'],
-    [/^const require = createRequire\(import\.meta\.url\);\r?\n/m, 'the createRequire line'],
-    [/^export \{.*\};\r?\n?/gm, 'the export lists'],
-    [/^export function /gm, 'the export keywords'],
+    [/^import .*;\r?\n/gm, 'the import declarations', ''],
+    [/^const require = createRequire\(import\.meta\.url\);\r?\n/m, 'the createRequire line', ''],
+    [/^export \{.*\};\r?\n?/gm, 'the export lists', ''],
+    [/^export function /gm, 'the export keywords', 'function '],
   ];
   let body = source;
-  for (const [pattern, label] of strips) {
+  for (const [pattern, label, replacement] of strips) {
     const before = body;
-    body = body.replace(pattern, label === 'the export keywords' ? 'function ' : '');
+    body = body.replace(pattern, replacement);
     assert.notEqual(body, before, `the harness did not strip ${label}; the composition result would be meaningless`);
   }
-  assert.doesNotMatch(body, /^\s*import /m, 'no module declaration is left to run');
+  assert.doesNotMatch(body, /^\s*(import|export)\b/m, 'no module declaration is left to run');
+  assert.doesNotMatch(body, /\bimport\.meta\b/, 'the module URL never reaches the evaluated body');
+  return body;
+}
+
+// The stubbed bindings replace the module declarations for as long as `use` runs, and every global
+// this suite touched is put back exactly as it was before returning.
+function withStubbedBridge(kernel, use) {
   const stubs = {
-    '@stellar/stellar-sdk': {
-      Keypair: { fromSecret: () => ({ publicKey: () => 'GPAYER' }) },
-      Transaction: class {},
-      TransactionBuilder: { cloneFrom: () => ({ build: () => ({ toXDR: () => 'XDR' }) }) },
-    },
-    '@x402/fetch': { x402Client: class { register() { return this; } }, x402HTTPClient: class {} },
-    '@x402/stellar': { createEd25519Signer: () => ({}), getNetworkPassphrase: () => 'Test SDF Network ; September 2015' },
-    '@x402/stellar/exact/client': { ExactStellarScheme: class {} },
-  };
-  // Every binding the stripped module declarations used to bring in becomes a global of the context.
-  const context = {
     require(id) {
       if (id === '../../src/x402.js') return kernel;
       throw new Error(`unexpected require in the stubbed bridge: ${id}`);
@@ -348,36 +352,43 @@ function loadBridgeWithStubs(kernel) {
     authDigestFromEnvelope: () => AUTH_DIGEST,
     verifyPreparedTransaction: () => ({ verified: false, checks: {}, reason: 'stub' }),
     verifySettlement: async () => ({ verified: false, checks: {}, reason: 'stub' }),
-    process: { env: {} },
-    URL,
-    Buffer,
-    AbortController,
-    setTimeout,
-    clearTimeout,
-    createHash,
-    console,
-    Keypair: stubs['@stellar/stellar-sdk'].Keypair,
-    Transaction: stubs['@stellar/stellar-sdk'].Transaction,
-    TransactionBuilder: stubs['@stellar/stellar-sdk'].TransactionBuilder,
-    x402Client: stubs['@x402/fetch'].x402Client,
-    x402HTTPClient: stubs['@x402/fetch'].x402HTTPClient,
-    createEd25519Signer: stubs['@x402/stellar'].createEd25519Signer,
-    getNetworkPassphrase: stubs['@x402/stellar'].getNetworkPassphrase,
-    ExactStellarScheme: stubs['@x402/stellar/exact/client'].ExactStellarScheme,
+    Keypair: { fromSecret: () => ({ publicKey: () => 'GPAYER' }) },
+    Transaction: class {},
+    TransactionBuilder: { cloneFrom: () => ({ build: () => ({ toXDR: () => 'XDR' }) }) },
+    x402Client: class { register() { return this; } },
+    x402HTTPClient: class {},
+    createEd25519Signer: () => ({}),
+    getNetworkPassphrase: () => 'Test SDF Network ; September 2015',
+    ExactStellarScheme: class {},
   };
-  vm.createContext(context);
-  vm.runInContext(body, context, { filename: 'demo/x402/ports.js' });
-  return context;
+  const saved = new Map(STUBBED_GLOBALS.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+  try {
+    for (const [name, value] of Object.entries(stubs)) globalThis[name] = value;
+    const script = new vm.Script(
+      `(function() {\n${readBridgeBody()}\nreturn { createStellarPorts, createMarketingPlanPayment, USDC_CONTRACT, NETWORK, PRICE_ATOMIC };\n})()`,
+      { filename: 'demo/x402/ports.js' },
+    );
+    return use(script.runInThisContext());
+  } finally {
+    for (const [name, descriptor] of saved) {
+      if (descriptor === undefined) delete globalThis[name];
+      else Object.defineProperty(globalThis, name, descriptor);
+    }
+  }
 }
 
 test('ADV15 the reference bridge factory supplies the kernel port shape (stubbed SDK, no network)', () => {
   const kernel = require('../src/x402.js');
-  const bridge = loadBridgeWithStubs(kernel);
-  assert.equal(typeof bridge.createStellarPorts, 'function');
-  assert.equal(typeof bridge.createMarketingPlanPayment, 'function');
-  const ports = bridge.createStellarPorts({ serviceUrl: CANONICAL_URL, payTo: 'GRECIPIENT', secret: 'PUBLIC-STUB-INPUT' });
-  assert.doesNotThrow(() => kernel.createX402Payment(spec(), ports), 'the factory output is the shape the contract accepts');
-  const payment = bridge.createMarketingPlanPayment({ serviceUrl: CANONICAL_URL, payTo: 'GRECIPIENT', secret: 'PUBLIC-STUB-INPUT' });
-  assert.equal(payment.id, 'x402-marketing-plan');
-  assert.deepEqual(payment.required(), { spend: [{ asset: `USDC:${bridge.USDC_CONTRACT}`, amount: '100000', to: 'GRECIPIENT' }] });
+  withStubbedBridge(kernel, (bridge) => {
+    assert.equal(typeof bridge.createStellarPorts, 'function');
+    assert.equal(typeof bridge.createMarketingPlanPayment, 'function');
+    const ports = bridge.createStellarPorts({ serviceUrl: CANONICAL_URL, payTo: 'GRECIPIENT', secret: 'PUBLIC-STUB-INPUT' });
+    assert.equal(typeof ports.http.discover, 'function');
+    assert.equal(typeof ports.http.sendPaid, 'function');
+    assert.equal(typeof ports.signer.prepare, 'function');
+    assert.doesNotThrow(() => kernel.createX402Payment(spec(), ports), 'the factory output is the shape the contract accepts');
+    const payment = bridge.createMarketingPlanPayment({ serviceUrl: CANONICAL_URL, payTo: 'GRECIPIENT', secret: 'PUBLIC-STUB-INPUT' });
+    assert.equal(payment.id, 'x402-marketing-plan');
+    assert.deepEqual(payment.required(), { spend: [{ asset: `USDC:${bridge.USDC_CONTRACT}`, amount: '100000', to: 'GRECIPIENT' }] });
+  });
 });
