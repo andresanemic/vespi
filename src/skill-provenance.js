@@ -27,6 +27,10 @@
 //     comparisons came out equal — which is when the block is also, string for string, what the
 //     resolver observed. Nothing the resolver wrote is copied into a sealed receipt (A18, reviews
 //     H06-H08, N01, H19), so a refutation is reported as a refutation and not as a value.
+//   - The name is the one value in a receipt that nothing checks, and it says so. The kernel cannot
+//     compare a name: it does not know which path inside the commit holds the artifact. So `name` is a
+//     search hint and `nameSource` is `declared` in every state — the same word `provenanceSource`
+//     uses — and no check, and no coverage, ever counts it (P2b finding 4.3).
 //   - Nothing on the claim is trusted, including fields written after registration. The registered
 //     values live in a private binding, the way the bound orchestrator lives in `delegation.js` (S11):
 //     a claim that anyone can rewrite is not a grant, it is a suggestion.
