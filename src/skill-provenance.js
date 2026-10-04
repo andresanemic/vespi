@@ -447,12 +447,18 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   if (typeof resolve !== 'function') {
     return refuse(record, 'no resolver was injected: nothing outside the skill has answered yet');
   }
+  // The question carries the location of the evidence and nothing else: the name, so a resolver can
+  // find the skill inside the repository, the repository, and the exact commit. The declared author
+  // and the declared content digest are withheld, because those are the two answers this kernel asks
+  // the resolver to produce. Handing them over made the cheapest possible resolver, one that returns
+  // the question it was given with a flag, verified provenance out of nothing (D1, review N05).
+  // Independence at this door is the kernel's; what the resolver does with the location it was given
+  // is the host's, and a host that passes the declaration to its own resolver hands back an answer
+  // this kernel cannot tell from an honest observation.
   const question = Object.freeze({
     name: record.name,
     repository: record.repository,
     commit: record.commit,
-    author: record.author,
-    contentDigest: record.contentDigest,
   });
   let evidence;
   try {
@@ -468,6 +474,15 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   }
   if (evidence === null || typeof evidence !== 'object' || Array.isArray(evidence)) {
     return refuse(record, 'the resolver answered with something that is not a record of evidence');
+  }
+  // Three answers that carry the declaration instead of evidence about it. The question is what this
+  // kernel asked, so handing it back proves nothing. The registration record and the claim view are
+  // this kernel's own copy of the declaration: whoever holds one can hand it straight back, and what
+  // the skill said about itself is not what it asked to be checked against. A copy of either that
+  // still carries the registration seal is refused for the same reason. A copy with the seal stripped
+  // is indistinguishable from an honest observation, and that is a limit, not a check (D1).
+  if (evidence === question || recordOf(evidence) !== null || readString(evidence, 'digest') === record.digest) {
+    return refuse(record, 'the resolver answered with the declaration instead of with evidence of its own');
   }
 
   const checks = {};
