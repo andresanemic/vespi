@@ -13,13 +13,13 @@
     ],
     "operations_total": 50,
     "accounts": 8,
-    "collected_at": "2026-10-04T21:54:29.310Z",
+    "collected_at": "2026-10-04T21:57:25.981Z",
     "local_expectation": 1,
     "no_local_expectation": 49,
     "readback_read": 50,
     "readback_failed": 0,
     "local_record_source": "repository run records, never the Horizon response",
-    "verified_at": "2026-10-04T21:55:07.705Z",
+    "verified_at": "2026-10-04T21:57:40.878Z",
     "semantic_verification": {
       "total": 50,
       "verified": 1,
@@ -28,7 +28,8 @@
       "declared_locally": 1,
       "expectation_source": "local run records in this repository, never the Horizon response"
     },
-    "readback_unread": 0
+    "readback_unread": 0,
+    "readback_successful": 50
   },
   "transactions": [
     {
@@ -38,11 +39,17 @@
       "operations": 1,
       "source_account": "GC6CSXBV4C6RL3HEDTW57KXYXSSXKAWKGYDEOSATXM3XNKXSR2VRYN3K",
       "run": "Vespi x402, corridas 1 a 3 (corrida-1-not_verified.json)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: Vespi x402, corridas 1 a 3 (corrida-1-not_verified.json)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "_links": {
             "self": {
@@ -180,12 +187,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -195,11 +196,17 @@
       "operations": 1,
       "source_account": "GC6CSXBV4C6RL3HEDTW57KXYXSSXKAWKGYDEOSATXM3XNKXSR2VRYN3K",
       "run": "Vespi x402, corridas 1 a 3 (corrida-2-verified.json)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: Vespi x402, corridas 1 a 3 (corrida-2-verified.json)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "_links": {
             "self": {
@@ -337,12 +344,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -352,6 +353,10 @@
       "operations": 1,
       "source_account": "GC6CSXBV4C6RL3HEDTW57KXYXSSXKAWKGYDEOSATXM3XNKXSR2VRYN3K",
       "run": "Vespi x402 en vivo (kernel)",
+      "verification": {
+        "ok": true,
+        "status": "verified"
+      },
       "expected": {
         "operation": "invoke_host_function",
         "memo": null,
@@ -429,7 +434,7 @@
       },
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "_links": {
             "self": {
@@ -567,10 +572,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": true,
-        "status": "verified"
       }
     },
     {
@@ -580,11 +581,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "SRls3Wg7OdJRy58Ll24oE/WLAXutyVao7NkT1xCkJ2c=",
           "_links": {
@@ -675,12 +682,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -690,11 +691,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "loNJRch7J+ByBSkwsIhldNte/f/ZjyZEmDgqsz9L+zg=",
           "_links": {
@@ -785,12 +792,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -800,11 +801,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "C9T+2acxXCWXpYRyzWiaMZ9Uye5YFnS4IRgmXAJqCog=",
           "_links": {
@@ -895,12 +902,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -910,11 +911,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "zJEVDdnhOJcO9Oh3C/s8N4c94dG2va7EcFb3CEZZKIQ=",
           "_links": {
@@ -1005,12 +1012,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1020,11 +1021,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "pHkvZ+sNnKXmqC6959AfsdGQnlIm5q0nzxmYUEos3qE=",
           "_links": {
@@ -1115,12 +1122,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1130,11 +1131,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "v2uMhvNXGY/G6c5V+WGeAqOS8rBsbeTg5kAKCOfSBtY=",
           "_links": {
@@ -1225,12 +1232,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1240,11 +1241,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "CKydjsN7kJLAMTKrYQ6BjJfhn6lBZndkgXrkrwJnQ6k=",
           "_links": {
@@ -1335,12 +1342,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1350,11 +1351,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "vUxmDh4BNZ/nGgBNNrIlyjp4YIqZ6wtJYklfChS2BQw=",
           "_links": {
@@ -1445,12 +1452,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1460,11 +1461,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "cY5gk8oQ5YKqHDWmoY3qfYtNMpawL4zZ6VjfWeW7irU=",
           "_links": {
@@ -1555,12 +1562,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1570,11 +1571,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "YhAKahwO9aeGl+Yz/LwdQRXP8paGiO7Eipa+/MRbloU=",
           "_links": {
@@ -1665,12 +1672,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1680,11 +1681,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "UT0LQmsCCNsgthKDGM0rBKo+CawIHerPeInKN+96YQs=",
           "_links": {
@@ -1775,12 +1782,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1790,11 +1791,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "eb1AzaalemjKTozJU2YQbE9ZnSymrjw6Swze7wXxOUI=",
           "_links": {
@@ -1885,12 +1892,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -1900,11 +1901,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "ciJPsUpL8p59gb26yGTjpQBOifAxS0FPfaWXAzSqZ0k=",
           "_links": {
@@ -1995,12 +2002,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2010,11 +2011,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "uVJA0jF6OSI6VPFCYrVdVcQolMJmNUfIWgoJFCmwt7Y=",
           "_links": {
@@ -2105,12 +2112,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2120,11 +2121,17 @@
       "operations": 1,
       "source_account": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
       "run": "TEMIS tramo 3, corrida 1",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 1); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "QYAvuL5mqk3p+ooKa3ygRvvYIqFgSNjbi6Mr5zifcXc=",
           "_links": {
@@ -2215,12 +2222,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2230,11 +2231,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "44y2GeF53kziT1rfsY4CnD3IQIQd1I86gy5TKHmAzXE=",
           "_links": {
@@ -2325,12 +2332,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2340,11 +2341,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "COCbv0RPALQM19Flz+TtIssHdtTcfZNrr/MCpKbxFpo=",
           "_links": {
@@ -2435,12 +2442,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2450,11 +2451,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "6OhL776ILMf6Spc/H28yYev4UYPeLj9ZMqMJl+zrkIo=",
           "_links": {
@@ -2545,12 +2552,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2560,11 +2561,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "VIO+0FwiNr2y+GsHHwYPb9SavHaPPThA3ZOQvQegC/s=",
           "_links": {
@@ -2655,12 +2662,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2670,11 +2671,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "mnBkYI7sWGusXKY1SMRkpIw0lT/UBVut9f4EIqKTaec=",
           "_links": {
@@ -2765,12 +2772,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2780,11 +2781,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "KQF9QmJ+TjFgdHgJR00cCt1wofvRZklpl0kOgKNrzEs=",
           "_links": {
@@ -2875,12 +2882,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -2890,11 +2891,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "3hTQBKPy9QtTJbJBK4Ev/fwePIzqUxjUmdxqE6ryejs=",
           "_links": {
@@ -2985,12 +2992,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3000,11 +3001,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "erKm9jvrs6gLCSKGNPbPILLbw0mvez+2Fqj6b1V8x6U=",
           "_links": {
@@ -3095,12 +3102,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3110,11 +3111,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "KVY6vFqBiQjtxCHFpqDLQZIb3edIMUlr97/vO+p8R44=",
           "_links": {
@@ -3205,12 +3212,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3220,11 +3221,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "0S5/YNWFTgYrwJvdpBlzLu9rv8TgKfU+vBNK0gJIeC8=",
           "_links": {
@@ -3315,12 +3322,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3330,11 +3331,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "7lzvx9mKoCuxomi32wWukol+PK30zsdozGH+zy28ycc=",
           "_links": {
@@ -3425,12 +3432,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3440,11 +3441,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "v3HjI3xkF6+61YOemQzBT4UdPW2gZbBD9AViWKAK5Nw=",
           "_links": {
@@ -3535,12 +3542,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3550,11 +3551,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "lPgLZ7+TSaj3xnX3jxJhNa393tIzAAzy3+EEuEcZ3/Y=",
           "_links": {
@@ -3645,12 +3652,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3660,11 +3661,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "W9TmOh4BGowX7xEM+Munp/cXeiixnrBkDEEZJ7PhdhI=",
           "_links": {
@@ -3755,12 +3762,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3770,11 +3771,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "VDe9bFKJn9OeaOcbDKwk6OcPuIWNnHfjkNL0nnoKyk8=",
           "_links": {
@@ -3865,12 +3872,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3880,11 +3881,17 @@
       "operations": 1,
       "source_account": "GBLGGBD744UYUO6VPGTNQHAR67YJ6LDH57PNNBLPVUQDUUDVGVB7Z4W2",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "F7oL++A2EsOmng6Krw/36qdSmqP9RhoHo31iQmKCh6Y=",
           "_links": {
@@ -3975,12 +3982,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -3990,11 +3991,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "mijgER+FHgrknqO0K0+HqUiVXcnFyA0ejViwQ+XWrg8=",
           "_links": {
@@ -4085,12 +4092,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -4100,11 +4101,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "EzWwAMjnoD+tUpf74sH3KwQc3nl3DQZoAsXJueWCsNU=",
           "_links": {
@@ -4195,12 +4202,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -4210,11 +4211,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "WrL3X+DGQkY37mhZXUqC8XLOGiOG0NdDv3tVLY6IqU8=",
           "_links": {
@@ -4305,12 +4312,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -4320,11 +4321,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "1bMULpcI2pmJr1yR7sXycoL+bTbI0ERffSFFyK0D7NM=",
           "_links": {
@@ -4415,12 +4422,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -4430,11 +4431,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "j8IiU94rwSlFzOGc2XuNGzwpG5JxWrmrektTIFC/Gfo=",
           "_links": {
@@ -4525,12 +4532,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -4540,11 +4541,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "FvNS2GpDGYkC6nSk2cZpfOmDuivLskDDL7Pg+6OcEpc=",
           "_links": {
@@ -4635,12 +4642,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -4650,11 +4651,17 @@
       "operations": 1,
       "source_account": "GDWWBZGPISWYOOKFWXU42MVSSZSXVTTVZW6RMVVFF4GKJ6PXIHOX342H",
       "run": "TEMIS tramo 3, corrida 2 (versión corregida)",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 3, corrida 2 (versión corregida)); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "L/c3GRusgFilyxHGXvk3lpIy2+S2iuvbToBGOTyIx78=",
           "_links": {
@@ -4745,12 +4752,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -4760,11 +4761,17 @@
       "operations": 1,
       "source_account": "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ",
       "run": "TEMIS tramo 4, payTo multiplexada y tipo de operación",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, payTo multiplexada y tipo de operación); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "_links": {
             "self": {
@@ -4859,12 +4866,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -4874,11 +4875,17 @@
       "operations": 1,
       "source_account": "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ",
       "run": "TEMIS tramo 4, payTo multiplexada y tipo de operación",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, payTo multiplexada y tipo de operación); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "_links": {
             "self": {
@@ -5003,12 +5010,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -5018,11 +5019,17 @@
       "operations": 1,
       "source_account": "GBUJ2OIMWU2XMRBDYBATO76CWXY3VZMYR3RUIO22IGOYUHUHDPYNRLW5",
       "run": "TEMIS tramo 4, anclajes concurrentes",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, anclajes concurrentes); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "6wHhDlwUHiqySdB9uGYT2dPt2qaRcNY7ERVXsi7qJ+w=",
           "_links": {
@@ -5113,12 +5120,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -5128,11 +5129,17 @@
       "operations": 1,
       "source_account": "GBUJ2OIMWU2XMRBDYBATO76CWXY3VZMYR3RUIO22IGOYUHUHDPYNRLW5",
       "run": "TEMIS tramo 4, anclajes concurrentes",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, anclajes concurrentes); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "7K1zRMwVIAReIrPoPDCQb8xLQB1V1+wqjFWE3J1sNRE=",
           "_links": {
@@ -5223,12 +5230,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -5238,11 +5239,17 @@
       "operations": 1,
       "source_account": "GBJQ3C746LWEUXNBBCJJNZOWDYE2T27MSRNI4WMI7LRESMF5FIHJCC4R",
       "run": "TEMIS tramo 4, anclajes concurrentes",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, anclajes concurrentes); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "nV6QqpRqToCM6KX4G6g0/X60qj872c5UqitE2GJ49kA=",
           "_links": {
@@ -5333,12 +5340,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -5348,11 +5349,17 @@
       "operations": 1,
       "source_account": "GBJQ3C746LWEUXNBBCJJNZOWDYE2T27MSRNI4WMI7LRESMF5FIHJCC4R",
       "run": "TEMIS tramo 4, anclajes concurrentes",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, anclajes concurrentes); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "HYyk2eUyApQviJ7+G8i69t1fNJUh1o6yl+FTSdFFFYA=",
           "_links": {
@@ -5443,12 +5450,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -5458,11 +5459,17 @@
       "operations": 1,
       "source_account": "GBDVO2MBRWENFH2EOFQS4FFMG7S2DGM4WVKSYTRC4IABC2ZFZP7LT23K",
       "run": "TEMIS tramo 4, anclajes concurrentes",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, anclajes concurrentes); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "lJxy+irKeUTkDqqoa9MKSnL5WTE4gKHwDQFqXINOpxs=",
           "_links": {
@@ -5553,12 +5560,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -5568,11 +5569,17 @@
       "operations": 1,
       "source_account": "GBDVO2MBRWENFH2EOFQS4FFMG7S2DGM4WVKSYTRC4IABC2ZFZP7LT23K",
       "run": "TEMIS tramo 4, anclajes concurrentes",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, anclajes concurrentes); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "memo": "zlAbPRNGz14WXoCxmki9yx3hFvC3cUE45VA/mI32elo=",
           "_links": {
@@ -5663,12 +5670,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     },
     {
@@ -5678,11 +5679,17 @@
       "operations": 1,
       "source_account": "GC6CSXBV4C6RL3HEDTW57KXYXSSXKAWKGYDEOSATXM3XNKXSR2VRYN3K",
       "run": "TEMIS tramo 4, idempotencia del pago x402",
+      "verification": {
+        "ok": null,
+        "status": "not_semantically_verified",
+        "field": "expected",
+        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
+      },
       "expectedFrom": null,
       "expectedFromReason": "no run record for this transaction in this repository (run: TEMIS tramo 4, idempotencia del pago x402); the expectation is not declared locally and was not copied from the Horizon readback",
       "historical_response": {
         "classification": "historical_readback",
-        "captured_at": "2026-10-04T21:55:07.705Z",
+        "captured_at": "2026-10-04T21:57:40.878Z",
         "transaction": {
           "_links": {
             "self": {
@@ -5820,12 +5827,6 @@
       "readback": {
         "status": "read",
         "attempts": 1
-      },
-      "verification": {
-        "ok": null,
-        "status": "not_semantically_verified",
-        "field": "expected",
-        "reason": "no local run record declared the expected operation, memo, asset, amount, and recipient"
       }
     }
   ]
