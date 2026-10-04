@@ -72,21 +72,21 @@ test('K3d the tower basis converts to the oracle polynomial basis and back', () 
   );
 
   // An element spread over every tower slot round trips through the twelve coefficients exactly.
-  const spread = ref.fromOracleBasis(['3', '0', '5', '0', '7', '0', '11', '0', '13', '0', '17', '0']);
+  const spread = ref.fromOracleBasis(basisOf(['3', '0', '5', '0', '7', '0', '11', '0', '13', '0', '17', '0']));
   const back = ref.fromOracleBasis(ref.toOracleBasis(spread));
   assert.equal(asOracle(back), asOracle(spread));
   assert.equal(asOracle(spread), ['3', '0', '5', '0', '7', '0', '11', '0', '13', '0', '17', '0'].join(','));
 
   // Interleaving the halves is not the same element: the conversion is not order blind.
   const twelve = ref.toOracleBasis(spread);
-  const shifted = ref.fromOracleBasis([...twelve.slice(1), '0']);
+  const shifted = ref.fromOracleBasis([...twelve.slice(1), 0n]);
   assert.notEqual(asOracle(shifted), asOracle(spread));
 });
 
 // --- 3. Frobenius --------------------------------------------------------------------------
 
 test('K3d the Frobenius has the order the tower requires', () => {
-  const sample = ref.fromOracleBasis(VECTORS.pairings[0].expected);
+  const sample = ref.fromOracleBasis(basisOf(VECTORS.pairings[0].expected));
   // pi^12 is the identity on Fp12.
   let twelve = sample;
   for (let i = 0; i < 12; i += 1) twelve = ref.frobenius(twelve);
@@ -141,10 +141,16 @@ test('K3d the pairing is bilinear in both arguments', () => {
   const three = ref.fields.fp12.mul(squared, one);
   assert.equal(asOracle(three), asOracle(ref.pairing(ref.groups.g1.mul(p, 3n), q)));
   assert.equal(asOracle(three), asOracle(ref.pairing(p, ref.groups.g2.mul(q, 3n))));
-  // Addition is multiplicative too.
+  // Addition is multiplicative too, for two different points rather than a doubling.
+  const other = ref.groups.g1.mul(g1Of({ x: '1', y: '2' }), 5n);
   assert.equal(
-    asOracle(ref.fields.fp12.mul(ref.pairing(p, q), ref.pairing(ref.groups.g1.add(p, p), q))),
-    asOracle(ref.pairing(ref.groups.g1.mul(p, 4n), q)),
+    asOracle(ref.fields.fp12.mul(ref.pairing(p, q), ref.pairing(other, q))),
+    asOracle(ref.pairing(ref.groups.g1.add(p, other), q)),
+  );
+  // e(P,Q)*e(2P,Q) is e(3P,Q).
+  assert.equal(
+    asOracle(ref.fields.fp12.mul(one, ref.pairing(ref.groups.g1.double(p), q))),
+    asOracle(ref.pairing(ref.groups.g1.mul(p, 3n), q)),
   );
 });
 
