@@ -201,6 +201,15 @@ function recordOf(claim) {
   }
 }
 
+// `safeText` in receipt.js drops anything over 512 characters, and a reason longer than that would
+// reach a receipt as an empty string anyway. Composing reasons from resolver-reported text is bounded
+// per field, but the join of four of them is not, so the cap is applied here rather than discovered
+// later as a missing reason.
+function short(reason) {
+  const value = typeof reason === 'string' ? reason : String(reason);
+  return value.length > 512 ? `${value.slice(0, 509)}...` : value;
+}
+
 function withChecks(values) {
   const out = {};
   for (const key of Object.keys(values).sort()) out[key] = values[key] === true;
@@ -238,7 +247,7 @@ function refuse(record, reason) {
   const result = Object.freeze({
     status: 'not_verifiable',
     provenanceStatus: 'not_verifiable',
-    reason,
+    reason: short(reason),
     checks,
     coverage: Object.freeze(coverageOf(checks)),
     notCovered: Object.freeze(notCoveredOf(checks)),
@@ -262,7 +271,7 @@ function settle(record, status, reason, checks) {
   const result = Object.freeze({
     status,
     provenanceStatus: status,
-    reason,
+    reason: short(reason),
     checks: sealed,
     coverage: Object.freeze(coverageOf(sealed)),
     notCovered: Object.freeze(notCoveredOf(sealed)),
@@ -426,7 +435,7 @@ function authorizeSkill(claim, result, requested) {
       authorized: false,
       status,
       provenanceStatus: status,
-      reason,
+      reason: short(reason),
       checks,
       coverage: Object.freeze(coveredKeys(checks)),
       notCovered: Object.freeze(uncoveredKeys(checks)),
@@ -542,7 +551,7 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
     authorized: matched === true ? decision.authorized : false,
     status,
     provenanceStatus: status,
-    reason,
+    reason: short(reason),
     checks,
     coverage: Object.freeze(coveredKeys(checks)),
     notCovered: Object.freeze(uncoveredKeys(checks)),

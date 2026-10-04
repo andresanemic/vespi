@@ -537,6 +537,26 @@ test('a forged verification result is refused', () => {
   assert.equal(decision.status, 'not_verifiable');
 });
 
+test('a resolver that echoes the question back proves nothing', async () => {
+  const claim = register();
+  // The cheapest possible forgery: hand the kernel the declaration and call it evidence.
+  const result = await verifySkillProvenance(claim, async (question) => question);
+  assert.equal(result.status, 'not_verifiable');
+  assert.equal(authorizeSkill(claim, result, ['read:project']).authorized, false);
+});
+
+test('a reason composed from hostile evidence stays inside the receipt size limit', async () => {
+  const claim = register();
+  const long = 'x'.repeat(4000);
+  const result = await verifySkillProvenance(claim, resolverFor({ repository: long, author: long }));
+  assert.equal(result.status, 'discrepant');
+  assert.ok(result.reason.length <= 512, `reason was ${result.reason.length} characters`);
+  const receipt = buildSkillReceipt(receiptSpec(), authorizeSkill(claim, result, ['read:project']));
+  assert.equal(receipt.status, 'failed');
+  assert.ok((receipt.skill.reason || '').length <= 512);
+  assert.equal(verifyReceipt(receipt).ok, true);
+});
+
 // --- 7. The receipt ---
 
 test('a skill receipt verifies and carries the provenance, the scope and the coverage', () => {
