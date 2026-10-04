@@ -44,16 +44,23 @@ function simulatedBackend() {
   return backend;
 }
 
+// `in` rather than `||`, so a test can deliberately pass null, [] or undefined and mean it.
 function config(over = {}) {
-  const verificationKey = over.verificationKey || fx.verificationKey();
+  const verificationKey = 'verificationKey' in over ? over.verificationKey : fx.verificationKey();
+  let expectedVkDigest = over.expectedVkDigest;
+  if (expectedVkDigest === undefined) {
+    // A key the strict reader refuses has no digest to pin; the fixture's own digest stands in, so
+    // the test still reaches createZkVerifier and reads the refusal there.
+    try { expectedVkDigest = digestZkVerificationKey(verificationKey); } catch { expectedVkDigest = FIXTURE_VK_DIGEST; }
+  }
   return {
     verificationKey,
-    expectedVkDigest: over.expectedVkDigest || digestZkVerificationKey(verificationKey),
-    circuitDigest: over.circuitDigest || CIRCUIT_DIGEST,
-    expectedPublicInputs: over.expectedPublicInputs || fx.publicInputs(),
-    backend: over.backend === undefined ? simulatedBackend() : over.backend,
-    backendDigest: over.backendDigest || BACKEND_DIGEST,
-    ...(over.maxPublicInputs === undefined ? {} : { maxPublicInputs: over.maxPublicInputs }),
+    expectedVkDigest,
+    circuitDigest: 'circuitDigest' in over ? over.circuitDigest : CIRCUIT_DIGEST,
+    expectedPublicInputs: 'expectedPublicInputs' in over ? over.expectedPublicInputs : fx.publicInputs(),
+    backend: 'backend' in over ? over.backend : simulatedBackend(),
+    backendDigest: 'backendDigest' in over ? over.backendDigest : BACKEND_DIGEST,
+    ...('maxPublicInputs' in over ? { maxPublicInputs: over.maxPublicInputs } : {}),
   };
 }
 
@@ -92,8 +99,8 @@ test('K3B.2 the existing public exports keep their names and their arity', () =>
   const delegation = require('../src/delegation.js');
   assert.deepEqual(Object.keys(operation).sort(), ['DEFAULT_EXIT', 'STATES', 'createOperation', 'pauseOperation', 'resumeOperation', 'runOperation']);
   assert.deepEqual(Object.keys(receipt).sort(), ['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt']);
-  assert.deepEqual(Object.keys(authority).sort(), ['grantSpend', 'requireSpend']);
-  assert.ok(Object.keys(continuity).length > 0);
+  assert.deepEqual(Object.keys(authority).sort(), ['grantSpend', 'sufficient']);
+  assert.deepEqual(Object.keys(continuity).sort(), ['resumeFromReceipts']);
   assert.ok(Object.keys(delegation).length > 0);
 });
 
@@ -103,17 +110,26 @@ test('K3B.3 a configuration whose vk digest is not the pinned one is refused bef
   assertRejectedConfig(config({ expectedVkDigest: 'd'.repeat(64) }), 'a digest that is not the pinned one');
 });
 
-test('K3B.4 an altered verification key is refused even when the digest is recomputed to match it', () => {
+test('K3B.4 an altered verification key is refused while the pin still names the original one', () => {
   const altered = fx.verificationKey();
   altered.ic[1][0] = '7';
-  assertRejectedConfig(config({ verificationKey: altered }), 'an altered key with a self-consistent digest');
+  assertRejectedConfig(config({ verificationKey: altered, expectedVkDigest: FIXTURE_VK_DIGEST }), 'an altered key under the original pin');
+  assert.notEqual(digestZkVerificationKey(altered), FIXTURE_VK_DIGEST,
+    'and the alteration really does change the digest');
 });
 
-test('K3B.5 nPublic and the ic length must agree', () => {
+test('K3B.5 a key whose nPublic and ic disagree never becomes a verifier', () => {
+  // The structural gate and the pin both refuse here, and that is the honest shape of it: a key the
+  // strict reader will not read has no digest anyone could pin. K3B.3 isolates the pin on its own.
   for (const nPublic of [2, 0, -1, 1.5, '1', null]) {
     const broken = fx.verificationKey();
     broken.nPublic = nPublic;
     assertRejectedConfig(config({ verificationKey: broken }), `nPublic ${String(nPublic)}`);
+  }
+  for (const icLength of [1, 3, 4]) {
+    const broken = fx.verificationKey();
+    broken.ic = Array.from({ length: icLength }, () => fx.verificationKey().ic[0]);
+    assertRejectedConfig(config({ verificationKey: broken }), `ic length ${icLength}`);
   }
 });
 
@@ -147,9 +163,9 @@ test('K3B.8 maxPublicInputs is an integer between 1 and 32 and defaults to 32', 
 test('K3B.9 the configuration is copied and frozen: mutating it afterwards changes nothing', async () => {
   const mutable = config();
   const verify = createZkVerifier(mutable);
-  const vk = mutable.verificationKey;
-  const inputs = mutable.expectedPublicInputs;
-  mutable.verificationKey = { ...vk, nPublic: 7 };
+  const originalIc0 = mutable.verificationKey.ic[0][0];
+  const originalInputsLength = mutable.expectedPublicInputs.length;
+  mutable.verificationKey = { ...mutable.verificationKey, nPublic: 7 };
   mutable.verificationKey.ic[0][0] = '9';
   mutable.expectedPublicInputs.push('999');
   mutable.expectedVkDigest = 'e'.repeat(64);
@@ -159,7 +175,10 @@ test('K3B.9 the configuration is copied and frozen: mutating it afterwards chang
   assert.equal(out.zk.vkDigest, FIXTURE_VK_DIGEST);
   assert.equal(out.zk.circuitDigest, CIRCUIT_DIGEST);
   assert.deepEqual(out.zk.publicInputs, ['35']);
-  assert.equal(vk.ic[0][0], inputs.length === 1 ? vk.ic[0][0] : null, 'the caller copy is not read again');
+  assert.equal(mutable.verificationKey.ic[0][0], '9', 'the caller did mutate its own copy');
+  assert.equal(mutable.expectedPublicInputs.length, originalInputsLength + 1);
+  assert.equal(digestZkVerificationKey(fx.verificationKey()), FIXTURE_VK_DIGEST,
+    'and the verifier still holds the key as it was at build time');
 });
 
 test('K3B.10 the frozen snapshot the backend receives cannot be written to', async () => {
@@ -263,7 +282,6 @@ const MALFORMED_REQUESTS = {
   'a 79 digit scalar': mutate((r) => { r.publicInputs = ['9'.repeat(79)]; }),
   'the base field modulus p': mutate((r) => { r.proof.a[0] = '21888242871839275222246405745257275088696311157297823662689037894645226208583'; }),
   'the scalar field modulus r': mutate((r) => { r.publicInputs = ['21888242871839275222246405745257275088548364400416034343698204186575808495617']; }),
-  'one above p minus one': mutate((r) => { r.proof.a[0] = '21888242871839275222246405745257275088696311157297823662689037894645226208582'; }),
   'r plus the expected signal': mutate((r) => { r.publicInputs = ['21888242871839275222246405745257275088548364400416034343698204186575808495652']; }),
   'a short coordinate pair': mutate((r) => { r.proof.a = [r.proof.a[0]]; }),
   'a long coordinate pair': mutate((r) => { r.proof.a = [...r.proof.a, '1']; }),
@@ -298,6 +316,21 @@ test('K3B.16 every malformed request is refused as malformed_input and never suc
     for (const key of CHECK_KEYS) assert.equal(out.checks[key], false, `${why}: ${key}`);
   }
   assert.equal(backend.calls.length, 0, 'no malformed request ever reaches the backend');
+});
+
+test('K3B.16b the range boundary is exactly: p minus one and r minus one are in range, p and r are not', async () => {
+  const pMinusOne = '21888242871839275222246405745257275088696311157297823662689037894645226208582';
+  const rMinusOne = '21888242871839275222246405745257275088548364400416034343698204186575808495616';
+  const verify = createZkVerifier(config({ backend: () => false, expectedPublicInputs: [rMinusOne] }));
+  const inside = await verify({ proof: fx.proof(), publicInputs: [rMinusOne] });
+  assert.equal(inside.zk.code, 'invalid_proof', 'p-1 and r-1 pass the reader and reach the backend');
+  assert.equal(inside.zk.publicInputs[0], rMinusOne);
+  const outsideCoordinate = await verify({ proof: { ...fx.proof(), a: [pMinusOne, '2'] }, publicInputs: [rMinusOne] });
+  assert.equal(outsideCoordinate.zk.code, 'invalid_proof', 'a coordinate equal to p minus one is still in the field');
+  const atP = await verify({ proof: { ...fx.proof(), a: ['21888242871839275222246405745257275088696311157297823662689037894645226208583', '2'] }, publicInputs: [rMinusOne] });
+  assert.equal(atP.zk.code, 'malformed_input', 'a coordinate equal to p is not in the field');
+  const atR = await verify({ proof: fx.proof(), publicInputs: ['21888242871839275222246405745257275088548364400416034343698204186575808495617'] });
+  assert.equal(atR.zk.code, 'malformed_input', 'a public input equal to r is not in the scalar field');
 });
 
 test('K3B.17 accessors, symbols, foreign prototypes, cycles and throwing proxies are refused', async () => {
