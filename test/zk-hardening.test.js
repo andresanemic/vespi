@@ -708,7 +708,54 @@ test('K3H.30 the verifier is read once, so the function called is the one that w
   assert.ok(!('zk' in receipt.verification), 'the second answer never gets a chance to arrive');
 });
 
-// E8. The two digests the kernel computes carry different domains, so a key digest can never be
+// E8. A digest that does not cover a field is a digest of the wrong thing. Every accepted field of
+// the verification key, and of the proof, has to move the digest that names it.
+test('K3H.31 every accepted field of the key and of the proof moves its digest', async () => {
+  const baseKey = fx.verificationKey();
+  const baseKeyDigest = digestZkVerificationKey(baseKey);
+  const keyMutations = {
+    nPublic: (vk) => { vk.ic = vk.ic.slice(0, vk.ic.length - 1); vk.nPublic -= 1; },
+    alpha: (vk) => { vk.alpha[0] = '7'; },
+    beta: (vk) => { vk.beta[0][1] = '7'; },
+    gamma: (vk) => { vk.gamma[1][0] = '7'; },
+    delta: (vk) => { vk.delta[0][0] = '7'; },
+    ic: (vk) => { vk.ic[0][1] = '7'; },
+    'an ic entry removed': (vk) => { vk.ic = vk.ic.slice(0, vk.ic.length - 1); vk.nPublic -= 1; },
+  };
+  // `schema` is not in that list on purpose: a key that claims another schema is not a key this
+  // port reads, so it has no digest at all rather than a different one.
+  const foreignSchema = fx.verificationKey();
+  foreignSchema.schema = 'vespi-groth16-bn254-v2';
+  assert.throws(() => digestZkVerificationKey(foreignSchema), (err) => err instanceof TypeError
+    && err.message === CONFIG_ERROR, 'a foreign schema has no digest');
+  for (const [why, mutate] of Object.entries(keyMutations)) {
+    const altered = fx.verificationKey();
+    mutate(altered);
+    let digest = null;
+    assert.doesNotThrow(() => { digest = digestZkVerificationKey(altered); }, why);
+    assert.notEqual(digest, baseKeyDigest, `${why} changes the key digest`);
+  }
+  const baseProof = fx.proof();
+  const verify = createZkVerifier(config({ backend: () => true }));
+  const baseOut = await verify({ proof: baseProof, publicInputs: fx.publicInputs() });
+  const proofMutations = {
+    a: (p) => { p.a[1] = '7'; },
+    b: (p) => { p.b[1][1] = '7'; },
+    c: (p) => { p.c[0] = '7'; },
+  };
+  for (const [why, mutate] of Object.entries(proofMutations)) {
+    const altered = fx.proof();
+    mutate(altered);
+    const out = await verify({ proof: altered, publicInputs: fx.publicInputs() });
+    assert.notEqual(out.zk.proofDigest, baseOut.zk.proofDigest, `${why} changes the proof digest`);
+  }
+  // What the key digest does not cover, said out loud: `circuitDigest` and `backendDigest` are
+  // separate configuration fields copied into the evidence, not part of the key.
+  const otherCircuit = createZkVerifier(config({ circuitDigest: '9'.repeat(64) }));
+  const out = await otherCircuit({ proof: baseProof, publicInputs: fx.publicInputs() });
+  assert.equal(out.zk.vkDigest, baseOut.zk.vkDigest, 'the key digest says nothing about the circuit');
+  assert.notEqual(out.zk.circuitDigest, baseOut.zk.circuitDigest);
+});
 // read as a proof digest and a proof digest can never be pinned as a key.
 test('K3H.29 the key digest and the proof digest cannot be confused', async () => {
   const verify = createZkVerifier(config({ backend: () => true }));
