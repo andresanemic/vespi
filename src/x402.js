@@ -740,12 +740,15 @@ async function prepareAuthorization(ctx) {
   }
   if (aborted(ctx)) return { ok: false, code: CODES.ABORTED };
   let authorization = null;
+  // The value is read once and the copy that was read is what the inspector and the wire get: a
+  // getter that answered a string to the check could otherwise hand an object to the payment.
+  let value = null;
   try {
-    authorization = typeof prepared?.authorization === 'string' && prepared.authorization.trim().length > 0
-      ? prepared.authorization : null;
+    value = prepared?.authorization;
   } catch {
-    authorization = null;
+    value = null;
   }
+  if (typeof value === 'string' && value.trim().length > 0) authorization = value;
   if (!authorization) return { ok: false, code: CODES.PREPARE_FAILED };
   return { ok: true, authorization };
 }
