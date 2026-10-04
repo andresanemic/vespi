@@ -483,16 +483,21 @@ test('H19 a null options object is refused the way every other unusable one is',
     const other = emergency.exerciseEmergency(permission, REQUEST({ useId: `u-${String(options)}` }), options);
     assert.equal(other.state, 'blocked');
   }
-  // And the four that take `{ ledger, by, decision, now }` answer the same way.
-  assert.throws(() => emergency.getEmergencyState(permission, null), /malformed|state/i);
+  // And the four that take `{ ledger, by, decision, now }` answer the same way, while the state,
+  // which has nothing to do but report, says it does not know instead of crashing.
+  const unknown = emergency.getEmergencyState(permission, null);
+  assert.equal(unknown.status, 'no_ledger');
+  assert.equal(unknown.nextUse, 'blocked_no_ledger');
   for (const call of [
     () => emergency.pauseEmergencyPermission(permission, null),
     () => emergency.resumeEmergencyPermission(permission, null),
     () => emergency.revokeEmergencyPermission(permission, null),
     () => emergency.reviewEmergencyUse(permission, 'u', null),
   ]) {
-    assert.throws(call, (err) => err instanceof Error && !/TypeError/.test(err.constructor.name)
-      && /ledger|emergency/i.test(err.message), 'a null options object must not escape as a raw TypeError');
+    // Whatever they answer, the answer is one of this module's own sentences and never a raw
+    // `TypeError` about destructuring: `by` is undefined, so they refuse on the person first.
+    assert.throws(call, (err) => err instanceof Error && !(err instanceof TypeError),
+      'a null options object must not escape as a raw TypeError');
   }
   // A real ledger still works, so nothing was loosened on the way.
   assert.equal(emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT }).state, 'review_pending');

@@ -514,7 +514,8 @@ function useReceipt(snapshot, asked, trigger, checked, dueAtMs, signalDigest) {
 
 // ─── The grant ────────────────────────────────────────────────────────────────────────────────
 
-async function createEmergencyPermission(grant, { authorizeGrantor, resolveVerifier, authorizeRenewal } = {}) {
+async function createEmergencyPermission(grant, options = {}) {
+  const { authorizeGrantor, resolveVerifier, authorizeRenewal } = options || {};
   const read = snapshotPermission(grant);
   if (!read.ok) throw new Error(`emergency permission is malformed: ${read.reason}`);
   const snapshot = read.snapshot;
@@ -625,6 +626,11 @@ function boundVerifier(bound, triggerId) {
 
 // ─── The exercise ─────────────────────────────────────────────────────────────────────────────
 
+// The options of every entry point above are read through `options || {}`. A destructuring default
+// only answers for `undefined`, so a caller who passed `null` used to get a raw `TypeError` out of
+// six public functions, while `0`, `'x'` and `true` in the same place were already handled: this
+// module promises to fail closed on a missing or unusable input, and `null` is one (H19).
+
 // Everything a nested call could have changed while the verifier ran: what the person decided about
 // this permission, and what this very call already spent.
 function pendingBlock(record, snapshot, asked) {
@@ -681,7 +687,8 @@ function verifySignal(verifier, trigger, signal, signalDigest) {
   return { ok: true, reason: safeText(rawReason) || 'verified by the injected independent verifier' };
 }
 
-function exerciseEmergency(permission, request, { ledger, now } = {}) {
+function exerciseEmergency(permission, request, options = {}) {
+  const { ledger, now } = options || {};
   const read = snapshotPermission(permission);
   const snapshot = read.ok ? read.snapshot : null;
   const asked = snapshotRequest(request);
@@ -788,7 +795,8 @@ function requireBinding(permission, bound, verb) {
   throw new Error(`this emergency permission carries no grant: no authority is bound to it, so it cannot be ${verb}`);
 }
 
-function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {}) {
+function reviewEmergencyUse(permission, useId, options = {}) {
+  const { ledger, by, decision, now } = options || {};
   const bound = requireBinding(permission, bindingOf(permission), 'reviewed');
   // Owner, reviewers and pausers are read from the grant that was actually authorized, not from the
   // object this caller happens to be holding.
@@ -853,7 +861,8 @@ function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {
 // decided against the wall clock: a caller that had been working with a fixed clock all along got
 // an answer about a moment nobody asked about, and the existing suite already passed a `now` to
 // `revokeEmergencyPermission` without ever seeing it arrive (H03).
-function pauseEmergencyPermission(permission, { ledger, by, now } = {}) {
+function pauseEmergencyPermission(permission, options = {}) {
+  const { ledger, by, now } = options || {};
   const bound = requireBinding(permission, bindingOf(permission), 'paused');
   const snapshot = bound.snapshot;
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
@@ -865,7 +874,8 @@ function pauseEmergencyPermission(permission, { ledger, by, now } = {}) {
   return getEmergencyState(permission, { ledger, now });
 }
 
-function resumeEmergencyPermission(permission, { ledger, by, now } = {}) {
+function resumeEmergencyPermission(permission, options = {}) {
+  const { ledger, by, now } = options || {};
   const bound = requireBinding(permission, bindingOf(permission), 'resumed');
   const snapshot = bound.snapshot;
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
@@ -880,7 +890,8 @@ function resumeEmergencyPermission(permission, { ledger, by, now } = {}) {
   return getEmergencyState(permission, { ledger, now });
 }
 
-function revokeEmergencyPermission(permission, { ledger, by, now } = {}) {
+function revokeEmergencyPermission(permission, options = {}) {
+  const { ledger, by, now } = options || {};
   const bound = requireBinding(permission, bindingOf(permission), 'revoked');
   const snapshot = bound.snapshot;
   if (by !== snapshot.owner) throw new Error('only the person who granted this emergency permission may revoke it');
@@ -979,7 +990,8 @@ function renewEmergencyPermission(permission, changes) {
 
 // ─── What the operation says about itself ─────────────────────────────────────────────────────
 
-function getEmergencyState(permission, { ledger, now } = {}) {
+function getEmergencyState(permission, options = {}) {
+  const { ledger, now } = options || {};
   const snapshot = readPermission(permission);
   if (!snapshot) throw new Error('emergency permission is malformed and has no state');
   const bound = bindingOf(permission);
