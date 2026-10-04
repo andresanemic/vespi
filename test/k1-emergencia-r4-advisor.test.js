@@ -65,7 +65,7 @@ async function granted(overrides = {}, verify = () => ({ verified: true }), deps
   });
 }
 
-const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT });
+const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT, by: host.principal('agent') });
 const state = (permission, ledger) => emergency.getEmergencyState(permission, { ledger, now: AT });
 const close = (permission, ledger, by, decision) => emergency.reviewEmergencyUse(permission, 'u', { ledger, by, decision: decision || 'accept', now: AT });
 

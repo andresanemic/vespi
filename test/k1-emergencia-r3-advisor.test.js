@@ -64,7 +64,7 @@ async function granted(overrides = {}, verify = () => ({ verified: true })) {
   });
 }
 
-const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT });
+const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT, by: host.principal('agent') });
 const state = (permission, ledger) => emergency.getEmergencyState(permission, { ledger, now: AT });
 const close = (permission, ledger, useId) => emergency.reviewEmergencyUse(permission, useId || 'u', { ledger, by: host.principal('person'), decision: 'accept', now: AT });
 // An options object whose only field throws the marker. Used by the R301 cases.

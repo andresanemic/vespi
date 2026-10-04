@@ -86,8 +86,10 @@ async function granted(overrides = {}, deps = {}) {
 }
 
 const ledgerFor = () => emergency.createEmergencyLedger();
+// The exercise authenticates its caller before it spends anything (R501): this helper presents the
+// agent the grant names, which is the only principal an exercise accepts.
 const run = (permission, request, now, ledger) => emergency.exerciseEmergency(permission, request, {
-  ledger: ledger || ledgerFor(), now: now || AT,
+  ledger: ledger || ledgerFor(), now: now || AT, by: host.principal('agent-1'),
 });
 const state = (permission, ledger, now) => emergency.getEmergencyState(permission, {
   ledger, now: now || AT,

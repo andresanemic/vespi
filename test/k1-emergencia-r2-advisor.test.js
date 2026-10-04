@@ -70,7 +70,7 @@ async function granted(overrides = {}, deps = {}) {
 }
 
 const ledgerFor = () => emergency.createEmergencyLedger();
-const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT });
+const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT, by: host.principal('agent') });
 const state = (permission, ledger) => emergency.getEmergencyState(permission, { ledger, now: AT });
 const throwing = (key) => Object.defineProperty({}, key, { get() { throw new Error(SECRET); } });
 const privateError = (err) => {

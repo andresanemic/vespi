@@ -72,7 +72,7 @@ async function granted(overrides = {}, deps = {}) {
 }
 
 const ledgerFor = () => emergency.createEmergencyLedger();
-const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT });
+const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT, by: host.principal('agent') });
 
 // ─── H01 · a check that failed has to be named as not covered ─────────────────────────────────
 
@@ -202,12 +202,12 @@ test('H05 a rejected use and a revocation survive a ledger the caller supplies',
 test('H05 the ledger binding survives a renewal, so the clock cannot buy a fresh account', async () => {
   const permission = await granted({ id: 'h05-renew' });
   const first = ledgerFor();
-  emergency.exerciseEmergency(permission, REQUEST(), { ledger: first, now: AT });
+  emergency.exerciseEmergency(permission, REQUEST(), { ledger: first, now: AT, by: host.principal('agent') });
   const renewed = emergency.renewEmergencyPermission(permission, { expiresAt: '2026-10-06T00:00:00Z' });
   const other = ledgerFor();
   // The renewed handle is a new object with the same family, so the ledger it already lives in is
   // still its ledger and another one is refused with nothing spent.
-  const result = emergency.exerciseEmergency(renewed, REQUEST({ useId: 'u2' }), { ledger: other, now: AT });
+  const result = emergency.exerciseEmergency(renewed, REQUEST({ useId: 'u2' }), { ledger: other, now: AT, by: host.principal('agent') });
   assert.equal(result.state, 'blocked');
   assert.match(result.reason, /ledger/i);
   assert.equal(emergency.getEmergencyState(renewed, { ledger: first, now: AT }).uses, 1);
