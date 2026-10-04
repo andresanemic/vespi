@@ -139,16 +139,28 @@ function stringList(value) {
   return new Set(out).size === out.length ? out : null;
 }
 
+// Nested structures get the same treatment as the top level: `id` and `verifierId` are read once
+// each into variables, and the copy that ends up bound is built from those variables. Validating
+// one value and binding another is how a grant ended up carrying a trigger whose id was undefined
+// and could not produce a valid fingerprint (R211).
 function triggerList(value) {
   if (!Array.isArray(value) || value.length === 0) return null;
   const out = [];
   const ids = new Set();
   for (const trigger of value) {
     if (!trigger || typeof trigger !== 'object' || Array.isArray(trigger)) return null;
-    if (!text(trigger.id) || !text(trigger.verifierId)) return null;
-    if (ids.has(trigger.id)) return null;
-    ids.add(trigger.id);
-    out.push({ id: trigger.id, verifierId: trigger.verifierId });
+    let id;
+    let verifierId;
+    try {
+      id = trigger.id;
+      verifierId = trigger.verifierId;
+    } catch {
+      return null;
+    }
+    if (!text(id) || !text(verifierId)) return null;
+    if (ids.has(id)) return null;
+    ids.add(id);
+    out.push({ id, verifierId });
   }
   return out;
 }
