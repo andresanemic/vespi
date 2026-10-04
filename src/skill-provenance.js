@@ -48,20 +48,100 @@
 const { createHash } = require('node:crypto');
 const { buildReceipt, computeDigest } = require('./receipt.js');
 
+// --- The boundary between the caller's data and the caller's code ---
+//
+// Everything below this line was one site away from asking the caller's world a question, and the
+// fourth review round showed what that costs (F408 to F418). Between the moment a value arrives from
+// a caller or from a resolver and the moment this kernel decides anything about it, this module used
+// to consult `Object.prototype`, `Array.prototype`, array iterators and `ArrayBuffer` predicates that
+// it did not hold a reference to. Four separate consequences, one cause:
+//   - a boolean a host had left on `Object.prototype` answered a comparison this kernel never made,
+//     and `verified` was written from it (F410, F411);
+//   - a hole where a capability name should be imported one from `Array.prototype`, and a grant is
+//     what decides authority (F412, F413);
+//   - one replaceable `Array.prototype.filter` was enough to make every requested capability look in
+//     scope, so `delete` was authorized under a grant of `read` (F414);
+//   - naming the shape of a payload ran the payload's own `getPrototypeOf`, and a declared `length`
+//     of two quadrillion was copied element by element before anything was validated (F408, F409,
+//     F417, F418).
+//
+// So the primitives are taken here, once, at load, before any caller can run: from this point on the
+// module holds a reference and not a lookup, and the one function that can still reach caller code is
+// `copyList`, which reads each index exactly once, in order, and owns everything it produces. What
+// this does not buy: a host that replaced these primitives *before* this module was loaded still owns
+// the process, and a resolver is still code the host chose. This is a boundary against the data, not a
+// sandbox for JavaScript.
+const hasOwn = Object.hasOwn;
+const isArray = Array.isArray;
+const viewIsArrayBufferView = ArrayBuffer.isView;
+const ownKeysOf = Object.keys;
+const wholeNumber = Number.isInteger;
+const safeInteger = Number.isSafeInteger;
+const nullObject = Object.create;
+const frozen = Object.freeze;
+// The comparison `Array.prototype.sort` performs, held onto as the function itself and not as a
+// lookup on the prototype: a host that replaced `Array.prototype.sort` after this module was loaded
+// would otherwise decide what a receipt says it covered (B03). The keys and names sorted below are
+// all strings, so the order is the UTF-16 order of the strings themselves; the comparator form keeps
+// the order a list of records had.
+const sortByDefault = Array.prototype.sort;
+const defaultSort = (list) => sortByDefault.call(list);
+const recordSort = (list, compare) => sortByDefault.call(list, compare);
+
+// The bound on any list this module copies. A list of capability names is a short list, and a `length`
+// is a claim about how much work there is rather than a fact: reading `Number.MAX_SAFE_INTEGER`
+// elements before validating a single one of them is a way to stop the process from answering at all
+// (F417, F418). The length is checked before the copy starts, because after the copy starts nothing in
+// this synchronous function can be interrupted, and the refusal carries this module's own words.
+const MAX_LIST_LENGTH = 256;
+
+// How many elements of a caller-supplied array this module reads while naming what it is. The bytes
+// are never decoded and never hashed, so the shape sentence is the only thing at stake, and a longer
+// array is named as too long to look at rather than walked.
+const MAX_SHAPE_SCAN = 65536;
+
+// Copy a list this module built into another list this module owns, by index. No spread, no
+// iterator, no method: a caller who replaced `Symbol.iterator` gets nothing to work with here.
+function copyList(list) {
+  const out = [];
+  for (let index = 0; index < list.length; index += 1) out[index] = list[index];
+  return out;
+}
+
+// `Array.prototype.join`, written out. The reasons below quote lists this module filled with strings,
+// and a host that replaced `join` could otherwise write the sentence a host logs.
+function joinWith(list, separator) {
+  let out = '';
+  for (let index = 0; index < list.length; index += 1) {
+    if (index > 0) out += separator;
+    const item = list[index];
+    out += item === null || item === undefined ? '' : item;
+  }
+  return out;
+}
+
+// Copy the own enumerable keys of an object into an object of this module's own, without spreading it.
+// A spread asks the source to list its keys and reads each one, which is caller code; this asks the
+// same question of an object this module built, with the reference it captured at load.
+function copyOwn(source, target) {
+  for (const key of ownKeysOf(source)) target[key] = source[key];
+  return target;
+}
+
 // The four states, spelled once. `verified` / `not_verified` are already receipt states; `discrepant`
 // and `not_verifiable` are the two ways a verification can fail without the receipt ladder needing a
 // new rung (see RECEIPT_STATUS below).
-const SKILL_PROVENANCE_STATUSES = Object.freeze(['verified', 'not_verified', 'discrepant', 'not_verifiable']);
+const SKILL_PROVENANCE_STATUSES = frozen(['verified', 'not_verified', 'discrepant', 'not_verifiable']);
 
 // The four checks a verification can cover. Names are stable: they travel into the receipt's
 // `verification.checks`, so a receipt written today reads the same way to `readChecks` as any other.
-const PROVENANCE_CHECKS = Object.freeze(['repository', 'commit_exists', 'author', 'content_digest']);
+const PROVENANCE_CHECKS = frozen(['repository', 'commit_exists', 'author', 'content_digest']);
 
 // How a skill status becomes a receipt status. `discrepant` is a claim that evidence refuted, which
 // is a failure and not a pause; `not_verifiable` is nothing proven and nothing refuted, which is what
 // the ladder already calls `not_verified`. The exact four-valued verdict is not lost: it rides in
 // `receipt.skill.provenanceStatus`.
-const RECEIPT_STATUS = Object.freeze({
+const RECEIPT_STATUS = frozen({
   verified: 'verified',
   not_verified: 'not_verified',
   discrepant: 'failed',
@@ -91,10 +171,15 @@ function wellFormedText(value) {
 }
 
 function canonicalize(value) {
-  if (Array.isArray(value)) return value.map(canonicalize);
+  if (isArray(value)) {
+    const list = [];
+    for (let index = 0; index < value.length; index += 1) list[index] = canonicalize(value[index]);
+    return list;
+  }
   if (value !== null && typeof value === 'object') {
-    const out = {};
-    for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
+    const out = nullObject(null);
+    const keys = defaultSort(ownKeysOf(value));
+    for (const key of keys) out[key] = canonicalize(value[key]);
     return out;
   }
   return value;
@@ -162,26 +247,33 @@ function capabilityName(value) {
   return name.includes('*') ? null : name;
 }
 
-// One field, one read, under its own guard, for the fields that are neither text nor a flag. A
-// getter that throws on `authority` used to escape the registry as the caller's own error object.
-function readValue(source, key) {
-  try {
-    return source[key];
-  } catch {
-    return undefined;
-  }
-}
+// The one door into this module, and the only place a caller's object is read. Everything a
+// registration hands over is read once, here, under its own guard, into an object with no prototype at
+// all and only the six keys this contract knows. What the rest of the file works on is that copy, so a
+// getter that answers once cannot answer differently later, and a field a host left on
+// `Object.prototype` is not a field the registry can see (F410, F411). The keys are the contract's, so
+// nothing a caller wrote on a spec beyond them is even looked at. A shape that cannot be read at all
+// (a revoked proxy reaches `isArray` and throws) leaves an empty record behind, and an empty record
+// refuses everything with this module's own reasons (review H01, R206).
+const REGISTRATION_KEYS = frozen(['name', 'repository', 'commit', 'author', 'content', 'authority']);
 
-// The shape check is inside a guard for the same reason `Array.isArray` is inside the request
-// capture (review R206): it reads the value's target, so a caller who revoked the spec before handing
-// it over would get a `TypeError` out of the registry instead of the refusal the module owes them
-// (A18, review H01).
 function registrationSource(spec) {
+  const out = nullObject(null);
   try {
-    return spec !== null && typeof spec === 'object' && !Array.isArray(spec) ? spec : {};
+    if (spec === null || typeof spec !== 'object' || isArray(spec)) return out;
+    for (let index = 0; index < REGISTRATION_KEYS.length; index += 1) {
+      const key = REGISTRATION_KEYS[index];
+      try {
+        out[key] = spec[key];
+      } catch {
+        out[key] = undefined;
+      }
+    }
   } catch {
-    return {};
+    // A shape this module cannot even read leaves an empty record behind, and an empty record refuses
+    // everything with this module's own reasons. Nothing the caller did is repeated back at them.
   }
+  return out;
 }
 
 // The grant is captured the same way the request is: by index, out of an array this module checked,
@@ -189,17 +281,33 @@ function registrationSource(spec) {
 // array is consulted, so the granted authority is the declared list and not what an overridden
 // `Symbol.iterator` decides to yield: the same rule the request capture was given (A02), applied to
 // the list that decides authority rather than to the one that asks for it (A18, review H04).
+//
+// Three refusals live here, and all three are about the list rather than its contents. It is not an
+// array, its length is not a length, and it is longer than `MAX_LIST_LENGTH`: the last one used to be
+// copied first and questioned afterwards, which turns a declared `Number.MAX_SAFE_INTEGER` into a
+// synchronous loop that a timer cannot reach (F417, F418). And an index the array does not own is not
+// an entry: `new Array(1)` reads `Array.prototype[0]` at every index, so a grant written as a hole
+// imported a capability name from the prototype (F412, F413). The copy is dense, owned and built here,
+// and everything downstream reads only that.
 function captureList(value, label) {
   const names = [];
   try {
-    if (!Array.isArray(value)) {
+    if (!isArray(value)) {
       return { ok: false, names, reason: `${label} must be an array of capability names` };
     }
     const length = value.length;
-    if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) {
+    if (!safeInteger(length) || length < 0) {
       return { ok: false, names, reason: `${label} could not be read as a list of names` };
     }
-    for (let index = 0; index < length; index += 1) names.push(value[index]);
+    if (length > MAX_LIST_LENGTH) {
+      return { ok: false, names, reason: `${label} holds more than ${MAX_LIST_LENGTH} entries, which no list of capability names needs` };
+    }
+    for (let index = 0; index < length; index += 1) {
+      if (!hasOwn(value, index)) {
+        return { ok: false, names, reason: `${label} has a gap at index ${index}, so it is not a list of names` };
+      }
+      names[index] = value[index];
+    }
   } catch {
     return { ok: false, names, reason: `${label} could not be read as a list of names` };
   }
@@ -210,10 +318,10 @@ function grantedList(value, label) {
   const capture = captureList(value, label);
   if (!capture.ok) throw new Error(capture.reason);
   const names = [];
-  for (const item of capture.names) {
-    const name = capabilityName(item);
+  for (let index = 0; index < capture.names.length; index += 1) {
+    const name = capabilityName(capture.names[index]);
     if (name === null) throw new Error(`${label} must hold capability names without wildcards`);
-    if (!names.includes(name)) names.push(name);
+    if (!listedIn(names, name)) names[index] = name;
   }
   return names;
 }
@@ -231,17 +339,12 @@ function registerSkillProvenance(spec) {
     throw new Error(`a skill needs a fixed commit id, not a moving reference: ${commit.slice(0, 64)}`);
   }
   if (author === null) throw new Error('a skill needs the author of that commit');
-  let content;
-  try {
-    content = source.content;
-  } catch {
-    content = null;
-  }
+  const content = source.content;
   if (typeof content !== 'string') throw new Error('a skill needs the content that will be loaded');
   if (!wellFormedText(content)) {
     throw new Error('a skill needs content that is well-formed UTF-8 text, not text carrying unpaired surrogates');
   }
-  const authority = Object.freeze(grantedList(readValue(source, 'authority'), 'authority'));
+  const authority = frozen(grantedList(source.authority, 'authority'));
   const parts = {
     name,
     repository,
@@ -251,18 +354,18 @@ function registerSkillProvenance(spec) {
     authority,
   };
   const digest = seal(parts);
-  const record = Object.freeze({ ...parts, digest });
+  const record = frozen({ ...parts, digest });
   BOUND.set(record, record);
   REGISTERED.add(record);
   // The claim the caller holds is a frozen view of the same record, so reading it and acting on it
   // cannot come apart. `BOUND.set(claim, record)` is what makes an unregistered look-alike inert.
-  const claim = Object.freeze({
+  const claim = frozen({
     name: record.name,
     repository: record.repository,
     commit: record.commit,
     author: record.author,
     contentDigest: record.contentDigest,
-    authority: Object.freeze([...record.authority]),
+    authority: frozen(copyList(record.authority)),
     digest: record.digest,
   });
   BOUND.set(claim, record);
@@ -273,16 +376,18 @@ function registerSkillProvenance(spec) {
 // the list is the part most likely to be logged.
 function listSkillProvenance() {
   const out = [];
+  let count = 0;
   for (const record of REGISTERED) {
-    out.push({
+    out[count] = {
       name: record.name,
       repository: record.repository,
       commit: record.commit,
       author: record.author,
       contentDigest: record.contentDigest,
-    });
+    };
+    count += 1;
   }
-  return out.sort((a, b) => (a.name === b.name ? (a.commit < b.commit ? -1 : 1) : (a.name < b.name ? -1 : 1)));
+  return recordSort(out, (a, b) => (a.name === b.name ? (a.commit < b.commit ? -1 : 1) : (a.name < b.name ? -1 : 1)));
 }
 
 function recordOf(claim) {
@@ -315,34 +420,94 @@ function short(reason) {
   return value.length > 512 ? `${value.slice(0, 509)}...` : value;
 }
 
+// The checks, as a map with no prototype at all. This is the heart of the fourth round's first class:
+// the accumulator used to be a plain object, and the code that asked whether a check had been done
+// asked `checks[key] !== undefined`, which is a question about the prototype chain. A host that left
+// `repository: true`, `author: true` and `commit_exists: true` on `Object.prototype` — before the
+// call, or from a getter this module had already accepted while it read a resolver's answer — got
+// three comparisons reported that were never run, a `verified` receipt out of them and a load that
+// authorized (F410, F411). With no prototype, an absent key answers `undefined`, and `undefined` is
+// not a comparison. Only the sites below write here, and only when they compared.
+const newChecks = () => nullObject(null);
+
+// One own-property read of a check. `undefined` means this kernel did not compare that one; nothing
+// else in this file may read a check any other way.
+function checkOf(checks, key) {
+  return hasOwn(checks, key) ? checks[key] : undefined;
+}
+
 function withChecks(values) {
-  const out = {};
-  for (const key of Object.keys(values).sort()) out[key] = values[key] === true;
-  return Object.freeze(out);
+  const out = nullObject(null);
+  const keys = defaultSort(ownKeysOf(values));
+  for (const key of keys) out[key] = values[key] === true;
+  return frozen(out);
 }
 
 function provenanceChecks(values) {
-  const out = {};
-  for (const key of PROVENANCE_CHECKS) out[key] = values[key] === true;
-  return Object.freeze(out);
+  const out = nullObject(null);
+  for (let index = 0; index < PROVENANCE_CHECKS.length; index += 1) {
+    const key = PROVENANCE_CHECKS[index];
+    out[key] = checkOf(values, key) === true;
+  }
+  return frozen(out);
 }
 
 function coverageOf(checks) {
-  return PROVENANCE_CHECKS.filter((key) => checks[key] === true);
+  const out = [];
+  let count = 0;
+  for (let index = 0; index < PROVENANCE_CHECKS.length; index += 1) {
+    const key = PROVENANCE_CHECKS[index];
+    if (checkOf(checks, key) === true) {
+      out[count] = key;
+      count += 1;
+    }
+  }
+  return out;
 }
 
 function notCoveredOf(checks) {
-  return PROVENANCE_CHECKS.filter((key) => checks[key] !== true);
+  const out = [];
+  let count = 0;
+  for (let index = 0; index < PROVENANCE_CHECKS.length; index += 1) {
+    const key = PROVENANCE_CHECKS[index];
+    if (checkOf(checks, key) !== true) {
+      out[count] = key;
+      count += 1;
+    }
+  }
+  return out;
+}
+
+// Whether all four comparisons were produced and passed. This is the gate `verified` is written
+// behind, in both places that can write it: the comparison sites above are the only producers of these
+// four own keys, so a check that is absent, inherited or anything but `true` means one comparison did
+// not come out equal, and an absent check is an uncovered check rather than a passing one. Reading the
+// four booleans without asking whether this kernel put them there is what F410 and F411 did.
+function everyCheckPassed(checks) {
+  for (let index = 0; index < PROVENANCE_CHECKS.length; index += 1) {
+    if (checkOf(checks, PROVENANCE_CHECKS[index]) !== true) return false;
+  }
+  return true;
 }
 
 // Coverage read off every key, for the stages that add checks of their own (the load re-hash). The
 // receipt shows what was covered, so a check that ran and passed has to be in the list.
 function coveredKeys(checks) {
-  return Object.keys(checks).filter((key) => checks[key] === true).sort();
+  const out = [];
+  const keys = defaultSort(ownKeysOf(checks));
+  for (const key of keys) {
+    if (checks[key] === true) out[out.length] = key;
+  }
+  return out;
 }
 
 function uncoveredKeys(checks) {
-  return Object.keys(checks).filter((key) => checks[key] !== true).sort();
+  const out = [];
+  const keys = defaultSort(ownKeysOf(checks));
+  for (const key of keys) {
+    if (checks[key] !== true) out[out.length] = key;
+  }
+  return out;
 }
 
 // Which of the two things a receipt's `provenance` block is, said out loud instead of left to the
@@ -365,7 +530,7 @@ function uncoveredKeys(checks) {
 // What this does not buy, stated plainly: 'verified' is a statement about four string comparisons
 // against an injected resolver, not about the repository. The resolver's independence is the host's
 // (see the header), and nothing here narrows that.
-const PROVENANCE_SOURCES = Object.freeze({ verified: 'verified', declared: 'declared' });
+const PROVENANCE_SOURCES = frozen({ verified: 'verified', declared: 'declared' });
 
 // Which of the two things a receipt's `name` is, in the vocabulary `provenanceSource` already taught
 // a host reading this same block.
@@ -389,14 +554,14 @@ function refuse(record, reason) {
   // No record means nothing can be covered: a claim this kernel never registered has no provenance to
   // check, so all four checks are reported as not covered rather than quietly passing. Nothing was
   // hashed on the way here either, so `contentRecomputed` is false.
-  const checks = provenanceChecks({});
-  const result = Object.freeze({
+  const checks = provenanceChecks(nullObject(null));
+  const result = frozen({
     status: 'not_verifiable',
     provenanceStatus: 'not_verifiable',
     reason: short(reason),
     checks,
-    coverage: Object.freeze(coverageOf(checks)),
-    notCovered: Object.freeze(notCoveredOf(checks)),
+    coverage: frozen(coverageOf(checks)),
+    notCovered: frozen(notCoveredOf(checks)),
     provenance: record === null ? null : provenanceOf(record),
     contentRecomputed: false,
   });
@@ -405,7 +570,7 @@ function refuse(record, reason) {
 }
 
 function provenanceOf(record) {
-  return Object.freeze({
+  return frozen({
     repository: record.repository,
     commit: record.commit,
     author: record.author,
@@ -421,16 +586,16 @@ function settle(record, status, reason, checks, contentRecomputed) {
   // Every one of the four checks is present and boolean here, so `checks` cannot answer `undefined`
   // for a check this kernel did not cover while `coverage` and `notCovered`, read off the same object,
   // do report it. A check that was left unanswered is reported as false, never as absent.
-  const values = { ...provenanceChecks(checks) };
-  for (const key of Object.keys(checks)) values[key] = checks[key] === true;
+  const values = copyOwn(provenanceChecks(checks), nullObject(null));
+  copyOwn(checks, values);
   const sealed = withChecks(values);
-  const result = Object.freeze({
+  const result = frozen({
     status,
     provenanceStatus: status,
     reason: short(reason),
     checks: sealed,
-    coverage: Object.freeze(coverageOf(sealed)),
-    notCovered: Object.freeze(notCoveredOf(sealed)),
+    coverage: frozen(coverageOf(sealed)),
+    notCovered: frozen(notCoveredOf(sealed)),
     provenance: provenanceOf(record),
     contentRecomputed: contentRecomputed === true,
   });
@@ -446,7 +611,7 @@ function settle(record, status, reason, checks, contentRecomputed) {
 // anything the resolver threw without reading what it threw. The timer is not `unref`'d: this
 // function owes an answer, and a process whose only handle is this deadline would otherwise exit
 // before printing one (A15).
-const DEADLINE = Object.freeze({ deadline: true });
+const DEADLINE = frozen({ deadline: true });
 
 async function askResolver(resolve, question, timeoutMs) {
   if (timeoutMs === undefined) return await resolve(question);
@@ -495,24 +660,33 @@ function compare(label, declared, found, checks) {
 // sentence was. Every read here is contained, so a payload that throws while being inspected is
 // reported, not raised.
 //
-// None of the three checks below reaches user code: `Buffer.isBuffer` and `ArrayBuffer.isView` read an
-// internal slot and answer false for a proxy, so a proxied buffer is named as the object it is.
+// None of the checks below reaches user code, and that is now the reason they are written the way
+// they are rather than a claim about it. `Buffer.isBuffer` is an `instanceof`, and an `instanceof`
+// walks the prototype chain, so naming a payload was a way to run the payload's own `getPrototypeOf`:
+// a revoked proxy turned the API into a rejection and a live trap threw the party's own text out of
+// the module (F408, F409). `ArrayBuffer.isView` asks the internal slot of the value instead and
+// answers false for every proxy without reaching a trap, so the value that gets past it is a real
+// view with nothing caller-controlled on it, and `constructor` is the one read that can tell a Buffer
+// from any other typed array. `Array.isArray` also answers without a trap, but it throws on a revoked
+// one, so the whole body is inside a guard and a shape that cannot be read gets a fixed sentence.
 function byteShapeOf(value) {
-  if (value === null || value === undefined) return null;
-  if (Buffer.isBuffer(value)) return 'a Buffer';
-  if (ArrayBuffer.isView(value)) return 'a typed array of bytes';
-  if (!Array.isArray(value)) {
-    return typeof value === 'object' ? 'an object that is not text' : `a ${typeof value}`;
-  }
   try {
+    if (value === null || value === undefined) return null;
+    if (viewIsArrayBufferView(value)) {
+      return value.constructor === Buffer ? 'a Buffer' : 'a typed array of bytes';
+    }
+    if (!isArray(value)) {
+      return typeof value === 'object' ? 'an object that is not text' : `a ${typeof value}`;
+    }
     const length = value.length;
-    if (!Number.isSafeInteger(length) || length <= 0) return 'an array that is not text';
+    if (!safeInteger(length) || length <= 0) return 'an array that is not text';
+    if (length > MAX_SHAPE_SCAN) return 'an array too long to look at here, so its bytes were not read';
     for (let index = 0; index < length; index += 1) {
       if (typeof value[index] !== 'number') return 'an array that is not text';
     }
     return 'an array of bytes';
   } catch {
-    return 'an array that could not be read';
+    return 'a payload whose shape could not be read';
   }
 }
 
@@ -539,7 +713,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   // The range is the platform's, not this module's preference: a timer set outside it does not keep
   // the value that was asked for, it becomes 1 ms and warns (A14). A deadline that silently becomes
   // another deadline is a deadline nobody granted.
-  if (timeoutMs !== undefined && (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_TIMER_MS)) {
+  if (timeoutMs !== undefined && (!wholeNumber(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_TIMER_MS)) {
     throw new Error(`timeoutMs must be a whole number of milliseconds between 1 and ${MAX_TIMER_MS}`);
   }
   if (typeof resolve !== 'function') {
@@ -553,7 +727,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   // Independence at this door is the kernel's; what the resolver does with the location it was given
   // is the host's, and a host that passes the declaration to its own resolver hands back an answer
   // this kernel cannot tell from an honest observation.
-  const question = Object.freeze({
+  const question = frozen({
     name: record.name,
     repository: record.repository,
     commit: record.commit,
@@ -570,7 +744,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
       ? 'the resolver did not answer in time'
       : 'the resolver did not answer: the call was refused or rejected');
   }
-  if (evidence === null || typeof evidence !== 'object' || Array.isArray(evidence)) {
+  if (evidence === null || typeof evidence !== 'object' || isArray(evidence)) {
     return refuse(record, 'the resolver answered with something that is not a record of evidence');
   }
   // Three answers that carry the declaration instead of evidence about it. The question is what this
@@ -583,7 +757,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     return refuse(record, 'the resolver answered with the declaration instead of with evidence of its own');
   }
 
-  const checks = {};
+  const checks = newChecks();
   const refuted = [];
 
   // A stage that stops early must not erase a refutation an earlier stage already found: `exists:
@@ -596,7 +770,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   // the way here, so `contentRecomputed` is false.
   function stoppedAt(reason) {
     if (refuted.length > 0) {
-      return settle(record, 'discrepant', `${refuted.join('; ')}; ${reason}`, checks, false);
+      return settle(record, 'discrepant', `${joinWith(refuted, '; ')}; ${reason}`, checks, false);
     }
     return settle(record, 'not_verifiable', reason, checks, false);
   }
@@ -626,20 +800,20 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   // still compared below: one missing field does not decide the other three.
   if (exists === false) {
     checks.commit_exists = false;
-    refuted.push(`commit ${record.commit} is not in ${record.repository}`);
+    refuted[refuted.length] = `commit ${record.commit} is not in ${record.repository}`;
   } else if (exists === true && evidenceCommit !== null) {
     if (evidenceCommit !== record.commit) {
       checks.commit_exists = false;
-      refuted.push(`the resolver answered about a commit that is not the one declared (${record.commit.slice(0, 120)})`);
+      refuted[refuted.length] = `the resolver answered about a commit that is not the one declared (${record.commit.slice(0, 120)})`;
     } else {
       checks.commit_exists = true;
     }
   }
 
   const repoReason = compare('repository', record.repository, repository, checks);
-  if (repoReason !== null) refuted.push(repoReason);
+  if (repoReason !== null) refuted[refuted.length] = repoReason;
   const authorReason = compare('author', record.author, author, checks);
-  if (authorReason !== null) refuted.push(authorReason);
+  if (authorReason !== null) refuted[refuted.length] = authorReason;
 
   // Bytes beat a digest string. If the resolver brought the content, the digest is computed here and
   // the string it may also have written is not consulted.
@@ -659,24 +833,38 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     const reported = hasContent
       ? `the content at ${record.commit.slice(0, 12)} hashes to ${resolvedDigest.slice(0, 12)}`
       : `the digest the resolver reported for ${record.commit.slice(0, 12)}`;
-    refuted.push(`${reported}, not to the digest of what was registered (${record.contentDigest.slice(0, 12)})`);
+    refuted[refuted.length] = `${reported}, not to the digest of what was registered (${record.contentDigest.slice(0, 12)})`;
   } else {
     checks.content_digest = true;
   }
 
   // An explicit false outranks an unanswered field: a resolver that refuted the author and left the
   // repository out has discrepant provenance, not merely unverifiable provenance.
-  const known = PROVENANCE_CHECKS.filter((key) => checks[key] !== undefined);
-  const unknown = notCoveredOf(checks).filter((key) => !known.includes(key));
-  const failures = Object.keys(checks).filter((key) => checks[key] === false);
+  //
+  // Both lists are read as own properties, so an unanswered check and an inherited one are the same
+  // thing here: neither is a comparison. That is the whole of F410 and F411 — `known` used to be
+  // `checks[key] !== undefined`, which the prototype could answer, so three checks nobody ran counted
+  // as answered and the verdict below came out `verified`.
+  const unknown = notCoveredOf(checks);
+  const failures = [];
+  const keys = ownKeysOf(checks);
+  for (const key of keys) {
+    if (checks[key] === false) failures[failures.length] = key;
+  }
   if (failures.length > 0) {
     // The flag travels with the refutation too. SHA-256 ran over the bytes before the verdict was
     // known, so a mismatch is a recomputation that happened, and dropping it here would have the
     // receipt claim the digest came from a string the resolver wrote (A18, review R201, R202).
-    return settle(record, 'discrepant', refuted.join('; '), checks, contentRecomputed);
+    return settle(record, 'discrepant', joinWith(refuted, '; '), checks, contentRecomputed);
   }
   if (unknown.length > 0) {
-    return settle(record, 'not_verifiable', `the resolver left ${unknown.join(', ')} unanswered, so nothing can be covered there`, checks, contentRecomputed);
+    return settle(record, 'not_verifiable', `the resolver left ${joinWith(unknown, ', ')} unanswered, so nothing can be covered there`, checks, contentRecomputed);
+  }
+  if (!everyCheckPassed(checks)) {
+    // Unreachable while the comparison sites above are the only producers, and kept on purpose: the
+    // word `verified` is not written from four booleans, it is written from four comparisons that
+    // this kernel ran.
+    return settle(record, 'not_verifiable', 'not every comparison behind this result was produced here, so nothing is verified', checks, contentRecomputed);
   }
   return settle(record, 'verified', 'the resolver reported this repository, commit, author and content, and all four match', checks, contentRecomputed);
 }
@@ -711,7 +899,7 @@ function captureRequest(value) {
 function authorizeSkill(claim, result, requested) {
   const record = recordOf(claim);
   const provenance = record === null ? null : provenanceOf(record);
-  const base = { provenance, name: record === null ? null : record.name, granted: record === null ? [] : [...record.authority] };
+  const base = { provenance, name: record === null ? null : record.name, granted: record === null ? [] : copyList(record.authority) };
   // Read off the linked result, not off anything the caller passed: only this kernel knows whether it
   // hashed the bytes or believed a digest string. It stays false until a result of this kernel's own
   // has been found, because nothing else can set it.
@@ -723,22 +911,25 @@ function authorizeSkill(claim, result, requested) {
   // what this stage decided, so asking for a capability outside the grant does not turn a verified
   // provenance into an unverified one (A09).
   function refuseDecision(status, reason, provenanceValues, extra, provenanceStatus) {
-    const values = {};
-    for (const key of PROVENANCE_CHECKS) values[key] = provenanceValues[key] === true;
-    for (const key of extra) values[key] = false;
+    const values = nullObject(null);
+    for (let index = 0; index < PROVENANCE_CHECKS.length; index += 1) {
+      const key = PROVENANCE_CHECKS[index];
+      values[key] = checkOf(provenanceValues, key) === true;
+    }
+    for (let index = 0; index < extra.length; index += 1) values[extra[index]] = false;
     const checks = withChecks(values);
-    const decision = Object.freeze({
+    const decision = frozen({
       authorized: false,
       status,
       provenanceStatus,
       reason: short(reason),
       checks,
-      coverage: Object.freeze(coveredKeys(checks)),
-      notCovered: Object.freeze(uncoveredKeys(checks)),
+      coverage: frozen(coveredKeys(checks)),
+      notCovered: frozen(uncoveredKeys(checks)),
       provenance: base.provenance,
       name: base.name,
-      granted: Object.freeze([...base.granted]),
-      requested: Object.freeze([]),
+      granted: frozen(copyList(base.granted)),
+      requested: frozen([]),
       contentRecomputed,
     });
     DECIDED_FROM.set(decision, record);
@@ -746,13 +937,15 @@ function authorizeSkill(claim, result, requested) {
   }
 
   if (record === null) {
-    return refuseDecision('not_verifiable', 'this skill was not registered in this kernel, so no authority can be granted', {}, [], 'not_verifiable');
+    return refuseDecision('not_verifiable', 'this skill was not registered in this kernel, so no authority can be granted', nullObject(null), [], 'not_verifiable');
   }
   if (result === null || typeof result !== 'object' || VERIFIED_FOR.get(result) !== record) {
-    return refuseDecision('not_verifiable', 'this verification result was not produced for this skill by this kernel', {}, [], 'not_verifiable');
+    return refuseDecision('not_verifiable', 'this verification result was not produced for this skill by this kernel', nullObject(null), [], 'not_verifiable');
   }
   const provenanceStatus = result.status;
-  const provenanceChecks = result.checks !== null && typeof result.checks === 'object' ? result.checks : {};
+  // The result is this kernel's own, and `settle` sealed its checks as an object of its own, so these
+  // are read as own properties: a check this kernel never compared is not one the grant may lean on.
+  const incomingChecks = result.checks !== null && typeof result.checks === 'object' ? result.checks : nullObject(null);
   contentRecomputed = result.contentRecomputed === true;
 
   // The scope of the request cannot decide the status on its own. A refuted provenance stays a
@@ -764,7 +957,7 @@ function authorizeSkill(claim, result, requested) {
 
   const capture = captureRequest(requested);
   if (!capture.ok) {
-    return refuseDecision(scopeStatus, capture.reason, provenanceChecks, ['authority_scope'], provenanceStatus);
+    return refuseDecision(scopeStatus, capture.reason, incomingChecks, ['authority_scope'], provenanceStatus);
   }
   const ask = capture.names;
   let malformed = null;
@@ -788,45 +981,57 @@ function authorizeSkill(claim, result, requested) {
         malformed = 'the requested authority repeats a capability';
       } else {
         ask[index] = name;
-        seen.push(name);
+        seen[seen.length] = name;
       }
     }
   }
   if (malformed !== null) {
-    return refuseDecision(scopeStatus, malformed, provenanceChecks, ['authority_scope'], provenanceStatus);
+    return refuseDecision(scopeStatus, malformed, incomingChecks, ['authority_scope'], provenanceStatus);
   }
-  const outside = ask.filter((item) => !listedIn(record.authority, item));
+  // The out-of-scope names, found by walking the captured copy. This used to be
+  // `ask.filter((item) => !listedIn(record.authority, item))`, which consults `Array.prototype.filter`
+  // *after* the caller's getters have already run inside the capture: a getter that set `filter` to
+  // return `[]` made every requested capability look granted, and a grant of `read` authorized
+  // `delete` (F414). One index at a time, over an array this module built, is the whole fix, and it
+  // only holds because `copyList` and `captureList` built that array themselves.
+  const outside = [];
+  for (let index = 0; index < ask.length; index += 1) {
+    if (!listedIn(record.authority, ask[index])) outside[outside.length] = ask[index];
+  }
   if (outside.length > 0) {
     return refuseDecision(
       scopeStatus,
-      `the person granted ${record.authority.length === 0 ? 'no capability at all' : record.authority.join(', ')}, and ${outside.join(', ')} is not among them`,
-      provenanceChecks,
+      `the person granted ${record.authority.length === 0 ? 'no capability at all' : joinWith(record.authority, ', ')}, and ${joinWith(outside, ', ')} is not among them`,
+      incomingChecks,
       ['authority_scope'],
       provenanceStatus,
     );
   }
-  if (provenanceStatus !== 'verified') {
+  // Authority is granted only when every one of the four comparisons was produced here and passed, and
+  // not merely because a status field says `verified`. The link above already proves the result is this
+  // kernel's own; this proves what is inside it (F410, F411).
+  if (provenanceStatus !== 'verified' || !everyCheckPassed(incomingChecks)) {
     return refuseDecision(
-      provenanceStatus,
+      provenanceStatus === 'verified' ? 'not_verified' : provenanceStatus,
       `the provenance of this skill is ${provenanceStatus}, so no authority is granted`,
-      provenanceChecks,
+      incomingChecks,
       [],
       provenanceStatus,
     );
   }
-  const checks = withChecks(provenanceChecks);
-  const decision = Object.freeze({
+  const checks = withChecks(incomingChecks);
+  const decision = frozen({
     authorized: true,
     status: 'verified',
     provenanceStatus: 'verified',
     reason: result.reason,
     checks,
-    coverage: Object.freeze(coveredKeys(checks)),
-    notCovered: Object.freeze(uncoveredKeys(checks)),
+    coverage: frozen(coveredKeys(checks)),
+    notCovered: frozen(uncoveredKeys(checks)),
     provenance: base.provenance,
     name: base.name,
-    granted: Object.freeze([...base.granted]),
-    requested: Object.freeze([...ask]),
+    granted: frozen(copyList(base.granted)),
+    requested: frozen(copyList(ask)),
     contentRecomputed,
   });
   DECIDED_FROM.set(decision, record);
@@ -874,8 +1079,10 @@ function loadSkill(claim, result, content, requested) {
 // bytes in hand and nothing is carried over from the verification, so the receipt says what was
 // loaded rather than what was checked.
 function withLoad(decision, record, loadedDigest, matched, status, reason) {
-  const checks = withChecks({ ...decision.checks, loaded_content_digest: matched === true });
-  const loaded = Object.freeze({
+  const values = copyOwn(decision.checks, nullObject(null));
+  values.loaded_content_digest = matched === true;
+  const rechecked = withChecks(values);
+  const loaded = frozen({
     authorized: matched === true ? decision.authorized : false,
     status,
     // The provenance is the one the decision carried. A load that found different bytes is a
@@ -883,9 +1090,9 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
     // a claim that the provenance of the skill stopped being what it was (A09).
     provenanceStatus: decision.provenanceStatus,
     reason: short(reason),
-    checks,
-    coverage: Object.freeze(coveredKeys(checks)),
-    notCovered: Object.freeze(uncoveredKeys(checks)),
+    checks: rechecked,
+    coverage: frozen(coveredKeys(rechecked)),
+    notCovered: frozen(uncoveredKeys(rechecked)),
     provenance: decision.provenance,
     name: decision.name,
     granted: decision.granted,
@@ -965,7 +1172,7 @@ function buildSkillReceipt(spec, decision) {
       reason: decision.reason,
     },
   });
-  receipt.skill = Object.freeze({
+  receipt.skill = frozen({
     name: decision.name,
     // The name the skill was registered under, and the word that says nothing here checked it. Placed
     // right under the name so a reader cannot reach the value without reading its label, and derived
@@ -980,12 +1187,14 @@ function buildSkillReceipt(spec, decision) {
     provenanceSource: provenanceVerdict === 'verified'
       ? PROVENANCE_SOURCES.verified
       : PROVENANCE_SOURCES.declared,
-    coverage: [...decision.coverage].sort(),
-    notCovered: [...decision.notCovered].sort(),
-    granted: [...decision.granted],
-    requested: [...decision.requested],
+    // Copied and ordered with the references this module took at load, so a host that replaced
+    // `Array.prototype.sort` after this module was loaded cannot change what a receipt says it covered.
+    coverage: defaultSort(copyList(decision.coverage)),
+    notCovered: defaultSort(copyList(decision.notCovered)),
+    granted: copyList(decision.granted),
+    requested: copyList(decision.requested),
     // The declaration, sealed as the declaration: `provenanceSource` is what says so.
-    provenance: { ...decision.provenance },
+    provenance: copyOwn(decision.provenance, {}),
     reason: decision.reason,
     loadedDigest: decision.loadedDigest === undefined ? null : decision.loadedDigest,
     contentRecomputed: decision.contentRecomputed === true,
