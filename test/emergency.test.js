@@ -61,22 +61,26 @@ const TRIAGE = (result) => (trigger, signal) => {
 
 async function granted(overrides = {}, deps = {}) {
   return emergency.createEmergencyPermission({ ...GRANT(), ...overrides }, {
-    authorizeGrantor: deps.authorizeGrantor || GRANTOR_OK,
-    resolveVerifier: deps.resolveVerifier || RESOLVE_OK(),
+    authorizeGrantor: 'authorizeGrantor' in deps ? deps.authorizeGrantor : GRANTOR_OK,
+    resolveVerifier: 'resolveVerifier' in deps ? deps.resolveVerifier : RESOLVE_OK(),
   });
 }
 
 const AT = '2026-10-04T12:00:00Z';
-const REQUEST = (overrides = {}) => ({
-  useId: 'use-1',
-  actor: 'agent-1',
-  action: 'open-record',
-  subject: 'allergy-summary',
-  destination: 'clinic-1',
-  triggerId: 'triage-red',
-  triggerSignal: { id: 'signal-1', source: 'triage-service', critical: true },
-  ...overrides,
-});
+// Every use carries its own signal: one signal opens one use, so a second use needs a second one.
+const REQUEST = (overrides = {}) => {
+  const useId = overrides.useId || 'use-1';
+  return {
+    useId,
+    actor: 'agent-1',
+    action: 'open-record',
+    subject: 'allergy-summary',
+    destination: 'clinic-1',
+    triggerId: 'triage-red',
+    triggerSignal: { id: `signal-${useId}`, source: 'triage-service', critical: true },
+    ...overrides,
+  };
+};
 
 const use = (permission, request, now, extra = {}) => emergency.exerciseEmergency(permission, request, {
   ledger: emergency.createEmergencyLedger(), now, ...extra,
@@ -130,8 +134,9 @@ test('extra injected keys buy nothing: the verifier consulted is the one bound a
     verify: () => { forgedCalls += 1; return { verified: true, reason: 'the agent says it is fine' }; },
   };
   const result = use(permission, REQUEST({ triggerVerified: true, triggerVerification: { verified: true } }), AT, { triggerVerifier: forged });
-  assert.equal(result.state, 'blocked');
   assert.equal(forgedCalls, 0, 'the verifier supplied at exercise time must never be called');
+  assert.equal(result.state, 'review_pending', 'the outcome is the bound verifier\'s, not the caller\'s extra keys');
+  assert.equal(result.receipt.trigger.verification.reason, 'the triage service signed this signal');
 });
 
 // ─── The trigger: a signal somebody else verified ──────────────────────────────────────────
@@ -156,15 +161,19 @@ test('exercising emits an immediate receipt with the trigger, its verification a
   assert.equal(verifyReceipt(result.receipt).ok, true);
 });
 
-test('a signal the agent signed for itself is blocked, and its own "verified" claim is ignored', async () => {
+test('a signal the agent signed for itself is blocked, and neither its claim nor its verifier is used', async () => {
   const permission = await granted();
+  let forgedCalls = 0;
   const result = use(permission, REQUEST({
     triggerVerified: true,
     triggerVerification: { verified: true, reason: 'emergency confirmed' },
     triggerSignal: { id: 'forged', source: 'agent-1', critical: true },
-  }), AT);
+  }), AT, {
+    triggerVerifier: { id: 'triage-service', verify: () => { forgedCalls += 1; return { verified: true, reason: 'trust me' }; } },
+  });
   assert.equal(result.state, 'blocked');
   assert.match(result.reason, /trigger|signal|source|independent/i);
+  assert.equal(forgedCalls, 0, 'the verifier the agent brought along is never called');
   assert.equal(result.receipt.status, 'blocked');
   assert.deepEqual(result.receipt.authority.exercised, [], 'nothing was exercised');
   assert.equal(verifyReceipt(result.receipt).ok, true);
@@ -185,9 +194,9 @@ test('a verifier that answers with a promise is refused: the kernel does not wai
   assert.equal(first.state, 'blocked');
   assert.match(first.reason, /verif|verifier/i);
   assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 0, 'a refused verification spends nothing');
-  const blockedByCap = emergency.exerciseEmergency(permission, REQUEST({ useId: 'use-2' }), { ledger, now: AT });
-  assert.equal(blockedByCap.state, 'blocked');
-  assert.match(blockedByCap.reason, /review/i, 'the refused attempt left no pending review behind');
+  const stillOpen = emergency.getEmergencyState(permission, { ledger, now: AT });
+  assert.equal(stillOpen.pendingReview, null, 'a refused attempt leaves no review behind');
+  assert.equal(stillOpen.nextUse, 'allowed');
 });
 
 test('a verifier that throws, or answers with anything but verified true, is blocked', async () => {
@@ -261,7 +270,10 @@ test('the same use cannot be replayed under another request key, and one signal 
   const replay = emergency.exerciseEmergency(permission, REQUEST({ requestKey: 'a-different-key' }), { ledger, now: '2026-10-04T12:05:00Z' });
   assert.equal(replay.state, 'blocked');
   assert.match(replay.reason, /replay|already used/i);
-  const sameSignal = emergency.exerciseEmergency(permission, REQUEST({ useId: 'use-2' }), { ledger, now: '2026-10-04T12:06:00Z' });
+  const sameSignal = emergency.exerciseEmergency(permission, REQUEST({
+    useId: 'use-2',
+    triggerSignal: { id: 'signal-use-1', source: 'triage-service', critical: true },
+  }), { ledger, now: '2026-10-04T12:06:00Z' });
   assert.equal(sameSignal.state, 'blocked');
   assert.match(sameSignal.reason, /signal|replay|already used/i);
   assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 1);
