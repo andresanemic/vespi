@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedBy": "node scripts/judge-package.mjs",
   "packageVersion": "0.1.4",
-  "gitCommit": "dbe92bd8e3afb4cae62daaf74910791059d3601f",
+  "gitCommit": "fde2ee08789e3d30517148e224310faace7e488c",
   "fileHashes": {
     "demo/x402/README.md": "056237ad81b5a23deceee84cc260377742d01dfc0a8dda2853320e9f26714405",
     "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
@@ -48,7 +48,7 @@
     "src/operation.js": "8dd7484a50eb8685069cdbfa4780754a92fc436a5a0fcda1025c886f95b5e8c9",
     "src/receipt.js": "25743f044a487bd682594cd8cec68128bf1d519aaa8e97ab070effa89d80bc7d",
     "src/time.js": "1021a9d4bd921763d6e09a35af850c2c39afb14cb1ad73d3fa93485045595d31",
-    "docs/JUDGE_PACKAGE.json": "7e7b934a3604d1dc79bf7da797a052f5afb935f9adf3ebc147ef68243014f515"
+    "docs/JUDGE_PACKAGE.json": "410bea66c7b8d760ec9295f331cb24ffadca0d08f7c0c36e180083b90e240c06"
   },
   "excludedPaths": [
     "**/node_modules/**",
@@ -113,5 +113,5 @@
     }
   ],
   "hashNote": "Ordinary hashes use SHA-256 over exact bytes. Generated dependencies under node_modules and Git metadata under .git are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
-  "manifestSelfHash": "7e7b934a3604d1dc79bf7da797a052f5afb935f9adf3ebc147ef68243014f515"
+  "manifestSelfHash": "410bea66c7b8d760ec9295f331cb24ffadca0d08f7c0c36e180083b90e240c06"
 }
