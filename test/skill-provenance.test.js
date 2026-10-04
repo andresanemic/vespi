@@ -166,7 +166,11 @@ test('verified provenance covers repository, commit existence, author and loaded
   assert.deepEqual(result.notCovered, []);
 });
 
-test('the resolver is asked about the declared provenance and is called exactly once', async () => {
+// The question is where the independence starts or does not. It carries only what locates the
+// evidence: the skill's name, its repository and the exact commit. The declared author and the
+// declared content digest are withheld, because those are the two answers this kernel asks the
+// resolver to produce; handing them over made a one-key echo of the question enough to be `verified`.
+test('the resolver is asked only where the evidence is, and is called exactly once', async () => {
   const claim = register();
   const calls = [];
   const result = await verifySkillProvenance(claim, async (question) => {
@@ -175,10 +179,16 @@ test('the resolver is asked about the declared provenance and is called exactly 
   });
   assert.equal(result.status, 'verified');
   assert.equal(calls.length, 1);
+  assert.equal(calls[0].name, 'ponytail');
   assert.equal(calls[0].repository, REPOSITORY);
   assert.equal(calls[0].commit, COMMIT);
-  assert.equal(calls[0].author, AUTHOR);
-  assert.equal(calls[0].contentDigest, sha256(CONTENT));
+  assert.deepEqual(Object.keys(calls[0]).sort(), ['commit', 'name', 'repository']);
+  // What the question must not carry, asserted as absences rather than as a comment.
+  assert.equal(calls[0].author, undefined);
+  assert.equal(calls[0].contentDigest, undefined);
+  assert.equal(JSON.stringify(calls[0]).includes(AUTHOR), false, 'the declared author reached the resolver');
+  assert.equal(JSON.stringify(calls[0]).includes(sha256(CONTENT)), false, 'the declared content digest reached the resolver');
+  assert.equal(Object.isFrozen(calls[0]), true);
 });
 
 test('the kernel hashes the bytes the resolver returns instead of believing a digest string', async () => {
