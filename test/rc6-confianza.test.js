@@ -14,12 +14,13 @@ const delegation = require('../src/delegation.js');
 const { buildReceipt, verifyReceipt } = require('../src/receipt.js');
 const { resumeFromReceipts } = require('../src/continuity.js');
 
-const MEDIUM = { cwd: 'C:/Claude', material: [], forbidden: ['.env'] };
+const ROOT = process.platform === 'win32' ? 'C:/Claude' : '/srv/claude';
+const MEDIUM = { cwd: ROOT, material: [], forbidden: ['.env'] };
 
 function returned() {
   const d = delegation.createDelegation({ task: 't', medium: MEDIUM, delegate: 'bunny', orchestrator: 'vespi' });
   delegation.recordStart(d, { readTask: true });
-  delegation.recordResult(d, { output: 'x', touched: ['C:/Claude/src/a.js'] });
+  delegation.recordResult(d, { output: 'x', touched: [`${ROOT}/src/a.js`] });
   return d;
 }
 

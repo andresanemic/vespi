@@ -644,7 +644,7 @@ test('receipts drop unrecognized evidence fields', () => {
 });
 
 test('kernel needs no specific capability to load', () => {
-  // Runs inside C:\Vespi, which has no node_modules/@x402. If src required it, this file would not even load.
+  // Runs in an isolated directory without node_modules/@x402. If src required it, this file would not even load.
   assert.ok(typeof runOperation === 'function');
   assert.ok(typeof sufficient === 'function');
   assert.ok(typeof buildReceipt === 'function');

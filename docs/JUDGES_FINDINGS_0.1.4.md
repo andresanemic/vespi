@@ -6,7 +6,7 @@ Reviewed the findings in sections (b) and (f) of simulated judge reports A, B, a
 
 ### 1. Uncertain result continuity (`not_verified`)
 
-**Verdict: real in the earlier tree, corrected in 0.1.4.** When a `not_verified` receipt records an exercised effect, resumption must request reconciliation and must not propose that action again. The candidate already enforces this. `test/v014.test.js`, V014-C1, covers the exercised case; V014-C2 distinguishes a receipt with no exercised effect, and V014-C3/C4 cover later verification and unknown settlement.
+**Verdict: real in the earlier tree, corrected in 0.1.4.** When a `not_verified` receipt records an exercised effect, resumption must request reconciliation and must not propose that action again. The pre-0.1.4 implementation from `c128a44^` reproduced the judge's result: `nextAction: payment`, `needsPerson: false`, `reason: resumes payment`. The candidate already enforces reconciliation. `test/v014.test.js`, V014-C1, covers the exercised case; V014-C2 distinguishes a receipt with no exercised effect, and V014-C3/C4 cover later verification and unknown settlement.
 
 Proof: `node --test test/v014.test.js` passed 24/24 tests in the focused run.
 
@@ -36,7 +36,7 @@ Se contrastaron los hallazgos de las secciones (b) y (f) de los informes simulad
 
 ### 1. Continuidad de un resultado incierto (`not_verified`)
 
-**Veredicto: real en el árbol anterior, corregido en 0.1.4.** Si un recibo `not_verified` registra un efecto ejercido, reanudar debe exigir reconciliación y no debe volver a proponer esa acción. El candidato ya aplica esa regla. `test/v014.test.js`, V014-C1, cubre el efecto ejercido; V014-C2 distingue el recibo sin efecto ejercido y V014-C3/C4 cubren una verificación posterior y un resultado de liquidación desconocido.
+**Veredicto: real en el árbol anterior, corregido en 0.1.4.** Si un recibo `not_verified` registra un efecto ejercido, reanudar debe exigir reconciliación y no debe volver a proponer esa acción. La implementación anterior a 0.1.4 de `c128a44^` reprodujo el resultado del juez: `nextAction: payment`, `needsPerson: false`, `reason: resumes payment`. El candidato ya exige reconciliación. `test/v014.test.js`, V014-C1, cubre el efecto ejercido; V014-C2 distingue el recibo sin efecto ejercido y V014-C3/C4 cubren una verificación posterior y un resultado de liquidación desconocido.
 
 Prueba: `node --test test/v014.test.js` pasó 24/24 en la ejecución enfocada.
 
