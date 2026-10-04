@@ -293,18 +293,38 @@ const LEDGER = new WeakMap();
 
 function newRecord() {
   return {
-    uses: 0, paused: false, revoked: false, stopped: false, rejectedUse: null,
+    family: null, uses: 0, paused: false, revoked: false, stopped: false, rejectedUse: null,
     pending: null, useIds: new Set(), signalIds: new Set(), receipts: new Map(), busy: false,
   };
 }
 
-function ensureRecord(records, id) {
-  let record = records.get(id);
-  if (!record) {
-    record = newRecord();
+// The public id is not an identity. Two different people may hold two real grants that happen to
+// share an id, and one person's reviewer must not close the other's review nor one person's owner
+// revoke the other's authority. So every record remembers the private family that opened it, and
+// only that family may read or move it. The token never travels and cannot be built by a caller,
+// so a collision fails closed: nothing is spent, nothing changes and nothing is revealed (R201,
+// R202). A renewal keeps the same token, because a longer clock is the same grant, not a new one.
+const FOREIGN_RECORD = 'the emergency record under this id was opened by a different grant, so this kernel neither reads nor changes it';
+
+// Opens the record for this family, or refuses: this is the only path that creates one, and it
+// refuses rather than letting a second family take an id that is already in use.
+function claimRecord(records, id, family) {
+  const existing = records.get(id);
+  if (!existing) {
+    const record = newRecord();
+    record.family = family;
     records.set(id, record);
+    return { ok: true, record };
   }
-  return record;
+  return existing.family === family ? { ok: true, record: existing } : { ok: false, reason: FOREIGN_RECORD };
+}
+
+// Reading is not claiming: a record nobody opened yet stays absent instead of being created, and a
+// record that belongs to another family is not read at all.
+function readRecord(records, id, family) {
+  const existing = records.get(id);
+  if (!existing) return { ok: true, record: null };
+  return existing.family === family ? { ok: true, record: existing } : { ok: false, reason: FOREIGN_RECORD };
 }
 
 function assetOf(id) {
@@ -494,6 +514,8 @@ async function createEmergencyPermission(grant, { authorizeGrantor, resolveVerif
     // clock simply cannot be extended (ADV04).
     approver: typeof authorizeRenewal === 'function' ? authorizeRenewal : null,
     grantDigest,
+    // The private family of this one grant, born here and kept by every renewal of it.
+    family: Object.freeze({}),
   };
   const permission = freeze({
     ...candidate,
@@ -600,7 +622,9 @@ function exerciseEmergency(permission, request, { ledger, now } = {}) {
   if (!records) return fail('a kernel emergency ledger is required to exercise emergency access', at, asked.signal ? asked.signal.id : null);
   // Readable is not granted: only the object the grant path produced carries authority.
   if (!bound) return fail('no grant is bound to this emergency permission: an object that did not come through the grant path exercises nothing', at, asked.signal ? asked.signal.id : null);
-  const record = ensureRecord(records, snapshot.id);
+  const claimed = claimRecord(records, snapshot.id, bound.family);
+  if (!claimed.ok) return fail(claimed.reason, at, asked.signal ? asked.signal.id : null);
+  const record = claimed.record;
 
   // Order matters twice over. Replay is checked before the pending review, so a caller replaying a
   // use is told it is a replay instead of being told the review is open. And revocation, pause and
@@ -684,7 +708,9 @@ function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {
   if (decision !== 'accept' && decision !== 'reject') throw new Error('review decision must be accept or reject');
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to close an emergency review');
-  const record = records.get(snapshot.id);
+  const found = readRecord(records, snapshot.id, bound.family);
+  if (!found.ok) throw new Error(found.reason);
+  const record = found.record;
   if (!record || !record.pending || record.pending.useId !== useId) throw new Error('no matching pending emergency review');
   if (!snapshot.reviewers.includes(by)) {
     throw new Error(`not authorized to close this emergency review: reviewers are [${snapshot.reviewers.join(', ')}]`);
@@ -738,7 +764,9 @@ function pauseEmergencyPermission(permission, { ledger, by } = {}) {
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to pause an emergency permission');
-  ensureRecord(records, snapshot.id).paused = true;
+  const claimed = claimRecord(records, snapshot.id, bound.family);
+  if (!claimed.ok) throw new Error(claimed.reason);
+  claimed.record.paused = true;
   return getEmergencyState(permission, { ledger });
 }
 
@@ -748,7 +776,9 @@ function resumeEmergencyPermission(permission, { ledger, by } = {}) {
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to resume an emergency permission');
-  const record = ensureRecord(records, snapshot.id);
+  const claimed = claimRecord(records, snapshot.id, bound.family);
+  if (!claimed.ok) throw new Error(claimed.reason);
+  const record = claimed.record;
   if (record.revoked) throw new Error('a revoked emergency permission cannot be resumed');
   if (record.stopped) throw new Error(`this emergency permission was stopped by the rejected review of ${record.rejectedUse}; resuming it is not what the person decided, so it needs a new grant`);
   record.paused = false;
@@ -761,7 +791,9 @@ function revokeEmergencyPermission(permission, { ledger, by } = {}) {
   if (by !== snapshot.owner) throw new Error('only the person who granted this emergency permission may revoke it');
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to revoke an emergency permission');
-  ensureRecord(records, snapshot.id).revoked = true;
+  const claimed = claimRecord(records, snapshot.id, bound.family);
+  if (!claimed.ok) throw new Error(claimed.reason);
+  claimed.record.revoked = true;
   return getEmergencyState(permission, { ledger });
 }
 
@@ -832,8 +864,11 @@ function getEmergencyState(permission, { ledger, now } = {}) {
   const bound = bindingOf(permission);
   const records = readRecords(ledger);
   // A ledger that exists but has never seen this id is a permission nobody has touched yet, not a
-  // missing one: the reads below need a record either way.
-  const record = records ? (records.get(snapshot.id) || newRecord()) : null;
+  // missing one: the reads below need a record either way. A record that belongs to another family
+  // is not read at all, so this call can neither reveal nor answer for it.
+  const found = !records || !bound ? { ok: true, record: null } : readRecord(records, snapshot.id, bound.family);
+  const foreign = !found.ok;
+  const record = found.ok ? (found.record || newRecord()) : null;
   const uses = record ? record.uses : 0;
   const clock = readClock(now);
   // A clock nobody injected and nobody could read is not replaced with wall time to decide whether
@@ -851,6 +886,11 @@ function getEmergencyState(permission, { ledger, now } = {}) {
   } else if (!bound) {
     status = 'unbound';
     nextUse = 'blocked_unbound';
+  } else if (foreign) {
+    // The id belongs to another grant. The honest answer is that this kernel cannot answer for it,
+    // and it says so instead of reporting another person's availability.
+    status = 'record_conflict';
+    nextUse = 'blocked_record_conflict';
   } else if (record.revoked) {
     status = 'revoked';
     nextUse = 'blocked_revoked';
