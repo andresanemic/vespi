@@ -294,9 +294,10 @@ function readConfig(raw) {
   try {
     if (!isPlainObject(raw) || !hasOnlyKeys(raw, CONFIG_KEYS)) return null;
     if (isAccessor(raw, 'backend')) return null;
-    const maxPublicInputs = raw.maxPublicInputs === undefined
-      ? DEFAULT_MAX_PUBLIC_INPUTS
-      : raw.maxPublicInputs;
+    // Read through the descriptor like every other field, so an accessor here is refused instead of
+    // being the one place where a getter on the configuration gets to run.
+    const maxRaw = readData(raw, 'maxPublicInputs');
+    const maxPublicInputs = maxRaw === undefined ? DEFAULT_MAX_PUBLIC_INPUTS : maxRaw;
     if (typeof maxPublicInputs !== 'number' || !Number.isInteger(maxPublicInputs)
       || maxPublicInputs < 1 || maxPublicInputs > MAX_PUBLIC_INPUTS_CEILING) return null;
 
