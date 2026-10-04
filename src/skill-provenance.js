@@ -157,10 +157,33 @@ function registrationSource(spec) {
   }
 }
 
-function grantedList(value, label) {
-  if (!Array.isArray(value)) throw new Error(`${label} must be an array of capability names`);
+// The grant is captured the same way the request is: by index, out of an array this module checked,
+// with a length it validated and every element read exactly once. Nothing the caller put on the
+// array is consulted, so the granted authority is the declared list and not what an overridden
+// `Symbol.iterator` decides to yield: the same rule the request capture was given (A02), applied to
+// the list that decides authority rather than to the one that asks for it (A18, review H04).
+function captureList(value, label) {
   const names = [];
-  for (const item of value) {
+  try {
+    if (!Array.isArray(value)) {
+      return { ok: false, names, reason: `${label} must be an array of capability names` };
+    }
+    const length = value.length;
+    if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) {
+      return { ok: false, names, reason: `${label} could not be read as a list of names` };
+    }
+    for (let index = 0; index < length; index += 1) names.push(value[index]);
+  } catch {
+    return { ok: false, names, reason: `${label} could not be read as a list of names` };
+  }
+  return { ok: true, names, reason: null };
+}
+
+function grantedList(value, label) {
+  const capture = captureList(value, label);
+  if (!capture.ok) throw new Error(capture.reason);
+  const names = [];
+  for (const item of capture.names) {
     const name = capabilityName(item);
     if (name === null) throw new Error(`${label} must hold capability names without wildcards`);
     if (!names.includes(name)) names.push(name);
@@ -188,7 +211,7 @@ function registerSkillProvenance(spec) {
     content = null;
   }
   if (typeof content !== 'string') throw new Error('a skill needs the content that will be loaded');
-  const authority = Object.freeze(grantedList(source.authority, 'authority'));
+  const authority = Object.freeze(grantedList(readValue(source, 'authority'), 'authority'));
   const parts = {
     name,
     repository,
@@ -541,20 +564,7 @@ function listedIn(list, value) {
 // get a `TypeError` out of `authorizeSkill` instead of a refusal. Whether the value is an array at
 // all still reads as its own fixed reason, and the refusal is the same either way (A18, review R206).
 function captureRequest(value) {
-  const names = [];
-  try {
-    if (!Array.isArray(value)) {
-      return { ok: false, names: [], reason: 'the requested authority must be an array of capability names' };
-    }
-    const length = value.length;
-    if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) {
-      return { ok: false, names: [], reason: 'the requested authority could not be read as a list of names' };
-    }
-    for (let index = 0; index < length; index += 1) names.push(value[index]);
-  } catch {
-    return { ok: false, names: [], reason: 'the requested authority could not be read as a list of names' };
-  }
-  return { ok: true, names, reason: null };
+  return captureList(value, 'the requested authority');
 }
 
 // The authority question, kept apart from the load question: may this skill act, and within what the

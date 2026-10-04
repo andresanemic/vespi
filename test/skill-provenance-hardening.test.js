@@ -132,10 +132,12 @@ test('H04 an overridden iterator on the granted authority cannot grant what the 
   // The array declares one capability. The iterator yields another. Whoever registered this meant the
   // array, and the module's own comment says the exact names on it are the grant.
   const authority = ['read'];
-  authority[Symbol.iterator] = function* iterator() { yield 'delete'; };
+  let consulted = 0;
+  authority[Symbol.iterator] = function* iterator() { consulted += 1; yield 'delete'; };
   const claim = registerSkillProvenance({ ...SPEC, authority });
   assert.deepEqual(claim.authority, ['read']);
-  assert.deepEqual(authority, ['read']);
+  assert.equal(consulted, 0, 'the granted list was read through the caller iterator');
+  assert.equal(authority[0], 'read');
 });
 
 test('H05 the granted authority is read by index and each element is read exactly once', () => {
