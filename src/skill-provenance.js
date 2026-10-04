@@ -718,7 +718,7 @@ function byteShapeOf(value) {
     }
     const length = value.length;
     if (!safeInteger(length) || length <= 0) return 'an array that is not text';
-    if (length > MAX_SHAPE_SCAN) return 'an array too long to look at here, so its bytes were not read';
+    if (length > MAX_SHAPE_SCAN) return 'an array too long to name here';
     for (let index = 0; index < length; index += 1) {
       if (typeof value[index] !== 'number') return 'an array that is not text';
     }
@@ -1252,8 +1252,8 @@ function buildSkillReceipt(spec, decision) {
 //     be accepted, and both leave `authority_scope` false.
 //   - two new sentences from `byteShapeOf`: `a payload whose shape could not be read` replaces
 //     `an array that could not be read` for anything that throws while being inspected, and an array
-//     past `MAX_SHAPE_SCAN` is named too long instead of walked. The bytes were never decoded and are
-//     still not, so the verdict of every one of these is unchanged: `content_digest` uncovered.
+//     past `MAX_SHAPE_SCAN` is named too long to name instead of walked. The bytes were never decoded
+//     and are still not, so the verdict of every one of these is unchanged: `content_digest` uncovered.
 //   - `checks`, `verification.checks` and every coverage map are now objects with no prototype. The
 //     own keys, their order and their values are the same, so a receipt reads the same and hashes the
 //     same; what changed is that a key this kernel did not write cannot be answered by a prototype.
