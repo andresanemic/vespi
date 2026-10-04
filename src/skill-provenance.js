@@ -98,6 +98,18 @@ const frozen = Object.freeze;
 const sortByDefault = Array.prototype.sort;
 const defaultSort = (list) => sortByDefault.call(list);
 const recordSort = (list, compare) => sortByDefault.call(list, compare);
+// The four string primitives this module reaches for, on the same terms. A replaced `trim` would let
+// a blank capability name read as a grantable one, and a replaced `includes` would let a wildcard
+// through the only place wildcards are refused. `slice` and `valueOf` come along because the same
+// argument applies to them and they are the reason text and the text test.
+const stringValueOf = String.prototype.valueOf;
+const stringTrim = String.prototype.trim;
+const stringIncludes = String.prototype.includes;
+const stringSlice = String.prototype.slice;
+const valueOfString = (value) => stringValueOf.call(value);
+const trimmed = (value) => stringTrim.call(value);
+const holds = (value, needle) => stringIncludes.call(value, needle);
+const head = (value, count) => stringSlice.call(value, 0, count);
 
 // The bound on any list this module copies. A list of capability names is a short list, and a `length`
 // is a claim about how much work there is rather than a fact: reading `Number.MAX_SAFE_INTEGER`
@@ -221,7 +233,7 @@ const COMMIT_ID = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const MAX_TIMER_MS = 2147483647;
 
 function text(value) {
-  return typeof value === 'string' && value.valueOf().trim().length > 0;
+  return typeof value === 'string' && trimmed(valueOfString(value)).length > 0;
 }
 
 // The two fixes of this review round share one code, A18, and are named apart by the reviewer's own
@@ -254,8 +266,8 @@ function readFlag(source, key) {
 // make in the open, not a rule hidden in the kernel.
 function capabilityName(value) {
   if (!text(value)) return null;
-  const name = value.valueOf();
-  return name.includes('*') ? null : name;
+  const name = valueOfString(value);
+  return holds(name, '*') ? null : name;
 }
 
 // The one door into this module, and the only place a caller's object is read. Everything a
@@ -347,7 +359,7 @@ function registerSkillProvenance(spec) {
   if (repository === null) throw new Error('a skill needs the repository it comes from');
   if (commit === null) throw new Error('a skill needs the exact commit it was read at');
   if (!COMMIT_ID.test(commit)) {
-    throw new Error(`a skill needs a fixed commit id, not a moving reference: ${commit.slice(0, 64)}`);
+    throw new Error(`a skill needs a fixed commit id, not a moving reference: ${head(commit, 64)}`);
   }
   if (author === null) throw new Error('a skill needs the author of that commit');
   const content = source.content;
@@ -428,7 +440,7 @@ function deciderRecord(decision) {
 // later as a missing reason.
 function short(reason) {
   const value = typeof reason === 'string' ? reason : String(reason);
-  return value.length > 512 ? `${value.slice(0, 509)}...` : value;
+  return value.length > 512 ? `${head(value, 509)}...` : value;
 }
 
 // The checks, as a map with no prototype at all. This is the heart of the fourth round's first class:
@@ -815,7 +827,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   } else if (exists === true && evidenceCommit !== null) {
     if (evidenceCommit !== record.commit) {
       checks.commit_exists = false;
-      refuted[refuted.length] = `the resolver answered about a commit that is not the one declared (${record.commit.slice(0, 120)})`;
+      refuted[refuted.length] = `the resolver answered about a commit that is not the one declared (${head(record.commit, 120)})`;
     } else {
       checks.commit_exists = true;
     }
@@ -842,9 +854,9 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     // module applies to everything else the resolver writes applies to it: it does not get quoted
     // back. The digest that was registered is this module's, and it is the one worth naming (N01).
     const reported = hasContent
-      ? `the content at ${record.commit.slice(0, 12)} hashes to ${resolvedDigest.slice(0, 12)}`
-      : `the digest the resolver reported for ${record.commit.slice(0, 12)}`;
-    refuted[refuted.length] = `${reported}, not to the digest of what was registered (${record.contentDigest.slice(0, 12)})`;
+      ? `the content at ${head(record.commit, 12)} hashes to ${head(resolvedDigest, 12)}`
+      : `the digest the resolver reported for ${head(record.commit, 12)}`;
+    refuted[refuted.length] = `${reported}, not to the digest of what was registered (${head(record.contentDigest, 12)})`;
   } else {
     checks.content_digest = true;
   }
@@ -1081,7 +1093,7 @@ function loadSkill(claim, result, content, requested) {
     return withLoad(decision, record, loaded, false, decision.status, decision.reason);
   }
   if (loaded !== record.contentDigest) {
-    return withLoad(decision, record, loaded, false, 'discrepant', `the content offered for loading hashes to ${loaded.slice(0, 12)}, not to the verified digest ${record.contentDigest.slice(0, 12)}: it changed between the check and the load`);
+    return withLoad(decision, record, loaded, false, 'discrepant', `the content offered for loading hashes to ${head(loaded, 12)}, not to the verified digest ${head(record.contentDigest, 12)}: it changed between the check and the load`);
   }
   return withLoad(decision, record, loaded, true, decision.status, decision.reason);
 }

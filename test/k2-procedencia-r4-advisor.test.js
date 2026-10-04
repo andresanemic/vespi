@@ -524,3 +524,28 @@ test('B04 a list longer than the module accepts is refused instead of copied', (
   for (let index = 0; index < 4096; index += 1) long.push(`read:${index}`);
   assert.throws(() => registerSkillProvenance({ ...SPEC, authority: long }), /could not be read as a list|more than/);
 });
+
+test('B05 a replaced String.prototype cannot widen a grant or hide a wildcard', () => {
+  // The same argument as the array primitives, on the four string methods this module reaches for.
+  // A `trim` that answers empty made a blank capability name look grantable, and an `includes` that
+  // answers false would have let `read:*` through the only place wildcards are refused.
+  const saved = Object.getOwnPropertyDescriptors(String.prototype);
+  let blankRefused = false;
+  let wildcardRefused = false;
+  String.prototype.trim = function trim() { return ''; };
+  String.prototype.includes = function includes() { return false; };
+  try {
+    assert.throws(() => registerSkillProvenance({ ...SPEC, authority: ['   '] }), /capability names/);
+    blankRefused = true;
+    assert.throws(() => registerSkillProvenance({ ...SPEC, authority: ['read:*'] }), /without wildcards/);
+    wildcardRefused = true;
+  } finally {
+    for (const key of Object.keys(saved)) Object.defineProperty(String.prototype, key, saved[key]);
+  }
+  assert.equal(blankRefused, true, 'a blank capability name was not refused');
+  assert.equal(wildcardRefused, true, 'a wildcard was registered while the primitive was replaced');
+  // And the module still refuses both once the realm is back to normal.
+  assert.throws(() => registerSkillProvenance({ ...SPEC, authority: ['   '] }), /capability names/);
+  const blank = registerSkillProvenance({ ...SPEC, authority: ['read'] });
+  assert.deepEqual([...blank.authority], ['read']);
+});
