@@ -101,6 +101,8 @@ function text(value) {
   return typeof value === 'string' && value.valueOf().trim().length > 0;
 }
 
+// The two fixes of this review round share one code, A18, and are named apart by the reviewer's own
+// case numbers (R201-R206). The code belongs to the round, the cases belong to the defect.
 // Reading a field off caller-supplied data can run a getter. Every read here is contained: a hostile
 // object fails the check instead of deciding the outcome.
 function readString(source, key) {
