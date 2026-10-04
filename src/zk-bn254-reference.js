@@ -4,7 +4,7 @@
 // This is not audited, not production-ready, not constant-time, and has no CPU budget.
 // A valid proof does not authenticate a presenter, attest an institution or prevent replay.
 
-const { FP_MODULUS: P, SCALAR_MODULUS: R } = require('./zk.js');
+const { FP_MODULUS: P, SCALAR_MODULUS: R, digestZkVerificationKey } = require('./zk.js');
 
 function mod(a) { const b = a % P; return b < 0n ? b + P : b; }
 function power(field, a, n) {
@@ -583,6 +583,12 @@ function verifyGroth16(rawVerificationKey, rawProof, rawPublicInputs) {
 // The backend of the phase 1 port, bound to one verification key. The key is parsed here as well, so
 // the backend does not take the port's word for it: a key this reader refuses never reaches a
 // pairing. Throws if the key itself is unusable, which is a configuration error, not a verdict.
+//
+// Bound means bound. The port pins a key, hands the backend a frozen copy of that pinned key and
+// records its digest in the receipt, so a backend that verified against some other key would make the
+// receipt name a key the maths never used. The key captured here is therefore a private deep copy
+// that is never read again, and every call compares the copy it receives with the one it was built
+// for. A mismatch throws, which the port reports as backend_error: never as verified.
 function createReferenceBackend(rawVerificationKey) {
   const key = readVerificationKey(rawVerificationKey);
   if (key === null) throw new TypeError('verification key is not readable by the BN254 reference');
@@ -594,13 +600,40 @@ function createReferenceBackend(rawVerificationKey) {
       throw new TypeError('verification key holds an IC point off the curve or outside the subgroup');
     }
   }
+  // The port's own digest is what the receipt will carry, so this is the value to compare against.
+  // A key the port cannot read cannot be the pinned key of any receipt: refuse it here.
+  let boundDigest;
+  try {
+    boundDigest = digestZkVerificationKey(rawVerificationKey);
+  } catch {
+    throw new TypeError('verification key is not readable by the zk port');
+  }
+  // The caller's object is not the key any more. What this backend verifies is decided now, from a
+  // copy nothing can reach afterwards.
+  const bound = frozenJsonCopy(rawVerificationKey);
   return Object.freeze({
     label: 'bn254-bigint-reference',
     // The port has already read the ranges; this repeats them, because a reference that trusts its
-    // caller is not a reference.
-    verify: ({ proof, publicInputs }) => verifyGroth16(rawVerificationKey, proof, publicInputs),
+    // caller is not a reference. The key, though, is not the caller's to choose: see above.
+    verify: ({ verificationKey, proof, publicInputs }) => {
+      if (digestZkVerificationKey(verificationKey) !== boundDigest) {
+        throw new TypeError('reference backend is bound to another verification key');
+      }
+      return verifyGroth16(bound, proof, publicInputs);
+    },
     digestMaterial: { nPublic: key.nPublic },
   });
+}
+
+// A private copy through JSON, frozen all the way down. Plain JSON in, plain JSON out, so what is
+// frozen here is exactly what the readers accept.
+function frozenJsonCopy(value) {
+  const freeze = (node) => {
+    if (node === null || typeof node !== 'object') return node;
+    for (const child of Object.values(node)) freeze(child);
+    return Object.freeze(node);
+  };
+  return freeze(JSON.parse(JSON.stringify(value)));
 }
 
 const bn254Internals = Object.freeze({ P, R, fp, fp2, fp6, fp12, g1, g2 });
