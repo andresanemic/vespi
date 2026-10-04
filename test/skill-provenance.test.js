@@ -142,7 +142,7 @@ test('verified provenance covers repository, commit existence, author and loaded
   const claim = register();
   const result = await verifySkillProvenance(claim, resolverFor());
   assert.equal(result.status, 'verified');
-  assert.deepEqual(result.coverage.sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
+  assert.deepEqual([...result.coverage].sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
   assert.deepEqual(result.notCovered, []);
 });
 
@@ -183,7 +183,7 @@ test('partial refutation keeps the checks that did pass in coverage', async () =
   const claim = register();
   const result = await verifySkillProvenance(claim, resolverFor({ author: 'Mallory <m@example.test>' }));
   assert.equal(result.status, 'discrepant');
-  assert.deepEqual(result.coverage.sort(), ['commit_exists', 'content_digest', 'repository']);
+  assert.deepEqual([...result.coverage].sort(), ['commit_exists', 'content_digest', 'repository']);
   assert.deepEqual(result.notCovered, ['author']);
 });
 
@@ -242,14 +242,18 @@ test('self-declared provenance without a resolver is not verifiable', async () =
   assert.equal(result.notCovered.length, 4);
 });
 
-test('evidence written onto the claim by the skill itself is not evidence', async () => {
+test('a skill cannot attach its own proof of innocence to its claim', async () => {
   const claim = register();
-  // A skill that ships its own proof of innocence: the claim carries every field a resolver would
-  // return. Nothing is read from there.
-  claim.evidence = evidence();
-  claim.selfDigest = sha256(CONTENT);
+  // A skill that ships its own evidence: every field a resolver would return, written onto the claim.
+  // The claim is frozen, so the write does not even land — and nothing on it is read as evidence.
+  assert.throws(() => {
+    claim.evidence = evidence();
+    claim.exists = true;
+    claim.selfDigest = sha256(CONTENT);
+  }, TypeError);
   const result = await verifySkillProvenance(claim);
   assert.equal(result.status, 'not_verifiable');
+  assert.deepEqual(Object.keys(claim).sort(), ['author', 'authority', 'commit', 'contentDigest', 'digest', 'name', 'repository']);
 });
 
 test('a claim that was never registered cannot be verified, however perfect the evidence', async () => {
@@ -313,7 +317,7 @@ test('evidence that omits a field proves nothing about it', async () => {
   const result = await verifySkillProvenance(claim, async () => ({ exists: true }));
   assert.equal(result.status, 'not_verifiable');
   assert.deepEqual(result.coverage, []);
-  assert.deepEqual(result.notCovered.sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
+  assert.deepEqual([...result.notCovered].sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
 });
 
 test('an exists flag that is not a boolean is not verifiable rather than a yes', async () => {
@@ -414,12 +418,13 @@ test('a skill cannot exercise authority beyond the person grant', () => {
   });
 });
 
-test('a wildcard in the grant is not expanded into capabilities', () => {
-  const claim = register({ authority: ['read:*'] });
+test('a wildcard never enters the registry, so there is no silent expansion to discover later', () => {
+  assert.throws(() => register({ authority: ['read:*'] }), /wildcard/i);
+  const claim = register();
   return verifySkillProvenance(claim, resolverFor()).then((verified) => {
-    const decision = authorizeSkill(claim, verified, ['read:project']);
+    const decision = authorizeSkill(claim, verified, ['read:*']);
     assert.equal(decision.authorized, false);
-    assert.match(decision.reason, /exact/i);
+    assert.match(decision.reason, /wildcard/i);
   });
 });
 
@@ -497,7 +502,7 @@ test('a skill receipt verifies and carries the provenance, the scope and the cov
     });
     assert.deepEqual(receipt.skill.granted, GRANTED);
     assert.deepEqual(receipt.skill.requested, ['read:project']);
-    assert.deepEqual(receipt.coverage.sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
+    assert.deepEqual([...receipt.coverage].sort(), ['author', 'commit_exists', 'content_digest', 'repository']);
     assert.deepEqual(receipt.notCovered, ['external anchor']);
   });
 });
