@@ -1,0 +1,294 @@
+'use strict';
+
+// The x402 paid-effect contract, promoted into the kernel with the network, the signer and the
+// settlement reader left as injected ports.
+//
+// What this module governs: the fixed declaration of the paid effect, the selection of authorized
+// terms, the order (discover, reserve, prepare, inspect, recheck, send, deliver, verify), the
+// association with the prepared authorization, local deduplication of the effect and of the settled
+// transaction, and the receipt verdict. What it never does: implement Stellar signing, XDR, HTTP,
+// facilitation or Horizon reads. Without ports there is no payment: importing this module performs
+// no I/O and produces no receipt.
+//
+// Every port is trusted host code, not a sandbox. A port that ignores its signal can keep acting
+// after this module gave up, and a port that lies is believed only after an independent check
+// returned true; that limit belongs to whoever writes the ports.
+
+const { sufficient } = require('./authority.js');
+const { parseTime } = require('./time.js');
+const { createHash } = require('node:crypto');
+
+// A canonical positive decimal amount, at most 78 digits, no sign, no exponent, no leading zero.
+const ATOMIC = /^[1-9][0-9]{0,77}$/;
+const HASH = /^[0-9a-f]{64}$/;
+const MAX_TEXT = 512;
+const MIN_WINDOW_SECONDS = 1;
+const MAX_WINDOW_SECONDS = 300;
+const DEFAULT_CLAIM_CAPACITY = 10_000;
+const MIN_CLAIM_CAPACITY = 1;
+const MAX_ACCEPTS = 64;
+const MAX_SPEC_DEPTH = 8;
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+const SUPPORTED_SCHEME = 'exact';
+const SUPPORTED_VERSION = 2;
+const ALLOWED_EXTRA_KEYS = new Set(['areFeesSponsored', 'paymentFlow']);
+const SUPPORTED_PAYMENT_FLOWS = new Set(['authorization']);
+
+// Public codes. The catalog is fixed: every rejection a receipt can carry comes from here, so a
+// reader never has to interpret a free text written by a port.
+const CODES = {
+  INVALID_SPEC: 'INVALID_SPEC',
+  INVALID_PORT: 'INVALID_PORT',
+  INVALID_CLOCK: 'INVALID_CLOCK',
+  DISCOVERY_FAILED: 'DISCOVERY_FAILED',
+  TERMS_REJECTED: 'TERMS_REJECTED',
+  AUTHORITY_EXPIRED: 'AUTHORITY_EXPIRED',
+  PREPARE_FAILED: 'PREPARE_FAILED',
+  PREPARED_REJECTED: 'PREPARED_REJECTED',
+  ABORTED: 'ABORTED',
+  DUPLICATE_EFFECT: 'DUPLICATE_EFFECT',
+  DUPLICATE_TRANSACTION: 'DUPLICATE_TRANSACTION',
+  CLAIMS_CAPACITY: 'CLAIMS_CAPACITY',
+  SEND_UNKNOWN: 'SEND_UNKNOWN',
+  SETTLEMENT_REJECTED: 'SETTLEMENT_REJECTED',
+  DELIVERY_REJECTED: 'DELIVERY_REJECTED',
+  VERIFIER_FAILED: 'VERIFIER_FAILED',
+};
+
+const EXIT = 'return to the person: change the agreement or cancel';
+
+function specError() {
+  const error = new Error('x402 spec is invalid');
+  error.code = 'VESPI_X402_INVALID_SPEC';
+  return error;
+}
+
+function portError() {
+  const error = new Error('x402 ports are invalid');
+  error.code = 'VESPI_X402_INVALID_PORT';
+  return error;
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  try {
+    const proto = Object.getPrototypeOf(value);
+    return proto === Object.prototype || proto === null;
+  } catch {
+    return false;
+  }
+}
+
+// A spec that carries its own cycle cannot be canonicalized, frozen or hashed later. Refusing it
+// here keeps every later read of the declaration total.
+function hasCycle(value, depth = 0, seen = new Set()) {
+  if (depth > MAX_SPEC_DEPTH) return true;
+  if (value === null || typeof value !== 'object') return false;
+  if (seen.has(value)) return true;
+  seen.add(value);
+  let cyclic = false;
+  try {
+    for (const key of Object.keys(value)) {
+      if (hasCycle(value[key], depth + 1, seen)) {
+        cyclic = true;
+        break;
+      }
+    }
+  } catch {
+    return true;
+  }
+  seen.delete(value);
+  return cyclic;
+}
+
+function readText(source, key) {
+  const value = source[key];
+  if (typeof value !== 'string' || value.length === 0 || value.length > MAX_TEXT) throw specError();
+  return value;
+}
+
+// HTTPS anywhere, or HTTP only on the loopback host: a paid effect never leaves in the clear.
+function readUrl(source) {
+  const raw = readText(source, 'url');
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw specError();
+  }
+  if (parsed.hash !== '' || parsed.username !== '' || parsed.password !== '') throw specError();
+  if (parsed.protocol === 'https:') return parsed.toString();
+  if (parsed.protocol === 'http:' && LOOPBACK_HOSTS.has(parsed.hostname)) return parsed.toString();
+  throw specError();
+}
+
+function readAmount(source) {
+  const value = source.amount;
+  if (typeof value !== 'string' || !ATOMIC.test(value)) throw specError();
+  return value;
+}
+
+function readWindow(source) {
+  const value = source.maxTimeoutSeconds;
+  if (!Number.isInteger(value) || value < MIN_WINDOW_SECONDS || value > MAX_WINDOW_SECONDS) throw specError();
+  return value;
+}
+
+function readSpec(raw) {
+  if (!isPlainObject(raw)) throw specError();
+  if (hasCycle(raw)) throw specError();
+  let frozen;
+  try {
+    frozen = Object.freeze({
+      id: readText(raw, 'id'),
+      url: readUrl(raw),
+      method: readText(raw, 'method'),
+      network: readText(raw, 'network'),
+      asset: readText(raw, 'asset'),
+      grantAsset: readText(raw, 'grantAsset'),
+      payer: readText(raw, 'payer'),
+      payTo: readText(raw, 'payTo'),
+      amount: readAmount(raw),
+      maxTimeoutSeconds: readWindow(raw),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.code === 'VESPI_X402_INVALID_SPEC') throw error;
+    throw specError();
+  }
+  if (frozen.method !== 'GET') throw specError();
+  return frozen;
+}
+
+function readPorts(raw) {
+  if (!isPlainObject(raw)) throw portError();
+  let ports;
+  try {
+    const http = raw.http;
+    const signer = raw.signer;
+    if (!isPlainObject(http) || typeof http.discover !== 'function' || typeof http.sendPaid !== 'function') throw portError();
+    if (!isPlainObject(signer) || typeof signer.prepare !== 'function') throw portError();
+    if (typeof raw.inspectPrepared !== 'function') throw portError();
+    if (typeof raw.verifySettlement !== 'function') throw portError();
+    if (typeof raw.validateOutput !== 'function') throw portError();
+    let claims = null;
+    if (raw.claims !== undefined && raw.claims !== null) {
+      if (!isPlainObject(raw.claims) || typeof raw.claims.reserveEffect !== 'function' || typeof raw.claims.claimTransaction !== 'function') {
+        throw portError();
+      }
+      claims = { reserveEffect: raw.claims.reserveEffect, claimTransaction: raw.claims.claimTransaction };
+    }
+    ports = {
+      discover: http.discover,
+      sendPaid: http.sendPaid,
+      prepare: signer.prepare,
+      inspectPrepared: raw.inspectPrepared,
+      verifySettlement: raw.verifySettlement,
+      validateOutput: raw.validateOutput,
+      claims,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.code === 'VESPI_X402_INVALID_PORT') throw error;
+    throw portError();
+  }
+  return ports;
+}
+
+// The expected effect a settlement has to match, built from the declaration and never from what the
+// server said. The grant asset is the authority identifier and may differ from the protocol asset.
+function expectedEffect(spec) {
+  return Object.freeze({
+    network: spec.network,
+    asset: spec.asset,
+    payer: spec.payer,
+    payTo: spec.payTo,
+    amount: spec.amount,
+  });
+}
+
+function requirementOf(spec) {
+  return Object.freeze({ asset: spec.grantAsset, amount: spec.amount, to: spec.payTo });
+}
+
+function sameEffect(effect, expected) {
+  if (!isPlainObject(effect)) return false;
+  for (const key of Object.keys(expected)) {
+    if (effect[key] !== expected[key]) return false;
+  }
+  return true;
+}
+
+// The set of keys allowed inside `extra`. A server that adds an economic field the kernel does not
+// understand is refused instead of being silently ignored: an unknown key is a possible new flow.
+function extraIsSupported(extra) {
+  if (extra === undefined) return false;
+  if (!isPlainObject(extra)) return false;
+  for (const key of Object.keys(extra)) {
+    if (!ALLOWED_EXTRA_KEYS.has(key)) return false;
+  }
+  if (extra.areFeesSponsored !== true) return false;
+  if (extra.paymentFlow !== undefined && !SUPPORTED_PAYMENT_FLOWS.has(extra.paymentFlow)) return false;
+  return true;
+}
+
+// One offer is acceptable only when it is the declared effect, exactly. A smaller amount is not a
+// discount this kernel accepts, and a larger one is not covered by the ceiling: the amount is
+// compared as a canonical decimal, never as a bound.
+function offerIsExact(offer, spec) {
+  if (!isPlainObject(offer)) return false;
+  if (offer.scheme !== SUPPORTED_SCHEME) return false;
+  if (offer.network !== spec.network) return false;
+  if (offer.asset !== spec.asset) return false;
+  if (offer.payTo !== spec.payTo) return false;
+  if (typeof offer.amount !== 'string' || !ATOMIC.test(offer.amount) || offer.amount !== spec.amount) return false;
+  if (!Number.isInteger(offer.maxTimeoutSeconds)) return false;
+  if (offer.maxTimeoutSeconds < MIN_WINDOW_SECONDS || offer.maxTimeoutSeconds > MAX_WINDOW_SECONDS) return false;
+  return extraIsSupported(offer.extra);
+}
+
+function copyTerms(spec, offer) {
+  const extra = {};
+  for (const key of Object.keys(offer.extra)) extra[key] = offer.extra[key];
+  return Object.freeze({
+    scheme: SUPPORTED_SCHEME,
+    network: spec.network,
+    asset: spec.asset,
+    payTo: spec.payTo,
+    amount: spec.amount,
+    maxTimeoutSeconds: offer.maxTimeoutSeconds,
+    extra: Object.freeze(extra),
+  });
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === 'object') {
+    const out = {};
+    for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
+    return out;
+  }
+  return value;
+}
+
+function sha256(text) {
+  return createHash('sha256').update(text, 'utf8').digest('hex');
+}
+
+function selectX402Terms() {
+  return { ok: false, code: CODES.INVALID_SPEC };
+}
+
+function createMemoryPaymentClaims() {
+  return { reserveEffect: () => 'capacity', claimTransaction: () => 'capacity' };
+}
+
+function createX402Payment(rawSpec, rawPorts) {
+  const spec = readSpec(rawSpec);
+  const ports = readPorts(rawPorts);
+  return {
+    id: spec.id,
+    required: () => ({ spend: [{ asset: spec.grantAsset, amount: spec.amount, to: spec.payTo }] }),
+    run: () => { throw new Error('x402 payment run is not built yet'); },
+  };
+}
+
+module.exports = { createX402Payment, selectX402Terms, createMemoryPaymentClaims };
