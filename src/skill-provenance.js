@@ -112,6 +112,18 @@ function readString(source, key) {
   }
 }
 
+// A boolean flag, read under its own guard and answered with three values instead of two. `null`
+// means the resolver did not answer, which is not `false`: it is one check left uncovered, and the
+// rest of the answer is still worth reading (A18).
+function readFlag(source, key) {
+  try {
+    const value = source[key];
+    return value === true ? true : value === false ? false : null;
+  } catch {
+    return null;
+  }
+}
+
 // A capability name a person can grant: non-blank text, no wildcard. `read:*` is not expanded into
 // `read:project` here. A grant means the exact names on it, and widening it is the person's edit to
 // make in the open, not a rule hidden in the kernel.
@@ -410,35 +422,33 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     return settle(record, 'not_verifiable', reason, checks, false);
   }
 
-  // Every field is read once, inside one guard, so a hostile evidence record either yields all of
-  // itself or none of it.
-  let exists;
-  let repository = null;
-  let author = null;
+  // Every field is read exactly once, and each one under its own guard. A single guard around all of
+  // them let a getter that throws on `content` take the whole answer down with it, including an
+  // `exists: false` sitting right beside it: a field nobody could read is a field nobody answered,
+  // which is never a refutation and must never be able to hide one (A18, review R204, R205). Nothing
+  // thrown here is read, inspected or copied into a reason.
+  const exists = readFlag(evidence, 'exists');
+  const repository = readString(evidence, 'repository');
+  const author = readString(evidence, 'author');
+  const evidenceCommit = readString(evidence, 'commit');
+  const contentDigest = readString(evidence, 'contentDigest');
   let content = null;
-  let contentDigest = null;
-  let evidenceCommit = null;
   try {
-    exists = evidence.exists;
-    repository = readString(evidence, 'repository');
-    author = readString(evidence, 'author');
     content = evidence.content;
-    contentDigest = readString(evidence, 'contentDigest');
-    evidenceCommit = readString(evidence, 'commit');
   } catch {
-    return stoppedAt('the evidence could not be read');
+    content = null;
   }
 
   // The commit has to be there at all, and the evidence has to be about *this* commit. `exists: true`
   // with no id says that some commit exists somewhere; the question was about one particular id, so
   // without the id nothing is covered and nothing is refuted. Evidence about another id answers a
-  // question nobody asked, and that is a refutation (A04).
+  // question nobody asked, and that is a refutation (A04). An unanswered `exists` says nothing at
+  // all, so `commit_exists` is left uncovered and the repository, the author and the content are
+  // still compared below: one missing field does not decide the other three.
   if (exists === false) {
     checks.commit_exists = false;
     refuted.push(`commit ${record.commit} is not in ${record.repository}`);
-  } else if (exists !== true) {
-    return refuse(record, 'the resolver did not say whether the commit exists');
-  } else if (evidenceCommit !== null) {
+  } else if (exists === true && evidenceCommit !== null) {
     if (evidenceCommit !== record.commit) {
       checks.commit_exists = false;
       refuted.push(`the resolver answered about commit ${evidenceCommit.slice(0, 120)}, not about ${record.commit.slice(0, 120)}`);
