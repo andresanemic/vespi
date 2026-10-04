@@ -18,6 +18,7 @@ const { sufficient } = require('./authority.js');
 const { runOperation } = require('./operation.js');
 const { parseTime } = require('./time.js');
 const { createHash } = require('node:crypto');
+const { types: utilTypes } = require('node:util');
 
 // A canonical positive decimal amount, at most 78 digits, no sign, no exponent, no leading zero.
 const ATOMIC = /^[1-9][0-9]{0,77}$/;
@@ -220,6 +221,46 @@ function sameEffect(effect, expected) {
   return true;
 }
 
+// A getter, a setter or a proxy can answer twice with two different things, and a trap can answer
+// by throwing. A container is plain only when it is an array or a plain object, carries no accessor
+// of its own and is not a proxy. The check reads descriptors, never values, so an accessor is
+// refused before it is ever called.
+function isPlainContainer(value) {
+  if (value === null || typeof value !== 'object') return false;
+  if (utilTypes.isProxy(value)) return false;
+  if (!isPlainObject(value) && !Array.isArray(value)) return false;
+  try {
+    for (const key of Object.keys(value)) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (descriptor === undefined || descriptor.get !== undefined || descriptor.set !== undefined) return false;
+    }
+  } catch {
+    return false;
+  }
+  return true;
+}
+
+// The same question at every level: the deepest reachable value has to be plain data too, and a
+// cycle is refused because a cyclic offer cannot be frozen, compared or signed.
+function isPlainData(value, depth = 0, seen = new Set()) {
+  if (value === null || typeof value !== 'object') return true;
+  if (depth >= MAX_SPEC_DEPTH || seen.has(value) || !isPlainContainer(value)) return false;
+  seen.add(value);
+  let plain = true;
+  try {
+    for (const key of Object.keys(value)) {
+      if (!isPlainData(value[key], depth + 1, seen)) {
+        plain = false;
+        break;
+      }
+    }
+  } catch {
+    plain = false;
+  }
+  seen.delete(value);
+  return plain;
+}
+
 // The set of keys allowed inside `extra`. A server that adds an economic field the kernel does not
 // understand is refused instead of being silently ignored: an unknown key is a possible new flow.
 function extraIsSupported(extra) {
@@ -250,21 +291,32 @@ function offerIsExact(offer, spec) {
   return extraIsSupported(offer.extra);
 }
 
-function copyTerms(spec, offer) {
-  const extra = {};
-  for (const key of Object.keys(offer.extra)) {
-    // An absent field stays absent: writing it as an explicit undefined would change what the terms
-    // say to whoever signs them.
-    if (offer.extra[key] === undefined) continue;
-    extra[key] = offer.extra[key];
+// The offer becomes a frozen plain copy read once, and that same copy is what gets validated and
+// what gets returned. The candidate's own fields are copied rather than the declaration's, so a
+// candidate that disagrees with the declaration is still refused by the validation below instead of
+// being corrected into agreement. An absent `extra` field stays absent: writing it as an explicit
+// undefined would change what the terms say to whoever signs them.
+function copyTerms(offer) {
+  if (!isPlainData(offer)) return null;
+  let extra;
+  let window;
+  try {
+    window = offer.maxTimeoutSeconds;
+    extra = {};
+    for (const key of Object.keys(offer.extra)) {
+      if (offer.extra[key] === undefined) continue;
+      extra[key] = offer.extra[key];
+    }
+  } catch {
+    return null;
   }
   return Object.freeze({
-    scheme: SUPPORTED_SCHEME,
-    network: spec.network,
-    asset: spec.asset,
-    payTo: spec.payTo,
-    amount: spec.amount,
-    maxTimeoutSeconds: offer.maxTimeoutSeconds,
+    scheme: offer.scheme,
+    network: offer.network,
+    asset: offer.asset,
+    payTo: offer.payTo,
+    amount: offer.amount,
+    maxTimeoutSeconds: window,
     extra: Object.freeze(extra),
   });
 }
@@ -284,8 +336,11 @@ function sha256(text) {
 }
 
 // The authority on hand has to name this recipient: a wildcard grant is a permission to spend
-// somewhere, not to pay this particular counterparty, so it does not authorize this payment.
+// somewhere, not to pay this particular counterparty, so it does not authorize this payment. The
+// authority has to be plain data too: a getter or a proxy there could answer once to the check and
+// once to the spend, and the check is the only thing standing between the two.
 function liveGrant(authority, spec, now) {
+  if (!isPlainData(authority)) return { ok: false, code: CODES.TERMS_REJECTED };
   const requirement = requirementOf(spec);
   const grants = Array.isArray(authority?.spend) ? authority.spend : [];
   let named = false;
@@ -321,6 +376,9 @@ function readAccepts(required, spec) {
   if (required.resource.url !== spec.url) return null;
   const accepts = required.accepts;
   if (!Array.isArray(accepts) || accepts.length === 0 || accepts.length > MAX_ACCEPTS) return null;
+  // The list itself has to be plain data before a single offer is read out of it. An offer that is
+  // not plain is refused later, as a refusal of terms, not as a malformed declaration.
+  if (!isPlainContainer(accepts)) throw specError();
   return accepts;
 }
 
@@ -342,23 +400,29 @@ function selectX402Terms(required, rawSpec, authority, now) {
   const moment = parseTime(now === undefined || now === null ? Date.now() : now);
   if (moment === null) return { ok: false, code: CODES.INVALID_CLOCK };
 
-  const cover = liveGrant(authority, spec, moment);
-  if (!cover.ok) return cover;
+  // Everything from here to the return speaks to the outside: the authority, the list of offers and
+  // the copy of one offer. Each of those is either refused here or guarded where it is read, so a
+  // host that lies with a getter or a trap gets a public code instead of a throw that would carry
+  // whatever it wrote.
   try {
+    const cover = liveGrant(authority, spec, moment);
+    if (!cover.ok) return cover;
     const check = sufficient([requirementOf(spec)], authority, { now: moment });
     if (!check || check.ok !== true) return { ok: false, code: CODES.TERMS_REJECTED };
+
+    for (const candidate of accepts) {
+      const terms = copyTerms(candidate);
+      if (terms === null) continue;
+      let exact = false;
+      try {
+        exact = offerIsExact(terms, spec);
+      } catch {
+        exact = false;
+      }
+      if (exact) return { ok: true, terms };
+    }
   } catch {
     return { ok: false, code: CODES.TERMS_REJECTED };
-  }
-
-  for (const candidate of accepts) {
-    let exact = false;
-    try {
-      exact = offerIsExact(candidate, spec);
-    } catch {
-      exact = false;
-    }
-    if (exact) return { ok: true, terms: copyTerms(spec, candidate) };
   }
   return { ok: false, code: CODES.TERMS_REJECTED };
 }
