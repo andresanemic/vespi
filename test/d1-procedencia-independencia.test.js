@@ -99,8 +99,11 @@ test('D1 an echo of the question is not verified provenance (N05)', async () => 
   const result = await verifySkillProvenance(claim, (question) => ({ ...question, exists: true }));
   assert.notEqual(result.status, 'verified', 'a one-key echo of the question is verified provenance');
   assert.equal(result.status, 'not_verifiable');
-  assert.deepEqual([...result.notCovered].sort(), ['author', 'commit_exists', 'content_digest']);
-  assert.deepEqual([...result.coverage], ['repository']);
+  // What the echo can still cover is the location, because the location is the only thing it was
+  // told. The two answers it was asked to produce are exactly the two it cannot.
+  assert.deepEqual([...result.notCovered].sort(), ['author', 'content_digest']);
+  assert.deepEqual([...result.coverage].sort(), ['commit_exists', 'repository']);
+  assert.equal(result.contentRecomputed, false);
   assert.equal(authorizeSkill(claim, result, ['read:project']).authorized, false);
 });
 
