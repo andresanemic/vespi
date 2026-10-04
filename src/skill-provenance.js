@@ -539,7 +539,14 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const contentRecomputed = hasContent;
   if (resolvedDigest !== record.contentDigest) {
     checks.content_digest = false;
-    refuted.push(`the content at ${record.commit.slice(0, 12)} hashes to ${resolvedDigest.slice(0, 12)}, not to the digest of what was registered (${record.contentDigest.slice(0, 12)})`);
+    // The prefix of the digest that was reported is quoted only when this kernel computed it. When
+    // the resolver sent a digest instead of bytes, that prefix is its own text, and the rule this
+    // module applies to everything else the resolver writes applies to it: it does not get quoted
+    // back. The digest that was registered is this module's, and it is the one worth naming (N01).
+    const reported = hasContent
+      ? `the content at ${record.commit.slice(0, 12)} hashes to ${resolvedDigest.slice(0, 12)}`
+      : `the digest the resolver reported for ${record.commit.slice(0, 12)}`;
+    refuted.push(`${reported}, not to the digest of what was registered (${record.contentDigest.slice(0, 12)})`);
   } else {
     checks.content_digest = true;
   }
