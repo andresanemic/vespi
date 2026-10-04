@@ -243,6 +243,7 @@ function seal(receipt) {
 }
 
 function blockedReceipt(snapshot, action, reason, at, signalId) {
+  const checks = { grantor_authority: snapshot !== null, trigger_verified: false };
   const receipt = {
     status: 'blocked',
     operation: { id: snapshot ? snapshot.id : 'unknown', goal: snapshot ? snapshot.purpose : DEFAULT_GOAL },
@@ -255,12 +256,8 @@ function blockedReceipt(snapshot, action, reason, at, signalId) {
     },
     outcome: 'blocked',
     evidence: signalId ? { signalId } : null,
-    verification: {
-      verified: false,
-      checks: { grantor_authority: snapshot !== null, trigger_verified: false },
-      reason,
-    },
-    coverage: coverageOf({ grantor_authority: snapshot !== null, trigger_verified: false }),
+    verification: { verified: false, checks, reason },
+    coverage: coverageOf(checks),
     notCovered: ['trigger_verified', 'effect_verified', 'external anchor'],
     anchor: { ...PENDING_ANCHOR },
     detail: reason,
@@ -478,6 +475,7 @@ function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {
   if (!clock.ok) throw new Error(clock.reason);
   const reviewedAt = iso(clock.now);
   const original = record.receipts.get(useId);
+  if (!original || !original.review) throw new Error('the receipt for this use is not in the record, so nothing can be closed over it');
   const closed = seal({
     ...original,
     review: { ...original.review, status: 'reviewed', decision, by, reviewedAt },

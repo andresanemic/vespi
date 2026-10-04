@@ -192,7 +192,7 @@ test('a verifier that answers with a promise is refused: the kernel does not wai
   const ledger = emergency.createEmergencyLedger();
   const first = emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT });
   assert.equal(first.state, 'blocked');
-  assert.match(first.reason, /verif|verifier/i);
+  assert.match(first.reason, /asynchronous/i);
   assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 0, 'a refused verification spends nothing');
   const stillOpen = emergency.getEmergencyState(permission, { ledger, now: AT });
   assert.equal(stillOpen.pendingReview, null, 'a refused attempt leaves no review behind');
@@ -397,6 +397,10 @@ test('renewal refuses to widen actions, scope, destination, triggers, reviewers,
     { maxUses: 99 },
     { purpose: 'anything else' },
     { owner: 'agent-1' },
+    // The dangerous shape: a renewal that also carries a longer clock, so the clock alone would pass.
+    { expiresAt: '2026-10-06T00:00:00Z', scope: ['allergy-summary', 'full-record'] },
+    { expiresAt: '2026-10-06T00:00:00Z', maxUses: 99 },
+    { expiresAt: '2026-10-06T00:00:00Z', owner: 'agent-1' },
   ];
   for (const changes of widenings) {
     assert.throws(() => emergency.renewEmergencyPermission(permission, changes), /renew|widen|expand|cannot/i, JSON.stringify(changes));
@@ -420,7 +424,7 @@ test('a permission that was not granted through the kernel exercises nothing', a
   };
   const result = use(forged, REQUEST(), AT);
   assert.equal(result.state, 'blocked');
-  assert.match(result.reason, /grant|verifier|bound|independent/i);
+  assert.match(result.reason, /bound/i, 'the refusal names the missing binding, not a generic failure');
   assert.equal(result.receipt.status, 'blocked');
 });
 
@@ -509,6 +513,15 @@ test('a review stamped with a clock the kernel cannot read is refused, and stays
   emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT });
   assert.throws(() => emergency.reviewEmergencyUse(permission, 'use-1', { ledger, by: 'person-1', decision: 'accept', now: 'not-a-time' }), /clock|time/i);
   assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).pendingReview, 'use-1');
+});
+
+test('a signal that cannot be walked is blocked, not crashed on', async () => {
+  const permission = await granted();
+  const signal = { id: 'signal-use-1', source: 'triage-service', critical: true };
+  signal.self = signal;
+  const result = use(permission, REQUEST({ triggerSignal: signal }), AT);
+  assert.equal(result.state, 'blocked');
+  assert.equal(verifyReceipt(result.receipt).ok, true);
 });
 
 test('the signal body never travels into the receipt: only the id the verifier vouched for', async () => {
