@@ -90,6 +90,11 @@ const wholeNumber = Number.isInteger;
 const safeInteger = Number.isSafeInteger;
 const nullObject = Object.create;
 const frozen = Object.freeze;
+// The collection walk, for the same reason as the primitives above: `for...of` over anything is a call
+// to `Symbol.iterator` looked up on a prototype at the moment it runs, so a host that replaced it
+// after this module was loaded would have chosen what the loop saw. One probe caught this: with a
+// generator installed on `Array.prototype[Symbol.iterator]`, a grant of `read` registered as `delete`.
+const setEach = Set.prototype.forEach;
 // The comparison `Array.prototype.sort` performs, held onto as the function itself and not as a
 // lookup on the prototype: a host that replaced `Array.prototype.sort` after this module was loaded
 // would otherwise decide what a receipt says it covered (B03). The keys and names sorted below are
@@ -147,7 +152,11 @@ function joinWith(list, separator) {
 // A spread asks the source to list its keys and reads each one, which is caller code; this asks the
 // same question of an object this module built, with the reference it captured at load.
 function copyOwn(source, target) {
-  for (const key of ownKeysOf(source)) target[key] = source[key];
+  const keys = ownKeysOf(source);
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
+    target[key] = source[key];
+  }
   return target;
 }
 
@@ -202,7 +211,7 @@ function canonicalize(value) {
   if (value !== null && typeof value === 'object') {
     const out = nullObject(null);
     const keys = defaultSort(ownKeysOf(value));
-    for (const key of keys) out[key] = canonicalize(value[key]);
+    for (let index = 0; index < keys.length; index += 1) out[keys[index]] = canonicalize(value[keys[index]]);
     return out;
   }
   return value;
@@ -396,11 +405,12 @@ function registerSkillProvenance(spec) {
 }
 
 // Reading the registry. Identity and digests only: the content itself never sits in a list, because
-// the list is the part most likely to be logged.
+// the list is the part most likely to be logged. The walk is `forEach` and not `for...of`, so it does
+// not go through `Set.prototype[Symbol.iterator]`, which is a prototype this module does not own.
 function listSkillProvenance() {
   const out = [];
   let count = 0;
-  for (const record of REGISTERED) {
+  setEach.call(REGISTERED, (record) => {
     out[count] = {
       name: record.name,
       repository: record.repository,
@@ -409,7 +419,7 @@ function listSkillProvenance() {
       contentDigest: record.contentDigest,
     };
     count += 1;
-  }
+  });
   return recordSort(out, (a, b) => (a.name === b.name ? (a.commit < b.commit ? -1 : 1) : (a.name < b.name ? -1 : 1)));
 }
 
@@ -462,7 +472,10 @@ function checkOf(checks, key) {
 function withChecks(values) {
   const out = nullObject(null);
   const keys = defaultSort(ownKeysOf(values));
-  for (const key of keys) out[key] = values[key] === true;
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
+    out[key] = values[key] === true;
+  }
   return frozen(out);
 }
 
@@ -518,7 +531,8 @@ function everyCheckPassed(checks) {
 function coveredKeys(checks) {
   const out = [];
   const keys = defaultSort(ownKeysOf(checks));
-  for (const key of keys) {
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
     if (checks[key] === true) out[out.length] = key;
   }
   return out;
@@ -527,7 +541,8 @@ function coveredKeys(checks) {
 function uncoveredKeys(checks) {
   const out = [];
   const keys = defaultSort(ownKeysOf(checks));
-  for (const key of keys) {
+  for (let index = 0; index < keys.length; index += 1) {
+    const key = keys[index];
     if (checks[key] !== true) out[out.length] = key;
   }
   return out;
@@ -871,8 +886,8 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const unknown = notCoveredOf(checks);
   const failures = [];
   const keys = ownKeysOf(checks);
-  for (const key of keys) {
-    if (checks[key] === false) failures[failures.length] = key;
+  for (let index = 0; index < keys.length; index += 1) {
+    if (checks[keys[index]] === false) failures[failures.length] = keys[index];
   }
   if (failures.length > 0) {
     // The flag travels with the refutation too. SHA-256 ran over the bytes before the verdict was

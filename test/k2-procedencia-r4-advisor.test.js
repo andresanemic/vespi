@@ -27,6 +27,7 @@ const {
   verifySkillProvenance,
   authorizeSkill,
   loadSkill,
+  listSkillProvenance,
   buildSkillReceipt,
 } = require('../src/skill-provenance.js');
 const { verifyReceipt } = require('../src/receipt.js');
@@ -548,4 +549,39 @@ test('B05 a replaced String.prototype cannot widen a grant or hide a wildcard', 
   assert.throws(() => registerSkillProvenance({ ...SPEC, authority: ['   '] }), /capability names/);
   const blank = registerSkillProvenance({ ...SPEC, authority: ['read'] });
   assert.deepEqual([...blank.authority], ['read']);
+});
+
+test('B06 a replaced Symbol.iterator cannot rewrite a grant, a request or a receipt', async () => {
+  // `for...of` is a call to `Symbol.iterator` looked up at the moment it runs, so the loop that walks
+  // a list of own keys or a set of records was one replaced generator away from seeing something else.
+  // The internal walks are index loops and the registry walk is `forEach`; this pins that.
+  const registered = claim();
+  const result = await verifiedFor(registered);
+  const saved = Object.getOwnPropertyDescriptors(Array.prototype);
+  const savedIterator = Object.getOwnPropertyDescriptor(Array.prototype, Symbol.iterator);
+  const savedSetIterator = Object.getOwnPropertyDescriptor(Set.prototype, Symbol.iterator);
+  Array.prototype[Symbol.iterator] = function* substituted() { yield 'delete'; };
+  Set.prototype[Symbol.iterator] = function* substituted() { yield { name: 'ghost', repository: 'ghost', commit: 'ghost', author: 'ghost', contentDigest: 'ghost' }; };
+  let receipt;
+  let listing;
+  try {
+    receipt = receiptOf(authorizeSkill(registered, result, ['read']));
+    listing = listSkillProvenance().filter((entry) => entry.name === 'r4');
+  } finally {
+    for (const key of Object.keys(saved)) {
+      const descriptor = saved[key];
+      if (descriptor !== undefined) Object.defineProperty(Array.prototype, key, descriptor);
+    }
+    Object.defineProperty(Array.prototype, Symbol.iterator, savedIterator);
+    Object.defineProperty(Set.prototype, Symbol.iterator, savedSetIterator);
+  }
+  assert.equal(receipt.status, 'verified');
+  assert.deepEqual(receipt.skill.requested, ['read']);
+  assert.deepEqual(receipt.skill.granted, ['read']);
+  assert.deepEqual(receipt.skill.coverage, ['author', 'commit_exists', 'content_digest', 'repository']);
+  // Every case in this file registers the same skill, so the listing holds many of them. What matters
+  // is that none of them is the record the substituted set iterator was yielding.
+  assert.ok(listing.length > 0, 'the registry listing came back empty');
+  for (const entry of listing) assert.equal(entry.repository, SPEC.repository, 'a substituted registry entry reached the listing');
+  for (const entry of listSkillProvenance()) assert.notEqual(entry.name, 'ghost', 'a substituted entry is in the registry');
 });
