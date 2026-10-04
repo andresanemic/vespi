@@ -215,3 +215,24 @@ test('A03-R413 a grant too wide for its own canonical budget cannot be approved 
   assert.equal(verifyReceipt(receipt).ok, true);
   assert.match(receipt.authorization.grantDigest, /^[a-f0-9]{64}$/);
 });
+// ─── The compatibility this round had to keep: what a receipt says, not who signed it ───────────
+
+test('A04 a receipt sealed under the identity door keeps the digest the previous module sealed', async () => {
+  // Both digests below were measured against `src/emergency.js` at cfafca6, the commit before this
+  // round, running the same grant, the same signal and the same clock with the port injected. The
+  // receipt is the same object: the principal never travels, the declared name it stands for is what
+  // gets sealed, so nothing an old consumer reads moved and no old digest changed.
+  const permission = await granted({ id: 'compat' }, () => ({ verified: true, reason: 'the sensor signed this' }));
+  const ledger = emergency.createEmergencyLedger();
+  const used = run(permission, ledger);
+  assert.equal(used.receipt.digest, 'd3bc8d9519aa61087996b9bdbb93e5df680332b6aa8e52f3b0fe161f32552791');
+  assert.equal(verifyReceipt(used.receipt).ok, true);
+  const closed = emergency.reviewEmergencyUse(permission, 'u', {
+    ledger, by: host.principal('person'), decision: 'accept', now: '2026-10-04T12:05:00Z',
+  });
+  assert.equal(closed.digest, '9680981c2ed518c84f6fdafe5cc6ad488e032762f8019b76f353e3614ecb074f');
+  assert.equal(closed.review.by, 'person');
+  assert.equal(verifyReceipt(closed).ok, true);
+  // A pause answers with the state, not a receipt, and it is the same state too.
+  assert.equal(emergency.pauseEmergencyPermission(permission, { ledger, by: host.principal('person'), now: AT }).status, 'paused');
+});
