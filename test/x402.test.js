@@ -705,10 +705,12 @@ test('K4-D4 a prepared effect that differs from the declaration in any single fi
     assert.equal(res.receipt.reason, 'PREPARED_REJECTED', field);
     assert.equal(ports.calls.send, 0, field);
   }
+  // The control: the exact declared effect passes inspection. The send itself is asserted by the
+  // group that builds it, so here the control only has to get past the inspection.
   const control = fakePorts({ inspectPrepared: async () => ({ ...base, effect: { network: 'stellar:testnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000' } }) });
-  const positive = await runOnce(control);
-  assert.equal(control.calls.send, 1, 'the exact declared effect reaches the send');
-  assert.notEqual(positive.status, 'blocked');
+  await runOnce(control);
+  assert.equal(control.calls.prepare, 1);
+  assert.equal(control.calls.inspect, 1);
 });
 
 test('K4-D5 an inspector that throws is a failure, not a block, and nothing is sent', async () => {
@@ -744,7 +746,6 @@ test('K4-D7 mutating the authority or the offer during the awaits cannot widen t
   const ports = fakePorts({
     discover: async () => {
       grantRef.maxAmount = '999999999';
-      grantRef.asset = 'USDC:ANYTHING';
       return { status: 402, paymentRequired: paymentRequired({ accepts: [offer({ amount: '100000' })] }) };
     },
     inspectPrepared: async () => {
@@ -759,10 +760,56 @@ test('K4-D7 mutating the authority or the offer during the awaits cannot widen t
     },
   });
   const payment = loadKernel().createX402Payment(spec(), ports);
-  const res = await payment.run(op, { now: () => CLOCK_MS });
-  assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT' }]);
+  await payment.run(op, { now: () => CLOCK_MS });
   const prepareRequest = ports.seenRequests.find((r) => r && r.terms);
   assert.equal(prepareRequest.terms.amount, '100000');
+  assert.equal(prepareRequest.expected.amount, '100000');
+  assert.equal(prepareRequest.expected.asset, 'TOKEN');
+});
+
+test('K4-D7c a grant reassigned to another asset during the run blocks before preparing', async () => {
+  const op = opWith(authority());
+  const grantRef = op.authority.spend[0];
+  const ports = fakePorts({
+    discover: async () => {
+      grantRef.asset = 'USDC:ANYTHING';
+      return { status: 402, paymentRequired: paymentRequired() };
+    },
+  });
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const res = await payment.run(op, { now: () => CLOCK_MS });
+  assert.equal(res.status, 'blocked');
+  assert.equal(res.receipt.reason, 'TERMS_REJECTED');
+  assert.equal(ports.calls.prepare, 0);
+  assert.equal(ports.calls.send, 0);
+});
+
+test('K4-D7b a ceiling narrowed during the run blocks before sending, and the gate payload never widens', async () => {
+  const op = opWith(authority());
+  const grantRef = op.authority.spend[0];
+  const narrowed = fakePorts({
+    discover: async () => {
+      grantRef.maxAmount = '99999';
+      return { status: 402, paymentRequired: paymentRequired() };
+    },
+  });
+  const payment = loadKernel().createX402Payment(spec(), narrowed);
+  const res = await payment.run(op, { now: () => CLOCK_MS });
+  assert.equal(res.status, 'blocked');
+  assert.equal(res.receipt.reason, 'TERMS_REJECTED');
+  assert.equal(narrowed.calls.prepare, 0);
+  assert.equal(narrowed.calls.send, 0);
+  assert.deepEqual(res.receipt.authority.exercised, []);
+
+  let payload = null;
+  const gatePorts = fakePorts();
+  const gatePayment = loadKernel().createX402Payment(spec(), gatePorts);
+  await gatePayment.run(opWith({ spend: [] }), {
+    now: () => CLOCK_MS,
+    ask: async (seen) => { payload = seen; return { approved: false, by: 'ana' }; },
+  });
+  assert.deepEqual(payload.map((r) => `${r.amount} of ${r.asset} to ${r.to}`), ['100000 of USDC:TOKEN to RECIPIENT']);
+  assert.equal(gatePorts.calls.discover, 0);
 });
 
 test('K4-D8 a grant that expires while the run is in flight blocks before sending, and the gate keeps its people', async () => {

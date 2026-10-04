@@ -286,15 +286,24 @@ function liveGrant(authority, spec, now) {
   const grants = Array.isArray(authority?.spend) ? authority.spend : [];
   let named = false;
   let expired = false;
+  let wideEnough = false;
   for (const entry of grants) {
     if (!isPlainObject(entry)) continue;
     if (entry.asset !== requirement.asset || entry.to !== requirement.to) continue;
     named = true;
     const live = entry.expiresAt === undefined || (parseTime(entry.expiresAt) !== null && parseTime(entry.expiresAt) > now);
     if (!live) expired = true;
+    // A ceiling that no longer reaches the declared amount is not a grant for this payment, however
+    // generously it reads: an amount is compared as a canonical decimal, never as a bound.
+    try {
+      if (ATOMIC.test(String(entry.maxAmount)) && BigInt(String(entry.maxAmount)) >= BigInt(requirement.amount)) {
+        wideEnough = true;
+      }
+    } catch {
+    }
   }
   if (expired) return { ok: false, code: CODES.AUTHORITY_EXPIRED };
-  if (!named) return { ok: false, code: CODES.TERMS_REJECTED };
+  if (!named || !wideEnough) return { ok: false, code: CODES.TERMS_REJECTED };
   return { ok: true };
 }
 
@@ -446,8 +455,74 @@ async function discoverRequired(ports, spec, signal) {
   return { ok: true, paymentRequired: discovered.paymentRequired };
 }
 
-// Group C stops here on purpose: the reserve, prepare, send and verify stages are built by the
-// groups that test them. Nothing in this state reaches a receipt.
+// The signer is trusted to produce an authorization and nothing else. What that authorization
+// contains is read by a different port, so a signer that says "verified" about its own output buys
+// nothing here.
+async function prepareAuthorization(ctx) {
+  let prepared;
+  try {
+    prepared = await ctx.ports.prepare({ terms: ctx.terms, expected: ctx.expected, signal: ctx.signal });
+  } catch {
+    return { ok: false, code: CODES.PREPARE_FAILED };
+  }
+  if (abortedRead(ctx.signal)) return { ok: false, code: CODES.ABORTED };
+  let authorization = null;
+  try {
+    authorization = typeof prepared?.authorization === 'string' && prepared.authorization.trim().length > 0
+      ? prepared.authorization : null;
+  } catch {
+    authorization = null;
+  }
+  if (!authorization) return { ok: false, code: CODES.PREPARE_FAILED };
+  return { ok: true, authorization };
+}
+
+// The inspection has to be a positive, complete, boolean-only verdict about the authorization that
+// exists right now: `prepared` true, a reason in words, an authorization digest computed from the
+// authorization bytes, and the very effect that was declared. One missing or false control stops
+// the send.
+function inspectionIsAcceptable(result, expected) {
+  if (!isPlainObject(result)) return false;
+  if (result.verified !== true) return false;
+  if (typeof result.reason !== 'string' || result.reason.length === 0) return false;
+  if (typeof result.authDigest !== 'string' || !HASH.test(result.authDigest)) return false;
+  if (!isPlainObject(result.checks)) return false;
+  let booleanOnly = true;
+  for (const key of Object.keys(result.checks)) {
+    if (typeof result.checks[key] !== 'boolean') booleanOnly = false;
+  }
+  if (!booleanOnly) return false;
+  if (result.checks.prepared !== true) return false;
+  return sameEffect(result.effect, expected);
+}
+
+async function inspectAuthorization(ctx, authorization) {
+  let result;
+  try {
+    result = await ctx.ports.inspectPrepared(authorization, { expected: ctx.expected, signal: ctx.signal });
+  } catch {
+    // An inspector that cannot read the authorization is a failed run, not a refusal of terms.
+    return { ok: false, code: CODES.PREPARED_REJECTED, failure: true };
+  }
+  if (abortedRead(ctx.signal)) return { ok: false, code: CODES.ABORTED, failure: true };
+  let acceptable = false;
+  try {
+    acceptable = inspectionIsAcceptable(result, ctx.expected);
+  } catch {
+    acceptable = false;
+  }
+  if (!acceptable) return { ok: false, code: CODES.PREPARED_REJECTED };
+  let digest = null;
+  try {
+    digest = HASH.test(result.authDigest) ? result.authDigest : null;
+  } catch {
+    digest = null;
+  }
+  return { ok: true, authDigest: digest };
+}
+
+// Group D stops here on purpose: the send, the delivery and the settlement verifier are built by
+// the group that tests them. Nothing past this point reaches a receipt yet.
 async function perform(ctx, spec, ports, io) {
   const now = ctx.now;
   const cover = liveGrant(ctx.authority, spec, now);
@@ -458,12 +533,26 @@ async function perform(ctx, spec, ports, io) {
 
   const chosen = selectX402Terms(discovered.paymentRequired, spec, ctx.authority, now);
   if (!chosen.ok) return blocked(chosen.code);
+  ctx.terms = chosen.terms;
 
-  const recheck = liveGrant(ctx.authority, spec, now);
-  if (!recheck.ok) return blocked(recheck.code);
+  const afterDiscovery = liveGrant(ctx.authority, spec, now);
+  if (!afterDiscovery.ok) return blocked(afterDiscovery.code);
 
-  ctx.trace.push('select');
-  throw new Error('x402 contract: reserve and prepare stages are not built yet');
+  const prepared = await prepareAuthorization(ctx);
+  if (!prepared.ok) return prepared.code === CODES.ABORTED ? failed(prepared.code) : failed(prepared.code);
+
+  const inspected = await inspectAuthorization(ctx, prepared.authorization);
+  if (!inspected.ok) {
+    if (inspected.failure) return failed(inspected.code);
+    return blocked(inspected.code);
+  }
+  ctx.authDigest = inspected.authDigest;
+
+  const beforeSend = liveGrant(ctx.authority, spec, now);
+  if (!beforeSend.ok) return blocked(beforeSend.code);
+
+  ctx.trace.push('recheck');
+  throw new Error('x402 contract: the send stage is not built yet');
 }
 
 // Installed by this contract, not by the host. Replaced by the settlement verifier in group E.
