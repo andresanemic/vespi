@@ -469,7 +469,10 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const unknown = notCoveredOf(checks).filter((key) => !known.includes(key));
   const failures = Object.keys(checks).filter((key) => checks[key] === false);
   if (failures.length > 0) {
-    return settle(record, 'discrepant', refuted.join('; '), checks);
+    // The flag travels with the refutation too. SHA-256 ran over the bytes before the verdict was
+    // known, so a mismatch is a recomputation that happened, and dropping it here would have the
+    // receipt claim the digest came from a string the resolver wrote (A18, review R201, R202).
+    return settle(record, 'discrepant', refuted.join('; '), checks, contentRecomputed);
   }
   if (unknown.length > 0) {
     return settle(record, 'not_verifiable', `the resolver left ${unknown.join(', ')} unanswered, so nothing can be covered there`, checks, contentRecomputed);
