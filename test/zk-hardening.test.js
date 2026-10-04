@@ -683,7 +683,32 @@ test('K3H.28 the evidence names the key without carrying it', async () => {
   assert.equal(verifyReceipt(stranger).ok, true);
 });
 
-// E7. The two digests the kernel computes carry different domains, so a key digest can never be
+// E7. `runOperation` asked `typeof io.verify` and then read `io.verify` again to call it. Two reads of
+// the same property means the function that gets checked and the function that gets called are not
+// guaranteed to be the same one, which is the class the first review of the emergency branch found
+// in its own resolver.
+test('K3H.30 the verifier is read once, so the function called is the one that was checked', async () => {
+  const op = createOperation({ goal: 'check a proof', authority: { spend: [] } });
+  const cap = {
+    id: 'zk:check',
+    required: () => ({ spend: [{ asset: 'zk:check', amount: '1', to: 'local:zk' }] }),
+    perform: async () => ({ ok: true, evidence: goodRequest() }),
+  };
+  const decoy = () => ({ verified: false, checks: {}, reason: 'the first read, an honest refusal' });
+  const port = createZkVerifier(config({ backend: () => true }));
+  let reads = 0;
+  const io = { ask: async () => ({ approved: true }) };
+  Object.defineProperty(io, 'verify', {
+    get() { reads += 1; return reads === 1 ? decoy : port; },
+    enumerable: true,
+  });
+  const { receipt } = await runOperation(op, cap, io);
+  assert.equal(reads, 1, 'the verifier is read once');
+  assert.notEqual(receipt.status, 'verified', 'and the value that was read is the value that ran');
+  assert.ok(!('zk' in receipt.verification), 'the second answer never gets a chance to arrive');
+});
+
+// E8. The two digests the kernel computes carry different domains, so a key digest can never be
 // read as a proof digest and a proof digest can never be pinned as a key.
 test('K3H.29 the key digest and the proof digest cannot be confused', async () => {
   const verify = createZkVerifier(config({ backend: () => true }));

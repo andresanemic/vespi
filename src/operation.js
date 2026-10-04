@@ -1005,7 +1005,10 @@ async function runOperationOnce(op, capability, io) {
   // do NOT rerun, do NOT claim verified.
   let verification;
   try {
-    const verifyFn = io && typeof io.verify === 'function' ? io.verify : null;
+    // Read once. `typeof io.verify` followed by `io.verify` is two reads of the same property, and
+    // the function that gets checked is then not the function that gets called.
+    const ioVerify = io ? io.verify : undefined;
+    const verifyFn = typeof ioVerify === 'function' ? ioVerify : null;
     verification = verifyFn
       ? await withTimeout(Promise.resolve().then(() => verifyFn.call(io, capabilityResult.evidence)), readTimeout(io, 'verifyTimeoutMs'), 'verifier')
       : { verified: false, checks: {}, reason: 'no verifier' };
