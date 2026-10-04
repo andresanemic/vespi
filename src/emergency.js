@@ -18,7 +18,8 @@ const { parseTime } = require('./time.js');
 //   · people    — the principal of the owner, the grantee, every reviewer, every pauser and every
 //                verifier, as the injected `authenticate` port answered for each name when the grant
 //                was made. Every `by` a caller supplies is compared against these and against nothing
-//                else. See "the host's door" below.
+//                else, and the first principal the port gave for a name is the one it keeps. See "the
+//                host's door" below.
 //   · family    : the private identity of this one grant. Records are kept by the public id, which is
 //                not an identity, so this is what says a counter, a review or a revocation belongs
 //                to this grant and not to another person who happened to use the same id. It is also
@@ -27,36 +28,50 @@ const { parseTime } = require('./time.js');
 // carries no authority at all: its shape proves nothing, and nothing in this module may treat a
 // readable object as a granted one.
 //
-// WHAT THIS KERNEL DOES NOT KNOW: who anybody is. It reads no name and believes it, because a name is
-// exactly what a caller holding the permission and its ledger can write. It checks relations between
-// principals the host vouched for, and its whole part is refusing everything else: a self-declared
-// `by`, an alias, an object nobody issued, a port that is missing, malformed, slow or contradictory.
-// The guarantees below are therefore exactly as strong as the host that issued those principals, and
-// no stronger: a host that hands the reviewer principal to the exercising agent has broken them, and
-// this kernel cannot tell. See "the host's door" below for the whole contract and for what remains
-// the consumer's to provide.
+// WHO MAY DO WHAT is a table and not a habit: the seven verbs, the role whose principals may perform
+// each of them, whether a verb insists on a principal at all, and the sentence a caller is refused
+// with. One function reads that table and every mutating entry point answers to it, so a verb cannot
+// be added without a door. See "the one door" below.
+//
+// WHAT THIS KERNEL STILL DOES NOT KNOW: who anybody is. The exercise authenticates its caller now, so
+// a declared `actor` is no longer what stands between a reader and the authority — but what it
+// authenticates is a PRINCIPAL, and a principal is whatever the host's port issued. It reads no name
+// and believes it, and it reads none of a principal's identity fields: it only ever compares the
+// objects by reference. So it checks relations between principals the host vouched for, and its whole
+// part is refusing everything else: a self-declared `by`, an alias, an object nobody issued, a port
+// that is missing, malformed, slow or contradictory. The guarantees below are therefore exactly as
+// strong as the host that issued those principals, and no stronger: a host that hands the reviewer
+// principal to the exercising agent has broken them, and this kernel cannot tell. It also cannot
+// establish that the principal really belongs to a real person, that the two handles are the same
+// human being across two hosts, or that nobody colluded. See "the host's door" below for the whole
+// contract and for what remains the consumer's to provide.
 //
 // What the kernel does NOT do, and says so: it cannot tell a real host from a lying one, and it does
 // not know who is holding the permission handle it was given. Whoever supplies `authenticate`,
 // `authorizeGrantor`, `resolveVerifier` and `authorizeRenewal` decides who may grant, who is who,
 // what counts as the independent signal, and whether the clock may grow. The kernel's part is that an
 // agent exercising the permission can never be the source of any of them, that a permission which
-// did not come through this path holds nothing, that a caller's `by` is a principal the host issued
-// rather than a name it wrote, and that a caller cannot get the kernel to bind one value and seal
-// another by answering twice. Every field it hands over, nested triggers included, is read once, and
-// what is validated is what gets bound. A barrier against the common forgery, not a proof against a
-// Proxy that lies about its own descriptors.
+// did not come through this path holds nothing, that a caller's `by` — including the exercise's own —
+// is a principal the host issued rather than a name it wrote, that a port which answers two
+// principals for one name is refused instead of believed, and that a caller cannot get the kernel to
+// bind one value and seal another by answering twice. Every field it hands over, nested triggers
+// included, is read once, and what is validated is what gets bound. A barrier against the common
+// forgery, not a proof against a Proxy that lies about its own descriptors.
 //
-// Two guarantees hold the surface up, and both are structural rather than promised:
+// Three guarantees hold the surface up, and all three are structural rather than promised:
 //   · One record per grant family, in one ledger. A grant family is bound to the ledger it was first
 //     used with, the binding is keyed by the family and not by the handle, and it survives a renewal.
 //     The cap, the replay sets, the pause, the revocation and a rejected review all live in that one
 //     record, so none of them can be restarted by handing the kernel a different ledger (H05).
-//   · The post-use review is signed by a principal that is not the one that spent the authority.
-//     A grant that names the grantee among the reviewers of its own use is refused at the door by
-//     name, and so is an ALIAS of it, because the host's port answered with one principal for two
-//     names (H04, A01). The same refusal covers pausing, resuming and revoking, and what was spent
-//     is never verified either way.
+//   · Only the grantee may exercise, and it has to prove it with the principal the host issued for
+//     that name before the ledger is bound, before a record exists and before a verifier is asked.
+//     A caller with the permission, the ledger and a declared `actor` string spends nothing at all
+//     (R501-R505).
+//   · The post-use review is signed by a principal that is neither the one that spent the authority
+//     nor an alias of it. The open record remembers the executor as a principal, the review is
+//     refused to it, and a grant that names the grantee among the reviewers of its own use is refused
+//     at the door by name (H04, A01, R502, R504, R505). The same refusal covers pausing, resuming and
+//     revoking, and what was spent is never verified either way.
 // What no code here can give the three: a ledger that survives its process, a principal that was
 // really authenticated (the host's promise, not this module's proof), and a human who reads the
 // effect. Durability and identity are the host's to provide, and a receipt that says `not_verified`
@@ -75,23 +90,28 @@ const BINDINGS = new WeakMap();
 //   that means the same person and a DIFFERENT one for a different person.
 //
 // The principal is branded on arrival and thereafter only ever compared by reference: the kernel
-// stores an opaque handle per object and reads no field of it, copies none and seals none. So two
-// names are the same person exactly when the port says so by handing back one object, an alias cannot
-// be spelled in a grant to get around anything, and nobody can mint a principal here: possession of
-// the permission, of the ledger and of every record in it is not possession of anybody's identity.
+// stores an opaque handle per object, reads none of its identity fields, copies none and seals none.
+// So two names are the same person exactly when the port says so by handing back one object, an alias
+// cannot be spelled in a grant to get around anything, and nobody can mint a principal here: possession
+// of the permission, of the ledger and of every record in it is not possession of anybody's identity.
+// The one property this module does read is `then`, and only to refuse a promise in place of a
+// principal; that is why the claim here is about identity fields and not about fields at all.
 //
 // What this does NOT do, and says so: the guarantee is exactly as strong as the host that issued the
 // principals. A host that hands the reviewer principal to the exercising agent has broken it, and
 // this kernel has no way to know. Independence, aliasing and delegation are the host's answers; what
 // this module guarantees is that it will not let a name, an alias or a forged object stand in for
-// one, and that it fails closed when the port is absent, malformed, slow or contradictory.
+// one, and that it fails closed when the port is absent, malformed, slow or contradictory. One name
+// answered with two principals is a contradiction and is refused at the grant (R519): a port that
+// cannot say who somebody is does not get to keep going by being believed in one role and doubted in
+// another.
 const PRINCIPALS = new WeakMap();
 const NO_PRINCIPAL = 'this kernel cannot authenticate a name: whoever signed this call has to present a principal that the injected authenticate port issued, and a declared name is not one';
 let principalSequence = 0;
 
 // A principal is a frozen object this port produced, and nothing else. Frozen because a mutable one
 // could be turned into somebody else after the kernel compared it; an object because a string, an
-// array or a plain value is a claim, not an identity. No field of it is read.
+// array or a plain value is a claim, not an identity. Not one of its own fields is read.
 function brandPrincipal(principal) {
   try {
     if (!principal || typeof principal !== 'object' || Array.isArray(principal)) return false;
@@ -142,10 +162,11 @@ function askPrincipal(port, claim) {
 }
 
 // Who everybody in this grant is, asked once, before the grantor is asked anything: the owner, the
-// grantee, every declared reviewer, every declared pauser and every declared trigger verifier. The
-// declared names stay in the snapshot exactly as authorized, because they are what a receipt carries
-// and what the grant digest is made of; these principals stay in the private binding, because they
-// are what a caller's `by` has to equal.
+// grantee, every declared reviewer, every declared pauser and every declared trigger verifier. A name
+// asked in two roles has to answer with the same object both times. The declared names stay in the
+// snapshot exactly as authorized, because they are what a receipt carries and what the grant digest is
+// made of; these principals stay in the private binding, because they are what a caller's `by` has to
+// equal.
 function askPeople(port, snapshot) {
   const asked = { owner: null, grantee: null, reviewers: [], pausers: [], verifiers: [] };
   const roles = [
