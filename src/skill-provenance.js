@@ -301,6 +301,11 @@ function settle(record, status, reason, checks) {
 
 // The resolver answers one question: is this repository, at this commit, by this author, these bytes?
 // A resolver that is handed more than that can be talked into more than that.
+//
+// The deadline rejects with a value this module made, so a missed deadline can be told apart from
+// anything the resolver threw without reading what it threw.
+const DEADLINE = Object.freeze({ deadline: true });
+
 async function askResolver(resolve, question, timeoutMs) {
   if (timeoutMs === undefined) return await resolve(question);
   let timer = null;
@@ -308,7 +313,7 @@ async function askResolver(resolve, question, timeoutMs) {
     return await Promise.race([
       Promise.resolve(resolve(question)),
       new Promise((_resolve, reject) => {
-        timer = setTimeout(() => reject(new Error('the resolver did not answer in time')), timeoutMs);
+        timer = setTimeout(() => reject(DEADLINE), timeoutMs);
         if (timer && typeof timer.unref === 'function') timer.unref();
       }),
     ]);
@@ -356,7 +361,13 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   try {
     evidence = await askResolver(resolve, question, timeoutMs);
   } catch (err) {
-    return refuse(record, `the resolver did not answer: ${err && err.message ? err.message : String(err)}`);
+    // The thrown value belongs to whoever threw it: it can carry a token, a path, or a `message`
+    // getter that throws a second time while the kernel tries to report the first. None of it is
+    // read, and none of it is written into a reason that can end up inside a receipt (A05, A06). The
+    // only thing read here is the identity of the deadline, which this module made itself.
+    return refuse(record, err === DEADLINE
+      ? 'the resolver did not answer in time'
+      : 'the resolver did not answer: the call was refused or rejected');
   }
   if (evidence === null || typeof evidence !== 'object' || Array.isArray(evidence)) {
     return refuse(record, 'the resolver answered with something that is not a record of evidence');
