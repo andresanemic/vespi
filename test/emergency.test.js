@@ -483,3 +483,65 @@ test('a receipt built without emergency access keeps the exports and the digest 
   assert.equal(receipt.digest, receiptKernel.buildReceipt(spec).digest);
   assert.equal(verifyReceipt(receipt).ok, true);
 });
+
+test('an emergency receipt counts as an attempt when the agreement caps attempts', async () => {
+  const permission = await granted();
+  const { receipt } = use(permission, REQUEST(), AT);
+  const resumed = resumeFromReceipts([receipt], { approved: [{ action: 'open-record', maxAttempts: 1 }] });
+  assert.equal(resumed.needsPerson, true);
+  assert.equal(resumed.reason, 'attempts_exhausted');
+});
+
+// ─── What the state must not claim, and what must not travel ─────────────────────────────────
+
+test('without a ledger the state says it does not know, instead of claiming the permission is available', async () => {
+  const permission = await granted();
+  const state = emergency.getEmergencyState(permission, {});
+  assert.equal(state.status, 'no_ledger');
+  assert.equal(state.nextUse, 'blocked_no_ledger');
+});
+
+test('a review stamped with a clock the kernel cannot read is refused, and stays pending', async () => {
+  const permission = await granted();
+  const ledger = emergency.createEmergencyLedger();
+  emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT });
+  assert.throws(() => emergency.reviewEmergencyUse(permission, 'use-1', { ledger, by: 'person-1', decision: 'accept', now: 'not-a-time' }), /clock|time/i);
+  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).pendingReview, 'use-1');
+});
+
+test('the signal body never travels into the receipt: only the id the verifier vouched for', async () => {
+  const permission = await granted();
+  const { receipt } = use(permission, REQUEST({
+    triggerSignal: {
+      id: 'signal-use-1',
+      source: 'triage-service',
+      critical: true,
+      patientNotes: 'SECRET-NOTE-THAT-MUST-NOT-TRAVEL',
+    },
+  }), AT);
+  assert.equal(receipt.evidence.signalId, 'signal-use-1');
+  assert.ok(!JSON.stringify(receipt).includes('SECRET-NOTE-THAT-MUST-NOT-TRAVEL'));
+});
+
+test('renewal keeps the record of what was already spent: the clock moves, the count does not', async () => {
+  const permission = await granted();
+  const ledger = emergency.createEmergencyLedger();
+  emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT });
+  review(permission, 'use-1', ledger, 'accept', AT);
+  const renewed = emergency.renewEmergencyPermission(permission, { expiresAt: '2026-10-06T00:00:00Z' });
+  assert.equal(emergency.getEmergencyState(renewed, { ledger, now: AT }).uses, 1);
+  assert.equal(emergency.exerciseEmergency(renewed, REQUEST({ useId: 'use-2' }), { ledger, now: AT }).state, 'review_pending');
+  review(permission, 'use-2', ledger, 'accept', AT);
+  assert.equal(emergency.exerciseEmergency(renewed, REQUEST({ useId: 'use-3' }), { ledger, now: AT }).state, 'blocked');
+});
+
+test('after a rejected review only a new grant opens the door: the same id does not come back to life', async () => {
+  const permission = await granted();
+  const ledger = emergency.createEmergencyLedger();
+  emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT });
+  review(permission, 'use-1', ledger, 'reject', AT);
+  const sameId = await granted();
+  assert.equal(emergency.exerciseEmergency(sameId, REQUEST({ useId: 'use-9' }), { ledger, now: AT }).state, 'blocked');
+  const fresh = await granted({ id: 'emergency-2' });
+  assert.equal(emergency.exerciseEmergency(fresh, REQUEST({ useId: 'use-10' }), { ledger, now: AT }).state, 'review_pending');
+});
