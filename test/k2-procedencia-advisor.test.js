@@ -244,3 +244,29 @@ test('A17 byte recomputation is distinguishable from a resolver asserted digest'
   const asserted = await verifySkillProvenance(claim, () => ({ ...proof(), content: undefined, contentDigest: claim.contentDigest }));
   assert.notDeepEqual(bytes, asserted, 'Vela must be able to record whether the verifier recomputed content');
 });
+
+test('A17 extended: a resolver cannot claim the kernel recomputed its content', async () => {
+  const claim = registerSkillProvenance(SPEC);
+  // The flag is computed by the kernel and is never read off the evidence, so a resolver that writes
+  // it into its own answer buys nothing.
+  const asserted = await verifySkillProvenance(claim, () => ({
+    ...proof(),
+    content: undefined,
+    contentDigest: claim.contentDigest,
+    contentRecomputed: true,
+  }));
+  assert.equal(asserted.contentRecomputed, false);
+  const decision = authorizeSkill(claim, asserted, ['read']);
+  assert.equal(decision.contentRecomputed, false);
+  assert.equal(buildSkillReceipt(RECEIPT_SPEC, decision).skill.contentRecomputed, false);
+});
+
+test('A17 extended: the receipt states that the kernel hashed the bytes, and the seal covers that', async () => {
+  const claim = registerSkillProvenance(SPEC);
+  const bytes = await verifySkillProvenance(claim, proof);
+  const receipt = buildSkillReceipt(RECEIPT_SPEC, loadSkill(claim, bytes, SPEC.content, ['read']));
+  assert.equal(receipt.skill.contentRecomputed, true);
+  assert.equal(verifyReceipt(receipt).ok, true, verifyReceipt(receipt).reason);
+  const tampered = { ...receipt, skill: { ...receipt.skill, contentRecomputed: false } };
+  assert.equal(verifyReceipt(tampered).ok, false);
+});

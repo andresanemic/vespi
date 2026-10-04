@@ -258,7 +258,8 @@ function uncoveredKeys(checks) {
 
 function refuse(record, reason) {
   // No record means nothing can be covered: a claim this kernel never registered has no provenance to
-  // check, so all four checks are reported as not covered rather than quietly passing.
+  // check, so all four checks are reported as not covered rather than quietly passing. Nothing was
+  // hashed on the way here either, so `contentRecomputed` is false.
   const checks = provenanceChecks({});
   const result = Object.freeze({
     status: 'not_verifiable',
@@ -268,6 +269,7 @@ function refuse(record, reason) {
     coverage: Object.freeze(coverageOf(checks)),
     notCovered: Object.freeze(notCoveredOf(checks)),
     provenance: record === null ? null : provenanceOf(record),
+    contentRecomputed: false,
   });
   if (record !== null) VERIFIED_FOR.set(result, record);
   return result;
@@ -282,7 +284,11 @@ function provenanceOf(record) {
   });
 }
 
-function settle(record, status, reason, checks) {
+// `contentRecomputed` is computed here and nowhere else: true only when the resolver handed over text
+// and this kernel ran SHA-256 over those bytes. False when the check compared a digest the resolver
+// wrote, or when no content arrived at all. A resolver cannot assert it — the flag is not read from
+// the evidence — so a receipt can say whether the digest in it came from bytes or from a claim (A17).
+function settle(record, status, reason, checks, contentRecomputed) {
   // Every one of the four checks is present and boolean here, so `checks` cannot answer `undefined`
   // for a check this kernel did not cover while `coverage` and `notCovered`, read off the same object,
   // do report it. A check that was left unanswered is reported as false, never as absent.
@@ -297,6 +303,7 @@ function settle(record, status, reason, checks) {
     coverage: Object.freeze(coverageOf(sealed)),
     notCovered: Object.freeze(notCoveredOf(sealed)),
     provenance: provenanceOf(record),
+    contentRecomputed: contentRecomputed === true,
   });
   // Bound to the record, so this result cannot be replayed against another skill later.
   VERIFIED_FOR.set(result, record);
@@ -448,6 +455,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     return stoppedAt('the resolver reported neither the content at that commit nor its digest');
   }
   const resolvedDigest = hasContent ? sha256(content) : contentDigest;
+  const contentRecomputed = hasContent;
   if (resolvedDigest !== record.contentDigest) {
     checks.content_digest = false;
     refuted.push(`the content at ${record.commit.slice(0, 12)} hashes to ${resolvedDigest.slice(0, 12)}, not to the digest of what was registered (${record.contentDigest.slice(0, 12)})`);
@@ -464,9 +472,9 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
     return settle(record, 'discrepant', refuted.join('; '), checks);
   }
   if (unknown.length > 0) {
-    return settle(record, 'not_verifiable', `the resolver left ${unknown.join(', ')} unanswered, so nothing can be covered there`, checks);
+    return settle(record, 'not_verifiable', `the resolver left ${unknown.join(', ')} unanswered, so nothing can be covered there`, checks, contentRecomputed);
   }
-  return settle(record, 'verified', 'the resolver reported this repository, commit, author and content, and all four match', checks);
+  return settle(record, 'verified', 'the resolver reported this repository, commit, author and content, and all four match', checks, contentRecomputed);
 }
 
 // Membership by plain loop. The lists compared here are built by this module, and no method handed
@@ -509,6 +517,10 @@ function authorizeSkill(claim, result, requested) {
   const record = recordOf(claim);
   const provenance = record === null ? null : provenanceOf(record);
   const base = { provenance, name: record === null ? null : record.name, granted: record === null ? [] : [...record.authority] };
+  // Read off the linked result, not off anything the caller passed: only this kernel knows whether it
+  // hashed the bytes or believed a digest string. It stays false until a result of this kernel's own
+  // has been found, because nothing else can set it.
+  let contentRecomputed = false;
 
   // A refusal reports the coverage it really has: a request out of scope does not erase the three
   // provenance checks that passed, and a provenance that failed does not invent an `authority_scope`
@@ -532,6 +544,7 @@ function authorizeSkill(claim, result, requested) {
       name: base.name,
       granted: Object.freeze([...base.granted]),
       requested: Object.freeze([]),
+      contentRecomputed,
     });
     DECIDED_FROM.set(decision, record);
     return decision;
@@ -545,6 +558,7 @@ function authorizeSkill(claim, result, requested) {
   }
   const provenanceStatus = result.status;
   const provenanceChecks = result.checks !== null && typeof result.checks === 'object' ? result.checks : {};
+  contentRecomputed = result.contentRecomputed === true;
 
   const capture = captureRequest(requested);
   if (!capture.ok) {
@@ -611,6 +625,7 @@ function authorizeSkill(claim, result, requested) {
     name: base.name,
     granted: Object.freeze([...base.granted]),
     requested: Object.freeze([...ask]),
+    contentRecomputed,
   });
   DECIDED_FROM.set(decision, record);
   return decision;
@@ -664,6 +679,7 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
     granted: decision.granted,
     requested: decision.requested,
     loadedDigest,
+    contentRecomputed: decision.contentRecomputed === true,
   });
   if (record !== null) DECIDED_FROM.set(loaded, record);
   return loaded;
@@ -701,6 +717,7 @@ function buildSkillReceipt(spec, decision) {
     provenance: { ...decision.provenance },
     reason: decision.reason,
     loadedDigest: decision.loadedDigest === undefined ? null : decision.loadedDigest,
+    contentRecomputed: decision.contentRecomputed === true,
   });
   // `buildReceipt` sealed the body without the skill block; sealing again puts the block inside. The
   // anchor stays `pending` and is outside the digest, so this cannot move it.
