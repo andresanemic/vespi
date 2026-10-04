@@ -1103,21 +1103,31 @@ test('K4-E10 the evidence carries only admitted keys and never the body, the aut
 
 const VECTOR_OPERATION_KEY = '01e6c8504077a1e7171b0609218eb120ecfea1e92df9a216a960aab6354af446';
 // Computed by a second implementation (python json.dumps with sorted keys, then sha256), not by the
-// function under test: {"expected":{...},"operationKey":...,"request":{...},"version":1}
-const VECTOR_EFFECT_KEY = '28b7c11ae51042db176f979f961c6890cd915970ca9f2d2d1948acb9490bc07b';
+// function under test: {"expected":{...},"operation":"op-d2-vector","operationKey":...,
+// "request":{...},"version":2}. The identity of the operation is part of the effect, so two operations
+// that want the same thing are two effects and one operation retried is its duplicate.
+const VECTOR_EFFECT_KEY = '3599c7370a1febeecbbf69aa63866f2f3a921632b375ee7d9bfc9a18f3d59c56';
 
-function portsWithoutClaims(over = {}) {
-  const ports = fakePorts(over);
-  delete ports.claims;
-  return ports;
+// Two operations that are the same one: the host rebuilt it, identity included, which is what a retry
+// after a restart looks like. Distinct objects, because the engine refuses to run one operation twice
+// at once (K4-F1b).
+function sameOperationTwice(over = {}) {
+  const first = opWith(authority(over.authority || {}), over.op || {});
+  const second = opWith(authority(over.authority || {}), over.op || {});
+  second.id = first.id;
+  return [first, second];
 }
 
 test('K4-F1 two concurrent runs of the same effect pay once: one sends and the other is blocked as a duplicate', async () => {
-  const shared = portsWithoutClaims();
-  const other = portsWithoutClaims();
+  // Deduplication lives in the store the host passes, so the store is created here and handed to both
+  // contracts: the process keeps no set of its own.
+  const store = loadKernel().createMemoryPaymentClaims();
+  const shared = fakePorts({ claims: store });
+  const other = fakePorts({ claims: store });
   const first = loadKernel().createX402Payment(spec(), shared);
   const second = loadKernel().createX402Payment(spec(), other);
-  const [a, b] = await Promise.all([first.run(opWith(authority()), runIo()), second.run(opWith(authority()), runIo())]);
+  const [one, twin] = sameOperationTwice();
+  const [a, b] = await Promise.all([first.run(one, runIo()), second.run(twin, runIo())]);
   const statuses = [a.status, b.status].sort();
   assert.deepEqual(statuses, ['blocked', 'verified']);
   const blocked = a.status === 'blocked' ? a : b;
@@ -1138,18 +1148,29 @@ test('K4-F1b the same operation run twice at once keeps the engine refusal inste
   assert.equal(ports.calls.send, 1);
 });
 
-test('K4-F2 a renewed grant or a fresh operation id is still the same effect, and other networks are not', async () => {
+test('K4-F2 a renewed grant on the same operation is still the same effect, a second operation is another effect, and other networks are not', async () => {
   const store = loadKernel().createMemoryPaymentClaims();
   const ports = fakePorts({ claims: store });
   const payment = loadKernel().createX402Payment(spec(), ports);
-  const first = await payment.run(opWith(authority()), runIo());
-  assert.equal(first.status, 'verified');
-  const renewed = await payment.run(opWith(authority({ spend: [grant({ expiresAt: '2040-06-30T00:00:00.000Z' })] })), runIo());
-  assert.equal(renewed.status, 'blocked');
-  assert.equal(renewed.receipt.reason, 'DUPLICATE_EFFECT');
+  const first = opWith(authority());
+  const paid = await payment.run(first, runIo());
+  assert.equal(paid.status, 'verified');
+
+  // The same operation, retried with a renewed grant: one operation is one effect, whatever the
+  // permission says today.
+  const renewed = opWith(authority({ spend: [grant({ expiresAt: '2040-06-30T00:00:00.000Z' })] }));
+  renewed.id = first.id;
+  const again = await payment.run(renewed, runIo());
+  assert.equal(again.status, 'blocked');
+  assert.equal(again.receipt.reason, 'DUPLICATE_EFFECT');
+
+  // Another operation that wants the same thing is not a duplicate of the first one: it goes out and
+  // pays. What this simulated port cannot show is a second unique transaction, because it answers the
+  // same hash twice, and that is a separate check from the one the effect key answers for.
   const freshOperation = await payment.run(opWith(authority(), { goal: 'obtain-marketing-plan', action: 'pay' }), runIo());
-  assert.equal(freshOperation.status, 'blocked');
-  assert.equal(ports.calls.send, 1);
+  assert.notEqual(freshOperation.receipt.reason, 'DUPLICATE_EFFECT');
+  assert.equal(freshOperation.receipt.verification.checks.transactionUnique, false, 'the same simulated hash, so not verified');
+  assert.equal(ports.calls.send, 2);
 
   // A different resource is a different effect, and it settles with its own transaction.
   const elsewhere = fakePorts({
@@ -1184,18 +1205,24 @@ test('K4-F2 a renewed grant or a fresh operation id is still the same effect, an
   assert.equal(pubnetPorts.calls.claimTransaction, 1, JSON.stringify(pubnetPorts.trace));
 });
 
-test('K4-F3 the effect key is a hash of the canonical effect, and a full store blocks instead of evicting', async () => {
+test('K4-F3 the effect key is a hash of the canonical effect and the operation identity, and a full store blocks instead of evicting', async () => {
   const seenKeys = [];
   const one = loadKernel().createMemoryPaymentClaims({ capacity: 1 });
   const ports = fakePorts({ claims: { reserveEffect: (key) => { seenKeys.push(key); return one.reserveEffect(key); }, claimTransaction: (n, t) => one.claimTransaction(n, t) } });
   const payment = loadKernel().createX402Payment(spec(), ports);
-  const first = await payment.run(opWith(authority()), runIo());
-  assert.equal(first.status, 'verified');
+  // The identity is pinned so the key is a vector: the effect the operation names, hashed.
+  const first = opWith(authority());
+  first.id = 'op-d2-vector';
+  const run = await payment.run(first, runIo());
+  assert.equal(run.status, 'verified');
   assert.equal(seenKeys.length, 1);
-  assert.equal(seenKeys[0], VECTOR_EFFECT_KEY, 'the key is the canonical effect hash, verified by a second implementation');
-  const second = await payment.run(opWith(authority()), runIo());
+  assert.equal(seenKeys[0], VECTOR_EFFECT_KEY, 'the key is the canonical effect hash with the operation identity, verified by a second implementation');
+  const [retry, again] = sameOperationTwice();
+  retry.id = 'op-d2-vector';
+  again.id = 'op-d2-vector';
+  const second = await payment.run(retry, runIo());
   assert.equal(second.status, 'blocked');
-  const third = await payment.run(opWith(authority()), runIo());
+  const third = await payment.run(again, runIo());
   assert.equal(third.status, 'blocked', 'nothing is evicted to make room');
   assert.equal(one.reserveEffect('b'.repeat(64)), 'capacity');
 });
