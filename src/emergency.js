@@ -17,7 +17,8 @@ const { parseTime } = require('./time.js');
 //   · approver  — the host callback that has to answer again before the clock may be extended.
 //   · family    : the private identity of this one grant. Records are kept by the public id, which is
 //                not an identity, so this is what says a counter, a review or a revocation belongs
-//                to this grant and not to another person who happened to use the same id.
+//                to this grant and not to another person who happened to use the same id. It is also
+//                the key of the ledger binding below, so a renewal keeps the record it had.
 // A permission that did not come out of `createEmergencyPermission` is not in this table, so it
 // carries no authority at all: its shape proves nothing, and nothing in this module may treat a
 // readable object as a granted one.
@@ -30,6 +31,18 @@ const { parseTime } = require('./time.js');
 // value and seal another by answering twice. Every field it hands over, nested triggers included,
 // is read once, and what is validated is what gets bound. A barrier against the common forgery, not
 // a proof against a Proxy that lies about its own descriptors.
+//
+// Two guarantees hold the surface up, and both are structural rather than promised:
+//   · One record per grant family, in one ledger. A grant family is bound to the ledger it was first
+//     used with, the binding is keyed by the family and not by the handle, and it survives a renewal.
+//     The cap, the replay sets, the pause, the revocation and a rejected review all live in that one
+//     record, so none of them can be restarted by handing the kernel a different ledger (H05).
+//   · The post-use review is signed by somebody other than the agent that spent the authority. A
+//     grant that names the grantee among the reviewers of its own use is refused at the door, and
+//     what was spent is never verified either way (H04).
+// What no code here can give the two: a ledger that survives its process, a reviewer whose identity
+// was actually checked, and a human who reads the effect. Durability and identity are the host's to
+// provide, and a receipt that says `not_verified` is this kernel saying exactly that.
 
 const BINDINGS = new WeakMap();
 
@@ -748,10 +761,11 @@ function boundVerifier(bound, triggerId) {
 
 // ─── The exercise ─────────────────────────────────────────────────────────────────────────────
 
-// The options of every entry point above are read through `options || {}`. A destructuring default
-// only answers for `undefined`, so a caller who passed `null` used to get a raw `TypeError` out of
-// six public functions, while `0`, `'x'` and `true` in the same place were already handled: this
-// module promises to fail closed on a missing or unusable input, and `null` is one (H19).
+// The options of every entry point in this module are read by `readOptions`, once, through their own
+// descriptors, and a missing or unusable one is answered with a fixed sentence. A destructuring
+// default only answers for `undefined`, so a caller who passed `null` used to get a raw `TypeError`
+// out of six public functions (H19), and a getter inside an options bag used to throw its own
+// exception out of all seven (R301). This module promises to fail closed on an input it cannot read.
 
 // Everything a nested call could have changed while the verifier ran: what the person decided about
 // this permission, and what this very call already spent.
