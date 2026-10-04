@@ -1175,13 +1175,13 @@ function buildSkillReceipt(spec, decision) {
   if (record === null) {
     throw new Error('a skill receipt needs a decision this kernel produced');
   }
-  const status = Object.prototype.hasOwnProperty.call(RECEIPT_STATUS, decision.status) ? decision.status : 'not_verified';
+  const status = hasOwn(RECEIPT_STATUS, decision.status) ? decision.status : 'not_verified';
   // The same mapping for the provenance verdict, written out instead of left to be remembered:
   // `not_verifiable` and `not_verified` both write `not_verified` in the ladder, so a host reading
   // `status` alone cannot tell which layer it is looking at. `provenanceStatus` keeps the exact
   // verdict and this field says how that verdict lands in the status ladder, so neither has to be
   // guessed from the other (P2b finding 4.4).
-  const provenanceVerdict = Object.prototype.hasOwnProperty.call(RECEIPT_STATUS, decision.provenanceStatus) ? decision.provenanceStatus : 'not_verified';
+  const provenanceVerdict = hasOwn(RECEIPT_STATUS, decision.provenanceStatus) ? decision.provenanceStatus : 'not_verified';
   const rawOutcome = receiptField(spec, 'outcome');
   const outcome = rawOutcome !== null && typeof rawOutcome === 'object' ? rawOutcome : {};
   const receipt = buildReceipt({
