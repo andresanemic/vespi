@@ -5,10 +5,12 @@
 //
 // Four of these fourteen cases were red when the report was written (N01 to N04) and each one keeps
 // the reviewer's code in its title, so a failure here can be traced back to the numbered fix that
-// asked for it. Three more stay red on purpose and are marked `todo`: N05 is the owner's decision
-// (take `author` and `contentDigest` out of what the resolver is handed), N07 is the optional
-// symmetry fix the report left out of the list, and N08 asks a promise out of base code this branch
-// does not touch, so its answer is in a comment instead of in a behavior change.
+// asked for it. N05 was the owner's decision and was taken on 2026-10-04: the resolver is no longer
+// handed the declared author or content digest, so the case is green here and lives in
+// `d1-procedencia-independencia.test.js` with the rest of that contract. Two cases stay red on
+// purpose and are marked `todo`: N07 is the optional symmetry fix the report left out of the list,
+// and N08 asks a promise out of base code this branch does not touch, so its answer is in a comment
+// instead of in a behavior change.
 //
 // What the four red cases have in common is that something the party under audit controls used to
 // reach further than it was allowed: a digest string the resolver wrote landed in the reason a host
@@ -122,13 +124,19 @@ test('N03 a throwing getter inside the receipt outcome is contained, not thrown'
   assert.doesNotThrow(() => buildSkillReceipt({ ...RECEIPT_SPEC, outcome }, authorizeSkill(claim, result, ['read'])));
 });
 
-// --- Still red on purpose, with the reason written down ---
+// --- The owner's decision, taken on 2026-10-04: N05 is green ---
 
-test('N05 the resolver is not handed the answers it is asked to produce (author, digest)', { todo: "decisión de Andrés, no arreglo: quitar `author` y `contentDigest` de lo que recibe el resolver exige cambiar la forma que `skill-provenance.test.js` fija como contrato, así que no se aplica en esta ronda. Mientras siga así, la independencia del resolver la garantiza el host y no el kernel." }, async () => {
+test('N05 the resolver is not handed the answers it is asked to produce (author, digest)', async () => {
+  // The question now carries name, repository and commit only. An echo of it can say where it looked,
+  // so `repository` and `commit_exists` stay covered, but the two answers it is asked for are exactly
+  // the two it cannot invent, and the result says which ones are missing.
   const claim = registered();
   const result = await verifySkillProvenance(claim, (question) => ({ ...question, exists: true }));
   assert.notEqual(result.status, 'verified', 'a one-key echo of the question is verified provenance');
+  assert.deepEqual([...result.notCovered].sort(), ['author', 'content_digest']);
 });
+
+// --- Still red on purpose, with the reason written down ---
 
 test('N07 resolver bytes carrying unpaired surrogates are not verified bytes (H12 symmetry)', { todo: "el informe lo marca opcional y fuera de la lista de arreglos de hoy: `hasContent` pasaría a exigir texto bien formado, que es un cambio de comportamiento que este encargo no pide. La asimetría con H12 queda anotada en el informe." }, async () => {
   const claim = registered({ content: '# r3 \ufffd' });
