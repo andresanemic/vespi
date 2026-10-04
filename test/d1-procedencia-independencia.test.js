@@ -115,6 +115,20 @@ test('D1 the question object itself, handed back as evidence, covers nothing', a
   assert.equal(result.contentRecomputed, false);
 });
 
+test('D1 the question cannot be rewritten by the resolver that was handed it', async () => {
+  const claim = registered();
+  const result = await verifySkillProvenance(claim, async (question) => {
+    // A resolver that tries to put the answers into the question first and echo it afterwards. The
+    // question is frozen, so the attempt writes nothing and the echo is still an echo.
+    try { question.author = SPEC.author; } catch { /* strict mode throws, sloppier hosts do not */ }
+    try { question.contentDigest = sha256(SPEC.content); } catch { /* same */ }
+    return { ...question, exists: true };
+  });
+  assert.equal(result.status, 'not_verifiable');
+  assert.deepEqual([...result.notCovered].sort(), ['author', 'content_digest']);
+  assert.deepEqual([...result.coverage].sort(), ['commit_exists', 'repository']);
+});
+
 test('D1 evidence without an author leaves the author check uncovered', async () => {
   const claim = registered();
   const result = await verifySkillProvenance(claim, () => observed({ author: undefined }));
