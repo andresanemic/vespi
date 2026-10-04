@@ -380,6 +380,10 @@ function readZkEvidence(value) {
     if (typeof result !== 'string' || !Object.prototype.hasOwnProperty.call(RESULT_CODES, result)) return null;
     if (typeof code !== 'string' || code.length === 0 || code.length > 64) return null;
     if (!RESULT_CODES[result].has(code)) return null;
+    // One shape, fixed by the design: `proofDigest` is null for a malformed request, where there is
+    // no proof to name, and present for every other outcome. A verdict that names no proof is a
+    // verdict nobody can look up later, so it is refused here rather than reconciled away later.
+    if ((code === 'malformed_input') !== (proofDigestRaw === null)) return null;
     return {
       schema: EVIDENCE_SCHEMA,
       system: 'groth16',
