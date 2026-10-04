@@ -821,7 +821,19 @@ function buildSkillReceipt(spec, decision) {
     evidence: receiptField(spec, 'evidence'),
     decidedBy: receiptField(spec, 'decidedBy'),
     at: receiptField(spec, 'at'),
-    outcome: { ...outcome, status: RECEIPT_STATUS[status] },
+    // `outcome` is the sixth caller-supplied field, so it is read the same way as the other five and
+    // never spread. `{ ...outcome }` asked the object to list its own keys: a revoked proxy answers
+    // no `ownKeys`, and a getter that throws on `detail` ran while the spread read it. Only the five
+    // fields `buildReceipt` reads out of `outcome` are passed on, each already read once under its
+    // own guard, so nothing else the caller wrote on that object is even looked at (N02, N03).
+    outcome: {
+      exercised: receiptField(outcome, 'exercised'),
+      detail: receiptField(outcome, 'detail'),
+      reason: receiptField(outcome, 'reason'),
+      exit: receiptField(outcome, 'exit'),
+      decidedBy: receiptField(outcome, 'decidedBy'),
+      status: RECEIPT_STATUS[status],
+    },
     verification: {
       verified: status === 'verified',
       checks: decision.checks,
