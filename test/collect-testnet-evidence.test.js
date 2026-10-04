@@ -202,6 +202,23 @@ test('F1b-C8: the summary states how many cases carry a local expectation and ho
   assert.equal(result.summary.local_record_source, 'repository run records, never the Horizon response');
 });
 
+test('F1b-C9: the summary counts the readbacks the network itself calls successful', async () => {
+  const { collectEvidence } = await loadCollector();
+  const result = await collectEvidence({
+    evidence: evidence([
+      { hash: LOCAL_HASH, run: 'local run' },
+      { hash: OTHER_HASH, run: 'other run' },
+      { hash: 'c'.repeat(64), run: 'third run' },
+    ]),
+    readTransaction: async (hash) => paymentResponse(hash === 'c'.repeat(64) ? { successful: false } : {}),
+    localExpectations: { [LOCAL_HASH]: localRecord() },
+    capturedAt: CAPTURED_AT,
+  });
+
+  assert.equal(result.summary.readback_successful, 2, 'an observed count from the readbacks, not an expectation');
+  assert.equal(result.summary.local_expectation, 1);
+});
+
 test('F1b-P1: the provenance checker rejects an expectation read back off its own response', async () => {
   const { assertExpectationProvenance, expectationProvenance } = await loadCollector();
   const readback = paymentResponse();

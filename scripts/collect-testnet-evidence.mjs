@@ -205,6 +205,9 @@ export async function collectEvidence({
       no_local_expectation: transactions.length - withExpectation,
       readback_read: count('read'),
       readback_failed: count('failed') + count('malformed') + count('timeout'),
+      // What the readbacks report, counted from the readbacks. This is an observation of the
+      // network, never an expectation: no case is verified by it.
+      readback_successful: transactions.filter((entry) => entry.historical_response?.transaction?.successful === true).length,
       local_record_source: 'repository run records, never the Horizon response',
     },
     transactions,
