@@ -757,10 +757,18 @@ async function inspectAuthorization(ctx, authorization) {
 }
 
 // A settlement answer is read apart from the body it carries, and only the parts the receipt admits
-// are kept: the transaction hash, who paid, on which network, how much. A hash is normalized once
-// (trimmed, lowercased) and has to be a hash; a missing or malformed one is never claimed.
+// are kept: the transaction hash, who paid, on which network, how much, in which asset and to whom.
+// A hash is normalized once (trimmed, lowercased) and has to be a hash; a missing or malformed one
+// is never claimed. Whatever the protocol chooses to declare is compared strictly: a field that is
+// absent is left to the settlement port, which reads it from the ledger, and a field that is present
+// and different is a contradiction this module refuses on its own.
 function readSettlement(settlement, expected) {
-  const answer = { ok: false, checks: { success: false, payer: false, network: false, amount: true, transaction: false }, evidence: {}, txHash: null };
+  const answer = {
+    ok: false,
+    checks: { success: false, payer: false, network: false, amount: true, asset: true, payTo: true, transaction: false },
+    evidence: {},
+    txHash: null,
+  };
   if (!isPlainObject(settlement)) return answer;
   try {
     answer.checks.success = settlement.success === true;
@@ -769,16 +777,17 @@ function readSettlement(settlement, expected) {
     if (typeof settlement.amount === 'string' && settlement.amount.length > 0) answer.evidence.amount = settlement.amount;
     answer.checks.payer = settlement.payer === expected.payer;
     answer.checks.network = settlement.network === expected.network;
-    // An amount the server chose to declare has to be exactly the declared one; a silent amount is
-    // left to the settlement port, which reads it from the ledger.
     answer.checks.amount = settlement.amount === undefined ? true : settlement.amount === expected.amount;
+    if (settlement.asset !== undefined) answer.checks.asset = settlement.asset === expected.asset;
+    if (settlement.payTo !== undefined) answer.checks.payTo = settlement.payTo === expected.payTo;
     const txHash = typeof settlement.transaction === 'string' ? settlement.transaction.trim().toLowerCase() : '';
     if (HASH.test(txHash)) {
       answer.txHash = txHash;
       answer.evidence.txHash = txHash;
       answer.checks.transaction = true;
     }
-    answer.ok = answer.checks.success && answer.checks.payer && answer.checks.network && answer.checks.amount && answer.checks.transaction;
+    answer.ok = answer.checks.success && answer.checks.payer && answer.checks.network
+      && answer.checks.amount && answer.checks.asset && answer.checks.payTo && answer.checks.transaction;
   } catch {
     return answer;
   }
