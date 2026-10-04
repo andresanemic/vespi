@@ -136,6 +136,32 @@ function ownDataOnly(value) {
   }
 }
 
+// The same rule for the options of the seven public entry points, read once as a whole. Every field
+// this module asks a host for lives in the descriptors of one object, so that object is read exactly
+// once and nothing else: a `ledger`, a `by`, a `now` or an `authorizeGrantor` whose getter throws, or
+// answers twice, is not a shape this kernel reads. A failure returns null and every caller answers
+// with its own fixed sentence, so an exception raised inside a caller's options never reaches the
+// caller's caller (R301). Prototype getters are untouched: a host that puts its callbacks on a class
+// is a host this kernel can still talk to.
+function readOptions(options, fields) {
+  try {
+    if (options === undefined || options === null) return Object.fromEntries(fields.map((field) => [field, undefined]));
+    if (typeof options !== 'object' || Array.isArray(options)) return null;
+    if (!ownDataOnly(options)) return null;
+    const out = {};
+    for (const field of fields) out[field] = options[field];
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+// The one sentence every refused options object gets, in each of the three places this module can
+// answer: a grant and its administration throw (a grant was never created, so there is nothing to
+// receipt), and an exercise or a state blocks or fails closed. It says what happened, not what the
+// hostile object said while it happened.
+const UNREADABLE_OPTIONS = 'the options this call was given could not be read safely';
+
 // A non-empty list of unique non-empty strings, or null. Null is what every reader below treats as
 // "this permission cannot be trusted with anything".
 function stringList(value) {
@@ -515,7 +541,9 @@ function useReceipt(snapshot, asked, trigger, checked, dueAtMs, signalDigest) {
 // ─── The grant ────────────────────────────────────────────────────────────────────────────────
 
 async function createEmergencyPermission(grant, options = {}) {
-  const { authorizeGrantor, resolveVerifier, authorizeRenewal } = options || {};
+  const deps = readOptions(options, ['authorizeGrantor', 'resolveVerifier', 'authorizeRenewal']);
+  if (!deps) throw new Error(UNREADABLE_OPTIONS);
+  const { authorizeGrantor, resolveVerifier, authorizeRenewal } = deps;
   const read = snapshotPermission(grant);
   if (!read.ok) throw new Error(`emergency permission is malformed: ${read.reason}`);
   const snapshot = read.snapshot;
@@ -688,11 +716,12 @@ function verifySignal(verifier, trigger, signal, signalDigest) {
 }
 
 function exerciseEmergency(permission, request, options = {}) {
-  const { ledger, now } = options || {};
   const read = snapshotPermission(permission);
   const snapshot = read.ok ? read.snapshot : null;
   const asked = snapshotRequest(request);
-  const clock = readClock(now);
+  const deps = readOptions(options, ['ledger', 'now']);
+  const ledger = deps ? deps.ledger : undefined;
+  const clock = deps ? readClock(deps.now) : { ok: false, reason: UNREADABLE_OPTIONS };
   const bound = bindingOf(permission);
   const authority = bound !== null;
   const fail = (reason, at, signalId) => ({
@@ -796,7 +825,9 @@ function requireBinding(permission, bound, verb) {
 }
 
 function reviewEmergencyUse(permission, useId, options = {}) {
-  const { ledger, by, decision, now } = options || {};
+  const deps = readOptions(options, ['ledger', 'by', 'decision', 'now']);
+  if (!deps) throw new Error(UNREADABLE_OPTIONS);
+  const { ledger, by, decision, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'reviewed');
   // Owner, reviewers and pausers are read from the grant that was actually authorized, not from the
   // object this caller happens to be holding.
@@ -862,7 +893,9 @@ function reviewEmergencyUse(permission, useId, options = {}) {
 // an answer about a moment nobody asked about, and the existing suite already passed a `now` to
 // `revokeEmergencyPermission` without ever seeing it arrive (H03).
 function pauseEmergencyPermission(permission, options = {}) {
-  const { ledger, by, now } = options || {};
+  const deps = readOptions(options, ['ledger', 'by', 'now']);
+  if (!deps) throw new Error(UNREADABLE_OPTIONS);
+  const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'paused');
   const snapshot = bound.snapshot;
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
@@ -875,7 +908,9 @@ function pauseEmergencyPermission(permission, options = {}) {
 }
 
 function resumeEmergencyPermission(permission, options = {}) {
-  const { ledger, by, now } = options || {};
+  const deps = readOptions(options, ['ledger', 'by', 'now']);
+  if (!deps) throw new Error(UNREADABLE_OPTIONS);
+  const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'resumed');
   const snapshot = bound.snapshot;
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
@@ -891,7 +926,9 @@ function resumeEmergencyPermission(permission, options = {}) {
 }
 
 function revokeEmergencyPermission(permission, options = {}) {
-  const { ledger, by, now } = options || {};
+  const deps = readOptions(options, ['ledger', 'by', 'now']);
+  if (!deps) throw new Error(UNREADABLE_OPTIONS);
+  const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'revoked');
   const snapshot = bound.snapshot;
   if (by !== snapshot.owner) throw new Error('only the person who granted this emergency permission may revoke it');
@@ -991,7 +1028,9 @@ function renewEmergencyPermission(permission, changes) {
 // ─── What the operation says about itself ─────────────────────────────────────────────────────
 
 function getEmergencyState(permission, options = {}) {
-  const { ledger, now } = options || {};
+  const deps = readOptions(options, ['ledger', 'now']);
+  if (!deps) throw new Error(UNREADABLE_OPTIONS);
+  const { ledger, now } = deps;
   const snapshot = readPermission(permission);
   if (!snapshot) throw new Error('emergency permission is malformed and has no state');
   const bound = bindingOf(permission);
