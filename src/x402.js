@@ -194,15 +194,23 @@ function readPorts(raw) {
     if (typeof raw.validateOutput !== 'function') throw portError();
     let claims = null;
     if (raw.claims !== undefined && raw.claims !== null) {
-      if (!isPlainObject(raw.claims) || typeof raw.claims.reserveEffect !== 'function' || typeof raw.claims.claimTransaction !== 'function') {
+      const claimsRaw = raw.claims;
+      if (!isPlainObject(claimsRaw) || typeof claimsRaw.reserveEffect !== 'function' || typeof claimsRaw.claimTransaction !== 'function') {
         throw portError();
       }
-      claims = { reserveEffect: raw.claims.reserveEffect, claimTransaction: raw.claims.claimTransaction };
+      // Read once here, already validated, and then bound to the store it came from. Copied out and
+      // called detached, the simplest durable store in the world, a plain object with two methods
+      // that use `this`, answered on a receiver that carries no state at all.
+      claims = {
+        reserveEffect: claimsRaw.reserveEffect.bind(claimsRaw),
+        claimTransaction: claimsRaw.claimTransaction.bind(claimsRaw),
+      };
     }
     ports = {
-      discover: http.discover,
-      sendPaid: http.sendPaid,
-      prepare: signer.prepare,
+      // The same for the http container and for the signer: read once, then bound.
+      discover: http.discover.bind(http),
+      sendPaid: http.sendPaid.bind(http),
+      prepare: signer.prepare.bind(signer),
       inspectPrepared: raw.inspectPrepared,
       verifySettlement: raw.verifySettlement,
       validateOutput: raw.validateOutput,
