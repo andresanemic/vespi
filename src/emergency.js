@@ -15,6 +15,9 @@ const { parseTime } = require('./time.js');
 //                to authorize and what the kernel binds. Never read back from a caller afterwards.
 //   · verifiers — the independent verifier of each declared trigger, bound when the person granted.
 //   · approver  — the host callback that has to answer again before the clock may be extended.
+//   · family    — the private identity of this one grant. Records are kept by the public id, which is
+//                not an identity, so this is what says a counter, a review or a revocation belongs
+//                to this grant and not to another person who happened to use the same id.
 // A permission that did not come out of `createEmergencyPermission` is not in this table, so it
 // carries no authority at all: its shape proves nothing, and nothing in this module may treat a
 // readable object as a granted one.
@@ -23,8 +26,10 @@ const { parseTime } = require('./time.js');
 // supplies `authorizeGrantor`, `resolveVerifier` and `authorizeRenewal` decides who may grant, what
 // counts as the independent signal, and whether the clock may grow. The kernel's part is that an
 // agent exercising the permission can never be the source of any of them, that a permission which
-// did not come through this path holds nothing, and that a caller reading its own data twice cannot
-// get the kernel to bind one value and seal another.
+// did not come through this path holds nothing, and that a caller cannot get the kernel to bind one
+// value and seal another by answering twice — every field it hands over, nested triggers included,
+// is read once, and what is validated is what gets bound. A barrier against the common forgery, not
+// a proof against a Proxy that lies about its own descriptors.
 
 const BINDINGS = new WeakMap();
 
@@ -166,9 +171,9 @@ function triggerList(value) {
 }
 
 // The kernel reads a value it did not write from a caller that may be hostile, so every read of the
-// permission goes through here, one read per field, and the result is normalized. A permission
-// nobody can read safely returns the reason it could not be read, and every caller fails closed on
-// it: it exercises nothing.
+// permission goes through here, one read per field — nested triggers included, which `triggerList`
+// handles the same way — and the result is normalized. A permission nobody can read safely returns
+// the reason it could not be read, and every caller fails closed on it: it exercises nothing.
 function snapshotPermission(permission) {
   try {
     if (!permission || typeof permission !== 'object' || Array.isArray(permission)) {
@@ -995,6 +1000,13 @@ function getEmergencyState(permission, { ledger, now } = {}) {
   } else if (pending) {
     status = 'review_pending';
     nextUse = 'blocked_until_review';
+  } else if (record.busy) {
+    // A use of this permission is being checked in this very run. A nested call would be refused
+    // for that, and a state that answered `allowed` in the middle of it would be advertising a
+    // slot the kernel is about to close. What the person revoked, stopped, paused or left pending
+    // still outranks it.
+    status = 'verifying';
+    nextUse = 'blocked_verifying';
   } else if (!clock.ok) {
     status = 'unknown_clock';
     nextUse = 'blocked_unknown_clock';
