@@ -14,6 +14,7 @@
 // attacks that did not break anything, kept so a later change cannot reopen them silently.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
+const { createHash } = require('node:crypto');
 const vm = require('node:vm');
 const emergency = require('../src/emergency.js');
 const { verifyReceipt } = require('../src/receipt.js');
@@ -547,6 +548,48 @@ test('H19 a null options object is refused the way every other unusable one is',
     assert.throws(call, (err) => err instanceof Error && !(err instanceof TypeError),
       'a null options object must not escape as a raw TypeError');
   }
-  // A real ledger still works, so nothing was loosened on the way.
-  assert.equal(emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT }).state, 'review_pending');
+// A real ledger still works, so nothing was loosened on the way.
+  assert.equal(run(permission, ledger, REQUEST({ useId: 'u-real' })).state, 'review_pending');
+});
+
+// ─── H20 · a body with no budget of size, depth or count ───────────────────────────────────────
+
+// The class: values nobody bounded, on the side that is hashed rather than sealed. H06 bounds every
+// text the kernel seals, and the canonical walk refuses what it cannot represent, but nothing caps
+// how much data walks through it: a body a megabyte wide or a thousand levels deep is copied,
+// hashed and handed to the verifier at the caller's expense, and the only bound so far was the call
+// stack (H08, which shows the consequence of having no bound at all). A budget stated up front is
+// what this kernel can promise: a body it can walk is a body whose cost it knows.
+test('H20 a body past the depth or the size budget is refused before the verifier is asked', async () => {
+  let calls = 0;
+  const permission = await granted({ id: 'h20' }, () => { calls += 1; return { verified: true }; });
+  const ledger = ledgerFor();
+  // Depth: nested one level past what any JSON signal a host would send has any business being.
+  let deep = { leaf: true };
+  for (let index = 0; index < 200; index += 1) deep = { next: deep };
+  const tooDeep = run(permission, ledger, REQUEST({ useId: 'h20-deep', triggerSignal: { id: 's', source: 'sensor', deep } }));
+  assert.equal(tooDeep.state, 'blocked');
+  assert.match(tooDeep.reason, /nested deeper|depth/i, 'the refusal names the bound it went past');
+  // Size: many keys, each of them small, which is how a caller fills memory without one long string.
+  const wide = {};
+  for (let index = 0; index < 20000; index += 1) wide[`k${index}`] = index;
+  const tooWide = run(permission, ledger, REQUEST({ useId: 'h20-wide', triggerSignal: { id: 's', source: 'sensor', wide } }));
+  assert.equal(tooWide.state, 'blocked');
+  assert.match(tooWide.reason, /more than the \d+ values|size|budget/i, 'the refusal names the bound it went past');
+  // Count: many array entries, which is the same walk through a different shape.
+  const many = new Array(20000).fill('x');
+  const tooMany = run(permission, ledger, REQUEST({ useId: 'h20-many', triggerSignal: { id: 's', source: 'sensor', many } }));
+  assert.equal(tooMany.state, 'blocked');
+  assert.equal(calls, 0, 'no verifier call, nothing spent');
+  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 0);
+  // A body inside the budget is untouched, and the digest is still the digest of that same body in the
+  // canonical form the kernel seals: keys sorted, arrays in order.
+  const ordinary = { id: 's', source: 'sensor', critical: true, samples: [1, 2, 3], nested: { a: 'b' } };
+  const accepted = run(permission, ledger, REQUEST({ useId: 'h20-ok', triggerSignal: ordinary }));
+  assert.equal(accepted.state, 'review_pending');
+  assert.deepEqual(ordinary, { id: 's', source: 'sensor', critical: true, samples: [1, 2, 3], nested: { a: 'b' } },
+    'the body the caller sent is not modified');
+  assert.equal(accepted.receipt.trigger.signalDigest, createHash('sha256')
+    .update(JSON.stringify({ critical: true, id: 's', nested: { a: 'b' }, samples: [1, 2, 3], source: 'sensor' }))
+    .digest('hex'));
 });

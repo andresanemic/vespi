@@ -90,19 +90,42 @@ function freeze(value) {
   return value;
 }
 
+// The budget this kernel spends on one body. Depth is what the walk costs in stack, and size is what
+// it costs in time and memory, so both are counted while copying and both refuse the body when they
+// are past what any signal this kernel is built for has any business carrying. Without them the only
+// bound was the call stack, and a body a megabyte wide walked all of it on the caller's expense
+// (H08, H20).
+const MAX_DEPTH = 32;
+const MAX_NODES = 4096;
+
+
 // The canonical form of data this kernel is willing to hash and seal: JSON primitives, plain objects
 // and arrays, keys sorted. Anything else — a function, a symbol, a bigint, an infinite number, a
 // cycle, a class instance, an object from another realm — is refused rather than half-copied, because
 // a receipt whose fingerprint cannot be recomputed is a receipt nobody can check later.
 //
-// The boundary of what travels is stated here and nowhere wider: a body is JSON data, whole. An array
-// has to be dense and nothing but indices (no hole to fill from a prototype, no extra key that would
-// be dropped), and an object may not carry a key of any kind that `Object.keys` cannot see. A symbol
-// key used to be dropped silently: the copy the verifier received simply did not have it, the body
-// was still hashed and the authority still spent on a fingerprint of something the verifier never
-// saw (R303, R304). Non-enumerable properties are the one thing this contract does not speak about:
-// they are outside JSON and this kernel does not claim them either way.
-function canonical(value, seen) {
+// The boundary of what travels is stated here and nowhere wider: a body is JSON data, whole, and
+// inside the budget above. An array has to be dense and nothing but indices (no hole to fill from a
+// prototype, no extra key that would be dropped), and an object may not carry a key of any kind that
+// `Object.keys` cannot see. A symbol key used to be dropped silently: the copy the verifier received
+// simply did not have it, the body was still hashed and the authority still spent on a fingerprint
+// of something the verifier never saw (R303, R304). Non-enumerable properties are the one thing this
+// contract does not speak about: they are outside JSON and this kernel does not claim them either way.
+function canonical(value, seen, budget, depth) {
+  // One budget per walk, and both bounds are checked before anything of this value is read or copied,
+  // so nothing of an oversized body is ever built. Every value counts, a scalar included: a body can
+  // be enormous without being deep (H20).
+  const counted = budget || { nodes: 0, reason: null };
+  const level = depth || 0;
+  if (level > MAX_DEPTH) {
+    if (!counted.reason) counted.reason = `it is nested deeper than the ${MAX_DEPTH} levels this kernel walks`;
+    return NOT_REPRESENTABLE;
+  }
+  if (counted.nodes >= MAX_NODES) {
+    if (!counted.reason) counted.reason = `it carries more than the ${MAX_NODES} values this kernel walks of one body`;
+    return NOT_REPRESENTABLE;
+  }
+  counted.nodes += 1;
   if (value === null) return null;
   const kind = typeof value;
   if (kind === 'string' || kind === 'boolean') return value;
@@ -126,7 +149,7 @@ function canonical(value, seen) {
     out = [];
     for (let index = 0; index < value.length; index += 1) {
       if (!Object.prototype.hasOwnProperty.call(value, String(index))) { path.delete(value); return NOT_REPRESENTABLE; }
-      const item = canonical(value[index], path);
+      const item = canonical(value[index], path, counted, level + 1);
       if (item === NOT_REPRESENTABLE) { path.delete(value); return NOT_REPRESENTABLE; }
       out.push(item);
     }
@@ -149,7 +172,7 @@ function canonical(value, seen) {
     // string this returns for an ordinary body is byte for byte the one a plain object gave.
     out = Object.create(null);
     for (const key of Object.keys(value).sort()) {
-      const item = canonical(value[key], path);
+      const item = canonical(value[key], path, counted, level + 1);
       if (item === NOT_REPRESENTABLE) { path.delete(value); return NOT_REPRESENTABLE; }
       out[key] = item;
     }
@@ -363,9 +386,15 @@ function snapshotRequest(request) {
     const triggerId = request.triggerId;
     const signal = request.triggerSignal;
     let body = null;
+    // Which bound a body went past, so a refusal can name it instead of only saying it was unreadable.
+    let problem = null;
     if (signal && typeof signal === 'object' && !Array.isArray(signal)) {
-      body = ownDataOnly(signal) ? canonical(signal) : NOT_REPRESENTABLE;
-      if (body === NOT_REPRESENTABLE) body = null;
+      const budget = { nodes: 0, reason: null };
+      body = ownDataOnly(signal) ? canonical(signal, null, budget) : NOT_REPRESENTABLE;
+      if (body === NOT_REPRESENTABLE) {
+        problem = budget.reason || 'it carries something this kernel cannot represent as JSON data';
+        body = null;
+      }
     }
     // Nothing a request names is longer than the bound a receipt answers to either. The fields are
     // still read once, and the caller is told which of them was over the line instead of being given
@@ -377,6 +406,7 @@ function snapshotRequest(request) {
     if (body && text(body.id) && !bounded(body.id)) over.push('triggerSignal.id');
     return {
       oversized: over,
+      signalProblem: body ? null : problem,
       useId: text(useId) ? useId : null,
       actor: text(actor) ? actor : null,
       action: text(action) ? action : null,
@@ -879,7 +909,9 @@ function exerciseEmergency(permission, request, options = {}) {
   }
   const trigger = snapshot.triggers.find((item) => item.id === asked.triggerId);
   if (!trigger) return fail('the trigger was not declared in advance by the person who granted this permission', at, asked.signal ? asked.signal.id : null);
-  if (!asked.signal) return fail('the emergency request carries no trigger signal, or one this kernel cannot read safely', at);
+  if (!asked.signal) {
+    return fail(`the emergency request carries no trigger signal${asked.signalProblem ? `, or one this kernel refused because ${asked.signalProblem}` : ', or one this kernel cannot read safely'}`, at);
+  }
   if (asked.signal.source !== trigger.verifierId) return fail(`the trigger signal does not come from the declared verifier ${trigger.verifierId}`, at, asked.signal.id);
   if (!asked.signal.id) return fail('the trigger signal carries no id, so it could not be told apart from a replay', at);
   const verifier = boundVerifier(bound, trigger.id);
