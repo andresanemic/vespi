@@ -34,6 +34,9 @@
 //   - Nothing on the claim is trusted, including fields written after registration. The registered
 //     values live in a private binding, the way the bound orchestrator lives in `delegation.js` (S11):
 //     a claim that anyone can rewrite is not a grant, it is a suggestion.
+//   - The word `verified` is written only from four comparisons this kernel ran, never from four
+//     booleans it read. A check that was not compared is an uncovered check, and an inherited one is
+//     not a check at all (see the boundary below).
 //
 // What this does NOT buy, stated plainly. It proves that an injected resolver said the repository,
 // the commit, the author and the bytes line up with what was declared, and that it was never given
@@ -44,6 +47,14 @@
 // module does not authenticate the person who registered the skill. It does not read the network, so
 // a correct answer has to be brought to it. And it does not vet what the skill *does* — that is the
 // granted authority, checked exactly, and the rest is the person's decision.
+//
+// Two operational bounds, both stated rather than discovered. A list of capability names may hold at
+// most `MAX_LIST_LENGTH` entries and a declared length above it is refused before anything is copied,
+// because the copy is synchronous and no timer reaches it. And this module trusts the shared realm it
+// was loaded into: the boundary below holds against a caller and a resolver, not against a host that
+// rewrote the intrinsics first. The digest of a receipt is a further matter and belongs to
+// `receipt.js`: `computeDigest` canonicalizes with a live `Object.keys(...).sort()`, so replacing
+// `Array.prototype.sort` changes how a receipt hashes. That is base code and is not touched here.
 
 const { createHash } = require('node:crypto');
 const { buildReceipt, computeDigest } = require('./receipt.js');
@@ -1205,6 +1216,23 @@ function buildSkillReceipt(spec, decision) {
   return receipt;
 }
 
+// What the fourth round changed in what a caller can observe. None of it is a published API: the
+// seven exports below keep their names and their types, and a receipt built without any of it keeps
+// its digest (360 receipts across four registrations, fifteen shapes of evidence and six requests were
+// compared byte for byte against the previous revision). What a reader of a receipt can see:
+//   - two new refusals from `captureList`, both with this module's own words: a gap in the list at a
+//     named index, and a list longer than `MAX_LIST_LENGTH`. Both are refusals where the list used to
+//     be accepted, and both leave `authority_scope` false.
+//   - two new sentences from `byteShapeOf`: `a payload whose shape could not be read` replaces
+//     `an array that could not be read` for anything that throws while being inspected, and an array
+//     past `MAX_SHAPE_SCAN` is named too long instead of walked. The bytes were never decoded and are
+//     still not, so the verdict of every one of these is unchanged: `content_digest` uncovered.
+//   - `checks`, `verification.checks` and every coverage map are now objects with no prototype. The
+//     own keys, their order and their values are the same, so a receipt reads the same and hashes the
+//     same; what changed is that a key this kernel did not write cannot be answered by a prototype.
+//   - `authorizeSkill` can answer `not_verified` for a result whose status says `verified` and whose
+//     four checks were not all produced here. That state was unreachable before and is refused rather
+//     than trusted now, which is the point of the gate.
 module.exports = {
   registerSkillProvenance,
   verifySkillProvenance,
