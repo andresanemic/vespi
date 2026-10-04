@@ -13,6 +13,11 @@
 //   - The evidence arrives from a resolver the caller injects. This module never opens a socket, never
 //     shells out to git, never reads a file. Whoever runs the kernel decides where the answer comes
 //     from; the kernel only decides whether the answer matches.
+//   - The resolver is not handed what it is asked to produce. The question carries where to look (the
+//     skill's name, its repository, the exact commit) and withholds the declared author and the
+//     declared content digest. The resolver answers with what it observed and the kernel compares it
+//     against what the skill declared; an answer that is the declaration, or an echo of the question,
+//     is refused rather than believed (D1, review N05).
 //   - What the kernel can check is checked by the kernel. If the resolver hands over bytes, the digest
 //     is computed here. A resolver that reports a matching digest string while shipping different
 //     bytes is refuted, not believed (decision 22: the verification record is computed by the code,
@@ -22,10 +27,13 @@
 //     a claim that anyone can rewrite is not a grant, it is a suggestion.
 //
 // What this does NOT buy, stated plainly. It proves that an injected resolver said the repository,
-// the commit, the author and the bytes line up with what was declared. It does not prove the resolver
-// told the truth: a resolver pointed at an attacker's own fork answers honestly about that fork. It
-// does not authenticate the person who registered the skill. It does not read the network, so a
-// correct answer has to be brought to it. And it does not vet what the skill *does* — that is the
+// the commit, the author and the bytes line up with what was declared, and that it was never given
+// the declared author or digest to say so with. It does not prove the resolver told the truth: a
+// resolver pointed at an attacker's own fork answers honestly about that fork, and a host that hands
+// its own resolver the declaration gets back four values that match, which is exactly what an honest
+// observation looks like. That last door is the host's, and no check here can see through it. The
+// module does not authenticate the person who registered the skill. It does not read the network, so
+// a correct answer has to be brought to it. And it does not vet what the skill *does* — that is the
 // granted authority, checked exactly, and the rest is the person's decision.
 
 const { createHash } = require('node:crypto');
