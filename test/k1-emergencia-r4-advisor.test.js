@@ -236,3 +236,18 @@ test('A04 a receipt sealed under the identity door keeps the digest the previous
   // A pause answers with the state, not a receipt, and it is the same state too.
   assert.equal(emergency.pauseEmergencyPermission(permission, { ledger, by: host.principal('person'), now: AT }).status, 'paused');
 });
+
+test('A01 a renewed handle keeps the very principals the person signed, and no new way in', async () => {
+  const permission = await granted();
+  const ledger = emergency.createEmergencyLedger();
+  run(permission, ledger);
+  // A longer clock is still the same grant, so the same door answers: the same principal closes the
+  // open review, and a declared name still cannot.
+  const renewed = emergency.renewEmergencyPermission(permission, { expiresAt: '2026-10-06T00:00:00Z' });
+  assert.throws(() => close(renewed, ledger, 'person'), /principal|authenticate|name/i);
+  assert.throws(() => close(renewed, ledger, host.principal('agent')), /grantee|own use|principal/i);
+  assert.equal(close(renewed, ledger, host.principal('person')).review.by, 'person');
+  assert.equal(state(renewed, ledger).pendingReview, null);
+  // And the original handle still answers with the same principals, not a second set.
+  assert.throws(() => close(permission, ledger, Object.freeze({ principal: 'simulated:person' })), /principal|authenticate|issued/i);
+});
