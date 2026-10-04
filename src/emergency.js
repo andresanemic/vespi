@@ -371,6 +371,16 @@ function coverageOf(checks) {
   return covered;
 }
 
+// And a check that did not pass is not covered, which is the other half of the same rule and what
+// receipt.js puts at the head of `notCovered`. A blocked receipt used to name `trigger_verified` and
+// stay silent about a `grantor_authority` that came back false, so a consumer reading `notCovered`
+// to learn what was not proven was told nothing about the grant (H01).
+function failedChecks(checks) {
+  const failed = [];
+  for (const key of Object.keys(checks)) if (checks[key] !== true) failed.push(key);
+  return failed;
+}
+
 function seal(receipt) {
   const next = { ...receipt };
   delete next.digest;
@@ -433,7 +443,7 @@ function blockedReceipt({ snapshot, authority, action, signalId, reason, at }) {
     evidence: signalId ? { signalId } : null,
     verification: { verified: false, checks, reason },
     coverage: coverageOf(checks),
-    notCovered: ['trigger_verified', 'effect_verified', 'external anchor', 'exact_state'],
+    notCovered: [...failedChecks(checks), 'effect_verified', 'external anchor', 'exact_state'],
     anchor: { ...PENDING_ANCHOR },
     ...(authority === true ? { authorization: authorizationOf(snapshot, action ? { action } : null) } : {}),
     detail: reason,
