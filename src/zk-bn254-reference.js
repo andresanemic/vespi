@@ -53,6 +53,10 @@ const fp2 = complete({
   },
 });
 const XI = Object.freeze([9n, 1n]);
+// The same width ceiling the port uses, so a decimal string is read the same way in both places.
+const MAX_DECIMAL_DIGITS = 78;
+const DECIMAL_PATTERN = /^(0|[1-9][0-9]*)$/;
+const MAX_PUBLIC_INPUTS = 32;
 const fp6 = complete({
   ZERO: Object.freeze([fp2.ZERO, fp2.ZERO, fp2.ZERO]),
   ONE: Object.freeze([fp2.ONE, fp2.ZERO, fp2.ZERO]),
@@ -379,6 +383,226 @@ function fromOracleBasis(coefficients) {
   return [half(0), half(1)];
 }
 
+// --- the Groth16 equation --------------------------------------------------------------------
+// Points arrive in the kernel's own shape, the one the phase 1 port hands a backend: G1 is [x, y]
+// and G2 is [[c0, c1], [c0, c1]]. Scalars are a BigInt inside the range or a canonical decimal
+// string; a Number, a sign, whitespace, an exponent, hex, a leading zero or a value outside the
+// range is refused. Nothing is reduced modulo p or modulo r, ever: reducing a public input modulo r
+// would let a signal equal to r pass as a signal equal to zero.
+function readCanonicalScalar(raw, modulus) {
+  let value;
+  if (typeof raw === 'bigint') value = raw;
+  else if (typeof raw === 'string' && raw.length <= MAX_DECIMAL_DIGITS && DECIMAL_PATTERN.test(raw)) {
+    value = BigInt(raw);
+  } else return null;
+  return value >= 0n && value < modulus ? value : null;
+}
+
+// G1 [x, y] -> internal {x, y}, or null. Infinity is not a point here.
+function readG1Point(raw) {
+  const pair = dataArray(raw, 2);
+  const x = readCanonicalScalar(pair[0], P);
+  const y = readCanonicalScalar(pair[1], P);
+  return x === null || y === null ? null : { x, y };
+}
+
+// G2 [[c0, c1], [c0, c1]] -> internal {x: [c0, c1], y: [c0, c1]}, or null.
+function readG2Point(raw) {
+  const rows = dataArray(raw, 2);
+  const x = dataArray(rows[0], 2);
+  const y = dataArray(rows[1], 2);
+  const parts = [x[0], x[1], y[0], y[1]].map((value) => readCanonicalScalar(value, P));
+  return parts.some((value) => value === null)
+    ? null
+    : { x: [parts[0], parts[1]], y: [parts[2], parts[3]] };
+}
+
+// The same readers, but an explicit null is the identity rather than a malformed point. Used for IC
+// only, where design 4 allows the identity if a pinned key needs it.
+function readIdentityG1Point(raw) {
+  if (raw === null) return null;
+  return readG1Point(raw);
+}
+
+// A point is good when it is on its curve and [r]P is the identity. The scalar is the full integer
+// r, never r reduced to zero, so this really is a subgroup test and not a no-op.
+function isValidG1(point) {
+  return point !== null && g1.onCurve(point) && g1.mul(point, R) === null;
+}
+function isValidG2(point) {
+  return point !== null && g2.onCurve(point) && g2.mul(point, R) === null;
+}
+
+const g1Shape = (point) => (point === null ? null : [point.x, point.y]);
+const g2Shape = (point) => (point === null ? null : [point.x.slice(), point.y.slice()]);
+
+const KEY_KEYS = ['nPublic', 'alpha', 'beta', 'gamma', 'delta', 'ic'];
+// The port's own schema tag is tolerated and ignored: this reader cares about the mathematics, and a
+// missing tag must not decide a pairing. Every other key must be absent.
+function readVerificationKey(raw) {
+  try {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const proto = Object.getPrototypeOf(raw);
+    if (proto !== Object.prototype && proto !== null) return null;
+    for (const key of Reflect.ownKeys(raw)) {
+      if (typeof key !== 'string') return null;
+      if (key !== 'schema' && !KEY_KEYS.includes(key)) return null;
+    }
+    for (const key of KEY_KEYS) {
+      const descriptor = Object.getOwnPropertyDescriptor(raw, key);
+      if (!descriptor || !('value' in descriptor)) return null;
+    }
+    const nPublic = raw.nPublic;
+    if (typeof nPublic !== 'number' || !Number.isInteger(nPublic) || nPublic < 0 || nPublic > MAX_PUBLIC_INPUTS) {
+      return null;
+    }
+    const alpha = readG1Point(raw.alpha);
+    const beta = readG2Point(raw.beta);
+    const gamma = readG2Point(raw.gamma);
+    const delta = readG2Point(raw.delta);
+    if (alpha === null || beta === null || gamma === null || delta === null) return null;
+    const icRaw = raw.ic;
+    if (!Array.isArray(icRaw) || icRaw.length !== nPublic + 1) return null;
+    const ic = [];
+    for (let i = 0; i < icRaw.length; i += 1) {
+      const point = readIdentityG1Point(icRaw[i]);
+      if (i === 0 ? point === null && icRaw[i] !== null : false) return null;
+      ic.push(point);
+    }
+    return { nPublic, alpha, beta, gamma, delta, ic };
+  } catch {
+    return null;
+  }
+}
+
+function readProof(raw) {
+  try {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const proto = Object.getPrototypeOf(raw);
+    if (proto !== Object.prototype && proto !== null) return null;
+    const keys = Reflect.ownKeys(raw);
+    if (keys.length !== 3 || keys.some((key) => key !== 'a' && key !== 'b' && key !== 'c')) return null;
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(raw, key);
+      if (!descriptor || !('value' in descriptor)) return null;
+    }
+    const a = readG1Point(raw.a);
+    const b = readG2Point(raw.b);
+    const c = readG1Point(raw.c);
+    // Infinity is refused here: a Groth16 proof needs three real elements.
+    if (a === null || b === null || c === null) return null;
+    if (!isValidG1(a) || !isValidG2(b) || !isValidG1(c)) return null;
+    return { a, b, c };
+  } catch {
+    return null;
+  }
+}
+
+function readPublicSignals(raw, nPublic) {
+  try {
+    if (!Array.isArray(raw) || raw.length !== nPublic) return null;
+    const out = [];
+    for (let i = 0; i < raw.length; i += 1) {
+      const value = readCanonicalScalar(raw[i], R);
+      if (value === null) return null;
+      out.push(value);
+    }
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+// vk_x = IC[0] + sum(publicInputs[i] * IC[i+1]), in the kernel's shape. An identity entry
+// contributes nothing, as an explicit identity should. Signals may be canonical decimals or BigInts;
+// anything else makes this return null rather than guess.
+function accumulateIc(rawIc, publicInputs) {
+  if (!Array.isArray(rawIc) || rawIc.length === 0 || !Array.isArray(publicInputs)) return null;
+  if (publicInputs.length > rawIc.length - 1) return null;
+  let running = readIdentityG1Point(rawIc[0]);
+  if (running === null && rawIc[0] !== null) return null;
+  for (let i = 0; i < publicInputs.length; i += 1) {
+    const scalar = readCanonicalScalar(publicInputs[i], R);
+    if (scalar === null) return null;
+    const entry = readIdentityG1Point(rawIc[i + 1]);
+    if (entry === null && rawIc[i + 1] !== null) return null;
+    if (entry === null) continue;
+    const term = g1.mul(entry, scalar);
+    running = running === null ? term : g1.add(running, term);
+  }
+  return g1Shape(running);
+}
+
+// The four pairs of the Groth16 equation, exposed so a test can compare them with the oracle's own
+// list instead of trusting a boolean. Reads the same shapes as verifyGroth16 and does not judge
+// them: verifying is verifyGroth16's job, which also checks the curves and the subgroups.
+function equationTerms(rawVerificationKey, rawProof, rawPublicInputs) {
+  const key = readVerificationKey(rawVerificationKey);
+  if (key === null) return null;
+  const proof = readProof(rawProof);
+  if (proof === null) return null;
+  const publicInputs = readPublicSignals(rawPublicInputs, key.nPublic);
+  if (publicInputs === null) return null;
+  const vkX = accumulateIc(rawVerificationKey.ic, publicInputs);
+  if (vkX === null) return null;
+  // The terms come back in the internal point shape, which is what pairingProduct consumes.
+  const vkXInternal = vkX === null ? null : { x: vkX[0], y: vkX[1] };
+  return [
+    { p: g1.neg(proof.a), q: proof.b },
+    { p: key.alpha, q: key.beta },
+    { p: vkXInternal, q: key.gamma },
+    { p: proof.c, q: key.delta },
+  ];
+}
+
+// e(-A,B) * e(alpha,beta) * e(vk_x,gamma) * e(C,delta) == 1, with one single final exponentiation
+// over the product of the four Miller values.
+//
+// The answer is a boolean about an equation. It is not a statement about the presenter, about the
+// institution that produced the key, or about freshness: the same proof verifies again for the same
+// signals, forever. Nothing here consumes a nonce and nothing here is a nullifier.
+function verifyGroth16(rawVerificationKey, rawProof, rawPublicInputs) {
+  try {
+    const key = readVerificationKey(rawVerificationKey);
+    if (key === null) return false;
+    if (!isValidG1(key.alpha) || !isValidG2(key.beta) || !isValidG2(key.gamma) || !isValidG2(key.delta)) {
+      return false;
+    }
+    for (const entry of key.ic) {
+      if (entry !== null && !isValidG1(entry)) return false;
+    }
+    if (readProof(rawProof) === null) return false;
+    const terms = equationTerms(rawVerificationKey, rawProof, rawPublicInputs);
+    if (terms === null) return false;
+    return fp12.eq(pairingProduct(terms), fp12.ONE);
+  } catch {
+    return false;
+  }
+}
+
+// The backend of the phase 1 port, bound to one verification key. The key is parsed here as well, so
+// the backend does not take the port's word for it: a key this reader refuses never reaches a
+// pairing. Throws if the key itself is unusable, which is a configuration error, not a verdict.
+function createReferenceBackend(rawVerificationKey) {
+  const key = readVerificationKey(rawVerificationKey);
+  if (key === null) throw new TypeError('verification key is not readable by the BN254 reference');
+  if (!isValidG1(key.alpha) || !isValidG2(key.beta) || !isValidG2(key.gamma) || !isValidG2(key.delta)) {
+    throw new TypeError('verification key holds a point off its curve or outside the subgroup');
+  }
+  for (const entry of key.ic) {
+    if (entry !== null && !isValidG1(entry)) {
+      throw new TypeError('verification key holds an IC point off the curve or outside the subgroup');
+    }
+  }
+  return Object.freeze({
+    label: 'bn254-bigint-reference',
+    // The port has already read the ranges; this repeats them, because a reference that trusts its
+    // caller is not a reference.
+    verify: ({ proof, publicInputs }) => verifyGroth16(rawVerificationKey, proof, publicInputs),
+    digestMaterial: { nPublic: key.nPublic },
+  });
+}
+
 const bn254Internals = Object.freeze({ P, R, fp, fp2, fp6, fp12, g1, g2 });
 module.exports = {
   bn254Internals,
@@ -394,4 +618,10 @@ module.exports = {
   pairingProduct,
   toOracleBasis,
   fromOracleBasis,
+  readVerificationKey,
+  readProof,
+  accumulateIc,
+  equationTerms,
+  verifyGroth16,
+  createReferenceBackend,
 };

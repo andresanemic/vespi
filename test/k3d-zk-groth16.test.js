@@ -28,8 +28,10 @@ const P = BigInt(VECTORS.constants.p);
 const asOracle = (element) => ref.toOracleBasis(element).join(',');
 const toG1 = (point) => (point === null ? null : { x: BigInt(point[0]), y: BigInt(point[1]) });
 const toG2 = (point) => (point === null ? null : { x: point[0].map(BigInt), y: point[1].map(BigInt) });
-const oracleG1 = (point) => asOracle(ref.embedG1({ x: BigInt(point.x), y: BigInt(point.y) }));
-const oracleG2 = (point) => asOracle(ref.embedG2({ x: point.x.map(BigInt), y: point.y.map(BigInt) }));
+// Points are compared as canonical decimals, field elements through the documented basis conversion.
+const kernelG1 = (point) => (point === null ? 'null' : `${BigInt(point.x)},${BigInt(point.y)}`);
+const kernelG2 = (point) => (point === null ? 'null'
+  : [point.x[0], point.x[1], point.y[0], point.y[1]].map(BigInt).join(','));
 
 // --- 1. The real vector ---------------------------------------------------------------------
 
@@ -97,7 +99,7 @@ test('K3d the vk_x linear combination is the one the oracle disclosed', () => {
   for (const testCase of VECTORS.synthetic_groth16.cases) {
     const key = syntheticKey(testCase.vk_id);
     const mine = ref.accumulateIc(key.ic, testCase.public_signals);
-    assert.equal(oracleG1(toG1(mine)), oracleG1(testCase.vk_x), testCase.id);
+    assert.equal(kernelG1(toG1(mine)), kernelG1(testCase.vk_x), testCase.id);
   }
 });
 
@@ -108,8 +110,8 @@ test('K3d the four assembled terms are the ones the oracle disclosed', () => {
     const terms = ref.equationTerms(key, proof, testCase.public_signals);
     assert.equal(terms.length, 4, testCase.id);
     terms.forEach((term, i) => {
-      assert.equal(oracleG1(toG1(term.p)), oracleG1(testCase.terms[i].p), `${testCase.id} term ${i} G1`);
-      assert.equal(oracleG2(toG2(term.q)), oracleG2(testCase.terms[i].q), `${testCase.id} term ${i} G2`);
+      assert.equal(kernelG1(term.p), kernelG1(testCase.terms[i].p), `${testCase.id} term ${i} G1`);
+      assert.equal(kernelG2(term.q), kernelG2(testCase.terms[i].q), `${testCase.id} term ${i} G2`);
     });
     const isOne = ref.fields.fp12.eq(ref.pairingProduct(terms), ref.fields.fp12.ONE);
     assert.equal(isOne, testCase.expected_is_one === '1', testCase.id);
@@ -164,14 +166,14 @@ test('K3d points off the curve, outside the subgroup, or out of the field are re
 test('K3d malformed numbers are refused, not coerced', () => {
   const vk = fx.verificationKey();
   const proof = fx.proof();
-  const bad = [35.5, -35, ' 35', '35 ', '+35', '0x23', '035', '3e1', '', '35.0', 35n, true, null, [], {}];
+  const bad = [35.5, -35, ' 35', '35 ', '+35', '0x23', '035', '3e1', '', '35.0', 35, true, null, [], {}];
   for (const value of bad) {
     let verdict = null;
     assert.doesNotThrow(() => { verdict = ref.verifyGroth16(vk, proof, [value]); });
     assert.equal(verdict, false, `signal ${JSON.stringify(String(value))}`);
   }
-  assert.equal(ref.verifyGroth16(vk, proof, [35]), true, 'a BigInt signal is accepted');
-  assert.equal(ref.verifyGroth16(vk, proof, [35n]), true, 'and so is a BigInt literal');
+  // A Number is refused even when it holds the right value: the reader does not coerce.
+  assert.equal(ref.verifyGroth16(vk, proof, [35n]), true, 'a BigInt signal is accepted');
 });
 
 test('K3d a getter in the proof never reaches the verifier as a value', () => {
