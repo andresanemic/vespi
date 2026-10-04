@@ -15,6 +15,7 @@
 // returned true; that limit belongs to whoever writes the ports.
 
 const { sufficient } = require('./authority.js');
+const { runOperation } = require('./operation.js');
 const { parseTime } = require('./time.js');
 const { createHash } = require('node:crypto');
 
@@ -353,13 +354,170 @@ function createMemoryPaymentClaims() {
   return { reserveEffect: () => 'capacity', claimTransaction: () => 'capacity' };
 }
 
+// Only these options reach the engine. `verify` is deliberately absent: this contract installs its
+// own verifier, so a host cannot hand the payment a verifier that trusts the signer.
+const ALLOWED_IO_KEYS = [
+  'ask', 'decide', 'decideThreshold', 'decideTimeoutMs', 'now',
+  'askTimeoutMs', 'performTimeoutMs', 'verifyTimeoutMs',
+];
+const DEFAULT_VERIFY_TIMEOUT_MS = 15_000;
+
+// The run clock is a synchronous contract, the same one the engine uses. An injected clock that is
+// invalid or asynchronous cannot authorize an effect, so the run stops before any port is called.
+function readRunNow(io) {
+  let clock;
+  try {
+    clock = io?.now;
+  } catch {
+    return null;
+  }
+  if (typeof clock !== 'function') return Date.now();
+  let value;
+  try {
+    value = clock.call(io);
+  } catch {
+    return null;
+  }
+  if (value !== null && (typeof value === 'object' || typeof value === 'function')) {
+    try {
+      if (typeof value.then === 'function') {
+        Promise.resolve(value).catch(() => {});
+        return null;
+      }
+    } catch {
+      return null;
+    }
+  }
+  const parsed = parseTime(value);
+  return parsed === null ? null : parsed;
+}
+
+// A required() that names an asset the authority mentions for somebody else is not a request for
+// permission: it is a payment this agreement cannot make, so it comes back blocked with its exit.
+// An authority that says nothing about the asset is left to the human gate, which may still say yes.
+function requiredFor(spec, op) {
+  const declared = { spend: [{ asset: spec.grantAsset, amount: spec.amount, to: spec.payTo }] };
+  let granted;
+  try {
+    granted = Array.isArray(op?.authority?.spend) ? op.authority.spend : [];
+  } catch {
+    return declared;
+  }
+  let mentionsAsset = false;
+  let namesRecipient = false;
+  for (const entry of granted) {
+    if (!isPlainObject(entry) || entry.asset !== spec.grantAsset) continue;
+    mentionsAsset = true;
+    if (entry.to === spec.payTo) namesRecipient = true;
+  }
+  if (mentionsAsset && !namesRecipient) {
+    return { impossible: true, reason: CODES.TERMS_REJECTED, exit: EXIT };
+  }
+  return declared;
+}
+
+function blocked(code) {
+  return { ok: false, impossible: true, reason: code, exit: EXIT };
+}
+
+function failed(code) {
+  return { ok: false, error: code };
+}
+
+function abortedRead(signal) {
+  try {
+    return Boolean(signal?.aborted);
+  } catch {
+    return false;
+  }
+}
+
+async function discoverRequired(ports, spec, signal) {
+  let discovered;
+  try {
+    discovered = await ports.discover({ url: spec.url, method: spec.method, redirect: 'error', signal });
+  } catch {
+    return { ok: false, code: CODES.DISCOVERY_FAILED };
+  }
+  if (abortedRead(signal)) return { ok: false, code: CODES.ABORTED };
+  if (!isPlainObject(discovered) || discovered.status !== 402 || !isPlainObject(discovered.paymentRequired)) {
+    return { ok: false, code: CODES.DISCOVERY_FAILED };
+  }
+  return { ok: true, paymentRequired: discovered.paymentRequired };
+}
+
+// Group C stops here on purpose: the reserve, prepare, send and verify stages are built by the
+// groups that test them. Nothing in this state reaches a receipt.
+async function perform(ctx, spec, ports, io) {
+  const now = ctx.now;
+  const cover = liveGrant(ctx.authority, spec, now);
+  if (!cover.ok) return blocked(cover.code);
+
+  const discovered = await discoverRequired(ports, spec, ctx.signal);
+  if (!discovered.ok) return failed(discovered.code);
+
+  const chosen = selectX402Terms(discovered.paymentRequired, spec, ctx.authority, now);
+  if (!chosen.ok) return blocked(chosen.code);
+
+  const recheck = liveGrant(ctx.authority, spec, now);
+  if (!recheck.ok) return blocked(recheck.code);
+
+  ctx.trace.push('select');
+  throw new Error('x402 contract: reserve and prepare stages are not built yet');
+}
+
+// Installed by this contract, not by the host. Replaced by the settlement verifier in group E.
+function privateVerifier(ctx) {
+  return { verified: false, checks: {}, reason: `settlement evidence for ${ctx.expected.payTo} is not verified by this build` };
+}
+
+function buildRunIo(io, ctx) {
+  let runIo = {};
+  if (io !== null && typeof io === 'object') runIo = { ...io };
+  for (const key of Object.keys(runIo)) {
+    if (!ALLOWED_IO_KEYS.includes(key)) delete runIo[key];
+  }
+  runIo.verify = (evidence) => privateVerifier(ctx, evidence);
+  return runIo;
+}
+
 function createX402Payment(rawSpec, rawPorts) {
   const spec = readSpec(rawSpec);
   const ports = readPorts(rawPorts);
   return {
     id: spec.id,
-    required: () => ({ spend: [{ asset: spec.grantAsset, amount: spec.amount, to: spec.payTo }] }),
-    run: () => { throw new Error('x402 payment run is not built yet'); },
+    required: (op) => requiredFor(spec, op),
+    run: async (op, io) => {
+      if (!isPlainObject(op)) throw specError();
+      // Every run owns its capability and its private context: no authDigest and no expectation is
+      // ever shared between two concurrent runs of the same payment.
+      const ctx = {
+        spec,
+        ports,
+        io,
+        expected: expectedEffect(spec),
+        requirement: requirementOf(spec),
+        now: null,
+        authority: null,
+        trace: [],
+        authDigest: null,
+        sendStarted: false,
+      };
+      const capability = {
+        id: spec.id,
+        required: (operation) => requiredFor(spec, operation),
+        perform: async (performCtx) => {
+          ctx.authority = performCtx?.authority ?? null;
+          ctx.operationKey = performCtx?.idempotencyKey ?? null;
+          ctx.signal = performCtx?.signal ?? null;
+          const now = readRunNow(io);
+          if (now === null) return failed(CODES.INVALID_CLOCK);
+          ctx.now = now;
+          return perform(ctx, spec, ports, io);
+        },
+      };
+      return runOperation(op, capability, buildRunIo(io, ctx));
+    },
   };
 }
 

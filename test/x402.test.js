@@ -530,10 +530,11 @@ test('K4-C3 a quorum that repeats one identity or names nobody allowed opens no 
 });
 
 test('K4-C4 a wildcard grant or a grant to another recipient blocks before any port runs', async () => {
+  // A grant that mentions this asset but never this recipient is a payment this agreement cannot
+  // make. A grant for another asset says nothing about this one, so the person still gets the gate.
   for (const [label, granted] of Object.entries({
     wildcard: [{ asset: 'USDC:TOKEN', maxAmount: '500000' }],
     'another recipient': [{ asset: 'USDC:TOKEN', maxAmount: '500000', to: 'SOMEONE-ELSE' }],
-    'another asset': [{ asset: 'USDC:OTHER', maxAmount: '500000', to: 'RECIPIENT' }],
   })) {
     const ports = fakePorts();
     const payment = loadKernel().createX402Payment(spec(), ports);
@@ -547,6 +548,18 @@ test('K4-C4 a wildcard grant or a grant to another recipient blocks before any p
     assert.equal(ports.calls.prepare, 0, label);
     assert.equal(ports.calls.send, 0, label);
   }
+});
+
+test('K4-C4b a grant for another asset opens the gate instead of blocking, with zero ports', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const res = await payment.run(opWith({ spend: [{ asset: 'USDC:OTHER', maxAmount: '500000', to: 'RECIPIENT' }] }), {
+    now: () => CLOCK_MS,
+    ask: async () => ({ approved: false, by: 'ana' }),
+  });
+  assert.equal(res.status, 'needs_human_decision');
+  assert.equal(ports.calls.discover, 0);
+  assert.equal(ports.calls.send, 0);
 });
 
 test('K4-C5 a grant naming this recipient reaches discovery exactly once', async () => {
