@@ -76,6 +76,15 @@ function portError() {
   return error;
 }
 
+// The run options are host code too. Options that cannot be read are a refused run, not a run
+// without them: a payment whose human gate, clock or budget could not even be copied away has no
+// business going out.
+function ioError() {
+  const error = new Error('x402 run options are invalid');
+  error.code = 'VESPI_X402_INVALID_IO';
+  return error;
+}
+
 function isPlainObject(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   try {
@@ -860,7 +869,9 @@ async function readDelivery(response, ctx) {
   let output;
   try {
     ok = isPlainObject(validated) && validated.ok === true;
-    digest = typeof validated.digest === 'string' && HASH.test(validated.digest) ? validated.digest : null;
+    // Read once: the digest that was checked for shape is the digest that goes on the receipt.
+    const reported = validated.digest;
+    digest = typeof reported === 'string' && HASH.test(reported) ? reported : null;
     output = validated.output === undefined ? null : validated.output;
   } catch {
     return { ok: false, output: null, digest: null };
@@ -1038,7 +1049,16 @@ function revalidateBeforeSend(ctx) {
 
 function buildRunIo(io, ctx) {
   let runIo = {};
-  if (io !== null && typeof io === 'object') runIo = { ...io };
+  if (io !== null && typeof io === 'object') {
+    // Copying the options reads every own key of a host object. If that read throws, the run is
+    // refused with a fixed code: the trap's own message never reaches the caller, and a payment is
+    // never sent with the host hooks silently missing.
+    try {
+      runIo = { ...io };
+    } catch {
+      throw ioError();
+    }
+  }
   for (const key of Object.keys(runIo)) {
     if (!ALLOWED_IO_KEYS.includes(key)) delete runIo[key];
   }

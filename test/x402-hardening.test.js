@@ -326,20 +326,22 @@ test('H09 a refused container is never read', () => {
 // Group D — the boundary of the contract
 // =====================================================================================
 
-test('H10 an unreadable io cannot throw out of the contract with a private message', async () => {
+test('H10 an unreadable io cannot leak its private message out of the contract', async () => {
   const kernel = require('../src/x402.js');
   const ports = fakePorts();
   const op = createOperation({ goal: 'paid marketing plan', action: 'pay', authority: authority() });
   const io = new Proxy({ now: () => CLOCK_MS }, {
     ownKeys() { throw new Error(PRIVATE_MARKER); },
   });
-  let res = null;
+  let error = null;
   try {
-    res = await kernel.createX402Payment(spec(), ports).run(op, io);
-  } catch (error) {
-    assert.fail(`run must answer with a public code, not with ${error && error.message}`);
+    await kernel.createX402Payment(spec(), ports).run(op, io);
+  } catch (thrown) {
+    error = thrown;
   }
-  assert.notEqual(res.status, 'verified');
+  assert.ok(error !== null, 'a run whose options cannot be read is refused, not sent without them');
+  assert.equal(error.code, 'VESPI_X402_INVALID_IO', 'the refusal is a fixed code of this module');
+  assert.equal(String(error.message).includes(PRIVATE_MARKER), false, 'no private message escapes');
   assert.equal(ports.calls.send, 0);
 });
 
