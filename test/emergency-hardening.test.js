@@ -175,9 +175,11 @@ test('H04 the grantee cannot be a declared reviewer of its own use', async () =>
 // The class: the counter that is not authority-bound. Records live in a ledger the caller names on
 // every call, so a caller who holds the permission can hand a fresh one to any of them. The cap,
 // the replay sets, the pause, the revocation and a review that was rejected all live in that
-// record, so a rejected use and a revoked grant both exercise again on the next ledger. Binding the
-// ledger to the grant would remove the multi-ledger shape the API has today, so this stays a
-// decision, and it is written down as a limit either way.
+// record, so a rejected use and a revoked grant both exercise again on the next ledger. The ledger is
+// bound to the private family of the grant instead, at its first administrative call or exercise, and
+// the binding is keyed by that family and not by the handle, so a renewal cannot hand the caller a
+// fresh account either. What this does not do is survive a process: the binding lives in this
+// process's memory, so a host that does not persist and restore its ledger has nothing to restore.
 test('H05 a rejected use and a revocation survive a ledger the caller supplies', async () => {
   const rejected = await granted({ id: 'h05-rejected' });
   const first = ledgerFor();
@@ -188,6 +190,26 @@ test('H05 a rejected use and a revocation survive a ledger the caller supplies',
   const revoked = await granted({ id: 'h05-revoked' });
   emergency.revokeEmergencyPermission(revoked, { ledger: ledgerFor(), by: 'person' });
   assert.equal(run(revoked, ledgerFor()).state, 'blocked');
+});
+
+test('H05 the ledger binding survives a renewal, so the clock cannot buy a fresh account', async () => {
+  const permission = await granted({ id: 'h05-renew' });
+  const first = ledgerFor();
+  emergency.exerciseEmergency(permission, REQUEST(), { ledger: first, now: AT });
+  const renewed = emergency.renewEmergencyPermission(permission, { expiresAt: '2026-10-06T00:00:00Z' });
+  const other = ledgerFor();
+  // The renewed handle is a new object with the same family, so the ledger it already lives in is
+  // still its ledger and another one is refused with nothing spent.
+  const result = emergency.exerciseEmergency(renewed, REQUEST({ useId: 'u2' }), { ledger: other, now: AT });
+  assert.equal(result.state, 'blocked');
+  assert.match(result.reason, /ledger/i);
+  assert.equal(emergency.getEmergencyState(renewed, { ledger: first, now: AT }).uses, 1);
+  assert.equal(emergency.getEmergencyState(renewed, { ledger: other, now: AT }).uses, 0);
+  assert.equal(emergency.getEmergencyState(renewed, { ledger: other, now: AT }).status, 'ledger_conflict');
+  // And it refuses on the administrative side too, so the binding cannot be moved by pausing first.
+  assert.throws(() => emergency.pauseEmergencyPermission(renewed, { ledger: other, by: 'person', now: AT }), /ledger/i);
+  assert.throws(() => emergency.revokeEmergencyPermission(renewed, { ledger: other, by: 'person', now: AT }), /ledger/i);
+  assert.equal(emergency.getEmergencyState(renewed, { ledger: first, now: AT }).status, 'review_pending');
 });
 
 // ─── H06 · a receipt that travels carries the text the common kernel would have refused ───────
