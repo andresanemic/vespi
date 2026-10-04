@@ -1447,3 +1447,101 @@ test('K4-G5 the settlement port is asked about the declared effect, never about 
   assert.equal(typeof seen.signal.aborted, 'boolean');
   assert.equal(seen.expected.grantAsset, undefined, 'the grant asset is not part of the protocol effect');
 });
+// =====================================================================================
+// Group H — hardening: the reasons name a public code, the engine's budget stops the run, and
+// two runs of the same payment never share private state (cases 12, 17 and the limits)
+// =====================================================================================
+
+test('K4-H1 every refusal on a receipt names a code from the catalog and no text written by a port', async () => {
+  const seen = [];
+  const refusals = {
+    SETTLEMENT_REJECTED: fakePorts({
+      sendPaid: async () => paidResponse({ settlement: { success: true, transaction: TX_HASH, payer: 'SOMEONE-ELSE', network: 'stellar:testnet', amount: '100000' } }),
+    }),
+    DELIVERY_REJECTED: fakePorts({ sendPaid: async () => paidResponse({ readBody: async () => ({ title: 'only a title' }) }) }),
+    DUPLICATE_TRANSACTION: fakePorts({ claims: loadKernel().createMemoryPaymentClaims(), sendPaid: async () => paidResponse({ settlement: { success: true, transaction: 'd'.repeat(64), payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }) }),
+    VERIFIER_FAILED: fakePorts({ sendPaid: async () => paidResponse(), verifySettlement: async () => ({ verified: true, checks: { invocation: false }, reason: '' }) }),
+  };
+  const store = refusals.DUPLICATE_TRANSACTION.claims;
+  for (const [code, ports] of Object.entries(refusals)) {
+    const res = await runOnce(ports);
+    assert.equal(res.status, 'not_verified', code);
+    const reason = res.receipt.verification.reason;
+    seen.push(reason);
+    assert.match(reason, new RegExp(code), `${code} is named in the reason`);
+    assert.equal(/facilitator|horizon|https?:|PUBLIC-AUTH/.test(reason), false, reason);
+  }
+  assert.equal(store.claimTransaction('stellar:testnet', 'd'.repeat(64)), 'duplicate');
+  const repeated = fakePorts({ claims: store, sendPaid: async () => paidResponse({ settlement: { success: true, transaction: 'd'.repeat(64), payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }) });
+  const again = await loadKernel().createX402Payment(spec({ url: 'https://example.test/api?service=twice' }), repeated).run(opWith(authority()), runIo());
+  assert.equal(again.status, 'not_verified');
+  assert.match(again.receipt.verification.reason, /DUPLICATE_TRANSACTION/);
+});
+
+test('K4-H2 the engine budget stops the run, the signal is cancelled and nothing is sent twice', async () => {
+  let signal = null;
+  let sends = 0;
+  const ports = fakePorts({
+    sendPaid: async (request) => {
+      sends += 1;
+      signal = request.signal;
+      return new Promise(() => {});
+    },
+  });
+  const res = await runOnce(ports, { performTimeoutMs: 40 });
+  assert.equal(sends, 1);
+  assert.equal(res.status, 'not_verified');
+  assert.equal(res.receipt.verification.verified, false);
+  assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT' }]);
+  await delay(80);
+  assert.equal(signal.aborted, true, 'the engine cancelled the signal it owns');
+  assert.equal(sends, 1, 'a cancelled run is never retried by this module');
+});
+
+test('K4-H3 a port that ignores cancellation cannot turn a stopped run into a verified one', async () => {
+  let late = null;
+  const ports = fakePorts({
+    sendPaid: async (request) => new Promise((resolve) => {
+      request.signal.addEventListener('abort', () => {
+        // The host keeps acting after the contract gave up: it answers anyway, late.
+        setTimeout(() => { late = 'answered'; resolve(paidResponse()); }, 60);
+      }, { once: true });
+    }),
+  });
+  const res = await runOnce(ports, { performTimeoutMs: 30 });
+  assert.equal(res.status, 'not_verified');
+  await delay(140);
+  assert.equal(late, 'answered', 'the port really did answer after the abort');
+  assert.equal(res.output, null, 'the receipt written before the answer is not upgraded');
+  assert.equal(res.receipt.verification.verified, false);
+});
+
+test('K4-H4 run refuses a malformed operation and leaves the engine states it owns alone', async () => {
+  const { createX402Payment } = loadKernel();
+  const ports = fakePorts();
+  const payment = createX402Payment(spec(), ports);
+  for (const bad of [null, undefined, 'op', 42, []]) {
+    await assert.rejects(() => payment.run(bad, runIo()), (err) => err.code === 'VESPI_X402_INVALID_SPEC', String(bad));
+  }
+  assert.equal(ports.calls.discover, 0);
+
+  const paused = opWith(authority());
+  const { pauseOperation } = require('../src/operation.js');
+  pauseOperation(paused, 'nobody');
+});
+
+test('K4-H5 two runs of the same payment at once keep their own private context', async () => {
+  const first = fakePorts({ sendPaid: async () => paidResponse({ settlement: { success: true, transaction: '1'.repeat(64), payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }) });
+  const second = fakePorts({ sendPaid: async () => paidResponse({ settlement: { success: true, transaction: '2'.repeat(64), payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }) });
+  const payment = loadKernel().createX402Payment(spec(), first);
+  const other = loadKernel().createX402Payment(spec(), second);
+  const [a, b] = await Promise.all([payment.run(opWith(authority()), runIo()), other.run(opWith(authority()), runIo())]);
+  assert.equal(a.status, 'verified');
+  assert.equal(b.status, 'verified');
+  assert.equal(a.receipt.evidence.txHash, '1'.repeat(64));
+  assert.equal(b.receipt.evidence.txHash, '2'.repeat(64));
+  assert.equal(a.receipt.digest, a.receipt.digest);
+  assert.notEqual(a.receipt.digest, b.receipt.digest);
+  assert.equal(verifyReceipt(a.receipt).ok, true);
+  assert.equal(verifyReceipt(b.receipt).ok, true);
+});
