@@ -710,10 +710,22 @@ async function discoverRequired(ctx, spec) {
     return { ok: false, code: CODES.DISCOVERY_FAILED };
   }
   if (aborted(ctx)) return { ok: false, code: CODES.ABORTED };
-  if (!isPlainObject(discovered) || discovered.status !== 402 || !isPlainObject(discovered.paymentRequired)) {
+  // `status` and `paymentRequired` are read once, inside the guard, and the copy that was read is the
+  // copy that is judged and the one handed on. Read outside it, a getter answered the check and threw
+  // at the use, and whatever it wrote travelled into the receipt as the run's detail.
+  let status;
+  let paymentRequired;
+  try {
+    if (!isPlainObject(discovered)) return { ok: false, code: CODES.DISCOVERY_FAILED };
+    status = discovered.status;
+    paymentRequired = discovered.paymentRequired;
+  } catch {
     return { ok: false, code: CODES.DISCOVERY_FAILED };
   }
-  return { ok: true, paymentRequired: discovered.paymentRequired };
+  if (status !== 402 || !isPlainObject(paymentRequired)) {
+    return { ok: false, code: CODES.DISCOVERY_FAILED };
+  }
+  return { ok: true, paymentRequired };
 }
 
 // The signer is trusted to produce an authorization and nothing else. What that authorization
