@@ -155,10 +155,22 @@ function askPeople(port, snapshot) {
     ...snapshot.pausers.map((name) => ['pauser', name, asked.pausers, null]),
     ...snapshot.triggers.map((trigger) => ['verifier', trigger.verifierId, asked.verifiers, null]),
   ];
+  // One name is one person, and the port is the only thing that can say so. The first answer for a
+  // name is the one this kernel keeps; a second answer for the SAME name that is not that very
+  // object is a port contradicting itself about who somebody is, and a kernel that compares principals
+  // cannot pick a winner (R519). Names are not compared and a grant may name one person twice — the
+  // owner is usually also a pauser — because the question is never "is this the same name", it is
+  // "did the port hand back the same person".
+  const firstAnswer = new Map();
   for (const [role, name, list, field] of roles) {
     const claim = Object.freeze({ grantId: snapshot.id, role, name });
     const answer = askPrincipal(port, claim);
     if (!answer.ok) return answer;
+    const held = firstAnswer.get(name);
+    if (held !== undefined && !samePrincipal(held.principal, answer.principal)) {
+      return { ok: false, reason: `the injected authenticate port answered with two different principals for the declared name ${name} (once as ${held.role} and once as ${role}), so this kernel cannot tell who is who: one name resolving to two identities is a contradiction, and it refuses it rather than choosing` };
+    }
+    if (held === undefined) firstAnswer.set(name, { principal: answer.principal, role });
     if (field) asked[field] = answer.principal;
     else list.push({ name, principal: answer.principal });
   }
@@ -187,6 +199,116 @@ function askPeople(port, snapshot) {
     return { ok: false, reason: `the owner ${snapshot.owner} and the grantee ${snapshot.grantee} resolve to the same principal, so this permission would let one principal sign the authority and spend it` };
   }
   return { ok: true, people: asked };
+}
+
+// ─── The one door every mutation comes through ─────────────────────────────────────────────────
+//
+// Who may spend, close, pause, resume, revoke, grant or extend a permission is a table, not a
+// question each function asks its own way. Before this there were five scattered comparisons and a
+// sixth verb, the exercise, that asked none: `src/emergency.js` read only `ledger` and `now`, so a
+// declared `actor` string was the whole caller check and a legitimate reviewer, the trigger verifier
+// or the owner could spend the authority and then sign its own review (R501-R505). A surface with a
+// hole in it like that is a surface where the next verb will have one too, so the roles live here and
+// every mutating entry point below answers to this one function.
+//
+//   role      — whose principals may perform the verb. `grantee` and `owner` are single principals
+//               from the binding; the plural roles are the lists the port answered for.
+//   required  — whether the verb refuses the transition outright when no principal is presented at
+//               all. True for the five verbs a caller of the permission handle performs. False for the
+//               grant and the renewal, because there the acting person is authenticated by the host
+//               callback this kernel BOUND (`authorizeGrantor`, `authorizeRenewal`) and a caller who
+//               presents nothing cannot replace that answer; a principal offered there is
+//               corroboration, checked and never trusted in place of the bound callback.
+//   refusal  — the sentence a caller is refused with when its principal is not in that role. It says
+//               which role could have, because "not authorized" alone leaves the caller guessing.
+//
+// The rule that holds over the table: the agent that spends the authority decides nothing about it,
+// whatever the grant declares and whatever principal the host issued for it (A01). The exercise is
+// the one verb that spends it, so it is the one verb the rule does not apply to.
+const TRANSITIONS = {
+  exercise: {
+    role: 'grantee',
+    required: true,
+    refusal: 'the principal that signed this call is not the grantee of this emergency permission ({names}), so it cannot spend this authority',
+  },
+  review: {
+    role: 'reviewers',
+    required: true,
+    refusal: 'not authorized to close this emergency review: reviewers are [{names}]',
+  },
+  pause: {
+    role: 'pausers',
+    required: true,
+    refusal: 'not authorized to pause: pausers are [{names}]',
+  },
+  resume: {
+    role: 'pausers',
+    required: true,
+    refusal: 'not authorized to resume: pausers are [{names}]',
+  },
+  revoke: {
+    role: 'owner',
+    required: true,
+    refusal: 'only the person who granted this emergency permission may revoke it, and it was granted by {names}',
+  },
+  grant: {
+    role: 'owner',
+    required: false,
+    refusal: 'the principal that signed this call is not the owner this grant names ({names}), so the grant is refused',
+  },
+  renew: {
+    role: 'owner',
+    required: false,
+    refusal: 'the principal that signed this call is not the owner of this permission ({names}), so the clock is not extended',
+  },
+};
+
+// The principals a role may act as. Taken from the private binding, never from the object the caller
+// happens to be holding, so a forged permission that is well formed names nobody.
+function roleEntries(target, role) {
+  const people = target.people;
+  if (role === 'grantee') return [{ name: target.snapshot.grantee, principal: people.grantee }];
+  if (role === 'owner') return [{ name: target.snapshot.owner, principal: people.owner }];
+  return people[role] || [];
+}
+
+// Who signed this call, as far as this kernel can know: a principal the host's own port issued at the
+// grant. A string is not one, an object nobody issued is not one, and anything else is a refusal
+// rather than a name this kernel would have to trust.
+function signedBy(by) {
+  if (!by || typeof by !== 'object') return null;
+  return PRINCIPALS.has(by) ? by : null;
+}
+
+// The agent that spends the authority is not a person who may decide about it: the sentence, or null.
+function refuseGrantee(target, by) {
+  if (samePrincipal(by, target.people.grantee)) {
+    return `the principal that signed this call is the agent that exercised the authority (${target.snapshot.grantee}), so it cannot decide about its own use`;
+  }
+  return null;
+}
+
+// The one door. `{ ok: true, signer, entry }` when the principal may perform the verb, and
+// `{ ok: false, reason }` when it may not; every entry point decides for itself whether that refusal
+// is a thrown error or a blocked receipt, because a transition that was never reached and a use that
+// was refused are honest in different shapes.
+function authorizeTransition(target, verb, by) {
+  const rule = TRANSITIONS[verb];
+  if (!rule) return { ok: false, reason: `this kernel does not know the transition ${verb}` };
+  const entries = roleEntries(target, rule.role);
+  if (by === undefined || by === null) {
+    if (rule.required) return { ok: false, reason: NO_PRINCIPAL };
+    // Nothing was presented and nothing is required here: the host callback this kernel bound is the
+    // authority for this verb, and it is already on the way to being asked.
+    return { ok: true, signer: null, entry: null };
+  }
+  const signer = signedBy(by);
+  if (!signer) return { ok: false, reason: NO_PRINCIPAL };
+  const independence = verb === 'exercise' ? null : refuseGrantee(target, signer);
+  if (independence) return { ok: false, reason: independence };
+  const entry = entries.find((item) => samePrincipal(item.principal, signer));
+  if (!entry) return { ok: false, reason: rule.refusal.replace('{names}', entries.map((item) => item.name).join(', ')) };
+  return { ok: true, signer, entry };
 }
 
 const CAPABILITY = 'emergency-access';
@@ -857,9 +979,9 @@ function useReceipt(snapshot, asked, trigger, checked, dueAtMs, signalDigest) {
 // ─── The grant ────────────────────────────────────────────────────────────────────────────────
 
 async function createEmergencyPermission(grant, options = {}) {
-  const deps = readOptions(options, ['authenticate', 'authorizeGrantor', 'resolveVerifier', 'authorizeRenewal']);
+  const deps = readOptions(options, ['authenticate', 'authorizeGrantor', 'resolveVerifier', 'authorizeRenewal', 'by']);
   if (!deps) throw new Error(UNREADABLE_OPTIONS);
-  const { authenticate, authorizeGrantor, resolveVerifier, authorizeRenewal } = deps;
+  const { authenticate, authorizeGrantor, resolveVerifier, authorizeRenewal, by } = deps;
   const read = snapshotPermission(grant);
   if (!read.ok) throw new Error(`emergency permission is malformed: ${read.reason}`);
   const snapshot = read.snapshot;
@@ -871,6 +993,15 @@ async function createEmergencyPermission(grant, options = {}) {
   const people = askPeople(authenticate, snapshot);
   if (!people.ok) throw new Error(people.reason);
   if (typeof authorizeGrantor !== 'function') throw new Error('an injected grantor authority check is required: the kernel cannot see who granted this');
+  // Who is granting, through the same door as every other transition (A01). A host that knows who is
+  // asking passes that principal as `by` and it is refused unless it is the very one this port
+  // answered for the owner. A host that passes nothing is not left unauthenticated: the acting person
+  // there is `authorizeGrantor`, which this kernel bound and a caller cannot replace, and what this
+  // check adds on top is a refusal when a principal IS offered and is not the owner. That is the
+  // honest size of the guarantee — a principal for the grantor, declared and compared, not a second
+  // authentication this module could perform on its own.
+  const grantGate = authorizeTransition({ snapshot, people: people.people }, 'grant', by);
+  if (!grantGate.ok) throw new Error(grantGate.reason);
   // The candidate is read once, frozen, and is the single source from here on: the host authorizes
   // this object and the permission is built from this object. A second read of the caller's grant
   // would let the grantor answer about one scope while the kernel binds another (ADV05).
@@ -1055,7 +1186,7 @@ function exerciseEmergency(permission, request, options = {}) {
   const read = snapshotPermission(permission);
   const snapshot = read.ok ? read.snapshot : null;
   const asked = snapshotRequest(request);
-  const deps = readOptions(options, ['ledger', 'now']);
+  const deps = readOptions(options, ['ledger', 'by', 'now']);
   const ledger = deps ? deps.ledger : undefined;
   const clock = deps ? readClock(deps.now) : { ok: false, reason: UNREADABLE_OPTIONS };
   const bound = bindingOf(permission);
@@ -1080,6 +1211,15 @@ function exerciseEmergency(permission, request, options = {}) {
   if (!records) return fail('a kernel emergency ledger is required to exercise emergency access', at, asked.signal ? asked.signal.id : null);
   // Readable is not granted: only the object the grant path produced carries authority.
   if (!bound) return fail('no grant is bound to this emergency permission: an object that did not come through the grant path exercises nothing', at, asked.signal ? asked.signal.id : null);
+  // And WHO is calling, before anything at all is touched. This is the door the exercise did not have:
+  // it used to read only `ledger` and `now`, so a declared `actor` string was the whole caller check,
+  // and whoever held the permission and the ledger could spend the authority and then sign its own
+  // review. The principal is asked first and compared against the grantee the host vouched for at the
+  // grant; no ledger is bound, no record is created and no verifier is asked until it matches, so a
+  // refusal spends nothing at all (R501-R505). `actor` stays below as a DECLARED name the grant has
+  // to agree with: it is what a receipt and a grant digest are made of, and never a credential.
+  const gate = authorizeTransition(bound, 'exercise', deps.by);
+  if (!gate.ok) return fail(gate.reason, at, asked.signal ? asked.signal.id : null);
   // And the record only answers in the ledger this grant was first used with. A second ledger is a
   // record that never saw the cap, the review or the revocation, so it is refused before anything is
   // looked at and nothing is spent (H05).
@@ -1157,7 +1297,16 @@ function exerciseEmergency(permission, request, options = {}) {
     // Only the open review keeps its receipt. A closed one was already handed to whoever exercised
     // the permission, and the record used to keep every receipt it ever sealed for the life of the
     // ledger, which is retention this kernel has no use for and no bound on.
-    record.pending = { useId: asked.useId, triggerId: trigger.id, dueAtMs, receipt };
+    //
+    // The pending also keeps WHO spent the authority, as the principal the door just authenticated and
+    // not as a name out of the request. Independence is a relation between principals, so it has to be
+    // remembered as one: the review below is refused to that principal whatever the grant calls it.
+    // With the exercise admitting only the grantee this is the very same principal `refuseGrantee`
+    // refuses, so the two refusals coincide today (R502, R504, R505); they are kept apart anyway,
+    // because the guarantee on this record is about the executor and a later verb must not be able to
+    // spend authority under a principal this kernel has never heard of. It stays in the private record:
+    // no principal is ever serialized into a receipt.
+    record.pending = { useId: asked.useId, triggerId: trigger.id, dueAtMs, receipt, executor: gate.signer };
     return { state: 'review_pending', reason: null, nextUse: 'blocked_until_review', receipt };
   } finally {
     record.busy = false;
@@ -1166,36 +1315,12 @@ function exerciseEmergency(permission, request, options = {}) {
 
 // ─── The post-use review ─────────────────────────────────────────────────────────────────────
 
+// The two questions every mutating call asks, in this order and through one door: who signed the call
+// (a principal the host's own port issued at the grant), and which of this grant's principals it is
+// (a relation between principals, never a name).
 function requireBinding(permission, bound, verb) {
   if (bound) return bound;
   throw new Error(`this emergency permission carries no grant: no authority is bound to it, so it cannot be ${verb}`);
-}
-
-// Who signed this call, as far as this kernel can know: a principal the host's own port issued at the
-// grant. A string is not one, an object nobody issued is not one, and the answer to anything else is
-// the refusal below rather than a name this kernel would have to trust. The second question, which of
-// the grant's principals this is, is asked by each transition below.
-function signedBy(bound, by) {
-  if (!by || typeof by !== 'object' || !PRINCIPALS.has(by)) throw new Error(NO_PRINCIPAL);
-  return by;
-}
-
-// The agent that spends the authority is not a person who may decide about it, whatever the grant
-// declares and whatever principal the host issued for it: independence is a relation between
-// principals, so it is checked here as one (A01).
-function refuseGrantee(bound, by) {
-  if (samePrincipal(by, bound.people.grantee)) {
-    throw new Error(`the principal that signed this call is the agent that exercised the authority (${bound.snapshot.grantee}), so it cannot decide about its own use`);
-  }
-}
-
-// The name behind a principal, which is what a receipt carries. The receipt keeps reporting the
-// declared name, because that is what the grant digest and the authorized grant were made of; the
-// proof that the caller was that person is the host's and does not travel.
-function namedPrincipal(list, by, message) {
-  const entry = list.find((item) => samePrincipal(item.principal, by));
-  if (!entry) throw new Error(message);
-  return entry.name;
 }
 
 function reviewEmergencyUse(permission, useId, options = {}) {
@@ -1208,10 +1333,9 @@ function reviewEmergencyUse(permission, useId, options = {}) {
   const snapshot = bound.snapshot;
   if (!text(useId)) throw new Error('a review names the use it closes');
   if (decision !== 'accept' && decision !== 'reject') throw new Error('review decision must be accept or reject');
-  const signer = signedBy(bound, by);
-  refuseGrantee(bound, signer);
-  const reviewer = namedPrincipal(bound.people.reviewers, signer,
-    `not authorized to close this emergency review: reviewers are [${snapshot.reviewers.join(', ')}]`);
+  const gate = authorizeTransition(bound, 'review', by);
+  if (!gate.ok) throw new Error(gate.reason);
+  const reviewer = gate.entry.name;
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to close an emergency review');
   if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
@@ -1219,6 +1343,12 @@ function reviewEmergencyUse(permission, useId, options = {}) {
   if (!found.ok) throw new Error(found.reason);
   const record = found.record;
   if (!record || !record.pending || record.pending.useId !== useId) throw new Error('no matching pending emergency review');
+  // The other half of the same guarantee, stated against the executor instead of against the grantee.
+  // Whoever spent this authority is not the person who gets to say the use was fine, and this record
+  // knows which principal that was because the exercise authenticated it (R502, R504, R505).
+  if (samePrincipal(gate.signer, record.pending.executor)) {
+    throw new Error(`the principal that signed this call is the one that spent the authority of ${useId}, so it cannot close its own review`);
+  }
   // Read before anything moves: a review closed with a clock nobody injected would be stamped with
   // wall time and would look like the person decided at a moment she was never asked about.
   const clock = readClock(now);
@@ -1271,14 +1401,12 @@ function pauseEmergencyPermission(permission, options = {}) {
   if (!deps) throw new Error(UNREADABLE_OPTIONS);
   const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'paused');
-  const snapshot = bound.snapshot;
-  const signer = signedBy(bound, by);
-  refuseGrantee(bound, signer);
-  namedPrincipal(bound.people.pausers, signer, `not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
+  const gate = authorizeTransition(bound, 'pause', by);
+  if (!gate.ok) throw new Error(gate.reason);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to pause an emergency permission');
   if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
-  const claimed = claimRecord(records, snapshot.id, bound.family);
+  const claimed = claimRecord(records, bound.snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   claimed.record.paused = true;
   return emergencyState(permission, ledger, now);
@@ -1289,17 +1417,15 @@ function resumeEmergencyPermission(permission, options = {}) {
   if (!deps) throw new Error(UNREADABLE_OPTIONS);
   const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'resumed');
-  const snapshot = bound.snapshot;
-  const signer = signedBy(bound, by);
   // A pause is the owner stopping the agent. Lifting it has to be somebody's decision and not
   // something the agent undoes by saying the owner's name, or accepting a pause would be a formality
   // the grantee could revoke whenever it suited (A01, R414).
-  refuseGrantee(bound, signer);
-  namedPrincipal(bound.people.pausers, signer, `not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
+  const gate = authorizeTransition(bound, 'resume', by);
+  if (!gate.ok) throw new Error(gate.reason);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to resume an emergency permission');
   if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
-  const claimed = claimRecord(records, snapshot.id, bound.family);
+  const claimed = claimRecord(records, bound.snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   const record = claimed.record;
   if (record.revoked) throw new Error('a revoked emergency permission cannot be resumed');
@@ -1313,15 +1439,13 @@ function revokeEmergencyPermission(permission, options = {}) {
   if (!deps) throw new Error(UNREADABLE_OPTIONS);
   const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'revoked');
-  const snapshot = bound.snapshot;
   // Revocation is the owner's own act and nobody else's: not a pauser, not a reviewer, not the agent.
-  const signer = signedBy(bound, by);
-  refuseGrantee(bound, signer);
-  if (!samePrincipal(signer, bound.people.owner)) throw new Error('only the person who granted this emergency permission may revoke it');
+  const gate = authorizeTransition(bound, 'revoke', by);
+  if (!gate.ok) throw new Error(gate.reason);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to revoke an emergency permission');
   if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
-  const claimed = claimRecord(records, snapshot.id, bound.family);
+  const claimed = claimRecord(records, bound.snapshot.id, bound.family);
   if (!claimed.ok) throw new Error(claimed.reason);
   claimed.record.revoked = true;
   return emergencyState(permission, ledger, now);
@@ -1332,8 +1456,19 @@ function revokeEmergencyPermission(permission, options = {}) {
 // still a growth of authority, so it needs the approver the host bound at grant time: nobody holding
 // the object can hand the kernel its own approval, and a host that bound no approver cannot have the
 // clock extended at all.
-function renewEmergencyPermission(permission, changes) {
+//
+// A third argument carries WHO is asking, read through the same door as every other transition and
+// refused unless it is the owner this permission names. It is not required, and the reason is the
+// sentence above rather than a convenience: the authority for this verb is the bound approver, which
+// is host-held, is asked exactly once and answers about a candidate nobody can substitute (R509). A
+// principal offered here is checked; the kernel does not pretend that checking one is what makes the
+// extension legitimate.
+function renewEmergencyPermission(permission, changes, options = {}) {
   const bound = requireBinding(permission, bindingOf(permission), 'renewed');
+  const requested = readOptions(options, ['by']);
+  if (!requested) throw new Error(UNREADABLE_OPTIONS);
+  const gate = authorizeTransition(bound, 'renew', requested.by);
+  if (!gate.ok) throw new Error(gate.reason);
   const snapshot = bound.snapshot;
   let keys;
   try {
