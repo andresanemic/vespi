@@ -224,15 +224,17 @@ function sameEffect(effect, expected) {
   return true;
 }
 
-// A getter, a setter or a proxy can answer twice with two different things, and a trap can answer
-// by throwing. A container is plain only when it is an array or a plain object, carries no accessor
-// of its own and is not a proxy. The check reads descriptors, never values, so an accessor is
+// A getter, a setter, a proxy or a symbol key can answer differently to the check and to the use: a
+// trap can answer by throwing, and a container that carries `Symbol.iterator` is its own list. A
+// container is plain only when it is an array or a plain object, carries no accessor of its own, no
+// symbol key and is not a proxy. The check reads descriptors, never values, so an accessor is
 // refused before it is ever called.
 function isPlainContainer(value) {
   if (value === null || typeof value !== 'object') return false;
   if (utilTypes.isProxy(value)) return false;
   if (!isPlainObject(value) && !Array.isArray(value)) return false;
   try {
+    if (Object.getOwnPropertySymbols(value).length > 0) return false;
     for (const key of Object.keys(value)) {
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (descriptor === undefined || descriptor.get !== undefined || descriptor.set !== undefined) return false;
@@ -378,10 +380,12 @@ function readAccepts(required, spec) {
   // fragment, a different host or an uncanonical spelling is not the same resource.
   if (required.resource.url !== spec.url) return null;
   const accepts = required.accepts;
-  if (!Array.isArray(accepts) || accepts.length === 0 || accepts.length > MAX_ACCEPTS) return null;
-  // The list itself has to be plain data before a single offer is read out of it. An offer that is
-  // not plain is refused later, as a refusal of terms, not as a malformed declaration.
+  if (!Array.isArray(accepts)) return null;
+  // The list has to be plain data before a single property of it is read. An offer that is not plain
+  // is refused later, as a refusal of terms; a list that is a proxy or that carries its own iterator
+  // is a malformed declaration, and nothing is read out of it either way.
   if (!isPlainContainer(accepts)) throw specError();
+  if (accepts.length === 0 || accepts.length > MAX_ACCEPTS) return null;
   return accepts;
 }
 

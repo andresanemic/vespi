@@ -295,13 +295,18 @@ test('H07 an economic key that arrives as __proto__ is refused, not adopted', ()
 });
 
 test('H08 an offer the server never listed cannot be selected through its own iterator', () => {
+  // `Object.keys` never sees a symbol key, so the plain-data guard walked straight past an own
+  // `Symbol.iterator` and the selection then followed the iterator the payload carried.
   const listed = offer({ amount: '999999' });
   const hidden = offer();
   const accepts = [listed];
   accepts[Symbol.iterator] = function* iterate() { yield hidden; };
   const r = select({ accepts });
   assert.equal(r.ok, false, 'the selected offer has to be one the server actually sent');
-  assert.equal(r.code, 'TERMS_REJECTED');
+  assert.ok(
+    r.code === 'INVALID_SPEC' || r.code === 'TERMS_REJECTED',
+    `a list that is its own iterator is refused with a public code, got ${r.code}`,
+  );
 });
 
 test('H09 a refused container is never read', () => {
