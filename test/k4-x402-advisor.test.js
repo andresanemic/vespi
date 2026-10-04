@@ -6,7 +6,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const vm = require('node:vm');
 const { createHash } = require('node:crypto');
 
 const { createOperation } = require('../src/operation.js');
@@ -306,89 +305,59 @@ test('ADV17 a hostile settlement property after send keeps exercised uncertainty
 });
 
 // =====================================================================================
-// Group J — the reference bridge composes with the contract (stubbed SDK, no network)
+// Group J — the reference bridge is a pending reference, and the trim is what holds
 // =====================================================================================
 
-// The demo package has its own dependencies and they are not installed here, so the bridge is read
-// with its module declarations stripped and its SDK replaced by stubs. It is evaluated in this very
-// realm, so the object the factory returns is a normal object and a cross-realm `Object.prototype`
-// cannot stand in for a port shape the contract refuses. What this proves is one thing only: the
-// shape the factory returns is the shape the contract accepts. It proves nothing about signing, XDR,
-// HTTP, Horizon or a real payment.
-const STUBBED_GLOBALS = [
-  'require', 'requirePublicKey', 'authDigestFromEnvelope', 'verifyPreparedTransaction', 'verifySettlement',
-  'Keypair', 'Transaction', 'TransactionBuilder', 'x402Client', 'x402HTTPClient',
-  'createEd25519Signer', 'getNetworkPassphrase', 'ExactStellarScheme',
-];
+// The coordinator's decision on the final review round: the demo runner went back to the base
+// version, so nothing loads ports.js any more and there is no execution path to it. A file nothing
+// runs cannot be asserted to compose with the contract, and a stubbed evaluation of a body whose
+// module declarations were stripped is not evidence about a payment. What is left to check is the
+// trim itself and the honesty of the header: that the runner drives the historical adapter, that no
+// demo module reaches for ports.js, and that the file says out loud that it was never executed.
 
-function readBridgeBody() {
-  const source = fs.readFileSync(path.join(DEMO, 'ports.js'), 'utf8');
-  const strips = [
-    [/^import .*;\r?\n/gm, 'the import declarations', ''],
-    [/^const require = createRequire\(import\.meta\.url\);\r?\n/m, 'the createRequire line', ''],
-    [/^export \{.*\};\r?\n?/gm, 'the export lists', ''],
-    [/^export function /gm, 'the export keywords', 'function '],
-  ];
-  let body = source;
-  for (const [pattern, label, replacement] of strips) {
-    const before = body;
-    body = body.replace(pattern, replacement);
-    assert.notEqual(body, before, `the harness did not strip ${label}; the composition result would be meaningless`);
-  }
-  assert.doesNotMatch(body, /^\s*(import|export)\b/m, 'no module declaration is left to run');
-  assert.doesNotMatch(body, /\bimport\.meta\b/, 'the module URL never reaches the evaluated body');
-  return body;
-}
-
-// The stubbed bindings replace the module declarations for as long as `use` runs, and every global
-// this suite touched is put back exactly as it was before returning.
-function withStubbedBridge(kernel, use) {
-  const stubs = {
-    require(id) {
-      if (id === '../../src/x402.js') return kernel;
-      throw new Error(`unexpected require in the stubbed bridge: ${id}`);
-    },
-    requirePublicKey: (key) => key,
-    authDigestFromEnvelope: () => AUTH_DIGEST,
-    verifyPreparedTransaction: () => ({ verified: false, checks: {}, reason: 'stub' }),
-    verifySettlement: async () => ({ verified: false, checks: {}, reason: 'stub' }),
-    Keypair: { fromSecret: () => ({ publicKey: () => 'GPAYER' }) },
-    Transaction: class {},
-    TransactionBuilder: { cloneFrom: () => ({ build: () => ({ toXDR: () => 'XDR' }) }) },
-    x402Client: class { register() { return this; } },
-    x402HTTPClient: class {},
-    createEd25519Signer: () => ({}),
-    getNetworkPassphrase: () => 'Test SDF Network ; September 2015',
-    ExactStellarScheme: class {},
-  };
-  const saved = new Map(STUBBED_GLOBALS.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
-  try {
-    for (const [name, value] of Object.entries(stubs)) globalThis[name] = value;
-    const script = new vm.Script(
-      `(function() {\n${readBridgeBody()}\nreturn { createStellarPorts, createMarketingPlanPayment, USDC_CONTRACT, NETWORK, PRICE_ATOMIC };\n})()`,
-      { filename: 'demo/x402/ports.js' },
-    );
-    return use(script.runInThisContext());
-  } finally {
-    for (const [name, descriptor] of saved) {
-      if (descriptor === undefined) delete globalThis[name];
-      else Object.defineProperty(globalThis, name, descriptor);
+function demoSources() {
+  const out = [];
+  for (const entry of fs.readdirSync(DEMO, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      for (const inner of fs.readdirSync(path.join(DEMO, entry.name))) {
+        if (/\.(mjs|js)$/.test(inner)) out.push(path.join(DEMO, entry.name, inner));
+      }
+    } else if (/\.(mjs|js)$/.test(entry.name) && entry.name !== 'ports.js') {
+      out.push(path.join(DEMO, entry.name));
     }
   }
+  return out;
 }
 
-test('ADV15 the reference bridge factory supplies the kernel port shape (stubbed SDK, no network)', () => {
-  const kernel = require('../src/x402.js');
-  withStubbedBridge(kernel, (bridge) => {
-    assert.equal(typeof bridge.createStellarPorts, 'function');
-    assert.equal(typeof bridge.createMarketingPlanPayment, 'function');
-    const ports = bridge.createStellarPorts({ serviceUrl: CANONICAL_URL, payTo: 'GRECIPIENT', secret: 'PUBLIC-STUB-INPUT' });
-    assert.equal(typeof ports.http.discover, 'function');
-    assert.equal(typeof ports.http.sendPaid, 'function');
-    assert.equal(typeof ports.signer.prepare, 'function');
-    assert.doesNotThrow(() => kernel.createX402Payment(spec(), ports), 'the factory output is the shape the contract accepts');
-    const payment = bridge.createMarketingPlanPayment({ serviceUrl: CANONICAL_URL, payTo: 'GRECIPIENT', secret: 'PUBLIC-STUB-INPUT' });
-    assert.equal(payment.id, 'x402-marketing-plan');
-    assert.deepEqual(payment.required(), { spend: [{ asset: `USDC:${bridge.USDC_CONTRACT}`, amount: '100000', to: 'GRECIPIENT' }] });
-  });
+test('ADV15 no demo module loads the reference bridge, and the runner drives the historical adapter', () => {
+  const runner = fs.readFileSync(path.join(DEMO, 'run.js'), 'utf8');
+  assert.doesNotMatch(runner, /ports\.js/, 'the runner does not reach the pending reference');
+  assert.match(runner, /x402Capability/, 'the runner drives the historical adapter capability');
+  assert.match(runner, /runOperation\(/, 'the historical path drives the operation through the engine');
+  for (const file of demoSources()) {
+    assert.doesNotMatch(
+      fs.readFileSync(file, 'utf8'),
+      /from '\.\/ports\.js'|import\('\.\/ports\.js'\)|require\('\.\/ports\.js'\)/,
+      `${path.basename(file)} does not load ports.js`,
+    );
+  }
+});
+
+test('ADV15 the reference bridge says it was never executed, and only its declared shape is read', () => {
+  const ports = fs.readFileSync(path.join(DEMO, 'ports.js'), 'utf8');
+  assert.match(ports, /PENDING REFERENCE\. Nothing imports this file and nothing runs it\./);
+  assert.match(ports, /NEVER EXECUTED WITH THE REAL SDK/, 'the header states the unexecuted truth');
+  assert.match(ports, /has never been executed/, 'the header states that the payment path is unproven');
+  assert.match(ports, /DO NOT USE THIS FILE/, 'the header tells the next reader what to do with it');
+  // The six ports are declared, and what is declared is what the contract asks for. Reading the text
+  // is the whole of the claim: nothing below these lines has ever been executed.
+  for (const port of ['discover', 'sendPaid', 'prepare', 'inspectPrepared', 'verifySettlement', 'validateOutput']) {
+    assert.match(ports, new RegExp(`\\b${port}\\b`), `ports.js declares ${port}`);
+  }
+});
+
+test('ADV15c the reference bridge factory composes with the contract at run time', {
+  todo: "the claim the stubbed evaluation used to make: evaluate ports.js with its module declarations stripped and its SDK stubbed, then check that createStellarPorts() returns the port shape src/x402.js accepts and that a payment runs end to end. Withdrawn on the coordinator's decision for the final round, because it could not survive contact with the truth: the inner verifySettlement shadowed the imported reader of the same name, so the bridge called itself and never read the ledger, and a test that executes a pending reference keeps implying it works. Restore this when the demo suite runs where its dependencies exist.",
+}, () => {
+  assert.equal(typeof require('../src/x402.js').createX402Payment, 'function');
 });

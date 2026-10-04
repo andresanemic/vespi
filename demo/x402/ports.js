@@ -1,18 +1,21 @@
-// Reference bridge: the only place that knows x402, Stellar and USDC.
+// PENDING REFERENCE. Nothing imports this file and nothing runs it.
 //
-// The kernel ships the CONTRACT of the paid effect (src/x402.js) with the network, the signer and
-// the settlement reader injected as ports. This file implements those ports on top of the same SDK
-// calls the historical adapter (capability.js) makes, and the demo runner consumes the contract
-// through them.
+// The kernel ships the CONTRACT of the paid effect (src/x402.js) with the network, the signer and the
+// settlement reader injected as ports. This file was written to implement those ports on top of the
+// same SDK calls the historical adapter (capability.js) makes. The demo runner does not use it: run.js
+// drives the historical adapter capability, as it did before this branch.
 //
-// PARTIALLY VERIFIED, AND ONLY IN ITS SHAPE. The demo package has its own dependencies (Stellar SDK,
-// four x402 packages, Express) and they are not installed in this checkout, so nothing that touches
-// the SDK, XDR, HTTP or Horizon was run: not the demo suite, not the runner, not a payment. What the
-// kernel suite does run, with the SDK replaced by stubs, is the composition: the object this factory
-// returns is the object src/x402.js accepts (test/k4-x402-advisor.test.js, case ADV15). Everything
-// below the ports is transcribed from capability.js and settlement.js, and the behaviours the
-// contract claims are covered by the kernel suite through simulated ports (test/x402.test.js).
-// Treat the payment path as unverified until the demo suite runs where its dependencies exist.
+// NEVER EXECUTED WITH THE REAL SDK. The demo package has its own dependencies (Stellar SDK, four x402
+// packages, Express) and they are not installed in this checkout, so nothing below was ever run: not
+// the demo suite, not the runner, not a payment, not a ledger readback. Only the port SHAPE is
+// checked, by reading this file (test/x402.test.js, case K4-I1); the payment path, including
+// settlement verification, has never been executed. Two known defects are left in place on purpose:
+// the inner `verifySettlement` below shadows the imported reader of the same name, so calling it
+// re-enters itself instead of reading the ledger, and no test can catch that while nothing runs it.
+//
+// DO NOT USE THIS FILE until the demo suite runs where its dependencies exist and the shadow is
+// repaired. Everything the kernel contract claims is covered by the kernel suite through simulated
+// ports (test/x402.test.js, test/k4-x402-advisor.test.js); this file proves none of it.
 import { Keypair, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { x402Client, x402HTTPClient } from '@x402/fetch';
 import { createEd25519Signer, getNetworkPassphrase } from '@x402/stellar';
@@ -242,7 +245,8 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
   };
 
   // The same shape the historical adapter checked: a marketing plan, not any JSON at all. The digest
-  // is required by the contract: a body nobody hashed is not a covered delivery.
+  // is what the kernel contract would require of a delivery: a body nobody hashed is not a covered
+  // delivery. Unverified here, see the header.
   const validateOutput = (body) => {
     if (!isMarketingPlan(body)) return { ok: false };
     let serialized;
@@ -271,8 +275,9 @@ function serviceEndpoint(base) {
   return url.toString();
 }
 
-// The declaration and the ports together are the whole capability: the kernel owns the fixed effect,
-// the order, the deduplication and the receipt verdict, and this adapter owns Stellar, x402 and HTTP.
+// The declaration and the ports together would be the whole capability: the kernel would own the
+// fixed effect, the order, the deduplication and the receipt verdict, and this adapter would own
+// Stellar, x402 and HTTP. Nothing calls this yet, see the header.
 export function createMarketingPlanPayment({ serviceUrl, payTo, secret, claims } = {}) {
   const recipient = requirePublicKey(payTo);
   const payer = secret ? Keypair.fromSecret(secret).publicKey() : '';

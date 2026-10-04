@@ -1563,7 +1563,9 @@ function readDemo(name) {
   return fs.readFileSync(path.join(DEMO, name), 'utf8');
 }
 
-test('K4-I1 the bridge implements the six ports the contract asks for and imports the kernel only through the contract', () => {
+// Source text only. demo/x402/ports.js is a pending reference that nothing loads, so what this reads
+// is what the file declares and how it reaches the kernel, never that any of it runs.
+test('K4-I1 the bridge declares the six ports the contract asks for and reaches the kernel only through the contract', () => {
   const ports = readDemo('ports.js');
   for (const port of ['discover', 'sendPaid', 'prepare', 'inspectPrepared', 'verifySettlement', 'validateOutput']) {
     assert.match(ports, new RegExp(`\\b${port}\\b`), `ports.js declares ${port}`);
@@ -1581,12 +1583,17 @@ test('K4-I1 the bridge implements the six ports the contract asks for and import
   assert.match(ports, /MAX_BODY_BYTES/, 'the body is bounded before it is parsed');
 });
 
-test('K4-I2 the demo runner consumes the contract and the historical adapter stays where its own tests find it', () => {
+test('K4-I2 the demo runner stays on the historical adapter and the adapter is left where its own tests find it', () => {
+  // The runner was moved back to the base version on the coordinator's decision for the final review
+  // round: demo/x402/ports.js stayed a pending reference that nothing loads, so the runner drives the
+  // historical adapter capability again and supplies its own verifier. What this asserts is the shape
+  // of that file, not that a payment works; nothing that touches the SDK was ever executed here.
   const runner = readDemo('run.js');
-  assert.match(runner, /createMarketingPlanPayment/);
-  assert.match(runner, /payment\.run\(/);
-  assert.doesNotMatch(runner, /x402Capability/, 'the runner no longer drives the adapter capability directly');
-  assert.doesNotMatch(runner, /verifySettlement/, 'the runner no longer supplies its own verifier');
+  assert.match(runner, /x402Capability/, 'the runner drives the historical adapter capability');
+  assert.match(runner, /runOperation\(/, 'the historical path goes through the engine');
+  assert.match(runner, /verify: \(evidence\) => verify\(evidence, payer, payTo\)/, 'the historical path brings its own verifier');
+  assert.doesNotMatch(runner, /ports\.js/, 'the runner does not reach the pending reference');
+  assert.doesNotMatch(runner, /createMarketingPlanPayment/, 'the runner does not consume the contract');
   const adapter = readDemo('capability.js');
   assert.match(adapter, /export function x402Capability/, 'the historical adapter is untouched');
   assert.match(adapter, /export \{ claimSettlement, claimTransaction/);
