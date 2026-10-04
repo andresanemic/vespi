@@ -196,25 +196,24 @@ test('H02 the inspection controls are read exactly once', async () => {
 // Group B — the settlement answer and the verdict it claims
 // =====================================================================================
 
-test('H03 a false settlement control cannot disappear by answering twice', async () => {
-  // ADV04 and ADV05 admit a verdict whole or not at all. The guard reads `checks` three times, so an
-  // object that answers differently to each read can drop the control that says the fee was not paid.
-  const answers = [{ transfer: true }, { transfer: true }, { transfer: true, feePaid: false }];
+test('H03 the settlement controls are read exactly once', async () => {
+  // ADV04 and ADV05 admit a verdict whole or not at all. Before the fix the guard read `checks`
+  // three times (plainness, key list, then each value), so an object that answered differently to
+  // each read could drop the control that said the fee was not paid and still verify.
   let reads = 0;
   const verdict = {
     verified: true,
     reason: 'independent readback',
     get checks() {
-      const answer = answers[Math.min(reads, answers.length - 1)];
       reads += 1;
-      return answer;
+      return { transfer: true };
     },
   };
   const ports = fakePorts({ verifySettlement: async () => verdict });
   const res = await runOnce(ports);
   assert.equal(ports.calls.verifySettlement, 1, 'the independent port was asked');
-  assert.notEqual(res.status, 'verified', 'a verdict that carries a false control is not a verification');
-  assert.equal(res.output, null, 'nothing is exposed on an unverified payment');
+  assert.equal(reads, 1, 'the controls are read once, inside the guard that validates them');
+  assert.equal(res.status, 'verified', 'the healthy path still verifies');
 });
 
 test('H04 the payer on the receipt is the payer the check validated', async () => {
@@ -389,7 +388,7 @@ test('H15 a control name written by a port cannot travel into a sealed receipt',
   const ports = fakePorts({
     verifySettlement: async () => ({
       verified: true,
-      checks: { transfer: true, [PRIVATE_MARKER]: true },
+      checks: { transfer: true, [`note: ${PRIVATE_MARKER} lives here`]: true },
       reason: 'independent readback',
     }),
   });

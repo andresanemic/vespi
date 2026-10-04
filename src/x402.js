@@ -23,6 +23,9 @@ const { types: utilTypes } = require('node:util');
 // A canonical positive decimal amount, at most 78 digits, no sign, no exponent, no leading zero.
 const ATOMIC = /^[1-9][0-9]{0,77}$/;
 const HASH = /^[0-9a-f]{64}$/;
+// The name of a control a port reports. It ends up on a sealed receipt, so it admits an identifier
+// and nothing else: no spaces, no separators, no free text of any length beyond the identifier.
+const CONTROL_NAME = /^[A-Za-z_][A-Za-z0-9_]{0,63}$/;
 const MAX_TEXT = 512;
 const MIN_WINDOW_SECONDS = 1;
 const MAX_WINDOW_SECONDS = 300;
@@ -537,19 +540,23 @@ async function verifySettlementEffect(ctx, evidence) {
 // A settlement verdict is admitted whole or not at all. It has to be a plain object, `verified`
 // exactly true, a reason in words, and at least one control, every control a boolean and every
 // control true. An invalid control is never dropped: a dropped control leaves a shorter set, and a
-// shorter set that happens to be empty reads as complete. Everything is read once inside the guard,
-// so a getter cannot answer twice and the verdict returned here is the verdict that was validated.
+// shorter set that happens to be empty reads as complete. A control name is host-written text and
+// this receipt admits no free text, so only a plain identifier is allowed to travel. Everything is
+// read once inside the guard, so a getter cannot answer twice and the verdict returned here is the
+// verdict that was validated.
 function readVerdict(verdict) {
   const out = { ok: false, checks: {} };
   try {
     if (!isPlainObject(verdict)) return out;
     if (verdict.verified !== true) return out;
     if (typeof verdict.reason !== 'string' || verdict.reason.length === 0) return out;
-    if (!isPlainObject(verdict.checks)) return out;
-    const keys = Object.keys(verdict.checks);
+    const controls = verdict.checks;
+    if (!isPlainObject(controls)) return out;
+    const keys = Object.keys(controls);
     if (keys.length === 0) return out;
     for (const key of keys) {
-      const value = verdict.checks[key];
+      if (!CONTROL_NAME.test(key)) return out;
+      const value = controls[key];
       if (typeof value !== 'boolean') return out;
       out.checks[key] = value;
     }
