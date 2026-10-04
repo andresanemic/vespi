@@ -162,10 +162,10 @@ function askPeople(port, snapshot) {
     if (field) asked[field] = answer.principal;
     else list.push({ name, principal: answer.principal });
   }
-  // Independence is a relation between principals, so this is where it is decided. A grant that names
-  // the grantee among the reviewers is still refused by name above; what is added here is that an
-  // ALIAS of the grantee is refused too, because the port answered with one principal for two
-  // different names (A01, R402).
+  // Independence is a relation between principals, so this is where it is decided. A grant that
+  // NAMES the grantee among the reviewers was already refused while the grant was read; what is added
+  // here is that an ALIAS of the grantee is refused too, because the port answered with one principal
+  // for two different names (A01, R402).
   for (const reviewer of asked.reviewers) {
     if (samePrincipal(reviewer.principal, asked.grantee)) {
       return { ok: false, reason: `the reviewer ${reviewer.name} resolves to the same principal as the grantee ${snapshot.grantee}, so the post-use review would be signed by the agent that spends the authority: this kernel compares principals, not names` };
