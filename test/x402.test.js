@@ -96,7 +96,7 @@ function fakePorts(over = {}) {
         trace.push('discover');
         seen.push(request);
         if (over.discover) return over.discover(request);
-        return { status: 402, paymentRequired: paymentRequired() };
+        return { status: 402, paymentRequired: paymentRequired({ resource: { url: request.url } }) };
       },
       async sendPaid(request) {
         calls.send += 1;
@@ -164,17 +164,20 @@ function fakePorts(over = {}) {
   };
   // A simulated claims store, always present and always fresh, so each test starts with empty
   // sets. Its counters and order are observable like every other port.
-  ports.claims = over.claims || {
+  const inner = over.claims || null;
+  ports.claims = {
     reserveEffect(key) {
       calls.reserveEffect += 1;
       trace.push('reserve');
       seen.push({ reserveEffect: key });
+      if (inner) return inner.reserveEffect(key);
       return over.reserveEffect ? over.reserveEffect(key) : 'claimed';
     },
     claimTransaction(network, txHash) {
       calls.claimTransaction += 1;
       trace.push('claimTransaction');
       seen.push({ claimTransaction: { network, txHash } });
+      if (inner) return inner.claimTransaction(network, txHash);
       return over.claimTransaction ? over.claimTransaction(network, txHash) : 'claimed';
     },
   };
@@ -1092,4 +1095,166 @@ test('K4-E10 the evidence carries only admitted keys and never the body, the aut
     assert.equal(json.includes(marker), false, marker);
   }
   assert.deepEqual(Object.keys(res.receipt.evidence).sort(), ['amount', 'authDigest', 'network', 'payer', 'planDigest', 'txHash'].sort());
+});
+// =====================================================================================
+// Group F — concurrent claims and deduplication (cases 14, 15 and 16)
+// =====================================================================================
+
+const VECTOR_OPERATION_KEY = '01e6c8504077a1e7171b0609218eb120ecfea1e92df9a216a960aab6354af446';
+// Computed by a second implementation (python json.dumps with sorted keys, then sha256), not by the
+// function under test: {"expected":{...},"operationKey":...,"request":{...},"version":1}
+const VECTOR_EFFECT_KEY = '28b7c11ae51042db176f979f961c6890cd915970ca9f2d2d1948acb9490bc07b';
+
+function portsWithoutClaims(over = {}) {
+  const ports = fakePorts(over);
+  delete ports.claims;
+  return ports;
+}
+
+test('K4-F1 two concurrent runs of the same effect pay once: one sends and the other is blocked as a duplicate', async () => {
+  const shared = portsWithoutClaims();
+  const other = portsWithoutClaims();
+  const first = loadKernel().createX402Payment(spec(), shared);
+  const second = loadKernel().createX402Payment(spec(), other);
+  const [a, b] = await Promise.all([first.run(opWith(authority()), runIo()), second.run(opWith(authority()), runIo())]);
+  const statuses = [a.status, b.status].sort();
+  assert.deepEqual(statuses, ['blocked', 'verified']);
+  const blocked = a.status === 'blocked' ? a : b;
+  assert.equal(blocked.receipt.reason, 'DUPLICATE_EFFECT');
+  assert.deepEqual(blocked.receipt.authority.exercised, []);
+  assert.equal(shared.calls.send + other.calls.send, 1, 'exactly one send');
+  assert.equal(shared.calls.prepare + other.calls.prepare, 1, 'exactly one preparation');
+});
+
+test('K4-F1b the same operation run twice at once keeps the engine refusal instead of paying twice', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const op = opWith(authority());
+  const results = await Promise.allSettled([payment.run(op, runIo()), payment.run(op, runIo())]);
+  const refused = results.filter((r) => r.status === 'rejected');
+  assert.equal(refused.length, 1);
+  assert.match(refused[0].reason.message, /already running/);
+  assert.equal(ports.calls.send, 1);
+});
+
+test('K4-F2 a renewed grant or a fresh operation id is still the same effect, and other networks are not', async () => {
+  const store = loadKernel().createMemoryPaymentClaims();
+  const ports = fakePorts({ claims: store });
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const first = await payment.run(opWith(authority()), runIo());
+  assert.equal(first.status, 'verified');
+  const renewed = await payment.run(opWith(authority({ spend: [grant({ expiresAt: '2040-06-30T00:00:00.000Z' })] })), runIo());
+  assert.equal(renewed.status, 'blocked');
+  assert.equal(renewed.receipt.reason, 'DUPLICATE_EFFECT');
+  const freshOperation = await payment.run(opWith(authority(), { goal: 'obtain-marketing-plan', action: 'pay' }), runIo());
+  assert.equal(freshOperation.status, 'blocked');
+  assert.equal(ports.calls.send, 1);
+
+  // A different resource is a different effect, and it settles with its own transaction.
+  const elsewhere = fakePorts({
+    claims: store,
+    sendPaid: async () => paidResponse({ settlement: { success: true, transaction: 'c'.repeat(64), payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }),
+  });
+  const otherUrl = loadKernel().createX402Payment(spec({ url: 'https://example.test/api?service=other-plan' }), elsewhere);
+  const differentUrl = await otherUrl.run(opWith(authority()), runIo());
+  assert.equal(differentUrl.status, 'verified');
+  // The same spend on another network is another effect and another transaction: it is neither a
+  // duplicate of the first payment nor blocked by its transaction.
+  const pubnetPorts = fakePorts({
+    claims: store,
+    discover: async (request) => ({
+      status: 402,
+      paymentRequired: paymentRequired({
+        resource: { url: request.url },
+        accepts: [offer({ network: 'stellar:pubnet' })],
+      }),
+    }),
+    sendPaid: async () => paidResponse({ settlement: { success: true, transaction: 'a'.repeat(64), payer: 'PAYER', network: 'stellar:pubnet', amount: '100000' } }),
+    inspectPrepared: async () => ({
+      verified: true,
+      authDigest: AUTH_DIGEST,
+      effect: { network: 'stellar:pubnet', asset: 'TOKEN', payer: 'PAYER', payTo: 'RECIPIENT', amount: '100000' },
+      checks: { prepared: true },
+      reason: 'prepared transaction matches declared effect',
+    }),
+  });
+  const differentNetwork = await loadKernel().createX402Payment(spec({ network: 'stellar:pubnet' }), pubnetPorts).run(opWith(authority()), runIo());
+  assert.equal(differentNetwork.status, 'verified', differentNetwork.receipt.reason || differentNetwork.receipt.detail);
+  assert.equal(pubnetPorts.calls.claimTransaction, 1, JSON.stringify(pubnetPorts.trace));
+});
+
+test('K4-F3 the effect key is a hash of the canonical effect, and a full store blocks instead of evicting', async () => {
+  const seenKeys = [];
+  const one = loadKernel().createMemoryPaymentClaims({ capacity: 1 });
+  const ports = fakePorts({ claims: { reserveEffect: (key) => { seenKeys.push(key); return one.reserveEffect(key); }, claimTransaction: (n, t) => one.claimTransaction(n, t) } });
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const first = await payment.run(opWith(authority()), runIo());
+  assert.equal(first.status, 'verified');
+  assert.equal(seenKeys.length, 1);
+  assert.equal(seenKeys[0], VECTOR_EFFECT_KEY, 'the key is the canonical effect hash, verified by a second implementation');
+  const second = await payment.run(opWith(authority()), runIo());
+  assert.equal(second.status, 'blocked');
+  const third = await payment.run(opWith(authority()), runIo());
+  assert.equal(third.status, 'blocked', 'nothing is evicted to make room');
+  assert.equal(one.reserveEffect('b'.repeat(64)), 'capacity');
+});
+
+test('K4-F4 a settled transaction already claimed is not exposed twice, and a hash is never claimed empty', async () => {
+  const store = loadKernel().createMemoryPaymentClaims();
+  const noisy = '  AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA  ';
+  const first = fakePorts({ claims: store, sendPaid: async () => paidResponse({ settlement: { success: true, transaction: noisy, payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }) });
+  const one = await loadKernel().createX402Payment(spec({ url: 'https://example.test/api?service=first-plan' }), first).run(opWith(authority()), runIo());
+  assert.equal(one.status, 'verified');
+  assert.equal(one.receipt.evidence.txHash, 'a'.repeat(64), 'the hash is normalized once');
+
+  const second = fakePorts({ claims: store, sendPaid: async () => paidResponse({ settlement: { success: true, transaction: 'A'.repeat(64), payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }) });
+  const twice = await loadKernel().createX402Payment(spec({ url: 'https://example.test/api?service=second-plan' }), second).run(opWith(authority()), runIo());
+  assert.equal(twice.status, 'not_verified');
+  assert.equal(twice.output, null);
+  assert.equal(twice.receipt.verification.checks.transactionUnique, false);
+  assert.ok(twice.receipt.notCovered.includes('transactionUnique'));
+
+  const noHash = fakePorts({
+    claims: store,
+    sendPaid: async () => paidResponse({ settlement: { success: true, payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }),
+  });
+  const silent = await loadKernel().createX402Payment(spec({ url: 'https://example.test/api?service=third-plan' }), noHash).run(opWith(authority()), runIo());
+  assert.equal(silent.status, 'not_verified');
+  assert.equal(noHash.calls.claimTransaction, 0, 'no hash, nothing claimed');
+});
+
+test('K4-F5 the in-memory claims store refuses what it cannot identify and separates networks', async () => {
+  const store = loadKernel().createMemoryPaymentClaims();
+  assert.equal(store.claimTransaction('stellar:testnet', 'a'.repeat(64)), 'claimed');
+  assert.equal(store.claimTransaction('stellar:testnet', 'A'.repeat(64)), 'duplicate');
+  assert.equal(store.claimTransaction('stellar:pubnet', 'a'.repeat(64)), 'claimed', 'another network is another transaction');
+  for (const bad of ['', '   ', 'not-a-hash', null, 42, undefined]) {
+    assert.equal(store.claimTransaction('stellar:testnet', bad), 'capacity', String(bad));
+  }
+  assert.equal(store.reserveEffect('c'.repeat(64)), 'claimed');
+  assert.equal(store.reserveEffect('C'.repeat(64)), 'duplicate');
+  for (const bad of ['', 'zz', null, {}, 7]) {
+    assert.equal(store.reserveEffect(bad), 'capacity', String(bad));
+  }
+});
+
+test('K4-F6 the claims capacity is an integer within bounds and anything else falls back to the default', () => {
+  const { createMemoryPaymentClaims } = loadKernel();
+  for (const [label, options] of Object.entries({
+    'zero': { capacity: 0 },
+    negative: { capacity: -1 },
+    fraction: { capacity: 1.5 },
+    'as string': { capacity: '1' },
+    'over the bound': { capacity: 10001 },
+    'not an object': 'capacity',
+    'no options': undefined,
+  })) {
+    const store = createMemoryPaymentClaims(options);
+    assert.equal(store.reserveEffect('d'.repeat(64)), 'claimed', label);
+    for (let i = 0; i < 9999; i += 1) store.reserveEffect(String(i).padStart(64, '0'));
+    assert.equal(store.reserveEffect('e'.repeat(64)), 'capacity', `${label}: the default holds ten thousand`);
+  }
+  const small = createMemoryPaymentClaims({ capacity: 1 });
+  assert.equal(small.reserveEffect('f'.repeat(64)), 'claimed');
+  assert.equal(small.reserveEffect('0'.repeat(64)), 'capacity');
 });

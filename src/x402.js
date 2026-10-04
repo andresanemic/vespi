@@ -27,6 +27,7 @@ const MIN_WINDOW_SECONDS = 1;
 const MAX_WINDOW_SECONDS = 300;
 const DEFAULT_CLAIM_CAPACITY = 10_000;
 const MIN_CLAIM_CAPACITY = 1;
+const MAX_CLAIM_CAPACITY = 10_000;
 const MAX_ACCEPTS = 64;
 const MAX_BODY_BYTES = 1024 * 1024;
 const MAX_SPEC_DEPTH = 8;
@@ -382,8 +383,11 @@ function createMemoryPaymentClaims(options = {}) {
   const transactions = new Set();
   const capacity = readClaimCapacity(options);
   return {
-    reserveEffect(key) {
-      if (typeof key !== 'string' || !HASH.test(key)) return 'capacity';
+    reserveEffect(rawKey) {
+      // The key is normalized once, the same way a transaction hash is: a key that differs only in
+      // case is the same effect, not a new one.
+      const key = typeof rawKey === 'string' ? rawKey.trim().toLowerCase() : '';
+      if (!HASH.test(key)) return 'capacity';
       if (effects.has(key)) return 'duplicate';
       if (effects.size >= capacity) return 'capacity';
       effects.add(key);
