@@ -770,16 +770,6 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
   return loaded;
 }
 
-// The receipt. Built through `buildReceipt` so coverage, `notCovered`, the anchor and the digest all
-// come from the same place they come from for any other receipt, and then sealed again with the skill
-// block attached — the block is inside the seal, which is what makes a skill swapped between two
-// receipts of the same operation visible instead of plausible.
-//
-// The spec is caller-supplied data like any other, so it is read field by field under guards and never
-// spread: `{...spec}` enumerates keys the caller controls, and a revoked proxy or a throwing getter in
-// any of the seven fields `buildReceipt` reads threw out of this function into someone else's control
-// flow. Naming the seven fields is what `buildReceipt` destructures anyway, so nothing else the caller
-// wrote could have reached the receipt through the spread (A18, review H09).
 // One field of the receipt spec, read once, under its own guard. `undefined` for a field that is
 // absent, that is not an object, or that could not be read: `buildReceipt` already substitutes a safe
 // value for every one of the seven, so an unreadable field produces an ordinary receipt that says
@@ -792,6 +782,16 @@ function receiptField(spec, key) {
   }
 }
 
+// The receipt. Built through `buildReceipt` so coverage, `notCovered`, the anchor and the digest all
+// come from the same place they come from for any other receipt, and then sealed again with the skill
+// block attached — the block is inside the seal, which is what makes a skill swapped between two
+// receipts of the same operation visible instead of plausible.
+//
+// The spec is caller-supplied data like any other, so it is read field by field under guards and never
+// spread: `{...spec}` enumerates keys the caller controls, and a revoked proxy or a throwing getter in
+// any of the seven fields `buildReceipt` reads threw out of this function into someone else's control
+// flow. Naming the seven fields is what `buildReceipt` destructures anyway, so nothing else the caller
+// wrote could have reached the receipt through the spread (A18, review H09).
 function buildSkillReceipt(spec, decision) {
   const record = deciderRecord(decision);
   if (record === null) {
