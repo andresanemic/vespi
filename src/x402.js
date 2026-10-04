@@ -442,14 +442,10 @@ async function verifySettlementEffect(ctx, evidence) {
       && (evidence.network === undefined || evidence.network === expected.network)
       && (evidence.amount === undefined || evidence.amount === expected.amount);
     if (declared && typeof ctx.authDigest === 'string' && evidence.authDigest === ctx.authDigest) {
-      const verdict = await callSettlementPort(ctx, evidence);
-      const portChecks = readBooleanChecks(verdict.checks);
-      for (const [key, value] of Object.entries(portChecks)) checks[`settlement_${key}`] = value;
-      const portVerified = verdict.verified === true
-        && typeof verdict.reason === 'string' && verdict.reason.length > 0
-        && Object.values(portChecks).every((value) => value === true);
-      checks.settlement = portVerified;
-      if (!portVerified) {
+      const verdict = readVerdict(await callSettlementPort(ctx, evidence));
+      for (const [key, value] of Object.entries(verdict.checks)) checks[`settlement_${key}`] = value;
+      checks.settlement = verdict.ok;
+      if (!verdict.ok) {
         settlementReason = `the settlement port did not verify the declared effect (${CODES.VERIFIER_FAILED})`;
       }
     }
@@ -472,11 +468,28 @@ async function verifySettlementEffect(ctx, evidence) {
   return { verified, checks, reason };
 }
 
-function readBooleanChecks(value) {
-  const out = {};
-  if (!isPlainObject(value)) return out;
-  for (const key of Object.keys(value)) {
-    if (typeof value[key] === 'boolean') out[key] = value[key];
+// A settlement verdict is admitted whole or not at all. It has to be a plain object, `verified`
+// exactly true, a reason in words, and at least one control, every control a boolean and every
+// control true. An invalid control is never dropped: a dropped control leaves a shorter set, and a
+// shorter set that happens to be empty reads as complete. Everything is read once inside the guard,
+// so a getter cannot answer twice and the verdict returned here is the verdict that was validated.
+function readVerdict(verdict) {
+  const out = { ok: false, checks: {} };
+  try {
+    if (!isPlainObject(verdict)) return out;
+    if (verdict.verified !== true) return out;
+    if (typeof verdict.reason !== 'string' || verdict.reason.length === 0) return out;
+    if (!isPlainObject(verdict.checks)) return out;
+    const keys = Object.keys(verdict.checks);
+    if (keys.length === 0) return out;
+    for (const key of keys) {
+      const value = verdict.checks[key];
+      if (typeof value !== 'boolean') return out;
+      out.checks[key] = value;
+    }
+    out.ok = keys.every((key) => out.checks[key] === true);
+  } catch {
+    return { ok: false, checks: {} };
   }
   return out;
 }
