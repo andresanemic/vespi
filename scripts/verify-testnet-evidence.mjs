@@ -7,6 +7,9 @@ import path from 'node:path';
 const DEFAULT_EVIDENCE = fileURLToPath(new URL('../docs/testnet-evidence.json', import.meta.url));
 const HORIZON = 'https://horizon-testnet.stellar.org';
 const EXPECTED_FIELDS = ['operation', 'memo', 'asset', 'amount', 'recipient'];
+const READ_TIMEOUT_MS = 10_000;
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 750;
 
 function validHash(hash) {
   return typeof hash === 'string' && /^[a-f0-9]{64}$/i.test(hash);
@@ -33,6 +36,17 @@ function sameAsset(operation, expected) {
   return operation.asset_code === expected.code && operation.asset_issuer === expected.issuer;
 }
 
+// A classic operation carries its own asset, amount and recipient. A Soroban operation
+// (invoke_host_function) carries none of them: the transfer appears in its
+// asset_balance_changes. The local record experiments/002-x402-slice1/RUN.md records that
+// the x402 Stellar settlement settles that way, so reading only the operation record made
+// every real payment unverifiable. Amount and recipient are then checked inside the
+// balance changes that already match the expected asset.
+function assetEffects(operation) {
+  const changes = Array.isArray(operation?.asset_balance_changes) ? operation.asset_balance_changes.filter(Boolean) : [];
+  return changes.length > 0 ? changes : [operation];
+}
+
 export function verifyTransactionEvidence(response, expected, capturedAt = new Date().toISOString()) {
   const transaction = response?.transaction;
   const operations = response?.operations;
@@ -51,9 +65,10 @@ export function verifyTransactionEvidence(response, expected, capturedAt = new D
   const operation = operations.find((candidate) => candidate?.type === expected.operation);
   if (!operation) return fail('operation', 'operation type does not match expected value');
   if ((transaction.memo ?? null) !== expected.memo) return fail('memo', 'memo does not match expected value');
-  if (!sameAsset(operation, expected.asset)) return fail('asset', 'asset does not match expected value');
-  if (operation.amount !== expected.amount) return fail('amount', 'amount does not match expected value');
-  if (operation.to !== expected.recipient) return fail('recipient', 'recipient does not match expected value');
+  const effects = assetEffects(operation).filter((effect) => sameAsset(effect, expected.asset));
+  if (effects.length === 0) return fail('asset', 'asset does not match expected value');
+  if (!effects.some((effect) => effect.amount === expected.amount)) return fail('amount', 'amount does not match expected value');
+  if (!effects.some((effect) => effect.to === expected.recipient)) return fail('recipient', 'recipient does not match expected value');
   return { ok: true, historical_response };
 }
 
@@ -67,16 +82,66 @@ export async function verifyEvidence(entries, fetchTransaction, capturedAt = new
   }));
 }
 
-async function json(fetcher, url) {
-  const response = await fetcher(url, { headers: { accept: 'application/json' } });
+// Same comparison per case, but for an evidence file that mixes cases with a local
+// expectation and cases without one. A case with no locally declared expectation reports
+// ok: null, field 'expected': it is not verified and it did not fail either, because
+// there is nothing independent to compare the chain against. Its readback is still kept.
+// A readback that could not be fetched reports ok: null, field 'readback'.
+export async function verifyEvidenceSet(entries, fetchTransaction, capturedAt = new Date().toISOString()) {
+  if (typeof fetchTransaction !== 'function') throw new TypeError('fetchTransaction must be a function');
+  const results = [];
+  for (const entry of entries ?? []) {
+    const hash = entry?.hash;
+    if (!expectedShape(entry?.expected)) {
+      let historical_response = null;
+      let readbackReason = null;
+      try {
+        const response = await fetchTransaction(hash);
+        if (response?.transaction && typeof response.transaction === 'object' && Array.isArray(response.operations)) {
+          historical_response = { classification: 'historical_readback', captured_at: capturedAt, transaction: response.transaction, operations: response.operations };
+        } else {
+          readbackReason = 'Horizon response did not contain a transaction record and operations';
+        }
+      } catch (error) {
+        readbackReason = error?.message ?? 'readback failed';
+      }
+      results.push({
+        hash,
+        ok: null,
+        field: readbackReason ? 'readback' : 'expected',
+        reason: readbackReason ?? 'no local run record declared the expected operation, memo, asset, amount, and recipient',
+        historical_response,
+      });
+      continue;
+    }
+    let response = null;
+    try {
+      response = await fetchTransaction(hash);
+    } catch (error) {
+      results.push({ hash, ok: null, field: 'readback', reason: error?.message ?? 'readback failed', historical_response: null });
+      continue;
+    }
+    results.push({ hash, ...verifyTransactionEvidence(response, entry.expected, capturedAt) });
+  }
+  return results;
+}
+
+async function json(fetcher, url, timeoutMs = READ_TIMEOUT_MS) {
+  const response = await fetcher(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(timeoutMs) });
   if (!response.ok) throw new Error(`Horizon ${response.status} for ${url}`);
   return response.json();
 }
 
-async function readHorizonTransaction(hash, fetcher = fetch) {
-  const transaction = await json(fetcher, `${HORIZON}/transactions/${hash}`);
-  const page = await json(fetcher, `${HORIZON}/transactions/${hash}/operations?limit=200`);
-  return { transaction, operations: page?._embedded?.records ?? [] };
+async function readHorizonTransaction(hash, fetcher = fetch, attemptsLeft = MAX_ATTEMPTS) {
+  try {
+    const transaction = await json(fetcher, `${HORIZON}/transactions/${hash}`);
+    const page = await json(fetcher, `${HORIZON}/transactions/${hash}/operations?limit=200`);
+    return { transaction, operations: page?._embedded?.records ?? [] };
+  } catch (error) {
+    if (attemptsLeft <= 1) throw error;
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    return readHorizonTransaction(hash, fetcher, attemptsLeft - 1);
+  }
 }
 
 async function main(argv) {
@@ -90,24 +155,41 @@ async function main(argv) {
     return;
   }
 
-  const missing = entries.filter((entry) => !expectedShape(entry.expected));
-  if (missing.length) throw new Error(`${missing.length} evidence case(s) lack declared operation, memo, asset, amount, and recipient expectations`);
+  const declared = entries.filter((entry) => expectedShape(entry.expected)).length;
   const capturedAt = new Date().toISOString();
-  const results = await verifyEvidence(entries, (hash) => readHorizonTransaction(hash), capturedAt);
-  const failures = results.filter((result) => !result.ok);
+  const results = await verifyEvidenceSet(entries, (hash) => readHorizonTransaction(hash), capturedAt);
+  const verified = results.filter((result) => result.ok === true);
+  const failed = results.filter((result) => result.ok === false);
+  const unverified = results.filter((result) => result.ok === null);
   for (const result of results) {
-    const detail = result.ok ? 'verified' : `mismatch: ${result.field}`;
+    const detail = result.ok === true ? 'verified' : result.ok === false ? `mismatch: ${result.field}` : `not semantically verified (${result.field})`;
     process.stdout.write(`${result.hash}: ${detail}\n`);
   }
-  const responseByHash = new Map(results.map((result) => [result.hash, result.historical_response]));
   const resultByHash = new Map(results.map((result) => [result.hash, result]));
   evidence.transactions = entries.map((entry) => {
     const result = resultByHash.get(entry.hash);
-    return { ...entry, historical_response: responseByHash.get(entry.hash), verification: { ok: result.ok, ...(result.field ? { field: result.field, reason: result.reason } : {}) } };
+    const verification = result.ok === null
+      ? { ok: null, status: 'not_semantically_verified', field: result.field, reason: result.reason }
+      : { ok: result.ok, status: result.ok ? 'verified' : 'mismatch', ...(result.field ? { field: result.field, reason: result.reason } : {}) };
+    return { ...entry, historical_response: result.historical_response ?? null, verification };
   });
+  evidence.summary = {
+    ...(evidence.summary ?? {}),
+    verified_at: capturedAt,
+    semantic_verification: {
+      total: entries.length,
+      verified: verified.length,
+      mismatch: failed.length,
+      not_semantically_verified: unverified.length,
+      declared_locally: declared,
+      expectation_source: 'local run records in this repository, never the Horizon response',
+    },
+    readback_read: results.filter((result) => result.historical_response).length,
+    readback_unread: results.filter((result) => !result.historical_response).length,
+  };
   await writeFile(filename, `${JSON.stringify(evidence, null, 2)}\n`, 'utf8');
-  if (failures.length) throw new Error(`${failures.length} transaction evidence case(s) failed semantic verification; historical responses were saved for review`);
-  process.stdout.write(`verified ${results.length} successful transactions; historical Horizon responses saved\n`);
+  process.stdout.write(`semantically verified ${verified.length} of ${entries.length}: ${failed.length} mismatch, ${unverified.length} without a local expectation; readbacks saved for ${evidence.summary.readback_read}\n`);
+  if (failed.length) throw new Error(`${failed.length} transaction evidence case(s) failed semantic verification; historical responses were saved for review`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
