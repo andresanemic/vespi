@@ -201,6 +201,18 @@ function recordOf(claim) {
   }
 }
 
+// The same private lookup, for the other side of the API: a decision only counts when this kernel is
+// the one that decided it. `WeakMap.get` answers `undefined` for a key it never saw, and a gate that
+// only tests for `null` lets an object the caller wrote itself straight through (A01).
+function deciderRecord(decision) {
+  try {
+    const record = decision !== null && typeof decision === 'object' ? DECIDED_FROM.get(decision) : null;
+    return record !== undefined && record !== null ? record : null;
+  } catch {
+    return null;
+  }
+}
+
 // `safeText` in receipt.js drops anything over 512 characters, and a reason longer than that would
 // reach a receipt as an empty string anyway. Composing reasons from resolver-reported text is bounded
 // per field, but the join of four of them is not, so the cap is applied here rather than discovered
@@ -570,7 +582,7 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
 // block attached — the block is inside the seal, which is what makes a skill swapped between two
 // receipts of the same operation visible instead of plausible.
 function buildSkillReceipt(spec, decision) {
-  const record = decision === null || typeof decision !== 'object' ? null : DECIDED_FROM.get(decision);
+  const record = deciderRecord(decision);
   if (record === null) {
     throw new Error('a skill receipt needs a decision this kernel produced');
   }
