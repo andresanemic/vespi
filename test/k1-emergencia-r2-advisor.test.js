@@ -93,8 +93,10 @@ test('R202 a second real grant with the same id cannot revoke the first grant', 
   assert.equal(state(permission, ledger).pendingReview, 'u');
 });
 
-// The reviewer asks for the conflict to be visible in the state without reading the record that
-// belongs to the other family, so this extension states the same refusal in the state surface.
+// The reviewer asks for the collision to fail closed without consuming, altering or revealing the
+// other family's record, and for the state to show a conflict instead of availability. Both are
+// stated here: R201b on the read side, R202c on the spend side, which is the only path a mutation
+// of `claimRecord` alone can still get through while a review happens to be pending.
 test('R201b a grant from another family reads a conflict in the state, never availability', async () => {
   const permission = await granted();
   const other = await granted({ owner: 'other', reviewers: ['other'], pausers: ['other'] });
@@ -107,6 +109,22 @@ test('R201b a grant from another family reads a conflict in the state, never ava
   assert.equal(foreign.uses, 0, 'the other families count stays unrevealed');
   assert.equal(run(other, ledger).state, 'blocked');
   assert.equal(state(permission, ledger).pendingReview, 'u', 'the first grant is untouched');
+});
+
+test('R202c a grant from another family spends nothing from an idle record', async () => {
+  const permission = await granted();
+  const other = await granted({ owner: 'other', reviewers: ['other'], pausers: ['other'] });
+  const ledger = ledgerFor();
+  run(permission, ledger);
+  emergency.reviewEmergencyUse(permission, 'u', { ledger, by: 'person', decision: 'accept', now: AT });
+  const idle = state(permission, ledger);
+  assert.equal(idle.pendingReview, null, 'the record is idle and available to its own family');
+  const stolen = run(other, ledger, REQUEST({ useId: 'u2', triggerSignal: { id: 's2', source: 'sensor', critical: true } }));
+  assert.equal(stolen.state, 'blocked');
+  assert.equal(state(permission, ledger).uses, idle.uses, 'the other family spent nothing');
+  assert.equal(state(permission, ledger).pendingReview, null, 'and left no review behind');
+  assert.equal(run(permission, ledger, REQUEST({ useId: 'u3', triggerSignal: { id: 's3', source: 'sensor', critical: true } })).state, 'review_pending',
+    'the record is still usable by the family that opened it');
 });
 
 // ─── R203-R208: everything the host answers is read once and contained ───────────────────────
