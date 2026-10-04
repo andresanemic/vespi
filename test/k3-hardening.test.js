@@ -20,8 +20,14 @@ test('K3-H1: a txHash without on-chain verification is "submitted", never "ancho
 
 test('K3-H2: "anchored" only when the verifier confirms the digest in that transaction', () => {
   const r = receiptMod.buildReceipt(spec({ a: true }));
-  const ok = receiptMod.anchorReceipt(r, () => ({ network: 'stellar:testnet', txHash: 'tx1' }), (txHash, digest) => txHash === 'tx1' && digest === r.digest);
+  let submittedDigest;
+  const ok = receiptMod.anchorReceipt(r, (digest) => {
+    submittedDigest = digest;
+    return { network: 'stellar:testnet', txHash: 'tx1' };
+  }, (txHash, digest) => txHash === 'tx1' && digest === submittedDigest);
   assert.equal(ok.anchor.status, 'anchored');
+  assert.equal(ok.digest, submittedDigest);
+  assert.equal(ok.anchor.digest, submittedDigest);
   assert.ok(!ok.notCovered.includes('external anchor'));
   const bad = receiptMod.anchorReceipt(r, () => ({ network: 'stellar:testnet', txHash: 'tx1' }), () => false);
   assert.equal(bad.anchor.status, 'submitted');

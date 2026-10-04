@@ -133,7 +133,6 @@ function readAnchorResult(result) {
 function finishAnchor(base, prevNotCovered, submitted, confirmed) {
   if (submitted && confirmed) {
     base.anchor = { status: 'anchored', network: submitted.network, txHash: submitted.txHash };
-    base.notCovered = withExternalAnchor(prevNotCovered, true);
   } else if (submitted) {
     base.anchor = { status: 'submitted', network: submitted.network, txHash: submitted.txHash };
     base.notCovered = withExternalAnchor(prevNotCovered, false);
@@ -159,11 +158,12 @@ function finishAnchor(base, prevNotCovered, submitted, confirmed) {
 function prepareAnchor(receipt) {
   const base = { ...(receipt || {}) };
   const prevNotCovered = Array.isArray(base.notCovered) ? base.notCovered : [];
-  if (typeof base.digest !== 'string') {
-    try {
-      base.digest = computeDigest(base);
-    } catch {
-    }
+  // The confirmed body is the body submitted to the adapter. Prepare its final coverage before
+  // computing the digest so confirmation never needs to rewrite a field covered by that digest.
+  base.notCovered = withExternalAnchor(prevNotCovered, true);
+  try {
+    base.digest = computeDigest(base);
+  } catch {
   }
   return { base, prevNotCovered };
 }
