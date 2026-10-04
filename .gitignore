@@ -3,3 +3,4 @@
 node_modules/
 .env*
 !.env.example
+PENDIENTES_DE_ANDRES.md

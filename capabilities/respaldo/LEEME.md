@@ -33,7 +33,7 @@ const { respaldoCapability, crearVerificador } = require('./index.js');
 
 const destino = 'D:/Drive/Mi Computador/jardin';   // la carpeta que Drive ya sincroniza
 
-const cap = respaldoCapability({ origen: 'C:/Claude/founder', destino });
+const cap = respaldoCapability({ origen: '/ruta/al/proyecto', destino });
 const op = createOperation({
   goal: 'respaldar el jardín antes de cambiar de computador',
   action: 'respaldar',
@@ -69,8 +69,8 @@ const { respaldar, verificar, restaurar, dondeEsta } = require('./index.js');
 await respaldar({ origen, destino, excluir: ['tmp', 'assets/borrador'] });
 
 verificar({ destino });                                   // { ok, integros, cambiaron, faltan }
-restaurar({ destino, archivo: 'lore/identidad.md', a: 'C:/recuperado/identidad.md' });
-restaurar({ destino, archivo: 'assets', a: 'C:/recuperado' });   // la carpeta completa
+restaurar({ destino, archivo: 'lore/identidad.md', a: '/ruta/recuperada/identidad.md' });
+restaurar({ destino, archivo: 'assets', a: '/ruta/recuperada' });   // la carpeta completa
 dondeEsta({ destino, nombre: 'clip' });                   // dónde está la última copia
 ```
 

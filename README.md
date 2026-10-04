@@ -5,7 +5,7 @@
 <p align="center">
   <a href="#english"><img src="https://img.shields.io/badge/version-v0.1.3-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.3"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
-  <a href="#the-functional-projects"><img src="https://img.shields.io/badge/projects-10_functional-D7B698?style=for-the-badge&labelColor=07111A" alt="Functional projects: 10"></a>
+  <a href="#the-functional-projects"><img src="https://img.shields.io/badge/projects-10_listed-D7B698?style=for-the-badge&labelColor=07111A" alt="Projects listed: 10, including one idea without code"></a>
   <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet_transactions-50_verified-E0C170?style=for-the-badge&labelColor=07111A" alt="50 successful transactions on Stellar testnet"></a>
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/built_with-Stellar_%C2%B7_x402_%C2%B7_Raven_MCP-E0C170?style=for-the-badge&labelColor=07111A" alt="Built with Stellar, x402 and Raven MCP"></a>
 </p>
@@ -47,8 +47,8 @@ Use it for writing, software development, graphic design, publishing or another 
 
 1. **What it is.** One idea, in [In one minute](#in-one-minute): the unit is the operation, not the agent.
 2. **What is on Stellar.** A live x402 payment of 0.01 USDC [confirmed on Horizon](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5), receipts that can be anchored on Stellar, and [50 successful testnet transactions](./docs/TESTNET_EVIDENCE.md). Details are under *Evidence you can open*.
-3. **Check it yourself.** The suite runs offline, with no wallet and no network. One separate script re-asks Horizon about every listed transaction; commands are under *Quickstart*.
-4. **See what is built on it.** Ten functional projects, each with an agreement written before its code, on fictional data, in *The functional projects*.
+3. **Check it yourself.** Follow the [judge's verification guide](./docs/FOR_JUDGES.md) for the exact commands, expected suite output, receipt file and Horizon checks. The kernel suite runs offline; checking transactions against Horizon needs a network.
+4. **See what is built on it.** Ten projects on fictional data, nine with code and tests and one idea without code, in *The functional projects*.
 5. **What we do not claim.** No mainnet, no second provider and no production readiness. See *What it does not do yet, and what is not verified*.
 
 ## In one minute
@@ -161,11 +161,13 @@ Lore Plugin `2.4.9` brings the flow into the kit: one checkpoint per project, ta
 
 ## Evidence you can open
 
-Published as [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (previous: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Everything in it was read in the code, not in a plan; the capabilities are explained one by one in [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md). The kernel suite was **205/205** at the 0.1.3 release; this worktree adds a portability check. At the release commits (`2dcfd92`, and again at `7dcec77`) they were 203/203 and 252/252; the two tests added since check the testnet evidence list.
+Published as [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (previous: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Everything in it was read in the code, not in a plan; the capabilities are explained one by one in [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md). Historical counts at commit `7dcec77` were 203/203 for `node --test test/*.test.js` and 252/252 for the full `node --test` run. This worktree adds two tests for the testnet evidence list and currently passes 205/205 kernel tests with `node --test test/*.test.js`.
 
 The newest record is the Stellar testnet evidence below. The first experiments that formed the kernel (RUN 01 to 05) are in [`experiments/`](./experiments/), with their blind reads and verifier reports; RUN 05 is **closed** within its declared local, offline scope. They were the first tests, not the latest work.
 
 **A live x402 payment on Stellar testnet is verified for this release.** On 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e8…`, ledger 4988161). It is one of the 50 transactions below, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The paid example lives in [`demo/x402/`](./demo/x402/), the only place that knows x402, Stellar or USDC.
+
+The payment's receipt is available at [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). It records `verified: true`, `anchor.status: pending` and `external anchor` under `notCovered`. The testnet USDC contract is `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`; the adapter checks issuer `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` in `demo/x402/run.js`.
 
 **It was not one transaction.** Between 2026-10-02 and 2026-10-03 the work around Vespi wrote **50 successful testnet transactions** from 8 accounts to the Stellar testnet (ledgers 4987795 to 4996153), on fictional data and with no real money. Every hash is in [docs/TESTNET_EVIDENCE.md](./docs/TESTNET_EVIDENCE.md) and in a [machine-readable file](./docs/testnet-evidence.json), and `node scripts/verify-testnet-evidence.mjs` asks Horizon about each one (50 of 50 were successful when this was written).
 
@@ -183,9 +185,9 @@ A second capability lives outside the kernel: [`capabilities/respaldo/`](./capab
 
 ## The functional projects
 
-Vespi is a kernel, not an app. What shows it works is what gets built on it: ten projects, each with its **own agreement written before its code**, on **fictional data**. Their stage was read on **2026-10-02** by running each project's own suite against the kernel installed today (`0.1.3`).
+Vespi is a kernel, not an app. What shows it works is what gets built on it: ten projects, each with its **own agreement written before its code**, on **fictional data**. Their stage was read on **2026-10-02** by running each project's own suite against the kernel installed today (`0.1.3`). Nine have code and tests; Permamuseum is a study note without code.
 
-The projects with code have their own public repository, linked in the table and without code for now, explaining in detail the why, the how and the what: how it works, who takes part and with what rights, and what evidence it has. During the judging period of the Find Your Way hackathon the code opens for review, under a license that lets you read and clone it to evaluate it, not modify it. The aim is to show how Vespi works, not only to tell it.
+The project records explain the why, the how and the what: how each works, who takes part and with what rights, and what evidence it has. The Escribano repository link still needs confirmation. During the judging period of the Find Your Way hackathon, the project code is intended to open for review under a review-only license; legal review of that draft is pending. The aim is to show how Vespi works, not only to tell it.
 
 | # | Project | What it is | Stage today | Suite today |
 |---|---|---|---|---|
@@ -194,7 +196,7 @@ The projects with code have their own public repository, linked in the table and
 | 3 | [**Casa Firme**](https://github.com/andresanemic/casa-firme) | Housing for informal settlements: authority born in the committee's assembly; every donation leaves a trace. | Agreement + code + tests | 21 / 24 |
 | 4 | [**Ficha Contigo**](https://github.com/andresanemic/ficha-contigo) | The clinical record: the institution uses only what the patient granted; emergency access is granted in advance. | Agreement + code + tests | 7 / 13 |
 | 5 | [**Cátedra**](https://github.com/andresanemic/catedra) | The university: declared AI use, grades signed by the professor, degrees as verifiable credentials. | Agreement + code + tests | 34 / 35 |
-| 6 | [**Escribano**](https://github.com/andresanemic/escribano) | A DAO with a legal record of every change to its contract (Wyoming W.S. 17-31). | Agreement + code + tests | 8 / 13 |
+| 6 | [**Escribano**](https://github.com/andresanemic/escribano) | A DAO with a legal record of every change to its contract (Wyoming W.S. 17-31). | Agreement + code + tests; public repository link needs confirmation | 8 / 13 |
 | 7 | [**Llavero**](https://github.com/andresanemic/llavero) | "My data": who asks for it, for what, under which permission, and what was refused. | Agreement + code + tests | 8 / 14 |
 | 8 | [**Farolero**](https://github.com/andresanemic/farolero) | Authority for agents without code: delegating only narrows; what does not fit comes back blocked. | Agreement + code + tests | 8 / 13 |
 | 9 | [**Marea**](https://github.com/andresanemic/marea) | Verifying climate commitments between countries (Paris Agreement art. 6.2) without counting a reduction twice. | Agreement + code + tests | 25 / 25 |
@@ -202,6 +204,8 @@ The projects with code have their own public repository, linked in the table and
 | — | [**TEMIS**](https://github.com/andresanemic/temis) | Legal validation for bilateral agreements by milestones: signed, counter-signed and anchored so a third party can rebuild what happened. The first real operation of Lore Plugin and Vespi as one. | Whitepaper + MVP: tests 0 to 8 run on Stellar testnet with fictional data (a full lifecycle run twice, 38 transactions, plus concurrent anchors and an idempotent x402 payment); owner's certificate and legal review pending | 135 / 135 |
 
 **How to read the last column.** Nine of the ten were built on 2026-09-29 against the kernel cut `54c20c7` and their own records report them green there; that was not re-run here. Each pins the kernel it consumes by digest and fails on purpose when the kernel moves, so against `0.1.3` part of every suite fails until it is re-pinned. That re-pinning is pending, and so is any claim that these ten are ready: today they show a working path, not a finished product.
+
+The Escribano repository link returned 404 during the simulated review. Its row remains as project evidence, but a working public link has not been confirmed.
 
 ## How this was built
 
@@ -248,11 +252,11 @@ We searched so as to offer something new and not repeat what other projects alre
 ```bash
 git clone https://github.com/andresanemic/vespi.git
 cd vespi
-node --test test/*.test.js
+node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs   # re-checks the 50 testnet transactions against Horizon (needs a network)
 ```
 
-The suite covers operations, bounded authority, multi-person approval, impossible tasks, pausing, the human gate, receipts, anchoring states and continuity from receipts. `node --test` also runs the x402 demo suite.
+Use Node.js 24 or later, matching the version declared by the x402 demo. The quoted test pattern is passed to Node so the command works in PowerShell, Command Prompt, macOS and Linux. The first command runs the kernel tests only and needs no wallet or network. The second command checks the listed transactions against Horizon and needs a network. See the [judge's verification guide](./docs/FOR_JUDGES.md) for expected output and direct links to the receipt and sample transactions.
 
 **Level 2, bounded x402 testnet demo:** see [`demo/x402/README.md`](./demo/x402/README.md). The paid route needs a funded testnet account, a USDC trustline, a receiver, environment variables and network access. One live testnet payment is verified; that is all it certifies.
 
@@ -285,8 +289,8 @@ The suite covers operations, bounded authority, multi-person approval, impossibl
 
 1. **Qué es.** Una idea, en [En un minuto](#en-un-minuto): la unidad es la operación, no el agente.
 2. **Qué hay en Stellar.** Un pago x402 en vivo de 0,01 USDC [confirmado en Horizon](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5), recibos que se pueden anclar en Stellar y [50 transacciones exitosas en testnet](./docs/TESTNET_EVIDENCE.md). El detalle está en *Evidencia que puedes abrir*.
-3. **Compruébalo tú.** La suite corre sin red y sin billetera. Otro script le pregunta de nuevo a Horizon por cada transacción listada; los comandos están en *Quickstart*.
-4. **Mira lo que se construye encima.** Diez proyectos funcionales, cada uno con su acuerdo escrito antes de su código, sobre datos ficticios, en *Los proyectos funcionales*.
+3. **Compruébalo tú.** Sigue la [guía de verificación para jueces](./docs/FOR_JUDGES.md) para ver los comandos exactos, la salida esperada, el archivo del recibo y las comprobaciones en Horizon. La suite del kernel corre sin red; consultar Horizon requiere conexión.
+4. **Mira lo que se construye encima.** Diez proyectos con datos ficticios, nueve con código y pruebas y uno como idea sin código, en *Los proyectos funcionales*.
 5. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Mira *Lo que todavía no hace, y lo que no está verificado*.
 
 ## En un minuto
@@ -399,11 +403,13 @@ Lore Plugin `2.4.9` trae el flujo al kit: un checkpoint por proyecto, tareas por
 
 ## Evidencia que puedes abrir
 
-Publicado como [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (anterior: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Todo lo que trae se leyó en el código, no en un plan; las capacidades están explicadas una por una en [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md). La suite del kernel estaba en **205/205** en la publicación 0.1.3; este árbol añade una comprobación de portabilidad. En los commits de la versión (`2dcfd92`, y de nuevo en `7dcec77`) eran 203/203 y 252/252; las dos pruebas añadidas desde entonces revisan la lista de evidencia de testnet.
+Publicado como [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel) (anterior: [`v0.1.2-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.2-kernel)). Todo lo que trae se leyó en el código, no en un plan; las capacidades están explicadas una por una en [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md). Las cifras históricas del commit `7dcec77` fueron 203/203 para `node --test test/*.test.js` y 252/252 para la corrida completa con `node --test`. Este árbol añade dos pruebas para la lista de evidencia de testnet y hoy pasan 205/205 pruebas del kernel con `node --test test/*.test.js`.
 
 El registro más nuevo es la evidencia en la testnet de Stellar de más abajo. Los primeros experimentos que formaron el kernel (RUN 01 a 05) están en [`experiments/`](./experiments/), con sus lecturas ciegas y los informes del verificador; el RUN 05 está **cerrado** dentro de su alcance local y sin red declarado. Fueron las primeras pruebas, no lo último que se hizo.
 
 **Un pago x402 en vivo en Stellar testnet está verificado para esta versión.** El 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitador real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e8…`, ledger 4988161). Es una de las 50 transacciones de abajo, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), el único lugar que conoce x402, Stellar o USDC.
+
+El recibo del pago está en [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). Registra `verified: true`, `anchor.status: pending` y `external anchor` dentro de `notCovered`. El contrato del activo USDC de testnet es `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`; el adaptador comprueba el emisor `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` en `demo/x402/run.js`.
 
 **No fue una sola transacción.** Entre el 2026-10-02 y el 2026-10-03 el trabajo alrededor de Vespi escribió **50 transacciones exitosas en testnet** desde 8 cuentas en la testnet de Stellar (ledgers 4987795 a 4996153), con datos de fantasía y sin dinero real. Cada hash está en [docs/TESTNET_EVIDENCE.md](./docs/TESTNET_EVIDENCE.md) y en un [archivo legible por máquina](./docs/testnet-evidence.json), y `node scripts/verify-testnet-evidence.mjs` le pregunta a Horizon por cada una (50 de 50 estaban exitosas al escribir esto).
 
@@ -421,9 +427,9 @@ Una segunda capacidad vive fuera del kernel: [`capabilities/respaldo/`](./capabi
 
 ## Los proyectos funcionales
 
-Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, sobre **datos ficcionados**. Su estado se leyó el **2026-10-02** corriendo la suite propia de cada proyecto contra el kernel instalado hoy (`0.1.3`).
+Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, sobre **datos ficcionados**. Su estado se leyó el **2026-10-02** corriendo la suite propia de cada proyecto contra el kernel instalado hoy (`0.1.3`). Nueve tienen código y pruebas; Permamuseum es una nota de estudio sin código.
 
-Los proyectos con código tienen su propio repositorio público, enlazado en la tabla y por ahora sin código, que explica en detalle el porqué, el cómo y el qué: cómo funciona, quién participa y con qué derechos, y qué evidencia tiene. Durante el periodo de revisión de los jueces de la hackatón Find Your Way el código se abre, con una licencia que permite leerlo y clonarlo para evaluar, no modificarlo. La idea es mostrar cómo funciona Vespi, no solo contarlo.
+Los registros de los proyectos explican el porqué, el cómo y el qué: cómo funciona cada uno, quién participa y con qué derechos, y qué evidencia tiene. Falta confirmar el enlace al repositorio de Escribano. Durante el periodo de revisión de los jueces de Find Your Way, está previsto abrir el código con una licencia de solo revisión; el borrador sigue pendiente de revisión legal. La idea es mostrar cómo funciona Vespi, no solo contarlo.
 
 | # | Proyecto | Qué es | Estado hoy | Su suite hoy |
 |---|---|---|---|---|
@@ -432,7 +438,7 @@ Los proyectos con código tienen su propio repositorio público, enlazado en la 
 | 3 | [**Casa Firme**](https://github.com/andresanemic/casa-firme) | Vivienda para asentamientos informales: la autoridad nace en la asamblea del comité; cada donación deja rastro. | Acuerdo + código + pruebas | 21 / 24 |
 | 4 | [**Ficha Contigo**](https://github.com/andresanemic/ficha-contigo) | La ficha clínica: la institución usa solo lo que el paciente otorgó; el acceso de emergencia se otorga de antemano. | Acuerdo + código + pruebas | 7 / 13 |
 | 5 | [**Cátedra**](https://github.com/andresanemic/catedra) | La universidad: uso declarado de IA, notas firmadas por el profesor, títulos como credenciales verificables. | Acuerdo + código + pruebas | 34 / 35 |
-| 6 | [**Escribano**](https://github.com/andresanemic/escribano) | Una DAO con registro legal de cada cambio de su contrato (Wyoming W.S. 17-31). | Acuerdo + código + pruebas | 8 / 13 |
+| 6 | [**Escribano**](https://github.com/andresanemic/escribano) | Una DAO con registro legal de cada cambio de su contrato (Wyoming W.S. 17-31). | Acuerdo + código + pruebas; falta confirmar el enlace al repositorio público | 8 / 13 |
 | 7 | [**Llavero**](https://github.com/andresanemic/llavero) | «Mis datos»: quién los pide, para qué, bajo qué permiso y qué se rechazó. | Acuerdo + código + pruebas | 8 / 14 |
 | 8 | [**Farolero**](https://github.com/andresanemic/farolero) | Autoridad para agentes sin código: delegar solo estrecha; lo que no cabe vuelve bloqueado. | Acuerdo + código + pruebas | 8 / 13 |
 | 9 | [**Marea**](https://github.com/andresanemic/marea) | Verificar compromisos climáticos entre países (Acuerdo de París art. 6.2) sin contar una reducción dos veces. | Acuerdo + código + pruebas | 25 / 25 |
@@ -440,6 +446,8 @@ Los proyectos con código tienen su propio repositorio público, enlazado en la 
 | — | [**TEMIS**](https://github.com/andresanemic/temis) | Validación legal de acuerdos bilaterales por hitos: firmados, contrafirmados y anclados para que un tercero reconstruya lo ocurrido. La primera operación real de Lore Plugin y Vespi como uno. | Whitepaper + MVP: pruebas 0 a 8 corridas en Stellar testnet con datos ficcionados (un ciclo completo corrido dos veces, 38 transacciones, más anclajes concurrentes y un pago x402 idempotente); falta el certificado de su dueño y la revisión jurídica | 135 / 135 |
 
 **Cómo leer la última columna.** Nueve de los diez se construyeron el 2026-09-29 contra el corte `54c20c7` del kernel y sus propios registros los dan en verde ahí; aquí no se volvió a correr. Cada uno fija por digest el kernel que consume y falla a propósito cuando el kernel se mueve, así que contra `0.1.3` parte de cada suite falla hasta re-anclarlo. Ese re-anclaje está pendiente, y también lo está cualquier afirmación de que estos diez estén listos: hoy muestran un camino que funciona, no un producto terminado.
+
+El enlace al repositorio de Escribano devolvió 404 durante la revisión simulada. La fila se conserva como evidencia de proyecto, pero aún no se confirmó un enlace público que funcione.
 
 ## Cómo se construyó
 
@@ -486,11 +494,11 @@ Buscamos para ofrecer algo nuevo y no repetir lo que otros proyectos ya hacen. C
 ```bash
 git clone https://github.com/andresanemic/vespi.git
 cd vespi
-node --test test/*.test.js                 # ℹ tests 206 · ℹ pass 206 · ℹ fail 0
+node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs   # vuelve a comprobar las 50 transacciones de testnet contra Horizon (necesita red)
 ```
 
-La suite cubre la operación, la autoridad acotada, la aprobación de varias personas, la tarea imposible, la pausa, la puerta humana, los recibos, los estados del anclaje y la continuidad por recibos. `node --test` solo también corre la suite de la demo x402.
+Usa Node.js 24 o posterior, la versión declarada por la demo x402. El patrón de pruebas va entre comillas para que Node lo reciba igual en PowerShell, Command Prompt, macOS y Linux. El primer comando corre solo las pruebas del kernel y no necesita wallet ni red. El segundo consulta las transacciones en Horizon y necesita red. La [guía de verificación para jueces](./docs/FOR_JUDGES.md) explica qué salida esperar y enlaza el recibo y transacciones de ejemplo.
 
 **Nivel 2, demo x402 acotada en testnet:** mira [`demo/x402/README.md`](./demo/x402/README.md). La ruta pagada necesita una cuenta de testnet con fondos, una línea de confianza a USDC, un receptor, variables de entorno y acceso a red. Un pago en vivo en testnet está verificado; eso es todo lo que certifica.
 
