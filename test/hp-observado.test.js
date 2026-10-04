@@ -40,8 +40,12 @@
 // reading one field could not tell which layer it was reading. The mapping is now written out in the
 // receipt (`provenanceReceiptStatus`) instead of left to be remembered.
 //
-// 4.3 · `name` travels as if it were verified and nothing compares it. That is the owner's decision,
-// it is not taken here, and the case is at the bottom.
+// 4.3 · `name` travels as if it were verified and nothing compares it. The owner decided it (2026-10-04,
+// the owner's own words: «tu recomendación»): option B of the report, the name stays in the receipt and
+// the receipt says out loud that it is a declaration and a search hint, not an identity anybody checked.
+// The kernel cannot compare the name because it does not know which path inside the commit holds the
+// artifact, and inventing a shape check on the name would be theatre: a pseudonym with the shape of a
+// path would pass. So nothing about `name` is verified and the receipt says so in one word.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -445,19 +449,109 @@ test('HP19 a host can tell the two verdicts that write the same word without kno
   assert.match(second.skill.reason, /no capability was requested/);
 });
 
-// --- 4.3 · the owner's question, left open on purpose ---
+// 4.3 · `name` travels as if it were verified and nothing compares it
 
-test('HP22 `name` travels as if it were verified and nothing compares it', { todo: "decisión del dueño: ¿se verifica `name`, se marca como declarado, o se deja de viajar en el recibo? El kernel no sabe qué ruta dentro del commit guarda el artefacto, así que hoy `name` entra en la pregunta y en el recibo sin que ninguna de las cuatro comparaciones lo mire. Ver el informe de H-P para las tres opciones y la recomendación." }, async () => {
+test('HP22 `name` is sealed as declared, and the word says it is not a checked identity', async () => {
   const claim = registered();
   const result = await verifySkillProvenance(claim, () => observedEvidence());
   assert.equal(result.status, 'verified');
   const receipt = receiptOf(authorizeSkill(claim, result, ['read:project']));
+  // The name is still there: it is what a host uses to find the skill again and what a debugging reader
+  // needs. What changed is that it can no longer be read as an identity this kernel checked.
   assert.equal(receipt.skill.name, SPEC.name);
-  assert.equal(receipt.skill.provenanceSource, 'verified');
-  // Everything this test can show today: the name is in the question and in the receipt, and no check
-  // covers it. Two skills that differ only in name, in the same commit, both verify.
+  assert.equal(receipt.skill.nameSource, 'declared');
+  // The same word `provenanceSource` uses for «what the skill claimed and nothing more», so a host that
+  // learned one of them in a receipt of this shape reads the other one without a second vocabulary.
+  assert.equal(receipt.skill.provenanceSource, 'verified', 'the four checks did run and did match');
+  // And no check, and no coverage, counts the name as verified or even as something that was asked for.
+  assert.equal(receipt.skill.checks, undefined, 'the checks live in the verification block and in the decision');
+  assert.equal(receipt.verification.checks.name, undefined, 'no check was ever invented for the name');
   assert.ok(!receipt.skill.coverage.includes('name'));
+  assert.ok(!receipt.skill.notCovered.includes('name'));
+  assert.ok(!receipt.coverage.includes('name'));
+  assert.ok(!receipt.notCovered.includes('name'));
+  // What this test can show, all of it still true: the name is in the question and in the receipt, and
+  // no check covers it. Two skills that differ only in name, in the same commit, both verify.
+  assert.equal(claim.name, SPEC.name, 'the question carries the name so a resolver can find the skill');
   const sibling = await verifySkillProvenance(registered({ name: 'hp-skill-2' }), () => observedEvidence());
   assert.equal(sibling.status, 'verified');
   assert.equal(sibling.checks.content_digest, true, 'the same bytes, under another name, verify the same');
+  assert.equal(receiptOf(authorizeSkill(claim, sibling, ['read:project'])).skill.nameSource, 'declared');
+});
+
+test('HP23 the name is declared in every state of the decision, verified provenance or not', async () => {
+  const claim = registered();
+  // Four states, one per place a decision can end: checked and matched, refuted, unanswered, and
+  // refused on scope with the provenance verified. The label follows the name, not the verdict.
+  const refuted = await verifySkillProvenance(claim, () => observedEvidence({ author: OTHER_AUTHOR }));
+  const unanswered = await verifySkillProvenance(claim, () => observedEvidence({ author: undefined }));
+  const verified = await verifySkillProvenance(claim, () => observedEvidence());
+  const states = [
+    ['verified provenance', authorizeSkill(claim, verified, ['read:project']), 'verified'],
+    ['refuted provenance', authorizeSkill(claim, refuted, ['read:project']), 'declared'],
+    ['unanswered provenance', authorizeSkill(claim, unanswered, ['read:project']), 'declared'],
+    ['out of scope request', authorizeSkill(claim, verified, ['delete:other']), 'verified'],
+  ];
+  for (const [label, decision, source] of states) {
+    const receipt = receiptOf(decision);
+    assert.equal(receipt.skill.name, SPEC.name, `${label}: the name is still sealed`);
+    assert.equal(receipt.skill.nameSource, 'declared', `${label}: the label followed the state`);
+    assert.equal(receipt.skill.provenanceSource, source, `${label}: the provenance label did not move`);
+    assert.ok(!receipt.skill.coverage.includes('name'), `${label}: covered the name`);
+    assert.ok(!receipt.notCovered.includes('name'), `${label}: reported the name as a check left open`);
+  }
+});
+
+test('HP24 nothing anyone wrote can promote the name to a verified identity', async () => {
+  const claim = registered();
+  // The attack this label has to survive: an answer that carries the word, a flag, and a name of its own,
+  // plus a provenance block of its own. Nothing the resolver wrote was ever read for the name — it comes
+  // from the registration record — and the label is derived here, so none of it arrives.
+  const result = await verifySkillProvenance(claim, (question) => ({
+    ...observedEvidence(),
+    name: 'hp-skill-that-was-never-registered',
+    nameSource: 'verified',
+    nameVerified: true,
+    nameIsVerified: true,
+    declaredName: 'attacker',
+    provenanceSource: 'verified',
+    provenance: { repository: 'https://attacker.test/x.git', commit: OTHER_COMMIT, author: OTHER_AUTHOR, contentDigest: sha256('attacker') },
+    question,
+  }));
+  assert.equal(result.status, 'verified');
+  const receipt = receiptOf(authorizeSkill(claim, result, ['read:project']));
+  assert.equal(receipt.skill.name, SPEC.name, 'the sealed name is the registered one');
+  assert.equal(receipt.skill.nameSource, 'declared');
+  assert.equal(JSON.stringify(receipt).includes('attacker.test'), false);
+  assert.equal(JSON.stringify(receipt).includes('never-registered'), false, 'the resolver text reached the receipt');
+  // A decision forged by hand, carrying the word for itself, is not a decision this kernel produced.
+  const forged = Object.freeze({
+    ...authorizeSkill(claim, result, ['read:project']),
+    name: 'hp-skill-that-was-never-registered',
+    nameSource: 'verified',
+  });
+  assert.throws(() => buildSkillReceipt(RECEIPT_SPEC, forged), /decision this kernel produced/);
+});
+
+test('HP25 the label rides inside the seal, so rewriting it is a broken receipt', async () => {
+  const claim = registered();
+  const result = await verifySkillProvenance(claim, () => observedEvidence());
+  const receipt = receiptOf(authorizeSkill(claim, result, ['read:project']));
+  assert.equal(receipt.skill.nameSource, 'declared');
+  const tampered = { ...receipt, skill: { ...receipt.skill, nameSource: 'verified' } };
+  assert.equal(verifyReceipt(tampered).ok, false, 'the digest does not cover nameSource');
+  const renamed = { ...receipt, skill: { ...receipt.skill, name: 'hp-skill-that-was-never-registered' } };
+  assert.equal(verifyReceipt(renamed).ok, false, 'the digest does not cover the name it labels');
+  // A load that finds different bytes is still the load's discrepancy, and the name is still declared.
+  const swapped = receiptOf(loadSkill(claim, result, `${SPEC.content}# swapped in the gap\n`, ['read:project']));
+  assert.equal(swapped.skill.nameSource, 'declared');
+  assert.equal(swapped.skill.status, 'discrepant');
+  assert.equal(swapped.status, 'failed');
+  // The same bytes under another name, loaded: still declared, still unverified, still sealed.
+  const other = registered({ name: 'hp-skill-2' });
+  const otherResult = await verifySkillProvenance(other, () => observedEvidence());
+  const otherReceipt = receiptOf(loadSkill(other, otherResult, SPEC.content, ['read:project']));
+  assert.equal(otherReceipt.skill.name, 'hp-skill-2');
+  assert.equal(otherReceipt.skill.nameSource, 'declared');
+  assert.equal(otherReceipt.skill.provenanceSource, 'verified');
 });
