@@ -42,6 +42,10 @@ const MAX_REASON = 512;
 // object that travels.
 const REFERENCE = /^[A-Za-z0-9._:-]{1,64}$/;
 const NOT_REPRESENTABLE = Symbol('not-representable');
+// The widest interval the calendar in time.js can hold, measured with the same strings that parser
+// accepts at its two ends. A deadline longer than this cannot be stamped at any instant of it, so
+// no clock will ever satisfy it and not one use of such a grant could reach the verifier.
+const CALENDAR_SPAN_MS = Date.parse('9999-12-31T23:59:59.999Z') - Date.parse('0000-01-01T00:00:00.000Z');
 
 function text(value) {
   return typeof value === 'string' && value.length > 0;
@@ -211,6 +215,11 @@ function snapshotPermission(permission) {
     // the review falls due.
     if (!Number.isSafeInteger(maxUses) || maxUses < 1) return { ok: false, reason: 'maxUses must be a positive safe integer' };
     if (!Number.isSafeInteger(reviewDueMs) || reviewDueMs < 1) return { ok: false, reason: 'reviewDueMs must be a positive safe integer' };
+    // And shorter than the whole calendar, which is the last value a safe integer can hold and still
+    // be a deadline somebody could stamp. A grant that declares one is authorized, sealed as
+    // verified and then refused at every single use, because `now + reviewDueMs` is not an instant:
+    // a signature on a permission that can never be exercised is refused here instead (H02).
+    if (reviewDueMs > CALENDAR_SPAN_MS) return { ok: false, reason: `reviewDueMs is longer than the whole calendar (${CALENDAR_SPAN_MS} ms), so no use of this permission could ever stamp its review` };
     if (startsAt === null || expiresAt === null || expiresAt <= startsAt) return { ok: false, reason: 'it needs a valid clock interval' };
     // The signal has to come from somebody who is neither the agent that will exercise the
     // permission nor the person who granted it. Independence is structural, not a promise.
