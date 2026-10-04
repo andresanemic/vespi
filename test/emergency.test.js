@@ -581,3 +581,105 @@ test('after a rejected review only a new grant opens the door: the same id does 
   const fresh = await granted({ id: 'emergency-2' });
   assert.equal(emergency.exerciseEmergency(fresh, REQUEST({ useId: 'use-10' }), { ledger, now: AT }).state, 'review_pending');
 });
+// ─── The boundaries the fix round added on its own (no A## from the reviewer) ────────────────
+
+test('a caller object carrying its own accessors is refused, and nothing is spent on it', async () => {
+  const draft = GRANT();
+  Object.defineProperty(draft, 'maxUses', { enumerable: true, get() { return 2; } });
+  await assert.rejects(() => emergency.createEmergencyPermission(draft, {
+    authorizeGrantor: GRANTOR_OK, resolveVerifier: RESOLVE_OK(),
+  }), /malformed|accessor/i);
+  const permission = await granted();
+  let reads = 0;
+  const request = REQUEST();
+  Object.defineProperty(request, 'destination', { enumerable: true, get() { return ++reads === 1 ? 'clinic-1' : 'somewhere-else'; } });
+  const ledger = emergency.createEmergencyLedger();
+  const result = emergency.exerciseEmergency(permission, request, { ledger, now: AT });
+  assert.equal(result.state, 'blocked');
+  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 0);
+});
+
+test('the subject has to be an operational reference: record content never reaches a receipt', async () => {
+  const permission = await granted();
+  const ledger = emergency.createEmergencyLedger();
+  const content = use(permission, REQUEST({ subject: 'severe penicillin allergy, chart page 3' }), AT, { ledger });
+  assert.equal(content.state, 'blocked');
+  assert.match(content.reason, /reference|record content/i);
+  assert.equal(JSON.stringify(content).includes('penicillin'), false);
+  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 0);
+  const reference = emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT });
+  assert.equal(reference.state, 'review_pending');
+  assert.equal(reference.receipt.authorization.subject, 'allergy-summary');
+});
+
+test('a signal the kernel cannot represent is refused before a single use is spent', async () => {
+  const permission = await granted();
+  const ledger = emergency.createEmergencyLedger();
+  const unreadable = [
+    { id: 'signal-use-1', source: 'triage-service', critical: true, sign: () => 'not data' },
+    { id: 'signal-use-1', source: 'triage-service', critical: true, severity: Number.POSITIVE_INFINITY },
+    Object.assign(Object.create({ inherited: true }), { id: 'signal-use-1', source: 'triage-service', critical: true }),
+  ];
+  for (const triggerSignal of unreadable) {
+    const result = emergency.exerciseEmergency(permission, REQUEST({ triggerSignal }), { ledger, now: AT });
+    assert.equal(result.state, 'blocked', JSON.stringify(triggerSignal));
+    assert.equal(verifyReceipt(result.receipt).ok, true);
+    assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).uses, 0);
+  }
+  const spoken = use(permission, REQUEST({ triggerSignal: { id: 'signal-use-1', source: 'triage-service', critical: true } }), AT);
+  assert.equal(spoken.state, 'review_pending', 'a plain signal still works after the refusals');
+});
+
+test('the new receipt says who authorized, who exercised and which signal body was checked', async () => {
+  const permission = await granted();
+  const { receipt } = use(permission, REQUEST({ triggerSignal: { id: 'signal-use-1', source: 'triage-service', critical: true, patientNotes: 'SECRET-NOTE-THAT-MUST-NOT-TRAVEL' } }), AT);
+  assert.equal(receipt.authorization.owner, 'person-1');
+  assert.equal(receipt.authorization.grantee, 'agent-1');
+  assert.equal(receipt.authorization.action, 'open-record');
+  assert.equal(receipt.authorization.subject, 'allergy-summary');
+  assert.equal(receipt.authorization.destination, 'clinic-1');
+  assert.match(receipt.authorization.grantDigest, /^[0-9a-f]{64}$/);
+  assert.equal(receipt.trigger.signalSource, 'triage-service');
+  assert.match(receipt.trigger.signalDigest, /^[0-9a-f]{64}$/);
+  assert.ok(!JSON.stringify(receipt).includes('SECRET-NOTE-THAT-MUST-NOT-TRAVEL'));
+  assert.ok(receipt.notCovered.includes('exact_state'), 'decision 22 stays open and says so');
+  assert.equal(verifyReceipt(receipt).ok, true);
+  const other = use(permission, REQUEST({ subject: 'full-record' }), AT);
+  assert.notEqual(other.receipt.authorization.grantDigest, null);
+  assert.notEqual(other.receipt.digest, receipt.digest);
+});
+
+test('an unbound permission, an unreadable clock and an interval not yet open are all blocked states', async () => {
+  const permission = await granted();
+  const ledger = emergency.createEmergencyLedger();
+  assert.deepEqual(
+    [emergency.getEmergencyState(GRANT(), { ledger, now: AT }).status,
+      emergency.getEmergencyState(GRANT(), { ledger, now: AT }).nextUse],
+    ['unbound', 'blocked_unbound']);
+  const badClock = emergency.getEmergencyState(permission, { ledger, now: 'not-a-time' });
+  assert.equal(badClock.status, 'unknown_clock');
+  assert.equal(badClock.nextUse, 'blocked_unknown_clock');
+  const early = emergency.getEmergencyState(permission, { ledger, now: '2026-09-30T12:00:00Z' });
+  assert.equal(early.status, 'not_yet_valid');
+  assert.equal(early.nextUse, 'blocked_not_started');
+  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).status, 'active');
+});
+
+test('a record held by one run is released, so a refusal does not lock the permission out', async () => {
+  let permission;
+  let attempts = 0;
+  permission = await granted({}, {
+    resolveVerifier: async (verifierId) => ({
+      id: verifierId,
+      verify: () => {
+        attempts += 1;
+        if (attempts === 1) throw new Error('the sensor is down');
+        return { verified: true, reason: 'the triage service signed this signal' };
+      },
+    }),
+  });
+  const ledger = emergency.createEmergencyLedger();
+  assert.equal(emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT }).state, 'blocked');
+  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).nextUse, 'allowed');
+  assert.equal(emergency.exerciseEmergency(permission, REQUEST(), { ledger, now: AT }).state, 'review_pending');
+});
