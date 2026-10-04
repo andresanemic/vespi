@@ -276,14 +276,28 @@ test('K3H.10 a backend cannot return a verdict by returning an object with a val
 // parameter of a public export and its fields are read with a plain property access. A throwing
 // getter or proxy there escapes the function and takes the private message with it.
 test('K3H.11 reconcileZk never throws on a hostile checks object', () => {
+  // Read through descriptors, so a container that only misbehaves on `get` is never consulted at
+  // all: the descriptor values decide, and the private message in the `get` trap cannot travel.
+  const liar = new Proxy(checks(), { get() { throw new Error(PRIVATE); } });
+  const fromDescriptors = reconcileZk({ verified: true, checks: liar, claimed: true, zk: evidence() });
+  assert.equal(fromDescriptors.consistent, true, 'the descriptors decide, not a lying get');
+  assertNoPrivateMarker(fromDescriptors, 'a lying get trap');
+
   for (const [why, hostile] of Object.entries({
-    'a throwing proxy': new Proxy(checks(), { get() { throw new Error(PRIVATE); } }),
     'a throwing getter': (() => {
       const c = checks();
       Object.defineProperty(c, 'zk.proof-valid', { get() { throw new Error(PRIVATE); }, enumerable: true });
       return c;
     })(),
     'a revoked proxy': (() => { const r = Proxy.revocable(checks(), {}); r.revoke(); return r.proxy; })(),
+    'a proxy with a throwing descriptor': new Proxy(checks(), {
+      getOwnPropertyDescriptor() { throw new Error(PRIVATE); },
+    }),
+    'a proxy that hides a covered check': new Proxy(checks(), {
+      getOwnPropertyDescriptor: (target, key) => (key === 'zk.proof-valid'
+        ? undefined
+        : Reflect.getOwnPropertyDescriptor(target, key)),
+    }),
     'a null checks': null,
     'an array as checks': [],
     'a string as checks': 'zk.proof-valid',

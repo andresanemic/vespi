@@ -399,17 +399,33 @@ function readZkEvidence(value) {
 //
 // `claimed` is true when the object had a non-null `zk` property, including one that is malformed:
 // a claim that did not survive cannot leave a `verified` receipt behind.
+// Reading the seven checks a claim has to agree with. A check counts only when the object itself
+// carries it: an inherited value is not a check that ran, an accessor is not a boolean anybody can
+// read twice, and a container that throws while being read is not a container at all. Every failure
+// here is the same failure, `consistent: false`, because none of them says the check did not pass.
+function readChecksForClaim(checks) {
+  if (!checks || typeof checks !== 'object' || Array.isArray(checks)) return null;
+  const read = {};
+  for (const key of CHECK_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(checks, key)) return null;
+    const value = readData(checks, key);
+    if (typeof value !== 'boolean') return null;
+    read[key] = value;
+  }
+  return read;
+}
+
 function reconcileZk({ verified, checks, claimed, zk }) {
   if (!claimed) return { verified, zk: null, consistent: true };
   const read = readZkEvidence(zk);
   if (read === null) return { verified: false, zk: null, consistent: false };
-  const checksAre = {};
-  for (const key of CHECK_KEYS) {
-    if (!checks || typeof checks !== 'object' || Array.isArray(checks)) return { verified: false, zk: null, consistent: false };
-    const value = checks[key];
-    if (typeof value !== 'boolean') return { verified: false, zk: null, consistent: false };
-    checksAre[key] = value;
+  let checksAre;
+  try {
+    checksAre = readChecksForClaim(checks);
+  } catch {
+    checksAre = null;
   }
+  if (checksAre === null) return { verified: false, zk: null, consistent: false };
   for (const key of LIMIT_CHECKS) if (checksAre[key] !== false) return { verified: false, zk: null, consistent: false };
   if (read.result === 'verified') {
     if (verified !== true) return { verified: false, zk: null, consistent: false };
