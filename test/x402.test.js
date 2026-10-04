@@ -346,3 +346,132 @@ test('K4-A9 every module the contract loads is itself free of network and proces
   }
   assert.equal(typeof kernel.createX402Payment, 'function');
 });
+// =====================================================================================
+// Group B — selectX402Terms: pure selection of authorized terms (cases 6, 7, 8, 9)
+// =====================================================================================
+
+test('K4-B1 the exact offer is selected and only admitted fields are copied into the terms', () => {
+  const { selectX402Terms } = loadKernel();
+  const chosen = selectX402Terms(paymentRequired(), spec(), authority(), CLOCK_MS);
+  assert.equal(chosen.ok, true);
+  assert.deepEqual(chosen.terms, {
+    scheme: 'exact',
+    network: 'stellar:testnet',
+    asset: 'TOKEN',
+    payTo: 'RECIPIENT',
+    amount: '100000',
+    maxTimeoutSeconds: 300,
+    extra: { areFeesSponsored: true, paymentFlow: 'authorization' },
+  });
+  const selective = selectX402Terms(
+    paymentRequired({ accepts: [offer({ extra: { areFeesSponsored: true }, facilitator: 'https://facilitator.test' })] }),
+    spec(), authority(), CLOCK_MS,
+  );
+  assert.deepEqual(selective.terms.extra, { areFeesSponsored: true });
+});
+
+test('K4-B2 an amount under the ceiling is still refused: the declared amount is exact, not a bound', () => {
+  const { selectX402Terms } = loadKernel();
+  assert.equal(selectX402Terms(paymentRequired(), spec(), authority(), CLOCK_MS).ok, true);
+  for (const amount of ['400000', '5000000', '1', '99999']) {
+    const chosen = selectX402Terms(paymentRequired({ accepts: [offer({ amount })] }), spec(), authority(), CLOCK_MS);
+    assert.deepEqual(chosen, { ok: false, code: 'TERMS_REJECTED' }, amount);
+  }
+});
+
+test('K4-B3 network, asset, payTo, scheme, version, resource, sponsorship, flow and unknown economics each refuse on their own', () => {
+  const { selectX402Terms } = loadKernel();
+  const refusals = {
+    network: paymentRequired({ accepts: [offer({ network: 'stellar:pubnet' })] }),
+    asset: paymentRequired({ accepts: [offer({ asset: 'OTHER' })] }),
+    payTo: paymentRequired({ accepts: [offer({ payTo: 'SOMEONE-ELSE' })] }),
+    scheme: paymentRequired({ accepts: [offer({ scheme: 'upto' })] }),
+    version: paymentRequired({ x402Version: 1, accepts: [offer()] }),
+    'version as string': paymentRequired({ x402Version: '2', accepts: [offer()] }),
+    resource: paymentRequired({ resource: { url: 'https://example.test/other' }, accepts: [offer()] }),
+    'resource missing': { x402Version: 2, accepts: [offer()] },
+    'resource uncanonical': paymentRequired({ resource: { url: 'https://example.test:443/api?service=marketing-plan' }, accepts: [offer()] }),
+    'not sponsored': paymentRequired({ accepts: [offer({ extra: { areFeesSponsored: false } })] }),
+    'no extra': paymentRequired({ accepts: [offer({ extra: undefined })] }),
+    'unknown flow': paymentRequired({ accepts: [offer({ extra: { areFeesSponsored: true, paymentFlow: 'optimistic' } })] }),
+    'unknown economic field': paymentRequired({ accepts: [offer({ extra: { areFeesSponsored: true, feeMultiplier: '2' } })] }),
+    'no offer matches': paymentRequired({ accepts: [offer({ payTo: 'SOMEONE-ELSE' })] }),
+  };
+  for (const [label, required] of Object.entries(refusals)) {
+    assert.deepEqual(selectX402Terms(required, spec(), authority(), CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' }, label);
+  }
+});
+
+test('K4-B4 the signature window is checked on its own boundaries and accepts is bounded', () => {
+  const { selectX402Terms } = loadKernel();
+  for (const window of [0, -1, 1.5, '300', 301, 1000]) {
+    assert.deepEqual(
+      selectX402Terms(paymentRequired({ accepts: [offer({ maxTimeoutSeconds: window })] }), spec(), authority(), CLOCK_MS),
+      { ok: false, code: 'TERMS_REJECTED' }, String(window),
+    );
+  }
+  for (const window of [1, 300]) {
+    assert.equal(selectX402Terms(paymentRequired({ accepts: [offer({ maxTimeoutSeconds: window })] }), spec(), authority(), CLOCK_MS).ok, true, String(window));
+  }
+  const bounded = { ok: false, code: 'TERMS_REJECTED' };
+  assert.deepEqual(selectX402Terms(paymentRequired({ accepts: [] }), spec(), authority(), CLOCK_MS), bounded);
+  assert.deepEqual(selectX402Terms(paymentRequired({ accepts: 'exact' }), spec(), authority(), CLOCK_MS), bounded);
+  assert.deepEqual(selectX402Terms(paymentRequired({ accepts: Array.from({ length: 65 }, () => offer()) }), spec(), authority(), CLOCK_MS), bounded);
+  assert.equal(selectX402Terms(paymentRequired({ accepts: Array.from({ length: 64 }, () => offer()) }), spec(), authority(), CLOCK_MS).ok, true);
+});
+
+test('K4-B5 a hostile first offer is never selected: the first acceptable offer in order wins', () => {
+  const { selectX402Terms } = loadKernel();
+  const hostile = { hostile: true };
+  const second = offer({ extra: { areFeesSponsored: true, paymentFlow: undefined } });
+  const chosen = selectX402Terms(paymentRequired({ accepts: [hostile, second] }), spec(), authority(), CLOCK_MS);
+  assert.equal(chosen.ok, true);
+  assert.deepEqual(chosen.terms.extra, { areFeesSponsored: true });
+  const first = offer({ maxTimeoutSeconds: 120 });
+  const picked = selectX402Terms(paymentRequired({ accepts: [first, second] }), spec(), authority(), CLOCK_MS);
+  assert.equal(picked.terms.maxTimeoutSeconds, 120);
+  assert.equal(Object.isFrozen(chosen.terms), true);
+});
+
+test('K4-B6 a wildcard grant does not authorize this payment and an expired grant says so', () => {
+  const { selectX402Terms } = loadKernel();
+  const wildcard = { spend: [{ asset: 'USDC:TOKEN', maxAmount: '500000' }] };
+  assert.deepEqual(selectX402Terms(paymentRequired(), spec(), wildcard, CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
+  const other = { spend: [{ asset: 'USDC:TOKEN', maxAmount: '500000', to: 'SOMEONE-ELSE' }] };
+  assert.deepEqual(selectX402Terms(paymentRequired(), spec(), other, CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
+  const expired = { spend: [grant({ expiresAt: CLOCK })] };
+  assert.deepEqual(selectX402Terms(paymentRequired(), spec(), expired, CLOCK_MS), { ok: false, code: 'AUTHORITY_EXPIRED' });
+  const stale = { spend: [grant({ expiresAt: '2039-12-31T23:59:59.000Z' })] };
+  assert.equal(selectX402Terms(paymentRequired(), spec(), stale, CLOCK_MS).ok, true);
+  assert.deepEqual(selectX402Terms(paymentRequired(), spec(), authority({ spend: [] }), CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
+  assert.deepEqual(selectX402Terms(paymentRequired(), spec(), authority({ spend: [grant({ maxAmount: '99999' })] }), CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
+  assert.deepEqual(selectX402Terms(paymentRequired(), spec(), authority({ spend: [grant({ asset: 'USDC:OTHER', maxAmount: '500000' })] }), CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
+});
+
+test('K4-B7 selection reads a malformed declaration or requirement as INVALID_SPEC and never throws at the caller', () => {
+  const { selectX402Terms } = loadKernel();
+  const throwing = paymentRequired();
+  Object.defineProperty(throwing, 'accepts', { get() { throw new Error('marker-secret'); } });
+  const circular = paymentRequired();
+  circular.accepts = [circular];
+  for (const [label, required] of Object.entries({
+    'null': null, 'array': [], 'not versioned': { accepts: [offer()] },
+    'getter that throws': throwing, cyclic: circular,
+  })) {
+    assert.deepEqual(selectX402Terms(required, spec(), authority(), CLOCK_MS), { ok: false, code: 'INVALID_SPEC' }, label);
+  }
+  assert.deepEqual(selectX402Terms(paymentRequired(), spec({ amount: '0' }), authority(), CLOCK_MS), { ok: false, code: 'INVALID_SPEC' });
+  assert.deepEqual(selectX402Terms(paymentRequired(), null, authority(), CLOCK_MS), { ok: false, code: 'INVALID_SPEC' });
+});
+
+test('K4-B8 selection never mutates what the server sent and never widens the requirement', () => {
+  const { selectX402Terms } = loadKernel();
+  const required = paymentRequired();
+  const before = JSON.stringify(required);
+  const chosen = selectX402Terms(required, spec(), authority(), CLOCK_MS);
+  assert.equal(chosen.ok, true);
+  assert.equal(JSON.stringify(required), before);
+  assert.equal(Object.isFrozen(chosen.terms.extra), true);
+  assert.equal(chosen.terms.grantAsset, undefined);
+  assert.equal(chosen.terms.payer, undefined);
+});
