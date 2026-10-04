@@ -398,11 +398,16 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   // A stage that stops early must not erase a refutation an earlier stage already found: `exists:
   // false` is still `discrepant` when the resolver also left the repository out of its answer
   // (A07). What was refuted stays refuted, whatever came up unanswered after it.
+  //
+  // Nor may stopping early erase the checks that did run. Three successful comparisons are a fact
+  // about what this kernel verified, and reporting them as a bare refusal with empty coverage hands
+  // the reader a weaker record than the code actually holds (A18, review R203). Nothing was hashed on
+  // the way here, so `contentRecomputed` is false.
   function stoppedAt(reason) {
     if (refuted.length > 0) {
-      return settle(record, 'discrepant', `${refuted.join('; ')}; ${reason}`, checks);
+      return settle(record, 'discrepant', `${refuted.join('; ')}; ${reason}`, checks, false);
     }
-    return refuse(record, reason);
+    return settle(record, 'not_verifiable', reason, checks, false);
   }
 
   // Every field is read once, inside one guard, so a hostile evidence record either yields all of
