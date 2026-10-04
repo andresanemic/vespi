@@ -279,7 +279,12 @@ function provenanceOf(record) {
 }
 
 function settle(record, status, reason, checks) {
-  const sealed = withChecks(checks);
+  // Every one of the four checks is present and boolean here, so `checks` cannot answer `undefined`
+  // for a check this kernel did not cover while `coverage` and `notCovered`, read off the same object,
+  // do report it. A check that was left unanswered is reported as false, never as absent.
+  const values = { ...provenanceChecks(checks) };
+  for (const key of Object.keys(checks)) values[key] = checks[key] === true;
+  const sealed = withChecks(values);
   const result = Object.freeze({
     status,
     provenanceStatus: status,
@@ -360,46 +365,47 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const checks = {};
   const refuted = [];
 
-  // The commit has to be there at all. A missing commit is a refutation, not an absence of evidence.
+  // Every field is read once, inside one guard, so a hostile evidence record either yields all of
+  // itself or none of it.
   let exists;
+  let repository = null;
+  let author = null;
+  let content = null;
+  let contentDigest = null;
+  let evidenceCommit = null;
   try {
     exists = evidence.exists;
+    repository = readString(evidence, 'repository');
+    author = readString(evidence, 'author');
+    content = evidence.content;
+    contentDigest = readString(evidence, 'contentDigest');
+    evidenceCommit = readString(evidence, 'commit');
   } catch {
     return refuse(record, 'the evidence could not be read');
   }
+
+  // The commit has to be there at all, and the evidence has to be about *this* commit. `exists: true`
+  // with no id says that some commit exists somewhere; the question was about one particular id, so
+  // without the id nothing is covered and nothing is refuted. Evidence about another id answers a
+  // question nobody asked, and that is a refutation (A04).
   if (exists === false) {
     checks.commit_exists = false;
     refuted.push(`commit ${record.commit} is not in ${record.repository}`);
   } else if (exists !== true) {
     return refuse(record, 'the resolver did not say whether the commit exists');
-  } else {
-    checks.commit_exists = true;
-  }
-
-  let repository = null;
-  let author = null;
-  let content = null;
-  let contentDigest = null;
-  try {
-    repository = readString(evidence, 'repository');
-    author = readString(evidence, 'author');
-    content = evidence.content;
-    contentDigest = readString(evidence, 'contentDigest');
-  } catch {
-    return refuse(record, 'the evidence could not be read');
+  } else if (evidenceCommit !== null) {
+    if (evidenceCommit !== record.commit) {
+      checks.commit_exists = false;
+      refuted.push(`the resolver answered about commit ${evidenceCommit.slice(0, 120)}, not about ${record.commit.slice(0, 120)}`);
+    } else {
+      checks.commit_exists = true;
+    }
   }
 
   const repoReason = compare('repository', record.repository, repository, checks);
   if (repoReason !== null) refuted.push(repoReason);
   const authorReason = compare('author', record.author, author, checks);
   if (authorReason !== null) refuted.push(authorReason);
-
-  // Evidence about a different commit than the one declared answers a question nobody asked.
-  const evidenceCommit = readString(evidence, 'commit');
-  if (evidenceCommit !== null && evidenceCommit !== record.commit) {
-    checks.commit_exists = false;
-    refuted.push(`the resolver answered about commit ${evidenceCommit.slice(0, 120)}, not about ${record.commit.slice(0, 120)}`);
-  }
 
   // Bytes beat a digest string. If the resolver brought the content, the digest is computed here and
   // the string it may also have written is not consulted.
@@ -428,8 +434,6 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   return settle(record, 'verified', 'the resolver reported this repository, commit, author and content, and all four match', checks);
 }
 
-// The authority question, kept apart from the load question: may this skill act, and within what the
-// person granted. Bytes belong to `loadSkill`, where the time-of-check gap actually opens.
 // Membership by plain loop. The lists compared here are built by this module, and no method handed
 // over by the caller ever decides whether authority widens.
 function listedIn(list, value) {
@@ -464,6 +468,8 @@ function captureRequest(value) {
   return { ok: true, names, reason: null };
 }
 
+// The authority question, kept apart from the load question: may this skill act, and within what the
+// person granted. Bytes belong to `loadSkill`, where the time-of-check gap actually opens.
 function authorizeSkill(claim, result, requested) {
   const record = recordOf(claim);
   const provenance = record === null ? null : provenanceOf(record);
