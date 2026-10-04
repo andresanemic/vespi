@@ -247,7 +247,12 @@ function offerIsExact(offer, spec) {
 
 function copyTerms(spec, offer) {
   const extra = {};
-  for (const key of Object.keys(offer.extra)) extra[key] = offer.extra[key];
+  for (const key of Object.keys(offer.extra)) {
+    // An absent field stays absent: writing it as an explicit undefined would change what the terms
+    // say to whoever signs them.
+    if (offer.extra[key] === undefined) continue;
+    extra[key] = offer.extra[key];
+  }
   return Object.freeze({
     scheme: SUPPORTED_SCHEME,
     network: spec.network,
@@ -273,8 +278,75 @@ function sha256(text) {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
-function selectX402Terms() {
-  return { ok: false, code: CODES.INVALID_SPEC };
+// The authority on hand has to name this recipient: a wildcard grant is a permission to spend
+// somewhere, not to pay this particular counterparty, so it does not authorize this payment.
+function liveGrant(authority, spec, now) {
+  const requirement = requirementOf(spec);
+  const grants = Array.isArray(authority?.spend) ? authority.spend : [];
+  let named = false;
+  let expired = false;
+  for (const entry of grants) {
+    if (!isPlainObject(entry)) continue;
+    if (entry.asset !== requirement.asset || entry.to !== requirement.to) continue;
+    named = true;
+    const live = entry.expiresAt === undefined || (parseTime(entry.expiresAt) !== null && parseTime(entry.expiresAt) > now);
+    if (!live) expired = true;
+  }
+  if (expired) return { ok: false, code: CODES.AUTHORITY_EXPIRED };
+  if (!named) return { ok: false, code: CODES.TERMS_REJECTED };
+  return { ok: true };
+}
+
+function readAccepts(required, spec) {
+  // A payload that is not an object at all is a malformed declaration, not a mismatch of terms.
+  if (!isPlainObject(required)) throw specError();
+  if (required.x402Version !== SUPPORTED_VERSION) return null;
+  if (!isPlainObject(required.resource)) return null;
+  // The resource has to be exactly the canonical url the declaration fixed. A relative resource, a
+  // fragment, a different host or an uncanonical spelling is not the same resource.
+  if (required.resource.url !== spec.url) return null;
+  const accepts = required.accepts;
+  if (!Array.isArray(accepts) || accepts.length === 0 || accepts.length > MAX_ACCEPTS) return null;
+  return accepts;
+}
+
+function selectX402Terms(required, rawSpec, authority, now) {
+  let spec;
+  try {
+    spec = readSpec(rawSpec);
+  } catch {
+    return { ok: false, code: CODES.INVALID_SPEC };
+  }
+  let accepts;
+  try {
+    accepts = readAccepts(required, spec);
+  } catch {
+    return { ok: false, code: CODES.INVALID_SPEC };
+  }
+  if (accepts === null) return { ok: false, code: CODES.TERMS_REJECTED };
+
+  const moment = parseTime(now === undefined || now === null ? Date.now() : now);
+  if (moment === null) return { ok: false, code: CODES.INVALID_CLOCK };
+
+  const cover = liveGrant(authority, spec, moment);
+  if (!cover.ok) return cover;
+  try {
+    const check = sufficient([requirementOf(spec)], authority, { now: moment });
+    if (!check || check.ok !== true) return { ok: false, code: CODES.TERMS_REJECTED };
+  } catch {
+    return { ok: false, code: CODES.TERMS_REJECTED };
+  }
+
+  for (const candidate of accepts) {
+    let exact = false;
+    try {
+      exact = offerIsExact(candidate, spec);
+    } catch {
+      exact = false;
+    }
+    if (exact) return { ok: true, terms: copyTerms(spec, candidate) };
+  }
+  return { ok: false, code: CODES.TERMS_REJECTED };
 }
 
 function createMemoryPaymentClaims() {

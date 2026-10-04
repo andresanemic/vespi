@@ -441,7 +441,7 @@ test('K4-B6 a wildcard grant does not authorize this payment and an expired gran
   assert.deepEqual(selectX402Terms(paymentRequired(), spec(), other, CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
   const expired = { spend: [grant({ expiresAt: CLOCK })] };
   assert.deepEqual(selectX402Terms(paymentRequired(), spec(), expired, CLOCK_MS), { ok: false, code: 'AUTHORITY_EXPIRED' });
-  const stale = { spend: [grant({ expiresAt: '2039-12-31T23:59:59.000Z' })] };
+  const stale = { spend: [grant({ expiresAt: '2040-06-30T00:00:00.000Z' })] };
   assert.equal(selectX402Terms(paymentRequired(), spec(), stale, CLOCK_MS).ok, true);
   assert.deepEqual(selectX402Terms(paymentRequired(), spec(), authority({ spend: [] }), CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
   assert.deepEqual(selectX402Terms(paymentRequired(), spec(), authority({ spend: [grant({ maxAmount: '99999' })] }), CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
@@ -454,12 +454,16 @@ test('K4-B7 selection reads a malformed declaration or requirement as INVALID_SP
   Object.defineProperty(throwing, 'accepts', { get() { throw new Error('marker-secret'); } });
   const circular = paymentRequired();
   circular.accepts = [circular];
+  // A payload that is not an object, cycles, or throws on read is malformed. A well-formed object
+  // that speaks another version, names another resource or offers nothing acceptable is a refusal.
   for (const [label, required] of Object.entries({
-    'null': null, 'array': [], 'not versioned': { accepts: [offer()] },
-    'getter that throws': throwing, cyclic: circular,
+    'null': null, 'array': [], 'getter that throws': throwing,
   })) {
     assert.deepEqual(selectX402Terms(required, spec(), authority(), CLOCK_MS), { ok: false, code: 'INVALID_SPEC' }, label);
   }
+  assert.deepEqual(selectX402Terms({ accepts: [offer()] }, spec(), authority(), CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
+  assert.deepEqual(selectX402Terms(circular, spec(), authority(), CLOCK_MS), { ok: false, code: 'TERMS_REJECTED' });
+  assert.deepEqual(selectX402Terms(paymentRequired(), spec(), authority(), 'not-a-clock'), { ok: false, code: 'INVALID_CLOCK' });
   assert.deepEqual(selectX402Terms(paymentRequired(), spec({ amount: '0' }), authority(), CLOCK_MS), { ok: false, code: 'INVALID_SPEC' });
   assert.deepEqual(selectX402Terms(paymentRequired(), null, authority(), CLOCK_MS), { ok: false, code: 'INVALID_SPEC' });
 });
