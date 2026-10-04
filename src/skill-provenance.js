@@ -397,11 +397,17 @@ async function askResolver(resolve, question, timeoutMs) {
 // parsing. Two spellings of the same repository are two claims until the person writes one, and the
 // disagreement is visible in the receipt instead of resolved silently here. A field the resolver left
 // unanswered is not a disagreement: the check stays undefined and is reported as not covered.
+//
+// What the reported value is not given is a place in the reason. The resolver is the party being
+// checked, it may put anything it likes in `author`, and the rule this module already applies to a
+// thrown value (A05, A06) applies to the fields it answers with: the text belongs to whoever
+// produced it. The declared value needs no repetition either, since the disagreement is already
+// readable in `checks` and the declared value is already in `provenance` (A18, review H06).
 function compare(label, declared, found, checks) {
   if (found === null) return null;
   if (found !== declared) {
     checks[label] = false;
-    return `the ${label} the resolver reported (${String(found).slice(0, 120)}) is not the one declared (${String(declared).slice(0, 120)})`;
+    return `the ${label} the resolver reported is not the one declared`;
   }
   checks[label] = true;
   return null;
@@ -498,7 +504,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   } else if (exists === true && evidenceCommit !== null) {
     if (evidenceCommit !== record.commit) {
       checks.commit_exists = false;
-      refuted.push(`the resolver answered about commit ${evidenceCommit.slice(0, 120)}, not about ${record.commit.slice(0, 120)}`);
+      refuted.push(`the resolver answered about a commit that is not the one declared (${record.commit.slice(0, 120)})`);
     } else {
       checks.commit_exists = true;
     }
