@@ -15,7 +15,7 @@ const { parseTime } = require('./time.js');
 //                to authorize and what the kernel binds. Never read back from a caller afterwards.
 //   · verifiers — the independent verifier of each declared trigger, bound when the person granted.
 //   · approver  — the host callback that has to answer again before the clock may be extended.
-//   · family    — the private identity of this one grant. Records are kept by the public id, which is
+//   · family    : the private identity of this one grant. Records are kept by the public id, which is
 //                not an identity, so this is what says a counter, a review or a revocation belongs
 //                to this grant and not to another person who happened to use the same id.
 // A permission that did not come out of `createEmergencyPermission` is not in this table, so it
@@ -27,7 +27,7 @@ const { parseTime } = require('./time.js');
 // counts as the independent signal, and whether the clock may grow. The kernel's part is that an
 // agent exercising the permission can never be the source of any of them, that a permission which
 // did not come through this path holds nothing, and that a caller cannot get the kernel to bind one
-// value and seal another by answering twice — every field it hands over, nested triggers included,
+// value and seal another by answering twice. Every field it hands over, nested triggers included,
 // is read once, and what is validated is what gets bound. A barrier against the common forgery, not
 // a proof against a Proxy that lies about its own descriptors.
 
@@ -90,7 +90,7 @@ function canonical(value, seen) {
     if (proto !== Object.prototype && proto !== null) { path.delete(value); return NOT_REPRESENTABLE; }
     // The copy is built without a prototype on purpose. Assigning to `{}` runs the inherited
     // `__proto__` setter, so a JSON body carrying that key either changed this copy's prototype and
-    // lost the key, or made the copy unrepresentable a second time — which is how a verified signal
+    // lost the key, or made the copy unrepresentable a second time, which is how a verified signal
     // used to be sealed with a null fingerprint (R209, R210). With no prototype there is no
     // inherited setter: every key of the body becomes exactly the data property it was, and the
     // string this returns for an ordinary body is byte for byte the one a plain object gave.
@@ -171,8 +171,8 @@ function triggerList(value) {
 }
 
 // The kernel reads a value it did not write from a caller that may be hostile, so every read of the
-// permission goes through here, one read per field — nested triggers included, which `triggerList`
-// handles the same way — and the result is normalized. A permission nobody can read safely returns
+// permission goes through here, one read per field, nested triggers included, which `triggerList`
+// handles the same way, and the result is normalized. A permission nobody can read safely returns
 // the reason it could not be read, and every caller fails closed on it: it exercises nothing.
 function snapshotPermission(permission) {
   try {
