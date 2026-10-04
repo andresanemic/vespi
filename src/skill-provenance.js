@@ -786,8 +786,12 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
 
 // One field of the receipt spec, read once, under its own guard. `undefined` for a field that is
 // absent, that is not an object, or that could not be read: `buildReceipt` already substitutes a safe
-// value for every one of the seven, so an unreadable field produces an ordinary receipt that says
-// nothing rather than a crash in the caller's face.
+// value for every one of the seven, so an unreadable top-level field produces an ordinary receipt
+// that says nothing. What lives inside a field is a step further down and is not contained:
+// `buildReceipt` reads `operation.id`, `authority.spend` and the rest without guards, so a hostile
+// getter nested in `operation` or `authority` still throws to the caller. That code is base and
+// unchanged here, so this comment names the boundary instead of promising a crash it cannot prevent
+// (review N08).
 function receiptField(spec, key) {
   try {
     return spec !== null && typeof spec === 'object' ? spec[key] : undefined;
@@ -803,9 +807,11 @@ function receiptField(spec, key) {
 //
 // The spec is caller-supplied data like any other, so it is read field by field under guards and never
 // spread: `{...spec}` enumerates keys the caller controls, and a revoked proxy or a throwing getter in
-// any of the seven fields `buildReceipt` reads threw out of this function into someone else's control
-// flow. Naming the seven fields is what `buildReceipt` destructures anyway, so nothing else the caller
-// wrote could have reached the receipt through the spread (A18, review H09).
+// any of the seven top-level fields `buildReceipt` reads threw out of this function into someone else's
+// control flow. `buildReceipt` destructures exactly those seven, so nothing else the caller wrote
+// could have reached the receipt through a spread of them; a value nested inside one of them is not
+// covered by that sentence (A18, review H09; review N08). `outcome` is the sixth caller-supplied
+// field and is read the same way now (N02, N03).
 function buildSkillReceipt(spec, decision) {
   const record = deciderRecord(decision);
   if (record === null) {
