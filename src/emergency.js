@@ -83,7 +83,13 @@ function canonical(value, seen) {
   } else {
     const proto = Object.getPrototypeOf(value);
     if (proto !== Object.prototype && proto !== null) { path.delete(value); return NOT_REPRESENTABLE; }
-    out = {};
+    // The copy is built without a prototype on purpose. Assigning to `{}` runs the inherited
+    // `__proto__` setter, so a JSON body carrying that key either changed this copy's prototype and
+    // lost the key, or made the copy unrepresentable a second time — which is how a verified signal
+    // used to be sealed with a null fingerprint (R209, R210). With no prototype there is no
+    // inherited setter: every key of the body becomes exactly the data property it was, and the
+    // string this returns for an ordinary body is byte for byte the one a plain object gave.
+    out = Object.create(null);
     for (const key of Object.keys(value).sort()) {
       const item = canonical(value[key], path);
       if (item === NOT_REPRESENTABLE) { path.delete(value); return NOT_REPRESENTABLE; }
@@ -425,7 +431,7 @@ function blockedReceipt({ snapshot, authority, action, signalId, reason, at }) {
 // authority grants and exercised amounts, declared coverage, a pending anchor, and a digest that
 // verifyReceipt recomputes. The effect itself is never claimed verified: the exercise is a grant
 // spent, not an effect proven, and the operation goes back to the person (decision 27).
-function useReceipt(snapshot, asked, trigger, checked, dueAtMs) {
+function useReceipt(snapshot, asked, trigger, checked, dueAtMs, signalDigest) {
   const signalId = asked.signal.id;
   const checks = { grantor_authority: true, trigger_verified: true, effect_verified: false };
   const receipt = {
@@ -456,8 +462,10 @@ function useReceipt(snapshot, asked, trigger, checked, dueAtMs) {
       verifierId: trigger.verifierId,
       signalId,
       // A digest of the very body the verifier received, so the receipt is bound to that signal and
-      // not merely to an id anybody could reuse. The body itself never travels.
-      signalDigest: fingerprint(asked.signal.body),
+      // not merely to an id anybody could reuse. The body itself never travels. The digest was
+      // computed and checked before the verifier was asked, so it is a hash or this call never got
+      // here: there is no path left that seals a null fingerprint next to a verified trigger.
+      signalDigest,
       signalSource: asked.signal.source,
       verification: { verified: true, reason: checked.reason },
     },
@@ -598,12 +606,22 @@ function pendingBlock(record, snapshot, asked) {
 // verifier whose `verified` or `reason` cannot be read has not verified anything, and the reason
 // that travels to the receipt is the bounded primitive this function produced — never an object,
 // never the text of an exception raised by a getter (ADV08, ADV09, ADV25).
-function verifySignal(verifier, trigger, signal) {
-  // The verifier gets copies: it may do whatever it likes with them, and the body the kernel seals a
-  // digest of is the one it actually handed over.
+function verifySignal(verifier, trigger, signal, signalDigest) {
+  // Both copies are made, and the fingerprint of the body is required, before the verifier is
+  // called: this kernel never hands a body it could not hash, and never reserves a use it could not
+  // seal. NOT_REPRESENTABLE is an internal marker and never reaches the callback.
+  let triggerCopy;
+  let bodyCopy;
   let checked;
   try {
-    checked = verifier.verify(canonical(trigger), canonical(signal.body));
+    triggerCopy = canonical(trigger);
+    bodyCopy = canonical(signal.body);
+    if (!signalDigest || triggerCopy === NOT_REPRESENTABLE || bodyCopy === NOT_REPRESENTABLE) {
+      return { ok: false, reason: 'the trigger signal has no representation this kernel can hand over and seal, so nothing was verified' };
+    }
+    // The verifier gets copies: it may do whatever it likes with them, and the body the kernel seals a
+    // digest of is the one it actually handed over.
+    checked = verifier.verify(triggerCopy, bodyCopy);
   } catch {
     return { ok: false, reason: 'the independent trigger verification failed' };
   }
@@ -685,6 +703,13 @@ function exerciseEmergency(permission, request, { ledger, now } = {}) {
   if (parseTime(dueAtMs) === null) {
     return fail('the post-use review deadline falls outside the calendar this kernel can hold, so the use spends nothing', at, asked.signal.id);
   }
+  // The fingerprint of the signal is taken and required before anything is verified or reserved. A
+  // body this kernel cannot hash faithfully is refused while it still costs nothing, rather than
+  // being verified and then sealed with no evidence at all.
+  const signalDigest = fingerprint(asked.signal.body);
+  if (!signalDigest) {
+    return fail('the trigger signal has no representation this kernel can hash and seal, so the use spends nothing', at, asked.signal.id);
+  }
 
   // Synchronous is not the same as unreentrant. The verifier is caller code running inside this
   // call: a verifier that re-enters `exerciseEmergency` on the same permission would otherwise find
@@ -695,7 +720,7 @@ function exerciseEmergency(permission, request, { ledger, now } = {}) {
   }
   record.busy = true;
   try {
-    const checked = verifySignal(verifier, trigger, asked.signal);
+    const checked = verifySignal(verifier, trigger, asked.signal, signalDigest);
     if (!checked.ok) return fail(checked.reason, at, asked.signal.id);
     // Everything the verifier could have changed with a side effect gets read again: a person who
     // revoked the permission while the sensor was thinking has already said no (ADV07).
@@ -705,7 +730,7 @@ function exerciseEmergency(permission, request, { ledger, now } = {}) {
     // the slot it would have taken stays available to the next honest caller.
     let receipt;
     try {
-      receipt = useReceipt({ ...snapshot, approval: bound.snapshot.approval }, { ...asked, at }, trigger, checked, dueAtMs);
+      receipt = useReceipt({ ...snapshot, approval: bound.snapshot.approval }, { ...asked, at }, trigger, checked, dueAtMs, signalDigest);
     } catch {
       return fail('the receipt for this use could not be sealed, so nothing was spent', at, asked.signal.id);
     }
