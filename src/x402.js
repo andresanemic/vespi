@@ -431,7 +431,7 @@ async function verifySettlementEffect(ctx, evidence) {
     delivery: ctx.delivery === true,
     transactionUnique: ctx.transactionUnique === true,
   };
-  let reason = 'the paid effect has not been verified';
+  let settlementReason = `the settlement evidence does not match the declared effect (${CODES.SETTLEMENT_REJECTED})`;
 
   // What can be compared here is compared here: a settlement answer that contradicts the declaration
   // is refused without asking the port, so a port cannot be handed a contradiction to rubber-stamp.
@@ -449,15 +449,20 @@ async function verifySettlementEffect(ctx, evidence) {
         && typeof verdict.reason === 'string' && verdict.reason.length > 0
         && Object.values(portChecks).every((value) => value === true);
       checks.settlement = portVerified;
-      reason = typeof verdict.reason === 'string' && verdict.reason.length > 0
-        ? verdict.reason : 'the settlement port returned no reason';
-    } else {
-      reason = 'the settlement evidence does not match the declared effect';
-      checks.settlement = false;
+      if (!portVerified) {
+        settlementReason = `the settlement port did not verify the declared effect (${CODES.VERIFIER_FAILED})`;
+      }
     }
-  } else if (!checks.prepared) {
-    reason = 'the authorization was not independently inspected';
   }
+
+  // One reason, in the order a reader needs it. It names a code from the catalog and never a string
+  // a port wrote: a raw SDK message, a url or a body does not travel into a receipt.
+  let reason = 'the paid effect is verified';
+  if (!checks.terms) reason = `the paid terms were not the authorized ones (${CODES.TERMS_REJECTED})`;
+  else if (!checks.prepared) reason = `the authorization was not independently inspected (${CODES.PREPARED_REJECTED})`;
+  else if (!checks.settlement) reason = settlementReason;
+  else if (!checks.transactionUnique) reason = `the settled transaction was not unique in this process (${ctx.claimCode || CODES.DUPLICATE_TRANSACTION})`;
+  else if (!checks.delivery) reason = `the paid response did not deliver a validated body (${CODES.DELIVERY_REJECTED})`;
 
   const verified = checks.terms === true
     && checks.prepared === true
@@ -787,16 +792,17 @@ function aborted(ctx) {
   return abortedRead(ctx.signal);
 }
 
-async function perform(ctx, spec, ports, io) {
+async function perform(ctx) {
+  const spec = ctx.spec;
   const stopWatching = watchAbort(ctx);
   try {
-    return await performStages(ctx, spec, ports, io);
+    return await performStages(ctx, spec);
   } finally {
     stopWatching();
   }
 }
 
-async function performStages(ctx, spec, ports, io) {
+async function performStages(ctx, spec) {
   const now = ctx.now;
   const cover = liveGrant(ctx.authority, spec, now);
   if (!cover.ok) return blocked(cover.code);
@@ -832,7 +838,8 @@ async function performStages(ctx, spec, ports, io) {
 
   ctx.evidence = { authDigest: ctx.authDigest };
   let response;
-  ctx.sendStarted = true;
+  // The send is on the wire from this line on: nothing below may report a plain failure with
+  // nothing exercised, and nothing below may send a second time.
   try {
     response = await ctx.ports.sendPaid({
       url: spec.url,
@@ -858,6 +865,7 @@ async function performStages(ctx, spec, ports, io) {
   // settlement the run then refuses is still a transaction this process has already seen.
   const claim = ctx.claims.claimTransaction(ctx.expected.network, settlement.txHash);
   ctx.transactionUnique = claim === 'claimed';
+  if (!ctx.transactionUnique) ctx.claimCode = claim === 'duplicate' ? CODES.DUPLICATE_TRANSACTION : CODES.CLAIMS_CAPACITY;
 
   // A hash that contradicts the declaration keeps its evidence on the receipt: the person reconciles
   // it. It is not verified and no output is exposed.
@@ -869,7 +877,6 @@ async function performStages(ctx, spec, ports, io) {
   ctx.delivery = delivery.ok && response.status === 200 && !aborted(ctx);
   if (!ctx.delivery) return { ok: true, evidence: ctx.evidence, output: null };
   ctx.evidence = { ...ctx.evidence, planDigest: delivery.digest };
-  ctx.output = delivery.output;
   return { ok: true, evidence: ctx.evidence, output: delivery.output };
 }
 
@@ -893,26 +900,27 @@ function createX402Payment(rawSpec, rawPorts) {
       if (!isPlainObject(op)) throw specError();
       // Every run owns its capability and its private context: no authDigest and no expectation is
       // ever shared between two concurrent runs of the same payment.
+      // Private to this run: nothing here is shared with another run of the same payment, so an
+      // authDigest from one run can never stand in for another.
       const ctx = {
         spec,
         ports,
         io,
         expected: expectedEffect(spec),
-        requirement: requirementOf(spec),
         now: null,
         authority: null,
-        trace: [],
+        operationKey: null,
+        signal: null,
+        claims: ports.claims || SHARED_CLAIMS,
+        terms: null,
         authDigest: null,
-        sendStarted: false,
         prepared: false,
         delivery: false,
         transactionUnique: false,
-        terms: null,
-        output: null,
         evidence: null,
         settlement: null,
+        claimCode: null,
         aborted: false,
-        claims: ports.claims || SHARED_CLAIMS,
       };
       const capability = {
         id: spec.id,
@@ -924,7 +932,7 @@ function createX402Payment(rawSpec, rawPorts) {
           const now = readRunNow(io);
           if (now === null) return failed(CODES.INVALID_CLOCK);
           ctx.now = now;
-          return perform(ctx, spec, ports, io);
+          return perform(ctx);
         },
       };
       return runOperation(op, capability, buildRunIo(io, ctx));

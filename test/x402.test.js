@@ -1459,10 +1459,12 @@ test('K4-H1 every refusal on a receipt names a code from the catalog and no text
       sendPaid: async () => paidResponse({ settlement: { success: true, transaction: TX_HASH, payer: 'SOMEONE-ELSE', network: 'stellar:testnet', amount: '100000' } }),
     }),
     DELIVERY_REJECTED: fakePorts({ sendPaid: async () => paidResponse({ readBody: async () => ({ title: 'only a title' }) }) }),
-    DUPLICATE_TRANSACTION: fakePorts({ claims: loadKernel().createMemoryPaymentClaims(), sendPaid: async () => paidResponse({ settlement: { success: true, transaction: 'd'.repeat(64), payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }) }),
     VERIFIER_FAILED: fakePorts({ sendPaid: async () => paidResponse(), verifySettlement: async () => ({ verified: true, checks: { invocation: false }, reason: '' }) }),
   };
-  const store = refusals.DUPLICATE_TRANSACTION.claims;
+  // The transaction case needs two runs: the first claims it, the second finds it claimed.
+  const store = loadKernel().createMemoryPaymentClaims();
+  const claimedOnce = fakePorts({ claims: store, sendPaid: async () => paidResponse({ settlement: { success: true, transaction: 'd'.repeat(64), payer: 'PAYER', network: 'stellar:testnet', amount: '100000' } }) });
+  assert.equal((await runOnce(claimedOnce)).status, 'verified');
   for (const [code, ports] of Object.entries(refusals)) {
     const res = await runOnce(ports);
     assert.equal(res.status, 'not_verified', code);
@@ -1525,9 +1527,14 @@ test('K4-H4 run refuses a malformed operation and leaves the engine states it ow
   }
   assert.equal(ports.calls.discover, 0);
 
-  const paused = opWith(authority());
+  // paused stays the engine's own state: a paused operation is not run, and nobody else may resume it
+  const paused = opWith(authority({ pausers: ['ana'] }));
   const { pauseOperation } = require('../src/operation.js');
-  pauseOperation(paused, 'nobody');
+  pauseOperation(paused, 'ana');
+  const stopped = await payment.run(paused, runIo());
+  assert.equal(stopped.status, 'paused');
+  assert.equal(ports.calls.discover, 0, 'a paused operation never reaches a port');
+  assert.throws(() => pauseOperation(paused, 'mallory'), /not authorized to pause/);
 });
 
 test('K4-H5 two runs of the same payment at once keep their own private context', async () => {
