@@ -1,5 +1,6 @@
 'use strict';
 
+const { createHash } = require('node:crypto');
 const { computeDigest } = require('./receipt.js');
 const { parseTime } = require('./time.js');
 
@@ -7,26 +8,35 @@ const { parseTime } = require('./time.js');
 // exercised against a signal somebody other than the exercising agent verified, sealed in an
 // immediate receipt, and always leaving a post-use review that only a declared reviewer can close.
 //
-// Two bindings live outside the values, because both are identity claims the kernel cannot check
-// on its own and must therefore receive from the host exactly once:
-//   · LEDGER   — the mutable record of a permission (uses, pause, revocation, pending review).
-//   · VERIFIERS — the independent verifier bound to a permission when the person granted it.
-// The verifier is bound at grant time on purpose. If the exercising call could name its own
-// verifier, "the emergency was independently verified" would be a sentence the agent writes about
-// itself, which is the one thing this module exists to refuse (K1).
+// Everything a grant binds lives outside the values, because every one of them is an identity claim
+// the kernel cannot check on its own and must therefore receive from the host exactly once. One
+// private binding per permission carries all of it:
+//   · snapshot  — the normalized grant, read once and frozen, which is both what the host was asked
+//                to authorize and what the kernel binds. Never read back from a caller afterwards.
+//   · verifiers — the independent verifier of each declared trigger, bound when the person granted.
+//   · approver  — the host callback that has to answer again before the clock may be extended.
+// A permission that did not come out of `createEmergencyPermission` is not in this table, so it
+// carries no authority at all: its shape proves nothing, and nothing in this module may treat a
+// readable object as a granted one.
 //
 // What the kernel does NOT do, and says so: it cannot tell a real host from a lying one. Whoever
-// supplies `authorizeGrantor` and `resolveVerifier` decides who may grant and what counts as the
-// independent signal. The kernel's part is that an agent exercising the permission can never be
-// the source of either, and that a permission which did not come through this path holds nothing.
+// supplies `authorizeGrantor`, `resolveVerifier` and `authorizeRenewal` decides who may grant, what
+// counts as the independent signal, and whether the clock may grow. The kernel's part is that an
+// agent exercising the permission can never be the source of any of them, that a permission which
+// did not come through this path holds nothing, and that a caller reading its own data twice cannot
+// get the kernel to bind one value and seal another.
 
-const LEDGER = new WeakMap();
-const VERIFIERS = new WeakMap();
+const BINDINGS = new WeakMap();
 
 const CAPABILITY = 'emergency-access';
 const DEFAULT_GOAL = 'emergency access under prior authority';
 const PENDING_ANCHOR = { status: 'pending', network: 'stellar:testnet' };
 const MAX_REASON = 512;
+// A subject reaches a receipt, so it has to be a reference and not content: letters, digits and
+// separators, bounded. What this kernel will not do is seal a piece of the patient's record into an
+// object that travels.
+const REFERENCE = /^[A-Za-z0-9._:-]{1,64}$/;
+const NOT_REPRESENTABLE = Symbol('not-representable');
 
 function text(value) {
   return typeof value === 'string' && value.length > 0;
@@ -36,14 +46,8 @@ function safeText(value, max = MAX_REASON) {
   return typeof value === 'string' && value.length > 0 ? value.slice(0, max) : null;
 }
 
-function clone(value) {
-  if (Array.isArray(value)) return value.map(clone);
-  if (value && typeof value === 'object') {
-    const out = {};
-    for (const key of Object.keys(value)) out[key] = clone(value[key]);
-    return out;
-  }
-  return value;
+function reference(value) {
+  return text(value) && REFERENCE.test(value);
 }
 
 function freeze(value) {
@@ -52,6 +56,69 @@ function freeze(value) {
     Object.freeze(value);
   }
   return value;
+}
+
+// The canonical form of data this kernel is willing to hash and seal: JSON primitives, plain objects
+// and arrays, keys sorted. Anything else — a function, a symbol, a bigint, an infinite number, a
+// cycle, a class instance, a sparse hole — is refused rather than half-copied, because a receipt
+// whose fingerprint cannot be recomputed is a receipt nobody can check later.
+function canonical(value, seen) {
+  if (value === null) return null;
+  const kind = typeof value;
+  if (kind === 'string' || kind === 'boolean') return value;
+  if (kind === 'number') return Number.isFinite(value) ? value : NOT_REPRESENTABLE;
+  if (kind !== 'object') return NOT_REPRESENTABLE;
+  const path = seen || new Set();
+  if (path.has(value)) return NOT_REPRESENTABLE;
+  path.add(value);
+  let out;
+  if (Array.isArray(value)) {
+    out = [];
+    for (let index = 0; index < value.length; index += 1) {
+      const item = canonical(value[index], path);
+      if (item === NOT_REPRESENTABLE) { path.delete(value); return NOT_REPRESENTABLE; }
+      out.push(item);
+    }
+    if (Object.keys(value).length !== value.length) { path.delete(value); return NOT_REPRESENTABLE; }
+  } else {
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) { path.delete(value); return NOT_REPRESENTABLE; }
+    out = {};
+    for (const key of Object.keys(value).sort()) {
+      const item = canonical(value[key], path);
+      if (item === NOT_REPRESENTABLE) { path.delete(value); return NOT_REPRESENTABLE; }
+      out[key] = item;
+    }
+  }
+  path.delete(value);
+  return out;
+}
+
+// A fingerprint of exactly what travels: unkeyed SHA-256, like the receipt digest itself. It proves
+// binding, not authenticity: it says two receipts were made from different inputs, and anybody able
+// to rewrite a receipt can recompute it. The independent evidence that would let a host check the
+// binding again stays with the host.
+function fingerprint(value) {
+  const canonicalValue = canonical(value);
+  if (canonicalValue === NOT_REPRESENTABLE) return null;
+  return createHash('sha256').update(JSON.stringify(canonicalValue), 'utf8').digest('hex');
+}
+
+// A caller object that carries its own accessors cannot be read exactly once: the kernel reads each
+// field one time and has no second look, so a getter that answers `read` and then something else is
+// a shape it refuses rather than a shape it trusts. Prototype getters are untouched — only accessors
+// the caller put on the object itself are refused. This is a barrier against the common forgery, not
+// a proof against a Proxy that lies about its own descriptors.
+function ownDataOnly(value) {
+  try {
+    for (const key of Object.keys(value)) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || typeof descriptor.get === 'function' || typeof descriptor.set === 'function') return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // A non-empty list of unique non-empty strings, or null. Null is what every reader below treats as
@@ -81,12 +148,16 @@ function triggerList(value) {
 }
 
 // The kernel reads a value it did not write from a caller that may be hostile, so every read of the
-// permission and the request goes through here. A permission nobody can read safely returns the
-// reason it could not be read, and every caller fails closed on it: it exercises nothing.
+// permission goes through here, one read per field, and the result is normalized. A permission
+// nobody can read safely returns the reason it could not be read, and every caller fails closed on
+// it: it exercises nothing.
 function snapshotPermission(permission) {
   try {
     if (!permission || typeof permission !== 'object' || Array.isArray(permission)) {
       return { ok: false, reason: 'the emergency permission is not an object' };
+    }
+    if (!ownDataOnly(permission)) {
+      return { ok: false, reason: 'it carries its own accessors, and this kernel reads each field only once' };
     }
     const id = permission.id;
     const owner = permission.owner;
@@ -112,8 +183,11 @@ function snapshotPermission(permission) {
     if (!triggers) return { ok: false, reason: 'its triggers must be a non-empty list, each naming a trigger and its independent verifier' };
     if (!reviewers) return { ok: false, reason: 'its reviewers must be a non-empty list of unique strings' };
     if (!pausers) return { ok: false, reason: 'its pausers must be a non-empty list of unique strings' };
-    if (!Number.isInteger(maxUses) || maxUses < 1) return { ok: false, reason: 'maxUses must be a positive integer' };
-    if (!Number.isInteger(reviewDueMs) || reviewDueMs < 1) return { ok: false, reason: 'reviewDueMs must be a positive integer' };
+    // Safe integers, not merely integers: a deadline or a cap past the range a Date can hold is not
+    // a permission this kernel can schedule, and accepting it would move the failure to the moment
+    // the review falls due.
+    if (!Number.isSafeInteger(maxUses) || maxUses < 1) return { ok: false, reason: 'maxUses must be a positive safe integer' };
+    if (!Number.isSafeInteger(reviewDueMs) || reviewDueMs < 1) return { ok: false, reason: 'reviewDueMs must be a positive safe integer' };
     if (startsAt === null || expiresAt === null || expiresAt <= startsAt) return { ok: false, reason: 'it needs a valid clock interval' };
     // The signal has to come from somebody who is neither the agent that will exercise the
     // permission nor the person who granted it. Independence is structural, not a promise.
@@ -123,13 +197,11 @@ function snapshotPermission(permission) {
       }
     }
     if (!pausers.includes(owner)) return { ok: false, reason: 'the person who granted it must be allowed to pause it' };
-    const verification = permission.grantVerification;
-    const approval = verification && typeof verification === 'object' ? safeText(verification.reason) : null;
     return {
       ok: true,
       snapshot: {
         id, owner, grantee, destination, purpose, actions, scope, triggers, reviewers, pausers,
-        maxUses, reviewDueMs, startsAt, expiresAt, approval,
+        maxUses, reviewDueMs, startsAt, expiresAt, approval: null,
       },
     };
   } catch {
@@ -142,20 +214,39 @@ function readPermission(permission) {
   return read.ok ? read.snapshot : null;
 }
 
+function clone(value) {
+  const copied = canonical(value);
+  return copied === NOT_REPRESENTABLE ? null : copied;
+}
+
+// One read per field, and the signal copied exactly once: the id and source that get checked against
+// the declaration, and the body the verifier receives, all come out of that single copy. Reading the
+// caller's signal twice is how a receipt ends up naming a signal the verifier never saw.
 function snapshotRequest(request) {
   try {
     if (!request || typeof request !== 'object' || Array.isArray(request)) return null;
+    if (!ownDataOnly(request)) return null;
+    const useId = request.useId;
+    const actor = request.actor;
+    const action = request.action;
+    const subject = request.subject;
+    const destination = request.destination;
+    const triggerId = request.triggerId;
     const signal = request.triggerSignal;
+    let body = null;
+    if (signal && typeof signal === 'object' && !Array.isArray(signal)) {
+      body = ownDataOnly(signal) ? canonical(signal) : NOT_REPRESENTABLE;
+      if (body === NOT_REPRESENTABLE) body = null;
+    }
     return {
-      useId: text(request.useId) ? request.useId : null,
-      actor: text(request.actor) ? request.actor : null,
-      action: text(request.action) ? request.action : null,
-      subject: text(request.subject) ? request.subject : null,
-      destination: text(request.destination) ? request.destination : null,
-      triggerId: text(request.triggerId) ? request.triggerId : null,
-      signal: signal && typeof signal === 'object' && !Array.isArray(signal)
-        ? { id: text(signal.id) ? signal.id : null, source: text(signal.source) ? signal.source : null, body: clone(signal) }
-        : null,
+      useId: text(useId) ? useId : null,
+      actor: text(actor) ? actor : null,
+      action: text(action) ? action : null,
+      subject: reference(subject) ? subject : null,
+      subjectRejected: text(subject) && !reference(subject),
+      destination: text(destination) ? destination : null,
+      triggerId: text(triggerId) ? triggerId : null,
+      signal: body ? { id: text(body.id) ? body.id : null, source: text(body.source) ? body.source : null, body: freeze(body) } : null,
     };
   } catch {
     return null;
@@ -198,10 +289,12 @@ function readRecords(ledger) {
   }
 }
 
+const LEDGER = new WeakMap();
+
 function newRecord() {
   return {
     uses: 0, paused: false, revoked: false, stopped: false, rejectedUse: null,
-    pending: null, useIds: new Set(), signalIds: new Set(), receipts: new Map(),
+    pending: null, useIds: new Set(), signalIds: new Set(), receipts: new Map(), busy: false,
   };
 }
 
@@ -242,8 +335,47 @@ function seal(receipt) {
   return freeze(next);
 }
 
-function blockedReceipt(snapshot, action, reason, at, signalId) {
-  const checks = { grantor_authority: snapshot !== null, trigger_verified: false };
+// The normalized grant as the host and the permission see it: the same object shape, with the clock
+// as the ISO strings a receipt can carry. Everything the kernel compares stays in milliseconds.
+function grantView(snapshot) {
+  return {
+    id: snapshot.id,
+    owner: snapshot.owner,
+    grantee: snapshot.grantee,
+    destination: snapshot.destination,
+    purpose: snapshot.purpose,
+    actions: [...snapshot.actions],
+    scope: [...snapshot.scope],
+    startsAt: iso(snapshot.startsAt),
+    expiresAt: iso(snapshot.expiresAt),
+    maxUses: snapshot.maxUses,
+    triggers: snapshot.triggers.map((trigger) => ({ ...trigger })),
+    reviewers: [...snapshot.reviewers],
+    reviewDueMs: snapshot.reviewDueMs,
+    pausers: [...snapshot.pausers],
+  };
+}
+
+// What was authorized and what was asked for, sealed next to the digest. Without it a receipt said
+// which permission it spent but not whose authority, not which agent, and not which subject was
+// touched: two different uses of the same permission sealed the same body. Only normalized values
+// go in, and the subject only as the operational reference it was validated to be.
+function authorizationOf(snapshot, asked) {
+  if (!snapshot) return null;
+  return {
+    owner: snapshot.owner,
+    grantee: snapshot.grantee,
+    destination: snapshot.destination,
+    action: asked && asked.action ? asked.action : null,
+    subject: asked && asked.subject ? asked.subject : null,
+    grantDigest: fingerprint(grantView(snapshot)),
+  };
+}
+
+function blockedReceipt({ snapshot, authority, action, signalId, reason, at }) {
+  // `grantor_authority` is read from the binding that was actually checked, never from the shape of
+  // an object: a forged permission that happens to be well formed claims nothing.
+  const checks = { grantor_authority: authority === true, trigger_verified: false };
   const receipt = {
     status: 'blocked',
     operation: { id: snapshot ? snapshot.id : 'unknown', goal: snapshot ? snapshot.purpose : DEFAULT_GOAL },
@@ -258,8 +390,9 @@ function blockedReceipt(snapshot, action, reason, at, signalId) {
     evidence: signalId ? { signalId } : null,
     verification: { verified: false, checks, reason },
     coverage: coverageOf(checks),
-    notCovered: ['trigger_verified', 'effect_verified', 'external anchor'],
+    notCovered: ['trigger_verified', 'effect_verified', 'external anchor', 'exact_state'],
     anchor: { ...PENDING_ANCHOR },
+    ...(authority === true ? { authorization: authorizationOf(snapshot, action ? { action } : null) } : {}),
     detail: reason,
     at,
   };
@@ -272,13 +405,13 @@ function blockedReceipt(snapshot, action, reason, at, signalId) {
 // authority grants and exercised amounts, declared coverage, a pending anchor, and a digest that
 // verifyReceipt recomputes. The effect itself is never claimed verified: the exercise is a grant
 // spent, not an effect proven, and the operation goes back to the person (decision 27).
-function useReceipt(snapshot, request, trigger, checked, at) {
-  const signalId = request.signal.id;
+function useReceipt(snapshot, asked, trigger, checked, dueAtMs) {
+  const signalId = asked.signal.id;
   const checks = { grantor_authority: true, trigger_verified: true, effect_verified: false };
   const receipt = {
     status: 'not_verified',
     operation: { id: snapshot.id, goal: snapshot.purpose },
-    action: request.action,
+    action: asked.action,
     capability: CAPABILITY,
     authority: {
       grants: grantOf(snapshot),
@@ -293,39 +426,54 @@ function useReceipt(snapshot, request, trigger, checked, at) {
       reason: 'trigger verified by an independent signal; the effect is unverified and the post-use review is open',
     },
     coverage: coverageOf(checks),
-    notCovered: ['effect_verified', 'post_use_review', 'external anchor'],
+    // `exact_state` is named here because this module cannot see it: it never reads the repository,
+    // the disk or the network, so decision 22 stays open and the receipt says so out loud.
+    notCovered: ['effect_verified', 'post_use_review', 'external anchor', 'exact_state'],
     anchor: { ...PENDING_ANCHOR },
+    authorization: authorizationOf(snapshot, asked),
     trigger: {
       id: trigger.id,
       verifierId: trigger.verifierId,
       signalId,
-      verification: { verified: true, reason: safeText(checked.reason) || 'verified by the injected independent verifier' },
+      // A digest of the very body the verifier received, so the receipt is bound to that signal and
+      // not merely to an id anybody could reuse. The body itself never travels.
+      signalDigest: fingerprint(asked.signal.body),
+      signalSource: asked.signal.source,
+      verification: { verified: true, reason: checked.reason },
     },
-    review: { status: 'pending', reviewers: [...snapshot.reviewers], dueAt: iso(at + snapshot.reviewDueMs) },
-    useId: request.useId,
-    at,
+    review: { status: 'pending', reviewers: [...snapshot.reviewers], dueAt: iso(dueAtMs) },
+    useId: asked.useId,
+    at: asked.at,
   };
   return seal(receipt);
 }
 
 // ─── The grant ────────────────────────────────────────────────────────────────────────────────
 
-async function createEmergencyPermission(grant, { authorizeGrantor, resolveVerifier } = {}) {
+async function createEmergencyPermission(grant, { authorizeGrantor, resolveVerifier, authorizeRenewal } = {}) {
   const read = snapshotPermission(grant);
   if (!read.ok) throw new Error(`emergency permission is malformed: ${read.reason}`);
   const snapshot = read.snapshot;
   if (typeof authorizeGrantor !== 'function') throw new Error('an injected grantor authority check is required: the kernel cannot see who granted this');
+  // The candidate is read once, frozen, and is the single source from here on: the host authorizes
+  // this object and the permission is built from this object. A second read of the caller's grant
+  // would let the grantor answer about one scope while the kernel binds another (ADV05).
+  const candidate = freeze(grantView(snapshot));
+  const grantDigest = fingerprint(candidate);
   let granted;
   try {
-    granted = await authorizeGrantor(clone(grant));
+    granted = await authorizeGrantor(candidate);
   } catch {
     throw new Error('the grantor authority could not be verified');
   }
-  if (!granted || typeof granted !== 'object' || granted.verified !== true || granted.grantor !== snapshot.owner) {
+  if (!granted || typeof granted !== 'object' || granted.verified !== true) {
+    throw new Error('the grantor authority check did not verify this grant');
+  }
+  if (granted.grantor !== snapshot.owner) {
     throw new Error(`grantor authority does not name the owner of this emergency permission (${snapshot.owner})`);
   }
   if (typeof resolveVerifier !== 'function') throw new Error('an injected trigger verifier resolver is required: the kernel cannot know what verifies a signal');
-  const bound = new Map();
+  const verifiers = new Map();
   for (const trigger of snapshot.triggers) {
     let verifier;
     try {
@@ -336,29 +484,25 @@ async function createEmergencyPermission(grant, { authorizeGrantor, resolveVerif
     if (!verifier || typeof verifier !== 'object' || verifier.id !== trigger.verifierId || typeof verifier.verify !== 'function') {
       throw new Error(`the resolved verifier is not the independent verifier ${trigger.verifierId} declared for trigger ${trigger.id}`);
     }
-    bound.set(trigger.id, { id: verifier.id, verify: verifier.verify });
+    verifiers.set(trigger.id, { id: verifier.id, verify: verifier.verify });
   }
-  const permission = freeze(clone({
-    id: snapshot.id,
-    owner: snapshot.owner,
-    grantee: snapshot.grantee,
-    destination: snapshot.destination,
-    purpose: snapshot.purpose,
-    actions: snapshot.actions,
-    scope: snapshot.scope,
-    startsAt: iso(snapshot.startsAt),
-    expiresAt: iso(snapshot.expiresAt),
-    maxUses: snapshot.maxUses,
-    triggers: snapshot.triggers.map((trigger) => ({ ...trigger })),
-    reviewers: snapshot.reviewers,
-    reviewDueMs: snapshot.reviewDueMs,
-    pausers: snapshot.pausers,
+  const bound = {
+    snapshot: { ...snapshot, approval: safeText(granted.reason) || 'the grantor authority check named the owner of this permission' },
+    verifiers,
+    // A renewal grows the authority a person signed, so it needs a fresh answer from the host. The
+    // approver is bound here and never chosen by whoever renews; when the host supplies none, the
+    // clock simply cannot be extended (ADV04).
+    approver: typeof authorizeRenewal === 'function' ? authorizeRenewal : null,
+    grantDigest,
+  };
+  const permission = freeze({
+    ...candidate,
     grantVerification: {
       verified: true,
-      reason: safeText(granted.reason) || 'the grantor authority check named the owner of this permission',
+      reason: bound.snapshot.approval,
     },
-  }));
-  VERIFIERS.set(permission, bound);
+  });
+  BINDINGS.set(permission, bound);
   return permission;
 }
 
@@ -368,10 +512,17 @@ function createEmergencyLedger() {
   return ledger;
 }
 
-function boundVerifier(permission, triggerId) {
+function bindingOf(permission) {
   try {
-    const bound = VERIFIERS.get(permission);
-    return bound ? bound.get(triggerId) || null : null;
+    return BINDINGS.get(permission) || null;
+  } catch {
+    return null;
+  }
+}
+
+function boundVerifier(bound, triggerId) {
+  try {
+    return bound ? bound.verifiers.get(triggerId) || null : null;
   } catch {
     return null;
   }
@@ -379,16 +530,67 @@ function boundVerifier(permission, triggerId) {
 
 // ─── The exercise ─────────────────────────────────────────────────────────────────────────────
 
+// Everything a nested call could have changed while the verifier ran: what the person decided about
+// this permission, and what this very call already spent.
+function pendingBlock(record, snapshot, asked) {
+  if (record.revoked) return 'this emergency permission was revoked by the person who granted it';
+  if (record.stopped) return `this emergency permission was stopped: the post-use review of ${record.rejectedUse} was rejected, and it needs a new grant`;
+  if (record.paused) return 'this emergency permission is paused';
+  if (record.uses >= snapshot.maxUses) return `the emergency use limit is exhausted (${record.uses} of ${snapshot.maxUses})`;
+  if (record.useIds.has(asked.useId)) return `emergency use ${asked.useId} was already used; a replay under another request key is refused`;
+  if (asked.signal && record.signalIds.has(asked.signal.id)) return `trigger signal ${asked.signal.id} already opened a use; one signal opens one use`;
+  if (record.pending) return `the post-use review of ${record.pending.useId} is still pending, so no second use is allowed`;
+  return null;
+}
+
+// The verdict is read once per field and inside the same error boundary as the call itself. A
+// verifier whose `verified` or `reason` cannot be read has not verified anything, and the reason
+// that travels to the receipt is the bounded primitive this function produced — never an object,
+// never the text of an exception raised by a getter (ADV08, ADV09, ADV25).
+function verifySignal(verifier, trigger, signal) {
+  // The verifier gets copies: it may do whatever it likes with them, and the body the kernel seals a
+  // digest of is the one it actually handed over.
+  let checked;
+  try {
+    checked = verifier.verify(canonical(trigger), canonical(signal.body));
+  } catch {
+    return { ok: false, reason: 'the independent trigger verification failed' };
+  }
+  try {
+    if (checked && (typeof checked === 'object' || typeof checked === 'function') && typeof checked.then === 'function') {
+      Promise.resolve(checked).catch(() => {});
+      return { ok: false, reason: 'the independent trigger verification answered asynchronously, which this kernel does not wait for' };
+    }
+  } catch {
+    return { ok: false, reason: 'the independent trigger verification could not be read' };
+  }
+  let verified;
+  let rawReason;
+  try {
+    verified = checked && typeof checked === 'object' ? checked.verified : undefined;
+    rawReason = checked && typeof checked === 'object' ? checked.reason : undefined;
+  } catch {
+    return { ok: false, reason: 'the independent trigger verification could not be read' };
+  }
+  if (verified !== true) return { ok: false, reason: 'the trigger signal was not independently verified' };
+  return { ok: true, reason: safeText(rawReason) || 'verified by the injected independent verifier' };
+}
+
 function exerciseEmergency(permission, request, { ledger, now } = {}) {
   const read = snapshotPermission(permission);
   const snapshot = read.ok ? read.snapshot : null;
   const asked = snapshotRequest(request);
   const clock = readClock(now);
+  const bound = bindingOf(permission);
+  const authority = bound !== null;
   const fail = (reason, at, signalId) => ({
     state: 'blocked',
     reason,
     nextUse: 'blocked',
-    receipt: blockedReceipt(snapshot, asked ? asked.action : null, reason, at, signalId),
+    receipt: blockedReceipt({
+      snapshot, authority, at, reason, signalId,
+      action: asked ? asked.action : null,
+    }),
   });
   if (!clock.ok) return fail(clock.reason, iso(Date.now()));
   const at = iso(clock.now);
@@ -396,69 +598,87 @@ function exerciseEmergency(permission, request, { ledger, now } = {}) {
   if (!asked) return fail('the emergency request could not be read safely', at);
   const records = readRecords(ledger);
   if (!records) return fail('a kernel emergency ledger is required to exercise emergency access', at, asked.signal ? asked.signal.id : null);
+  // Readable is not granted: only the object the grant path produced carries authority.
+  if (!bound) return fail('no grant is bound to this emergency permission: an object that did not come through the grant path exercises nothing', at, asked.signal ? asked.signal.id : null);
   const record = ensureRecord(records, snapshot.id);
 
   // Order matters twice over. Replay is checked before the pending review, so a caller replaying a
   // use is told it is a replay instead of being told the review is open. And revocation, pause and
   // the clock are checked before the signal is looked at, so a permission the person already stopped
   // never spends a verifier call.
-  if (record.revoked) return fail('this emergency permission was revoked by the person who granted it', at, asked.signal ? asked.signal.id : null);
-  if (record.stopped) return fail(`this emergency permission was stopped: the post-use review of ${record.rejectedUse} was rejected, and it needs a new grant`, at, asked.signal ? asked.signal.id : null);
-  if (record.paused) return fail('this emergency permission is paused', at, asked.signal ? asked.signal.id : null);
+  const blocked = pendingBlock(record, snapshot, asked);
+  if (blocked) return fail(blocked, at, asked.signal ? asked.signal.id : null);
   if (clock.now < snapshot.startsAt) return fail(`this emergency permission is not valid before ${iso(snapshot.startsAt)}`, at, asked.signal ? asked.signal.id : null);
   if (clock.now >= snapshot.expiresAt) return fail(`this emergency permission expired at ${iso(snapshot.expiresAt)}`, at, asked.signal ? asked.signal.id : null);
-  if (record.uses >= snapshot.maxUses) return fail(`the emergency use limit is exhausted (${record.uses} of ${snapshot.maxUses})`, at, asked.signal ? asked.signal.id : null);
   if (!asked.useId) return fail('the emergency request carries no stable use id, so it could not be told apart from a replay', at, asked.signal ? asked.signal.id : null);
-  if (record.useIds.has(asked.useId)) return fail(`emergency use ${asked.useId} was already used; a replay under another request key is refused`, at, asked.signal ? asked.signal.id : null);
-  if (record.pending) return fail(`the post-use review of ${record.pending.useId} is still pending, so no second use is allowed`, at, asked.signal ? asked.signal.id : null);
   if (asked.actor !== snapshot.grantee) return fail(`the actor is outside the granted authority (${snapshot.grantee})`, at, asked.signal ? asked.signal.id : null);
+  if (asked.subjectRejected) {
+    return fail('the subject is not an operational reference, and this kernel will not seal record content into a receipt', at, asked.signal ? asked.signal.id : null);
+  }
   if (!snapshot.actions.includes(asked.action) || !snapshot.scope.includes(asked.subject)
     || asked.destination !== snapshot.destination) {
     return fail('the requested action, subject or destination is outside the granted scope', at, asked.signal ? asked.signal.id : null);
   }
   const trigger = snapshot.triggers.find((item) => item.id === asked.triggerId);
   if (!trigger) return fail('the trigger was not declared in advance by the person who granted this permission', at, asked.signal ? asked.signal.id : null);
-  if (!asked.signal) return fail('the emergency request carries no trigger signal', at);
+  if (!asked.signal) return fail('the emergency request carries no trigger signal, or one this kernel cannot read safely', at);
   if (asked.signal.source !== trigger.verifierId) return fail(`the trigger signal does not come from the declared verifier ${trigger.verifierId}`, at, asked.signal.id);
   if (!asked.signal.id) return fail('the trigger signal carries no id, so it could not be told apart from a replay', at);
-  if (record.signalIds.has(asked.signal.id)) return fail(`trigger signal ${asked.signal.id} already opened a use; one signal opens one use`, at, asked.signal.id);
-  const verifier = boundVerifier(permission, trigger.id);
+  const verifier = boundVerifier(bound, trigger.id);
   if (!verifier) return fail(`no independent verifier is bound to this emergency permission for trigger ${trigger.id}; a permission that did not go through the grant path exercises nothing`, at, asked.signal.id);
-  let checked;
-  try {
-    checked = verifier.verify(clone(trigger), asked.signal.body);
-  } catch {
-    return fail('the independent trigger verification failed', at, asked.signal.id);
-  }
-  try {
-    if (checked && (typeof checked === 'object' || typeof checked === 'function') && typeof checked.then === 'function') {
-      Promise.resolve(checked).catch(() => {});
-      return fail('the independent trigger verification answered asynchronously, which this kernel does not wait for', at, asked.signal.id);
-    }
-  } catch {
-    return fail('the independent trigger verification could not be read', at, asked.signal.id);
-  }
-  if (!checked || typeof checked !== 'object' || checked.verified !== true) {
-    return fail('the trigger signal was not independently verified', at, asked.signal.id);
+  // The review deadline is checked before the verifier is asked and before anything is reserved: a
+  // deadline no calendar can hold must not spend a verifier call and then fail to stamp a review.
+  const dueAtMs = clock.now + snapshot.reviewDueMs;
+  if (parseTime(dueAtMs) === null) {
+    return fail('the post-use review deadline falls outside the calendar this kernel can hold, so the use spends nothing', at, asked.signal.id);
   }
 
-  // The reservation happens after every check and in one synchronous run, so two callers in one
-  // tick cannot spend the same slot of the cap. A host that runs workers in parallel still has to
-  // serialize this ledger itself; the kernel only guarantees this within one process.
-  record.uses += 1;
-  record.useIds.add(asked.useId);
-  record.signalIds.add(asked.signal.id);
-  record.pending = { useId: asked.useId, triggerId: trigger.id, dueAtMs: clock.now + snapshot.reviewDueMs };
-  const receipt = useReceipt(snapshot, asked, trigger, checked, clock.now);
-  record.receipts.set(asked.useId, receipt);
-  return { state: 'review_pending', reason: null, nextUse: 'blocked_until_review', receipt };
+  // Synchronous is not the same as unreentrant. The verifier is caller code running inside this
+  // call: a verifier that re-enters `exerciseEmergency` on the same permission would otherwise find
+  // the cap unspent and open a second use out of one signal. The record is held for the whole run
+  // and released in `finally`, so a nested call is blocked and spends nothing.
+  if (record.busy) {
+    return fail('a use of this emergency permission is already being checked in this same run; one signal opens one use', at, asked.signal.id);
+  }
+  record.busy = true;
+  try {
+    const checked = verifySignal(verifier, trigger, asked.signal);
+    if (!checked.ok) return fail(checked.reason, at, asked.signal.id);
+    // Everything the verifier could have changed with a side effect gets read again: a person who
+    // revoked the permission while the sensor was thinking has already said no (ADV07).
+    const changed = pendingBlock(record, snapshot, asked);
+    if (changed) return fail(`${changed} while the signal was being verified`, at, asked.signal.id);
+    // The receipt is sealed before the cap moves. A receipt that cannot be built spends nothing, and
+    // the slot it would have taken stays available to the next honest caller.
+    let receipt;
+    try {
+      receipt = useReceipt({ ...snapshot, approval: bound.snapshot.approval }, { ...asked, at }, trigger, checked, dueAtMs);
+    } catch {
+      return fail('the receipt for this use could not be sealed, so nothing was spent', at, asked.signal.id);
+    }
+    record.uses += 1;
+    record.useIds.add(asked.useId);
+    record.signalIds.add(asked.signal.id);
+    record.pending = { useId: asked.useId, triggerId: trigger.id, dueAtMs };
+    record.receipts.set(asked.useId, receipt);
+    return { state: 'review_pending', reason: null, nextUse: 'blocked_until_review', receipt };
+  } finally {
+    record.busy = false;
+  }
 }
 
 // ─── The post-use review ─────────────────────────────────────────────────────────────────────
 
+function requireBinding(permission, bound, verb) {
+  if (bound) return bound;
+  throw new Error(`this emergency permission carries no grant: no authority is bound to it, so it cannot be ${verb}`);
+}
+
 function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {}) {
-  const snapshot = readPermission(permission);
-  if (!snapshot) throw new Error('emergency permission is malformed and cannot carry a review');
+  const bound = requireBinding(permission, bindingOf(permission), 'reviewed');
+  // Owner, reviewers and pausers are read from the grant that was actually authorized, not from the
+  // object this caller happens to be holding.
+  const snapshot = bound.snapshot;
   if (!text(useId)) throw new Error('a review names the use it closes');
   if (!text(by)) throw new Error('a review names who closed it');
   if (decision !== 'accept' && decision !== 'reject') throw new Error('review decision must be accept or reject');
@@ -476,8 +696,27 @@ function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {
   const reviewedAt = iso(clock.now);
   const original = record.receipts.get(useId);
   if (!original || !original.review) throw new Error('the receipt for this use is not in the record, so nothing can be closed over it');
+  // A review cannot predate the use it closes. A clock that walked backwards would stamp the
+  // decision before the event, and the ledger and the open review stay exactly as they were.
+  const usedAt = parseTime(original.at);
+  if (usedAt === null || clock.now < usedAt) {
+    throw new Error('a post-use review cannot be dated before the use it closes: the injected clock went backwards');
+  }
+  // Closing the review is a transition that actually happened, so the receipt says it happened: the
+  // check is derived from this call, the reason stops saying the review is open, and the effect
+  // stays unverified either way. Accepting a review does not claim anybody read the document.
+  const checks = { ...original.verification.checks, post_use_review: true };
   const closed = seal({
     ...original,
+    verification: {
+      ...original.verification,
+      checks,
+      reason: decision === 'accept'
+        ? 'trigger verified by an independent signal; the post-use review was closed by a declared reviewer; the effect is unverified'
+        : 'trigger verified by an independent signal; the post-use review was rejected by a declared reviewer; the effect is unverified',
+    },
+    coverage: coverageOf(checks),
+    notCovered: original.notCovered.filter((key) => key !== 'post_use_review'),
     review: { ...original.review, status: 'reviewed', decision, by, reviewedAt },
   });
   record.receipts.set(useId, closed);
@@ -494,8 +733,8 @@ function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {
 // ─── Pause, revocation and renewal (decision 16: the agreement says who may pause) ──────────────
 
 function pauseEmergencyPermission(permission, { ledger, by } = {}) {
-  const snapshot = readPermission(permission);
-  if (!snapshot) throw new Error('emergency permission is malformed and cannot be paused');
+  const bound = requireBinding(permission, bindingOf(permission), 'paused');
+  const snapshot = bound.snapshot;
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to pause an emergency permission');
@@ -504,8 +743,8 @@ function pauseEmergencyPermission(permission, { ledger, by } = {}) {
 }
 
 function resumeEmergencyPermission(permission, { ledger, by } = {}) {
-  const snapshot = readPermission(permission);
-  if (!snapshot) throw new Error('emergency permission is malformed and cannot be resumed');
+  const bound = requireBinding(permission, bindingOf(permission), 'resumed');
+  const snapshot = bound.snapshot;
   if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to resume an emergency permission');
@@ -517,8 +756,8 @@ function resumeEmergencyPermission(permission, { ledger, by } = {}) {
 }
 
 function revokeEmergencyPermission(permission, { ledger, by } = {}) {
-  const snapshot = readPermission(permission);
-  if (!snapshot) throw new Error('emergency permission is malformed and cannot be revoked');
+  const bound = requireBinding(permission, bindingOf(permission), 'revoked');
+  const snapshot = bound.snapshot;
   if (by !== snapshot.owner) throw new Error('only the person who granted this emergency permission may revoke it');
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to revoke an emergency permission');
@@ -527,10 +766,13 @@ function revokeEmergencyPermission(permission, { ledger, by } = {}) {
 }
 
 // Renewal moves the clock and nothing else. The grant a person signed does not grow because time
-// passed, and the record of what was already spent stays with the same id.
+// passed, and the record of what was already spent stays with the same id. The clock growing is
+// still a growth of authority, so it needs the approver the host bound at grant time: nobody holding
+// the object can hand the kernel its own approval, and a host that bound no approver cannot have the
+// clock extended at all.
 function renewEmergencyPermission(permission, changes) {
-  const snapshot = readPermission(permission);
-  if (!snapshot) throw new Error('emergency permission is malformed and cannot be renewed');
+  const bound = requireBinding(permission, bindingOf(permission), 'renewed');
+  const snapshot = bound.snapshot;
   let keys;
   try {
     keys = changes && typeof changes === 'object' && !Array.isArray(changes) ? Object.keys(changes) : [];
@@ -540,13 +782,45 @@ function renewEmergencyPermission(permission, changes) {
   if (keys.length !== 1 || keys[0] !== 'expiresAt') {
     throw new Error('renewal cannot widen or alter the grant: only expiresAt may change, because the person signed the rest');
   }
-  const expiresAt = parseTime(changes.expiresAt);
+  // One read. The value that was validated is the value that gets stored: a second read is how a
+  // renewal stamps a clock nobody approved (ADV18).
+  let rawExpiresAt;
+  try {
+    rawExpiresAt = changes.expiresAt;
+  } catch {
+    throw new Error('a renewal must extend the existing clock, and never shorten it');
+  }
+  const expiresAt = parseTime(rawExpiresAt);
   if (expiresAt === null || expiresAt <= snapshot.expiresAt) {
     throw new Error('a renewal must extend the existing clock, and never shorten it');
   }
-  const bound = VERIFIERS.get(permission);
-  const renewed = freeze({ ...clone(permission), expiresAt: changes.expiresAt });
-  if (bound) VERIFIERS.set(renewed, new Map(bound));
+  if (!bound.approver) {
+    throw new Error(`no renewal approver is bound to this emergency permission: extending the clock needs a fresh authorization from ${snapshot.owner}, and this kernel cannot stand in for it`);
+  }
+  const candidate = freeze(grantView({ ...snapshot, expiresAt }));
+  let answer;
+  try {
+    answer = bound.approver(candidate);
+  } catch {
+    throw new Error('the renewal authorization could not be read');
+  }
+  try {
+    if (answer && (typeof answer === 'object' || typeof answer === 'function') && typeof answer.then === 'function') {
+      Promise.resolve(answer).catch(() => {});
+      throw new Error('the renewal authorization answered asynchronously, which this kernel does not wait for');
+    }
+  } catch (err) {
+    if (err && err.message && err.message.includes('asynchronously')) throw err;
+    throw new Error('the renewal authorization could not be read');
+  }
+  if (!answer || typeof answer !== 'object' || answer.verified !== true) {
+    throw new Error(`the renewal authorization did not approve extending this emergency permission`);
+  }
+  if (answer.grantor !== snapshot.owner) {
+    throw new Error(`the renewal authorization does not name the owner of this emergency permission (${snapshot.owner})`);
+  }
+  const renewed = freeze({ ...clone(candidate), grantVerification: { verified: true, reason: safeText(answer.reason) || snapshot.approval } });
+  BINDINGS.set(renewed, { ...bound, snapshot: { ...snapshot, expiresAt, approval: safeText(answer.reason) || snapshot.approval } });
   return renewed;
 }
 
@@ -555,15 +829,18 @@ function renewEmergencyPermission(permission, changes) {
 function getEmergencyState(permission, { ledger, now } = {}) {
   const snapshot = readPermission(permission);
   if (!snapshot) throw new Error('emergency permission is malformed and has no state');
+  const bound = bindingOf(permission);
   const records = readRecords(ledger);
   // A ledger that exists but has never seen this id is a permission nobody has touched yet, not a
   // missing one: the reads below need a record either way.
   const record = records ? (records.get(snapshot.id) || newRecord()) : null;
   const uses = record ? record.uses : 0;
   const clock = readClock(now);
-  const at = clock.ok ? clock.now : Date.now();
+  // A clock nobody injected and nobody could read is not replaced with wall time to decide whether
+  // the permission is available: the honest answer is that this kernel does not know.
+  const at = clock.ok ? clock.now : null;
   const pending = record && record.pending ? record.pending : null;
-  const expired = at >= snapshot.expiresAt;
+  const expired = at !== null && at >= snapshot.expiresAt;
   const exhausted = uses >= snapshot.maxUses;
   let status = 'active';
   let nextUse = 'allowed';
@@ -571,6 +848,9 @@ function getEmergencyState(permission, { ledger, now } = {}) {
   if (!records) {
     status = 'no_ledger';
     nextUse = 'blocked_no_ledger';
+  } else if (!bound) {
+    status = 'unbound';
+    nextUse = 'blocked_unbound';
   } else if (record.revoked) {
     status = 'revoked';
     nextUse = 'blocked_revoked';
@@ -583,6 +863,12 @@ function getEmergencyState(permission, { ledger, now } = {}) {
   } else if (pending) {
     status = 'review_pending';
     nextUse = 'blocked_until_review';
+  } else if (!clock.ok) {
+    status = 'unknown_clock';
+    nextUse = 'blocked_unknown_clock';
+  } else if (at < snapshot.startsAt) {
+    status = 'not_yet_valid';
+    nextUse = 'blocked_not_started';
   } else if (expired) {
     status = 'expired';
     nextUse = 'blocked_expired';
@@ -601,7 +887,7 @@ function getEmergencyState(permission, { ledger, now } = {}) {
     revoked: Boolean(record && record.revoked),
     pendingReview: pending ? pending.useId : null,
     reviewDueAt: pending ? iso(pending.dueAtMs) : null,
-    reviewOverdue: pending ? at > pending.dueAtMs : false,
+    reviewOverdue: pending !== null && at !== null && at > pending.dueAtMs,
     rejectedUse: record && record.rejectedUse ? record.rejectedUse : null,
     nextUse,
   };

@@ -415,19 +415,24 @@ test('ADV28 absent exact project state must be explicitly listed as not covered'
 // ─── The renewal answer itself (A04 with an approver bound) ─────────────────────────────────
 
 test('a renewal needs the approver bound at grant time, and never one the caller brings', async () => {
-  const permission = await granted();
   for (const answer of [
     { verified: false, grantor: 'person-1', reason: 'not signed' },
     { verified: true, grantor: 'agent-1', reason: 'the agent says so' },
-    { verified: true, grantor: 'person-1' },
     Promise.resolve({ verified: true, grantor: 'person-1' }),
     { verified: 'yes', grantor: 'person-1' },
+    null,
   ]) {
     const unapproved = await granted({}, { authorizeRenewal: () => answer });
     assert.throws(() => emergency.renewEmergencyPermission(unapproved, { expiresAt: '2026-10-06T00:00:00Z' }),
       /renew|authority|approv|owner|authoriz/i, JSON.stringify(String(answer)));
-    assert.throws(() => emergency.renewEmergencyPermission(permission, { expiresAt: '2026-10-06T00:00:00Z' }, {
-      authorizeRenewal: () => ({ verified: true, grantor: 'person-1' }),
-    }), /renew|authority|approv|owner|authoriz/i, 'an authorizer chosen by the caller is not an approval');
+    assert.equal(emergency.getEmergencyState(unapproved, { ledger: ledgerFor(), now: AT }).expiresAt,
+      '2026-10-05T00:00:00.000Z', 'a refused renewal leaves the clock the person signed');
   }
+  const bare = await granted({}, { authorizeRenewal: undefined });
+  assert.throws(() => emergency.renewEmergencyPermission(bare, { expiresAt: '2026-10-06T00:00:00Z' }, {
+    authorizeRenewal: () => ({ verified: true, grantor: 'person-1' }),
+  }), /renew|authority|approv|owner|authoriz/i, 'an authorizer chosen by the caller is not an approval');
+  const approved = await granted({}, { authorizeRenewal: () => ({ verified: true, grantor: 'person-1' }) });
+  assert.equal(emergency.renewEmergencyPermission(approved, { expiresAt: '2026-10-06T00:00:00Z' }).expiresAt,
+    '2026-10-06T00:00:00.000Z', 'an approval that names the owner is enough, with or without a reason');
 });

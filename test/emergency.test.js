@@ -59,10 +59,19 @@ const TRIAGE = (result) => (trigger, signal) => {
   return typeof result === 'function' ? result(trigger, signal, base) : { ...base, ...(result || {}) };
 };
 
+// Extending the clock grows the authority the patient signed, so the host has to answer again. That
+// answer is bound with the grant and is never chosen by whoever renews.
+const RENEWAL_OK = (candidate) => ({
+  verified: true,
+  grantor: candidate.owner,
+  reason: 'the patient signed the extension',
+});
+
 async function granted(overrides = {}, deps = {}) {
   return emergency.createEmergencyPermission({ ...GRANT(), ...overrides }, {
     authorizeGrantor: 'authorizeGrantor' in deps ? deps.authorizeGrantor : GRANTOR_OK,
     resolveVerifier: 'resolveVerifier' in deps ? deps.resolveVerifier : RESOLVE_OK(),
+    authorizeRenewal: 'authorizeRenewal' in deps ? deps.authorizeRenewal : RENEWAL_OK,
   });
 }
 
@@ -411,8 +420,20 @@ test('renewal only extends the clock, and the renewed permission keeps its bound
   const permission = await granted();
   assert.throws(() => emergency.renewEmergencyPermission(permission, { expiresAt: '2026-10-04T00:00:00Z' }), /renew|extend|clock/i);
   const renewed = emergency.renewEmergencyPermission(permission, { expiresAt: '2026-10-06T00:00:00Z' });
-  assert.equal(renewed.expiresAt, '2026-10-06T00:00:00Z');
+  assert.equal(renewed.expiresAt, '2026-10-06T00:00:00.000Z');
   assert.equal(use(renewed, REQUEST(), '2026-10-05T12:00:00Z').state, 'review_pending');
+});
+
+test('renewal needs the approver bound at grant time, and a refusal changes nothing', async () => {
+  const bare = await granted({}, { authorizeRenewal: undefined });
+  assert.throws(() => emergency.renewEmergencyPermission(bare, { expiresAt: '2026-10-06T00:00:00Z' }), /renewal approver|authority/i);
+  assert.throws(() => emergency.renewEmergencyPermission({ ...bare, expiresAt: '2026-10-09T00:00:00Z' }, { expiresAt: '2026-10-06T00:00:00Z' }), /no grant|bound/i,
+    'a copy nobody was granted carries nothing, even to renew itself');
+  const refused = await granted({}, { authorizeRenewal: () => ({ verified: true, grantor: 'agent-1' }) });
+  assert.throws(() => emergency.renewEmergencyPermission(refused, { expiresAt: '2026-10-06T00:00:00Z' }), /does not name the owner|renewal/i);
+  const ledger = emergency.createEmergencyLedger();
+  assert.equal(emergency.getEmergencyState(refused, { ledger, now: AT }).expiresAt, '2026-10-05T00:00:00.000Z');
+  assert.equal(use(refused, REQUEST(), AT).state, 'review_pending', 'the permission itself is untouched');
 });
 
 // ─── Objects that never went through the grant, and hostile ones ─────────────────────────────
