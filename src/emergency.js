@@ -198,13 +198,17 @@ function readRecords(ledger) {
   }
 }
 
+function newRecord() {
+  return {
+    uses: 0, paused: false, revoked: false, stopped: false, rejectedUse: null,
+    pending: null, useIds: new Set(), signalIds: new Set(), receipts: new Map(),
+  };
+}
+
 function ensureRecord(records, id) {
   let record = records.get(id);
   if (!record) {
-    record = {
-      uses: 0, paused: false, revoked: false, stopped: false, rejectedUse: null,
-      pending: null, useIds: new Set(), signalIds: new Set(), receipts: new Map(),
-    };
+    record = newRecord();
     records.set(id, record);
   }
   return record;
@@ -468,8 +472,11 @@ function reviewEmergencyUse(permission, useId, { ledger, by, decision, now } = {
   if (!snapshot.reviewers.includes(by)) {
     throw new Error(`not authorized to close this emergency review: reviewers are [${snapshot.reviewers.join(', ')}]`);
   }
+  // Read before anything moves: a review closed with a clock nobody injected would be stamped with
+  // wall time and would look like the person decided at a moment she was never asked about.
   const clock = readClock(now);
-  const reviewedAt = iso(clock.ok ? clock.now : Date.now());
+  if (!clock.ok) throw new Error(clock.reason);
+  const reviewedAt = iso(clock.now);
   const original = record.receipts.get(useId);
   const closed = seal({
     ...original,
@@ -551,7 +558,9 @@ function getEmergencyState(permission, { ledger, now } = {}) {
   const snapshot = readPermission(permission);
   if (!snapshot) throw new Error('emergency permission is malformed and has no state');
   const records = readRecords(ledger);
-  const record = records ? records.get(snapshot.id) : null;
+  // A ledger that exists but has never seen this id is a permission nobody has touched yet, not a
+  // missing one: the reads below need a record either way.
+  const record = records ? (records.get(snapshot.id) || newRecord()) : null;
   const uses = record ? record.uses : 0;
   const clock = readClock(now);
   const at = clock.ok ? clock.now : Date.now();
@@ -560,13 +569,17 @@ function getEmergencyState(permission, { ledger, now } = {}) {
   const exhausted = uses >= snapshot.maxUses;
   let status = 'active';
   let nextUse = 'allowed';
-  if (record && record.revoked) {
+  // Without the ledger the exercise is blocked, so the state that says "available" would be a lie.
+  if (!records) {
+    status = 'no_ledger';
+    nextUse = 'blocked_no_ledger';
+  } else if (record.revoked) {
     status = 'revoked';
     nextUse = 'blocked_revoked';
-  } else if (record && record.stopped) {
+  } else if (record.stopped) {
     status = 'stopped_by_review';
     nextUse = 'blocked_stopped';
-  } else if (record && record.paused) {
+  } else if (record.paused) {
     status = 'paused';
     nextUse = 'blocked_paused';
   } else if (pending) {

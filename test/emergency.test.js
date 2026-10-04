@@ -484,12 +484,14 @@ test('a receipt built without emergency access keeps the exports and the digest 
   assert.equal(verifyReceipt(receipt).ok, true);
 });
 
-test('an emergency receipt counts as an attempt when the agreement caps attempts', async () => {
+test('continuity asks for reconciliation before it counts attempts: the unresolved effect is what stops the agent', async () => {
   const permission = await granted();
   const { receipt } = use(permission, REQUEST(), AT);
-  const resumed = resumeFromReceipts([receipt], { approved: [{ action: 'open-record', maxAttempts: 1 }] });
-  assert.equal(resumed.needsPerson, true);
-  assert.equal(resumed.reason, 'attempts_exhausted');
+  const capped = resumeFromReceipts([receipt], { approved: [{ action: 'open-record', maxAttempts: 1 }] });
+  assert.equal(capped.needsPerson, true);
+  assert.equal(capped.reason, 'reconciliation_required');
+  const uncapped = resumeFromReceipts([receipt], { approved: [{ action: 'open-record' }] });
+  assert.equal(uncapped.reason, capped.reason, 'the declared cap is not what stops the agent here');
 });
 
 // ─── What the state must not claim, and what must not travel ─────────────────────────────────
