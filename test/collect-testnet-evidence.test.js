@@ -91,14 +91,18 @@ test('F1b-C2: a readback that disagrees with the local record never rewrites the
 test('F1b-C3: a transaction with no local run record keeps no expectation and says why', async () => {
   const { collectEvidence } = await loadCollector();
   const result = await collectEvidence({
-    evidence: evidence([{ hash: OTHER_HASH, run: 'TEMIS tramo 3, corrida 1' }]),
+    evidence: evidence([{
+      hash: OTHER_HASH,
+      run: 'TEMIS tramo 3, corrida 1',
+      expected: { operation: 'payment', memo: null, asset: { type: 'native' }, amount: '5.0000000', recipient: 'GOTHER' },
+    }]),
     readTransaction: async () => paymentResponse(),
     localExpectations: {},
     capturedAt: CAPTURED_AT,
   });
 
   const [entry] = result.transactions;
-  assert.equal(Object.hasOwn(entry, 'expected'), false);
+  assert.equal(Object.hasOwn(entry, 'expected'), false, 'an expectation with no local record behind it must not survive collection');
   assert.equal(entry.expectedFrom, null);
   assert.match(entry.expectedFromReason, /TEMIS tramo 3, corrida 1/);
   assert.equal(entry.historical_response.classification, 'historical_readback');
@@ -198,7 +202,7 @@ test('F1b-C8: the summary states how many cases carry a local expectation and ho
   assert.equal(result.summary.local_record_source, 'repository run records, never the Horizon response');
 });
 
-test('F1b-P1: the provenance checker rejects an expectation copied from its own readback', async () => {
+test('F1b-P1: the provenance checker rejects an expectation read back off its own response', async () => {
   const { assertExpectationProvenance, expectationProvenance } = await loadCollector();
   const readback = paymentResponse();
   const forged = {
@@ -210,11 +214,20 @@ test('F1b-P1: the provenance checker rejects an expectation copied from its own 
       amount: readback.operations[0].amount,
       recipient: readback.operations[0].to,
     },
+    expectedFrom: {
+      classification: 'horizon_readback',
+      recorded_at: '2040-01-02T00:00:00.000Z',
+      citations: [{ file: 'docs/testnet-evidence.json', line: 19, contains: 'hash' }],
+    },
     historical_response: { classification: 'historical_readback', captured_at: CAPTURED_AT, ...readback },
   };
 
-  assert.equal(expectationProvenance(forged).ok, false);
-  assert.throws(() => assertExpectationProvenance([forged]), /historical_response|expectedFrom/i);
+  const report = expectationProvenance(forged);
+  assert.equal(report.ok, false);
+  assert.ok(report.problems.some((problem) => /classification must be local_run_record/.test(problem)), report.problems.join(' | '));
+  assert.ok(report.problems.some((problem) => /may not point at the evidence file/.test(problem)), report.problems.join(' | '));
+  assert.ok(report.problems.some((problem) => /at or after the network readback/.test(problem)), report.problems.join(' | '));
+  assert.throws(() => assertExpectationProvenance([forged]), /expectedFrom|historical_response/i);
 });
 
 test('F1b-P2: an expectation without a local citation is rejected even when it matches the readback', async () => {
