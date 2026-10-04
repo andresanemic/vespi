@@ -13,6 +13,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const emergency = require('../src/emergency.js');
+const { createHost } = require('./emergency-host.js');
+
+// One SIMULATED authentication port for this file: it answers with a frozen object per declared
+// name and hands back the same object for the same person. See `emergency-host.js`.
+const host = createHost();
 const { verifyReceipt } = require('../src/receipt.js');
 
 const AT = '2026-10-04T12:00:00Z';
@@ -57,6 +62,7 @@ const CRITICAL_ONLY = (trigger, signal) => ({ verified: signal && signal.critica
 
 async function granted(overrides = {}, deps = {}) {
   return emergency.createEmergencyPermission(GRANT(overrides), {
+    authenticate: host.authenticate,
     authorizeGrantor: 'authorizeGrantor' in deps ? deps.authorizeGrantor : GRANTOR_OK,
     resolveVerifier: 'resolveVerifier' in deps ? deps.resolveVerifier : async (id) => ({ id, verify: CRITICAL_ONLY }),
     authorizeRenewal: 'authorizeRenewal' in deps ? deps.authorizeRenewal : RENEWAL_OK,
@@ -79,7 +85,7 @@ test('R201 a second real grant with the same id cannot close the first grant rev
   const other = await granted({ owner: 'other', reviewers: ['other'], pausers: ['other'] });
   const ledger = ledgerFor();
   run(permission, ledger);
-  assert.throws(() => emergency.reviewEmergencyUse(other, 'u', { ledger, by: 'other', decision: 'accept', now: AT }));
+  assert.throws(() => emergency.reviewEmergencyUse(other, 'u', { ledger, by: host.principal('other'), decision: 'accept', now: AT }));
   assert.equal(state(permission, ledger).pendingReview, 'u');
 });
 
@@ -88,7 +94,7 @@ test('R202 a second real grant with the same id cannot revoke the first grant', 
   const other = await granted({ owner: 'other', reviewers: ['other'], pausers: ['other'] });
   const ledger = ledgerFor();
   run(permission, ledger);
-  try { emergency.revokeEmergencyPermission(other, { ledger, by: 'other' }); } catch { /* it has to fail closed */ }
+  try { emergency.revokeEmergencyPermission(other, { ledger, by: host.principal('other') }); } catch { /* it has to fail closed */ }
   assert.equal(state(permission, ledger).revoked, false, 'one grant owner revoked a different owner grant');
   assert.equal(state(permission, ledger).pendingReview, 'u');
 });
@@ -116,7 +122,7 @@ test('R202c a grant from another family spends nothing from an idle record', asy
   const other = await granted({ owner: 'other', reviewers: ['other'], pausers: ['other'] });
   const ledger = ledgerFor();
   run(permission, ledger);
-  emergency.reviewEmergencyUse(permission, 'u', { ledger, by: 'person', decision: 'accept', now: AT });
+  emergency.reviewEmergencyUse(permission, 'u', { ledger, by: host.principal('person'), decision: 'accept', now: AT });
   const idle = state(permission, ledger);
   assert.equal(idle.pendingReview, null, 'the record is idle and available to its own family');
   const stolen = run(other, ledger, REQUEST({ useId: 'u2', triggerSignal: { id: 's2', source: 'sensor', critical: true } }));
@@ -241,7 +247,7 @@ test('R212 verifier pausing authority mid-call spends nothing and the lock relea
       verify: () => {
         if (first) {
           first = false;
-          emergency.pauseEmergencyPermission(permission, { ledger, by: 'person' });
+          emergency.pauseEmergencyPermission(permission, { ledger, by: host.principal('person') });
         }
         return { verified: true };
       },
@@ -249,7 +255,7 @@ test('R212 verifier pausing authority mid-call spends nothing and the lock relea
   });
   assert.equal(run(permission, ledger).state, 'blocked');
   assert.equal(state(permission, ledger).uses, 0);
-  emergency.resumeEmergencyPermission(permission, { ledger, by: 'person' });
+  emergency.resumeEmergencyPermission(permission, { ledger, by: host.principal('person') });
   assert.equal(run(permission, ledger).state, 'review_pending');
 });
 
@@ -259,7 +265,7 @@ test('R213 renewed handles share revocation and pending review with their source
   const ledger = ledgerFor();
   run(permission, ledger);
   assert.equal(run(renewed, ledger, REQUEST({ useId: 'u2', triggerSignal: { id: 's2', source: 'sensor', critical: true } })).state, 'blocked');
-  emergency.revokeEmergencyPermission(renewed, { ledger, by: 'person' });
+  emergency.revokeEmergencyPermission(renewed, { ledger, by: host.principal('person') });
   assert.equal(state(permission, ledger).revoked, true);
 });
 

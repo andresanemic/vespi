@@ -18,6 +18,11 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const emergency = require('../src/emergency.js');
+const { createHost } = require('./emergency-host.js');
+
+// One SIMULATED authentication port for this file: it answers with a frozen object per declared
+// name and hands back the same object for the same person. See `emergency-host.js`.
+const host = createHost();
 const { verifyReceipt } = require('../src/receipt.js');
 
 const GRANT = (overrides = {}) => ({
@@ -73,6 +78,7 @@ const AT = '2026-10-04T12:00:00Z';
 async function granted(overrides = {}, deps = {}) {
   const verify = deps.verify || VERIFIED;
   return emergency.createEmergencyPermission(GRANT(overrides), {
+    authenticate: host.authenticate,
     authorizeGrantor: 'authorizeGrantor' in deps ? deps.authorizeGrantor : GRANTOR_OK,
     resolveVerifier: 'resolveVerifier' in deps ? deps.resolveVerifier : async (id) => ({ id, verify }),
     authorizeRenewal: 'authorizeRenewal' in deps ? deps.authorizeRenewal : RENEWAL_OK,
@@ -94,7 +100,7 @@ test('ADV01 forged reviewers cannot close a genuine pending review', async () =>
   const ledger = ledgerFor();
   run(permission, REQUEST(), AT, ledger);
   assert.throws(() => emergency.reviewEmergencyUse({ ...permission, reviewers: ['agent-1'] }, 'use-adv', {
-    ledger, by: 'agent-1', decision: 'accept', now: AT,
+    ledger, by: host.principal('agent-1'), decision: 'accept', now: AT,
   }), /permission|grant|bound|authorized/i);
   assert.equal(state(permission, ledger).pendingReview, 'use-adv', 'the review stays open');
 });
@@ -102,9 +108,9 @@ test('ADV01 forged reviewers cannot close a genuine pending review', async () =>
 test('ADV02 forged pausers cannot resume a genuine paused permission', async () => {
   const permission = await granted();
   const ledger = ledgerFor();
-  emergency.pauseEmergencyPermission(permission, { ledger, by: 'person-1' });
+  emergency.pauseEmergencyPermission(permission, { ledger, by: host.principal('person-1') });
   assert.throws(() => emergency.resumeEmergencyPermission({ ...permission, pausers: ['person-1', 'agent-1'] }, {
-    ledger, by: 'agent-1',
+    ledger, by: host.principal('agent-1'),
   }), /permission|grant|bound|authorized/i);
   assert.equal(state(permission, ledger).paused, true);
 });
@@ -113,7 +119,7 @@ test('ADV03 forged owner cannot revoke another persons permission', async () => 
   const permission = await granted();
   const ledger = ledgerFor();
   assert.throws(() => emergency.revokeEmergencyPermission({ ...permission, owner: 'agent-1', pausers: ['agent-1'] }, {
-    ledger, by: 'agent-1',
+    ledger, by: host.principal('agent-1'),
   }), /permission|grant|bound|authorized/i);
   assert.equal(state(permission, ledger).revoked, false);
 });
@@ -136,6 +142,7 @@ test('ADV05 authorization checks the same scope that the kernel binds', async ()
     get() { return ++reads === 1 ? ['full-record'] : ['allergy-summary']; },
   });
   const deps = {
+    authenticate: host.authenticate,
     authorizeGrantor: async (observed) => ({
       verified: observed.scope.length === 1 && observed.scope[0] === 'allergy-summary',
       grantor: 'person-1',
@@ -179,7 +186,7 @@ test('ADV07 revocation during signal verification blocks the outer use', async (
   let permission;
   permission = await granted({}, {
     verify: () => {
-      emergency.revokeEmergencyPermission(permission, { ledger, by: 'person-1' });
+      emergency.revokeEmergencyPermission(permission, { ledger, by: host.principal('person-1') });
       return { verified: true, reason: 'checked' };
     },
   });
@@ -322,7 +329,7 @@ test('ADV19 post-use review cannot be timestamped before the use', async () => {
   const ledger = ledgerFor();
   run(permission, REQUEST(), AT, ledger);
   assert.throws(() => emergency.reviewEmergencyUse(permission, 'use-adv', {
-    ledger, by: 'person-1', decision: 'accept', now: '2026-10-03T12:00:00Z',
+    ledger, by: host.principal('person-1'), decision: 'accept', now: '2026-10-03T12:00:00Z',
   }), /clock|before|time|review/i);
   assert.equal(state(permission, ledger).pendingReview, 'use-adv', 'the review stays open');
 });
@@ -370,7 +377,7 @@ test('ADV22 use and review never claim an independently verified effect', async 
   const ledger = ledgerFor();
   const result = run(permission, REQUEST(), AT, ledger);
   const closed = emergency.reviewEmergencyUse(permission, 'use-adv', {
-    ledger, by: 'person-1', decision: 'accept', now: AT,
+    ledger, by: host.principal('person-1'), decision: 'accept', now: AT,
   });
   for (const receipt of [result.receipt, closed]) {
     assert.equal(receipt.status, 'not_verified');
@@ -397,7 +404,7 @@ test('ADV26 a closed review no longer claims that post-use review is open and un
   const ledger = ledgerFor();
   run(permission, REQUEST(), AT, ledger);
   const closed = emergency.reviewEmergencyUse(permission, 'use-adv', {
-    ledger, by: 'person-1', decision: 'accept', now: AT,
+    ledger, by: host.principal('person-1'), decision: 'accept', now: AT,
   });
   assert.equal(closed.review.status, 'reviewed');
   assert.equal(closed.notCovered.includes('post_use_review'), false);

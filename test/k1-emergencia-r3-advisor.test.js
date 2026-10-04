@@ -12,6 +12,11 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const emergency = require('../src/emergency.js');
+const { createHost } = require('./emergency-host.js');
+
+// One SIMULATED authentication port for this file: it answers with a frozen object per declared
+// name and hands back the same object for the same person. See `emergency-host.js`.
+const host = createHost();
 const { verifyReceipt } = require('../src/receipt.js');
 
 const AT = '2026-10-04T12:00:00Z';
@@ -52,6 +57,7 @@ const APPROVE = (candidate) => ({ verified: true, grantor: candidate.owner, reas
 
 async function granted(overrides = {}, verify = () => ({ verified: true })) {
   return emergency.createEmergencyPermission({ ...GRANT(), ...overrides }, {
+    authenticate: host.authenticate,
     authorizeGrantor: APPROVE,
     resolveVerifier: (id) => ({ id, verify }),
     authorizeRenewal: APPROVE,
@@ -60,7 +66,7 @@ async function granted(overrides = {}, verify = () => ({ verified: true })) {
 
 const run = (permission, ledger, request) => emergency.exerciseEmergency(permission, request || REQUEST(), { ledger, now: AT });
 const state = (permission, ledger) => emergency.getEmergencyState(permission, { ledger, now: AT });
-const close = (permission, ledger, useId) => emergency.reviewEmergencyUse(permission, useId || 'u', { ledger, by: 'person', decision: 'accept', now: AT });
+const close = (permission, ledger, useId) => emergency.reviewEmergencyUse(permission, useId || 'u', { ledger, by: host.principal('person'), decision: 'accept', now: AT });
 // An options object whose only field throws the marker. Used by the R301 cases.
 const hostileOptions = () => Object.defineProperty({}, 'ledger', { get() { throw new Error(MARKER); } });
 
@@ -136,6 +142,7 @@ test('R305 a grant with no representable review deadline anywhere in its own int
   const span = Date.parse('9999-12-31T23:59:59.999Z') - Date.parse('0000-01-01T00:00:00.000Z');
   await assert.rejects(
     () => emergency.createEmergencyPermission({ ...GRANT(), reviewDueMs: span }, {
+      authenticate: host.authenticate,
       authorizeGrantor: (candidate) => { approvals += 1; return APPROVE(candidate); },
       resolveVerifier: (id) => ({ id, verify: () => ({ verified: true }) }),
       authorizeRenewal: APPROVE,
@@ -149,7 +156,7 @@ test('R306 a verdict then getter that pauses the family leaves the cap untouched
   let permission;
   const ledger = emergency.createEmergencyLedger();
   permission = await granted({}, () => Object.defineProperty({ verified: true }, 'then', {
-    get() { emergency.pauseEmergencyPermission(permission, { ledger, by: 'person', now: AT }); return undefined; },
+    get() { emergency.pauseEmergencyPermission(permission, { ledger, by: host.principal('person'), now: AT }); return undefined; },
   }));
   assert.equal(run(permission, ledger).state, 'blocked');
   assert.equal(state(permission, ledger).uses, 0);
@@ -163,7 +170,7 @@ test('R307 a nested signal getter can revoke a renewed handle before verificatio
   const ledger = emergency.createEmergencyLedger();
   const nested = Object.defineProperty({}, 'value', {
     enumerable: true,
-    get() { emergency.revokeEmergencyPermission(renewed, { ledger, by: 'person', now: AT }); return true; },
+    get() { emergency.revokeEmergencyPermission(renewed, { ledger, by: host.principal('person'), now: AT }); return true; },
   });
   assert.equal(run(permission, ledger, REQUEST({ triggerSignal: { id: 's', source: 'sensor', nested } })).state, 'blocked');
   assert.equal(calls, 0);
@@ -204,6 +211,7 @@ test('R310 the entire grant is snapshotted before an asynchronous authorization 
   const wait = new Promise((resolve) => { release = resolve; });
   let seen;
   const pending = emergency.createEmergencyPermission(draft, {
+    authenticate: host.authenticate,
     authorizeGrantor: async (candidate) => { seen = candidate; await wait; return APPROVE(candidate); },
     resolveVerifier: (id) => ({ id, verify: () => ({ verified: true }) }),
     authorizeRenewal: APPROVE,

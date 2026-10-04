@@ -17,6 +17,11 @@ const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const vm = require('node:vm');
 const emergency = require('../src/emergency.js');
+const { createHost } = require('./emergency-host.js');
+
+// One SIMULATED authentication port for this file: it answers with a frozen object per declared
+// name and hands back the same object for the same person. See `emergency-host.js`.
+const host = createHost();
 const { verifyReceipt } = require('../src/receipt.js');
 
 const AT = '2026-10-04T12:00:00Z';
@@ -59,6 +64,7 @@ const RENEWAL_OK = (candidate) => ({ verified: true, grantor: candidate.owner, r
 
 async function granted(overrides = {}, deps = {}) {
   return emergency.createEmergencyPermission(GRANT(overrides), {
+    authenticate: host.authenticate,
     authorizeGrantor: 'authorizeGrantor' in deps ? deps.authorizeGrantor : GRANTOR_OK,
     resolveVerifier: 'resolveVerifier' in deps ? deps.resolveVerifier : async (id) => ({ id, verify: () => ({ verified: true, reason: 'signed' }) }),
     authorizeRenewal: 'authorizeRenewal' in deps ? deps.authorizeRenewal : RENEWAL_OK,
@@ -134,16 +140,16 @@ test('H02 a review deadline past the whole calendar is refused when the grant is
 test('H03 pause, resume and revoke answer with the clock the caller injected', async () => {
   const permission = await granted({ id: 'h03' });
   const ledger = ledgerFor();
-  emergency.pauseEmergencyPermission(permission, { ledger, by: 'person' });
+  emergency.pauseEmergencyPermission(permission, { ledger, by: host.principal('person') });
   // A clock before the grant opens: the honest answer is not_yet_valid, not "active".
-  const early = emergency.resumeEmergencyPermission(permission, { ledger, by: 'person', now: '2000-01-01T00:00:00Z' });
+  const early = emergency.resumeEmergencyPermission(permission, { ledger, by: host.principal('person'), now: '2000-01-01T00:00:00Z' });
   assert.equal(early.status, 'not_yet_valid');
-  const late = emergency.resumeEmergencyPermission(permission, { ledger, by: 'person', now: '2099-01-01T00:00:00Z' });
+  const late = emergency.resumeEmergencyPermission(permission, { ledger, by: host.principal('person'), now: '2099-01-01T00:00:00Z' });
   assert.equal(late.status, 'expired');
-  emergency.resumeEmergencyPermission(permission, { ledger, by: 'person' });
-  const paused = emergency.pauseEmergencyPermission(permission, { ledger, by: 'person', now: '2099-01-01T00:00:00Z' });
+  emergency.resumeEmergencyPermission(permission, { ledger, by: host.principal('person') });
+  const paused = emergency.pauseEmergencyPermission(permission, { ledger, by: host.principal('person'), now: '2099-01-01T00:00:00Z' });
   assert.equal(paused.status, 'paused');
-  const revoked = emergency.revokeEmergencyPermission(permission, { ledger, by: 'person', now: '2099-01-01T00:00:00Z' });
+  const revoked = emergency.revokeEmergencyPermission(permission, { ledger, by: host.principal('person'), now: '2099-01-01T00:00:00Z' });
   assert.equal(revoked.status, 'revoked');
 });
 
@@ -167,8 +173,8 @@ test('H04 the grantee cannot be a declared reviewer of its own use', async () =>
   const permission = await granted({ id: 'h04-ok' });
   const ledger = ledgerFor();
   assert.equal(run(permission, ledger).state, 'review_pending');
-  assert.throws(() => emergency.reviewEmergencyUse(permission, 'u', { ledger, by: 'agent', decision: 'accept', now: AT }),
-    /reviewer|authorized|independen/i);
+  assert.throws(() => emergency.reviewEmergencyUse(permission, 'u', { ledger, by: host.principal('agent'), decision: 'accept', now: AT }),
+    /reviewer|authorized|independen|grantee|own use/i);
 });
 
 // ─── H05 · a second ledger brings a stopped permission back to life ───────────────────────────
@@ -185,11 +191,11 @@ test('H05 a rejected use and a revocation survive a ledger the caller supplies',
   const rejected = await granted({ id: 'h05-rejected' });
   const first = ledgerFor();
   run(rejected, first);
-  emergency.reviewEmergencyUse(rejected, 'u', { ledger: first, by: 'person', decision: 'reject', now: AT });
+  emergency.reviewEmergencyUse(rejected, 'u', { ledger: first, by: host.principal('person'), decision: 'reject', now: AT });
   assert.equal(run(rejected, ledgerFor(), REQUEST({ useId: 'u2', triggerSignal: { id: 's2', source: 'sensor' } })).state, 'blocked');
 
   const revoked = await granted({ id: 'h05-revoked' });
-  emergency.revokeEmergencyPermission(revoked, { ledger: ledgerFor(), by: 'person' });
+  emergency.revokeEmergencyPermission(revoked, { ledger: ledgerFor(), by: host.principal('person') });
   assert.equal(run(revoked, ledgerFor()).state, 'blocked');
 });
 
@@ -211,8 +217,8 @@ test('H05 the ledger binding survives a renewal, so the clock cannot buy a fresh
   assert.equal(emergency.getEmergencyState(renewed, { ledger: other, now: AT }).remainingUses, null);
   assert.equal(emergency.getEmergencyState(renewed, { ledger: other, now: AT }).status, 'ledger_conflict');
   // And it refuses on the administrative side too, so the binding cannot be moved by pausing first.
-  assert.throws(() => emergency.pauseEmergencyPermission(renewed, { ledger: other, by: 'person', now: AT }), /ledger/i);
-  assert.throws(() => emergency.revokeEmergencyPermission(renewed, { ledger: other, by: 'person', now: AT }), /ledger/i);
+  assert.throws(() => emergency.pauseEmergencyPermission(renewed, { ledger: other, by: host.principal('person'), now: AT }), /ledger/i);
+  assert.throws(() => emergency.revokeEmergencyPermission(renewed, { ledger: other, by: host.principal('person'), now: AT }), /ledger/i);
   assert.equal(emergency.getEmergencyState(renewed, { ledger: first, now: AT }).status, 'review_pending');
 });
 
@@ -297,7 +303,7 @@ test('H09 every sealed emergency receipt still verifies', async () => {
   const permission = await granted({ id: 'h09' });
   const ledger = ledgerFor();
   const used = run(permission, ledger);
-  const closed = emergency.reviewEmergencyUse(permission, 'u', { ledger, by: 'person', decision: 'accept', now: AT });
+  const closed = emergency.reviewEmergencyUse(permission, 'u', { ledger, by: host.principal('person'), decision: 'accept', now: AT });
   const blocked = run(permission, ledger, REQUEST({ useId: 'u2', action: 'write' }));
   const unbound = run(GRANT(), ledgerFor());
   const noLedger = emergency.exerciseEmergency(permission, REQUEST({ useId: 'u3' }), { now: AT });
@@ -363,7 +369,7 @@ test('H12 the receipt already in the caller hand keeps its own honest statement'
   const permission = await granted({ id: 'h12' });
   const ledger = ledgerFor();
   const used = run(permission, ledger);
-  const closed = emergency.reviewEmergencyUse(permission, 'u', { ledger, by: 'person', decision: 'accept', now: AT });
+  const closed = emergency.reviewEmergencyUse(permission, 'u', { ledger, by: host.principal('person'), decision: 'accept', now: AT });
   assert.notEqual(used.receipt, closed);
   assert.equal(used.receipt.review.status, 'pending');
   assert.equal(used.receipt.notCovered.includes('post_use_review'), true);
@@ -388,9 +394,9 @@ test('H13 a second permission from the same declaration cannot touch the first r
   assert.equal(blocked.state, 'blocked');
   assert.match(blocked.reason, /different grant/i);
   assert.equal(emergency.getEmergencyState(second, { ledger, now: AT }).status, 'record_conflict');
-  assert.throws(() => emergency.reviewEmergencyUse(second, 'u', { ledger, by: 'person', decision: 'accept', now: AT }),
+  assert.throws(() => emergency.reviewEmergencyUse(second, 'u', { ledger, by: host.principal('person'), decision: 'accept', now: AT }),
     /different grant/i);
-  assert.throws(() => emergency.pauseEmergencyPermission(second, { ledger, by: 'person' }), /different grant/i);
+  assert.throws(() => emergency.pauseEmergencyPermission(second, { ledger, by: host.principal('person') }), /different grant/i);
   // The grant that opened the record is untouched by all of it.
   assert.equal(emergency.getEmergencyState(first, { ledger, now: AT }).status, 'review_pending');
 });
@@ -403,7 +409,7 @@ test('H14 a use id and a signal id are each spent for good', async () => {
   const permission = await granted({ id: 'h14', maxUses: 3 });
   const ledger = ledgerFor();
   assert.equal(run(permission, ledger).state, 'review_pending');
-  emergency.reviewEmergencyUse(permission, 'u', { ledger, by: 'person', decision: 'accept', now: AT });
+  emergency.reviewEmergencyUse(permission, 'u', { ledger, by: host.principal('person'), decision: 'accept', now: AT });
   const replay = run(permission, ledger, REQUEST({ useId: 'u', triggerSignal: { id: 'other', source: 'sensor' } }));
   assert.equal(replay.state, 'blocked');
   assert.match(replay.reason, /already used|replay/i);
@@ -451,10 +457,10 @@ test('H16 the roles come from the bound grant and not from the object in hand', 
   const ledger = ledgerFor();
   assert.equal(run(permission, ledger).state, 'review_pending');
   // The owner is a declared reviewer here, so this one is hers to close.
-  assert.equal(emergency.reviewEmergencyUse(permission, 'u', { ledger, by: 'person', decision: 'reject', now: AT }).review.decision, 'reject');
+  assert.equal(emergency.reviewEmergencyUse(permission, 'u', { ledger, by: host.principal('person'), decision: 'reject', now: AT }).review.decision, 'reject');
   const stranger = { ...permission, owner: 'agent', reviewers: ['agent'], pausers: ['agent'] };
-  assert.throws(() => emergency.pauseEmergencyPermission(stranger, { ledger, by: 'agent' }), /grant|authorized/i);
-  assert.throws(() => emergency.revokeEmergencyPermission(stranger, { ledger, by: 'agent' }), /grant|owner|authorized/i);
+  assert.throws(() => emergency.pauseEmergencyPermission(stranger, { ledger, by: host.principal('agent') }), /grant|authorized/i);
+  assert.throws(() => emergency.revokeEmergencyPermission(stranger, { ledger, by: host.principal('agent') }), /grant|owner|authorized/i);
   assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).status, 'stopped_by_review');
 });
 
@@ -489,6 +495,7 @@ test('H18 a wide grant binds exactly the fields the host was asked about', async
   });
   const seen = [];
   const permission = await emergency.createEmergencyPermission(wide, {
+    authenticate: host.authenticate,
     authorizeGrantor: (candidate) => { seen.push(candidate); return GRANTOR_OK(candidate); },
     resolveVerifier: async (id) => ({ id, verify: () => ({ verified: true, reason: 'signed' }) }),
     authorizeRenewal: RENEWAL_OK,
@@ -522,7 +529,7 @@ test('H19 a null options object is refused the way every other unusable one is',
   const permission = await granted({ id: 'h19' });
   const ledger = ledgerFor();
   await assert.rejects(() => emergency.createEmergencyPermission(GRANT({ id: 'h19-other' }), null),
-    (err) => err instanceof Error && /authorizeGrantor|grantor|malformed|emergency/i.test(err.message),
+    (err) => err instanceof Error && /authorizeGrantor|grantor|malformed|emergency|authenticate|options/i.test(err.message),
     'a null options object must not escape as a raw TypeError');
   // The exercise answers blocked, with a receipt that verifies, exactly as it does for `0`.
   const blocked = emergency.exerciseEmergency(permission, REQUEST(), null);

@@ -46,6 +46,131 @@ const { parseTime } = require('./time.js');
 
 const BINDINGS = new WeakMap();
 
+// ─── The host's door: who a caller is ──────────────────────────────────────────────────────────
+//
+// This kernel does not know who anyone is. It never reads a name and believes it: every name in a
+// grant is a claim, and a claim is exactly what a caller holding the permission and its ledger can
+// write. What the kernel CAN check is a relation between principals the host vouched for, so the
+// host injects one port and this module never accepts a self-declared name.
+//
+//   authenticate({ grantId, role, name }) → a principal: a frozen object, the SAME one for every call
+//   that means the same person and a DIFFERENT one for a different person.
+//
+// The principal is branded on arrival and thereafter only ever compared by reference: the kernel
+// stores an opaque handle per object and reads no field of it, copies none and seals none. So two
+// names are the same person exactly when the port says so by handing back one object, an alias cannot
+// be spelled in a grant to get around anything, and nobody can mint a principal here: possession of
+// the permission, of the ledger and of every record in it is not possession of anybody's identity.
+//
+// What this does NOT do, and says so: the guarantee is exactly as strong as the host that issued the
+// principals. A host that hands the reviewer principal to the exercising agent has broken it, and
+// this kernel has no way to know. Independence, aliasing and delegation are the host's answers; what
+// this module guarantees is that it will not let a name, an alias or a forged object stand in for
+// one, and that it fails closed when the port is absent, malformed, slow or contradictory.
+const PRINCIPALS = new WeakMap();
+const NO_PRINCIPAL = 'this kernel cannot authenticate a name: whoever signed this call has to present a principal that the injected authenticate port issued, and a declared name is not one';
+let principalSequence = 0;
+
+// A principal is a frozen object this port produced, and nothing else. Frozen because a mutable one
+// could be turned into somebody else after the kernel compared it; an object because a string, an
+// array or a plain value is a claim, not an identity. No field of it is read.
+function brandPrincipal(principal) {
+  try {
+    if (!principal || typeof principal !== 'object' || Array.isArray(principal)) return false;
+    if (!Object.isFrozen(principal)) return false;
+    if (!PRINCIPALS.has(principal)) {
+      principalSequence += 1;
+      PRINCIPALS.set(principal, principalSequence);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Only ever a question between two branded principals, so an unbranded one is not equal to anything.
+function samePrincipal(left, right) {
+  try {
+    const one = PRINCIPALS.get(left);
+    return one !== undefined && one === PRINCIPALS.get(right);
+  } catch {
+    return false;
+  }
+}
+
+// One question to the host about one declared name in one role. Synchronous for the same reason the
+// renewal approver and the trigger verifier are: a door this kernel would have to wait for cannot
+// close a transition. Every failure is a refusal and not a retry, and the reason never carries
+// whatever the port said or threw on the way.
+function askPrincipal(port, claim) {
+  let answered;
+  try {
+    answered = port(claim);
+  } catch {
+    return { ok: false, reason: 'the injected authenticate port could not authenticate a declared name, so this kernel does not know who is calling' };
+  }
+  try {
+    if (Boolean(answered) && (typeof answered === 'object' || typeof answered === 'function') && typeof answered.then === 'function') {
+      Promise.resolve(answered).catch(() => {});
+      return { ok: false, reason: 'the injected authenticate port answered asynchronously, which this kernel does not wait for' };
+    }
+  } catch {
+    return { ok: false, reason: 'the injected authenticate port could not be read' };
+  }
+  if (!brandPrincipal(answered)) {
+    return { ok: false, reason: 'the injected authenticate port answered with something that is not a frozen principal, and this kernel will not guess who that is' };
+  }
+  return { ok: true, principal: answered };
+}
+
+// Who everybody in this grant is, asked once, before the grantor is asked anything: the owner, the
+// grantee, every declared reviewer, every declared pauser and every declared trigger verifier. The
+// declared names stay in the snapshot exactly as authorized, because they are what a receipt carries
+// and what the grant digest is made of; these principals stay in the private binding, because they
+// are what a caller's `by` has to equal.
+function askPeople(port, snapshot) {
+  const asked = { owner: null, grantee: null, reviewers: [], pausers: [], verifiers: [] };
+  const roles = [
+    ['owner', snapshot.owner, asked, 'owner'],
+    ['grantee', snapshot.grantee, asked, 'grantee'],
+    ...snapshot.reviewers.map((name) => ['reviewer', name, asked.reviewers, null]),
+    ...snapshot.pausers.map((name) => ['pauser', name, asked.pausers, null]),
+    ...snapshot.triggers.map((trigger) => ['verifier', trigger.verifierId, asked.verifiers, null]),
+  ];
+  for (const [role, name, list, field] of roles) {
+    const claim = Object.freeze({ grantId: snapshot.id, role, name });
+    const answer = askPrincipal(port, claim);
+    if (!answer.ok) return answer;
+    if (field) asked[field] = answer.principal;
+    else list.push({ name, principal: answer.principal });
+  }
+  // Independence is a relation between principals, so this is where it is decided. A grant that names
+  // the grantee among the reviewers is still refused by name above; what is added here is that an
+  // ALIAS of the grantee is refused too, because the port answered with one principal for two
+  // different names (A01, R402).
+  for (const reviewer of asked.reviewers) {
+    if (samePrincipal(reviewer.principal, asked.grantee)) {
+      return { ok: false, reason: `the reviewer ${reviewer.name} resolves to the same principal as the grantee ${snapshot.grantee}, so the post-use review would be signed by the agent that spends the authority: this kernel compares principals, not names` };
+    }
+  }
+  for (const verifier of asked.verifiers) {
+    if (samePrincipal(verifier.principal, asked.grantee) || samePrincipal(verifier.principal, asked.owner)) {
+      return { ok: false, reason: `the verifier ${verifier.name} resolves to the same principal as ${samePrincipal(verifier.principal, asked.grantee) ? snapshot.grantee : snapshot.owner}, and an independent signal cannot come from the agent that will act on it or from the person who granted the authority` };
+    }
+  }
+  // The person who granted this has to be able to stop it, and that too is a relation between
+  // principals: a pauser entry the port does not resolve to the owner is not the owner.
+  if (!asked.pausers.some((pauser) => samePrincipal(pauser.principal, asked.owner))) {
+    return { ok: false, reason: `none of the declared pausers resolves to the principal of the owner ${snapshot.owner}, so the person who granted this could not stop it` };
+  }
+  // And a grant whose owner is its own grantee is not a grant: it is one principal on both sides of
+  // the whole capability.
+  if (samePrincipal(asked.owner, asked.grantee)) {
+    return { ok: false, reason: `the owner ${snapshot.owner} and the grantee ${snapshot.grantee} resolve to the same principal, so this permission would let one principal sign the authority and spend it` };
+  }
+  return { ok: true, people: asked };
+}
+
 const CAPABILITY = 'emergency-access';
 const DEFAULT_GOAL = 'emergency access under prior authority';
 const PENDING_ANCHOR = { status: 'pending', network: 'stellar:testnet' };
@@ -714,12 +839,19 @@ function useReceipt(snapshot, asked, trigger, checked, dueAtMs, signalDigest) {
 // ─── The grant ────────────────────────────────────────────────────────────────────────────────
 
 async function createEmergencyPermission(grant, options = {}) {
-  const deps = readOptions(options, ['authorizeGrantor', 'resolveVerifier', 'authorizeRenewal']);
+  const deps = readOptions(options, ['authenticate', 'authorizeGrantor', 'resolveVerifier', 'authorizeRenewal']);
   if (!deps) throw new Error(UNREADABLE_OPTIONS);
-  const { authorizeGrantor, resolveVerifier, authorizeRenewal } = deps;
+  const { authenticate, authorizeGrantor, resolveVerifier, authorizeRenewal } = deps;
   const read = snapshotPermission(grant);
   if (!read.ok) throw new Error(`emergency permission is malformed: ${read.reason}`);
   const snapshot = read.snapshot;
+  // The door comes first, before the grantor is even asked: a permission whose callers cannot be
+  // authenticated is not an authority this kernel is willing to hold, whoever signed it.
+  if (typeof authenticate !== 'function') {
+    throw new Error('an injected authenticate port is required: this kernel cannot see who is calling, and a declared name is not a caller');
+  }
+  const people = askPeople(authenticate, snapshot);
+  if (!people.ok) throw new Error(people.reason);
   if (typeof authorizeGrantor !== 'function') throw new Error('an injected grantor authority check is required: the kernel cannot see who granted this');
   // The candidate is read once, frozen, and is the single source from here on: the host authorizes
   // this object and the permission is built from this object. A second read of the caller's grant
@@ -800,6 +932,9 @@ async function createEmergencyPermission(grant, options = {}) {
     grantDigest,
     // The private family of this one grant, born here and kept by every renewal of it.
     family: Object.freeze({}),
+    // Who everybody in this grant is, as the host's port vouched for it at the moment of granting.
+    // Never read back from a caller: a `by` is compared against these and against nothing else.
+    people: people.people,
   };
   const permission = freeze({
     ...candidate,
@@ -1018,6 +1153,33 @@ function requireBinding(permission, bound, verb) {
   throw new Error(`this emergency permission carries no grant: no authority is bound to it, so it cannot be ${verb}`);
 }
 
+// Who signed this call, as far as this kernel can know: a principal the host's own port issued at the
+// grant. A string is not one, an object nobody issued is not one, and the answer to anything else is
+// the refusal below rather than a name this kernel would have to trust. The second question, which of
+// the grant's principals this is, is asked by each transition below.
+function signedBy(bound, by) {
+  if (!by || typeof by !== 'object' || !PRINCIPALS.has(by)) throw new Error(NO_PRINCIPAL);
+  return by;
+}
+
+// The agent that spends the authority is not a person who may decide about it, whatever the grant
+// declares and whatever principal the host issued for it: independence is a relation between
+// principals, so it is checked here as one (A01).
+function refuseGrantee(bound, by) {
+  if (samePrincipal(by, bound.people.grantee)) {
+    throw new Error(`the principal that signed this call is the agent that exercised the authority (${bound.snapshot.grantee}), so it cannot decide about its own use`);
+  }
+}
+
+// The name behind a principal, which is what a receipt carries. The receipt keeps reporting the
+// declared name, because that is what the grant digest and the authorized grant were made of; the
+// proof that the caller was that person is the host's and does not travel.
+function namedPrincipal(list, by, message) {
+  const entry = list.find((item) => samePrincipal(item.principal, by));
+  if (!entry) throw new Error(message);
+  return entry.name;
+}
+
 function reviewEmergencyUse(permission, useId, options = {}) {
   const deps = readOptions(options, ['ledger', 'by', 'decision', 'now']);
   if (!deps) throw new Error(UNREADABLE_OPTIONS);
@@ -1027,8 +1189,11 @@ function reviewEmergencyUse(permission, useId, options = {}) {
   // object this caller happens to be holding.
   const snapshot = bound.snapshot;
   if (!text(useId)) throw new Error('a review names the use it closes');
-  if (!text(by)) throw new Error('a review names who closed it');
   if (decision !== 'accept' && decision !== 'reject') throw new Error('review decision must be accept or reject');
+  const signer = signedBy(bound, by);
+  refuseGrantee(bound, signer);
+  const reviewer = namedPrincipal(bound.people.reviewers, signer,
+    `not authorized to close this emergency review: reviewers are [${snapshot.reviewers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to close an emergency review');
   if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
@@ -1036,9 +1201,6 @@ function reviewEmergencyUse(permission, useId, options = {}) {
   if (!found.ok) throw new Error(found.reason);
   const record = found.record;
   if (!record || !record.pending || record.pending.useId !== useId) throw new Error('no matching pending emergency review');
-  if (!snapshot.reviewers.includes(by)) {
-    throw new Error(`not authorized to close this emergency review: reviewers are [${snapshot.reviewers.join(', ')}]`);
-  }
   // Read before anything moves: a review closed with a clock nobody injected would be stamped with
   // wall time and would look like the person decided at a moment she was never asked about.
   const clock = readClock(now);
@@ -1067,7 +1229,7 @@ function reviewEmergencyUse(permission, useId, options = {}) {
     },
     coverage: coverageOf(checks),
     notCovered: original.notCovered.filter((key) => key !== 'post_use_review'),
-    review: { ...original.review, status: 'reviewed', decision, by, reviewedAt },
+    review: { ...original.review, status: 'reviewed', decision, by: reviewer, reviewedAt },
   });
   record.pending = null;
   // A rejection is the person saying the use was not hers. It stops the permission: it cannot be
@@ -1092,7 +1254,9 @@ function pauseEmergencyPermission(permission, options = {}) {
   const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'paused');
   const snapshot = bound.snapshot;
-  if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
+  const signer = signedBy(bound, by);
+  refuseGrantee(bound, signer);
+  namedPrincipal(bound.people.pausers, signer, `not authorized to pause: pausers are [${snapshot.pausers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to pause an emergency permission');
   if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
@@ -1108,7 +1272,12 @@ function resumeEmergencyPermission(permission, options = {}) {
   const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'resumed');
   const snapshot = bound.snapshot;
-  if (!snapshot.pausers.includes(by)) throw new Error(`not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
+  const signer = signedBy(bound, by);
+  // A pause is the owner stopping the agent. Lifting it has to be somebody's decision and not
+  // something the agent undoes by saying the owner's name, or accepting a pause would be a formality
+  // the grantee could revoke whenever it suited (A01, R414).
+  refuseGrantee(bound, signer);
+  namedPrincipal(bound.people.pausers, signer, `not authorized to resume: pausers are [${snapshot.pausers.join(', ')}]`);
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to resume an emergency permission');
   if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
@@ -1127,7 +1296,10 @@ function revokeEmergencyPermission(permission, options = {}) {
   const { ledger, by, now } = deps;
   const bound = requireBinding(permission, bindingOf(permission), 'revoked');
   const snapshot = bound.snapshot;
-  if (by !== snapshot.owner) throw new Error('only the person who granted this emergency permission may revoke it');
+  // Revocation is the owner's own act and nobody else's: not a pauser, not a reviewer, not the agent.
+  const signer = signedBy(bound, by);
+  refuseGrantee(bound, signer);
+  if (!samePrincipal(signer, bound.people.owner)) throw new Error('only the person who granted this emergency permission may revoke it');
   const records = readRecords(ledger);
   if (!records) throw new Error('a kernel emergency ledger is required to revoke an emergency permission');
   if (!bindLedger(ledger, bound.family)) throw new Error(FOREIGN_LEDGER);
