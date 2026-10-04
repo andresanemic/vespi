@@ -635,20 +635,20 @@ async function prepareAuthorization(ctx) {
 
 // The inspection has to be a positive, complete, boolean-only verdict about the authorization that
 // exists right now: `prepared` true, a reason in words, an authorization digest computed from the
-// authorization bytes, and the very effect that was declared. One missing or false control stops
-// the send.
+// authorization bytes, and the very effect that was declared. Every control it reports has to be
+// exactly `true`: one false or non-boolean control stops the send, because an inspector that says
+// "the authorization was not what I checked" has not cleared the payment.
 function inspectionIsAcceptable(result, expected) {
   if (!isPlainObject(result)) return false;
   if (result.verified !== true) return false;
   if (typeof result.reason !== 'string' || result.reason.length === 0) return false;
   if (typeof result.authDigest !== 'string' || !HASH.test(result.authDigest)) return false;
   if (!isPlainObject(result.checks)) return false;
-  let booleanOnly = true;
-  for (const key of Object.keys(result.checks)) {
-    if (typeof result.checks[key] !== 'boolean') booleanOnly = false;
-  }
-  if (!booleanOnly) return false;
   if (result.checks.prepared !== true) return false;
+  const keys = Object.keys(result.checks);
+  for (const key of keys) {
+    if (result.checks[key] !== true) return false;
+  }
   return sameEffect(result.effect, expected);
 }
 
