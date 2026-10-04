@@ -562,3 +562,155 @@ test('K3H.22 the zk a receipt carries is the verifier own copy and not a handle 
   assert.equal(fromFrozen.verification.verified, true, 'a frozen claim is still readable evidence');
   assert.equal(verifyReceipt(fromFrozen).ok, true);
 });
+
+// ===========================================================================
+// E. What the port does not know, said out loud
+// ===========================================================================
+
+// E1. The port checks the range of a coordinate, never that the coordinate is on the curve or in the
+// subgroup. A structurally readable proof full of zeros reaches the backend, and whatever the backend
+// says is the verdict. Nothing here claims the port can tell a valid proof from an invented one.
+test('K3H.23 a structurally valid proof that no curve would accept reaches the backend', async () => {
+  const zero = ['0', '0'];
+  const nonsense = {
+    proof: { a: zero, b: [zero, zero], c: zero },
+    publicInputs: ['35'],
+  };
+  const seen = [];
+  const verify = createZkVerifier(config({ backend: (input) => { seen.push(input); return true; } }));
+  const out = await verify(nonsense);
+  assert.equal(seen.length, 1, 'the port asked the backend about it');
+  assert.equal(out.verified, true, 'and believed the answer, because the backend is the crypto');
+  assert.equal(out.checks['zk.proof-valid'], true, 'a check the port cannot run is credited to the backend');
+  const refusing = createZkVerifier(config({ backend: () => false }));
+  const refused = await refusing(nonsense);
+  assert.equal(refused.verified, false, 'and the same proof fails when the backend is honest');
+  assert.equal(refused.zk.code, 'invalid_proof');
+});
+
+// E2. `backendDigest` names the implementation expected for the audit record. It cannot be the
+// implementation: two different functions answer under the same digest and the evidence cannot tell.
+test('K3H.24 backendDigest describes an artifact, not the function that was injected', async () => {
+  const truth = createZkVerifier(config({ backend: () => true }));
+  const liar = createZkVerifier(config({ backend: () => false }));
+  const honest = await truth(goodRequest());
+  const dishonest = await liar(goodRequest());
+  assert.equal(honest.zk.backendDigest, dishonest.zk.backendDigest, 'the same label for two behaviours');
+  assert.equal(honest.zk.code, 'ok');
+  assert.equal(dishonest.zk.code, 'invalid_proof');
+  assert.equal(honest.zk.proofDigest, fx.manifest.digests.proofDigest, 'and the proof is named in both');
+  assert.equal(dishonest.zk.proofDigest, fx.manifest.digests.proofDigest,
+    'so the two answers can be told apart even though their label is the same');
+});
+
+// E3. The port consumes no nonce, so nothing in its answer distinguishes this verification from the
+// same one an hour ago. `zk.replay-prevention` is false for exactly that reason.
+test('K3H.25 the same request verified twice differs in nothing at all', async () => {
+  const verify = createZkVerifier(config({ backend: () => true }));
+  const first = await verify(goodRequest());
+  const second = await verify(goodRequest());
+  assert.deepEqual(first, second, 'no timestamp, no counter, no nonce: an identical answer');
+  assert.equal(first.checks['zk.replay-prevention'], false);
+  assert.ok(!('nonce' in first.zk) && !('at' in first.zk) && !('timestamp' in first.zk),
+    'and the evidence carries no field that could pretend otherwise');
+});
+
+// E4. An array with a poisoned prototype is read as data or refused; its `map` never runs, because
+// every structure the port digests or hands over is rebuilt by the strict reader.
+test('K3H.26 a poisoned array prototype never reaches the digest or the backend', async () => {
+  let mapped = false;
+  const poison = { map: () => { mapped = true; throw new Error(PRIVATE); } };
+  const inputs = fx.publicInputs();
+  Object.setPrototypeOf(inputs, poison);
+  const proof = fx.proof();
+  Object.setPrototypeOf(proof.a, poison);
+  let seen = null;
+  const verify = createZkVerifier(config({ backend: (input) => { seen = input; return true; } }));
+  const out = await verify({ proof, publicInputs: inputs });
+  assert.equal(mapped, false, 'no caller supplied map is ever invoked');
+  assert.equal(out.verified, true);
+  assertNoPrivateMarker(seen, 'the snapshot');
+  assert.equal(Object.getPrototypeOf(seen.publicInputs), Array.prototype,
+    'the backend sees an ordinary array');
+});
+
+// E5. `claimsZk` notices a claim however it is hidden, and `reconcileZk` refuses a claim it was
+// never handed: nothing is ever taken on trust about whether a zk was claimed.
+test('K3H.27 every way of hiding or omitting a claim ends in the same refusal', () => {
+  const hidden = { verified: true, checks: checks(), reason: 'x' };
+  Object.defineProperty(hidden, 'zk', { value: evidence(), enumerable: false });
+  assert.equal(claimsZk(hidden), true, 'a non enumerable claim is still a claim');
+  const receipt = buildReceipt(receiptSpec(hidden));
+  assert.equal(receipt.verification.verified, true, 'and it is honoured when it holds up');
+  assert.equal(receipt.verification.zk.result, 'verified');
+  const inherited = Object.create({ zk: evidence() });
+  inherited.verified = true;
+  inherited.checks = checks();
+  inherited.reason = 'x';
+  assert.equal(claimsZk(inherited), false, 'an inherited claim is not the object own claim');
+  for (const [why, missing] of Object.entries({
+    'undefined': undefined,
+    'null': null,
+    'a boolean': true,
+    'an empty object': {},
+  })) {
+    const out = reconcileZk({ verified: true, checks: checks(), claimed: true, zk: missing });
+    assert.equal(out.consistent, false, why);
+    assert.equal(out.zk, null, why);
+  }
+  const unclaimed = reconcileZk({ verified: true, checks: checks(), claimed: false, zk: evidence() });
+  assert.deepEqual(unclaimed, { verified: true, zk: null, consistent: true },
+    'and a claim that was never made is simply not carried');
+});
+
+// E6. The evidence names the key by digest but carries no key, so nothing can check that this claim
+// belongs to the key this port pinned. The pin is checked where the key is; here it is a name.
+test('K3H.28 the evidence names the key without carrying it', async () => {
+  const verify = createZkVerifier(config({ backend: () => true }));
+  const out = await verify(goodRequest());
+  assert.equal(Object.getPrototypeOf(out.zk).constructor, Object, 'plain data, no hidden fields');
+  assert.deepEqual(Object.keys(out.zk).sort(), [
+    'backendDigest', 'circuitDigest', 'code', 'curve', 'proofDigest', 'publicInputs',
+    'result', 'schema', 'system', 'vkDigest',
+  ]);
+  // A receipt built by hand may name any key at all, because it carries none to compare against.
+  const stranger = buildReceipt(receiptSpec({
+    verified: true, checks: checks(), reason: 'x',
+    zk: { ...evidence(), vkDigest: OTHER_DIGEST, proofDigest: OTHER_DIGEST },
+  }));
+  assert.equal(stranger.verification.verified, true, 'which is why this is a limit and not a defect');
+  assert.equal(stranger.verification.zk.vkDigest, OTHER_DIGEST);
+  assert.equal(verifyReceipt(stranger).ok, true);
+});
+
+// E7. The two digests the kernel computes carry different domains, so a key digest can never be
+// read as a proof digest and a proof digest can never be pinned as a key.
+test('K3H.29 the key digest and the proof digest cannot be confused', async () => {
+  const verify = createZkVerifier(config({ backend: () => true }));
+  const out = await verify(goodRequest());
+  const vkDigest = digestZkVerificationKey(fx.verificationKey());
+  assert.match(vkDigest, /^[0-9a-f]{64}$/);
+  assert.match(out.zk.proofDigest, /^[0-9a-f]{64}$/);
+  assert.notEqual(vkDigest, out.zk.proofDigest);
+  assert.notEqual(vkDigest, 'c'.repeat(64), 'nor is a digest that another artifact could pick');
+  assert.equal(digestZkVerificationKey(fx.verificationKey()), vkDigest, 'and it is stable');
+});
+
+// E8. The operation layer wraps every verifier in a 15 second budget. Nobody has measured a real
+// BN254 pairing in this kernel, because the reference never landed, so the budget is a number here
+// and not a promise. This test pins the number so nobody has to read the source to find it.
+test('K3H.29b the operation budget for a verifier is 15 seconds and nothing measured it', async () => {
+  const op = createOperation({ goal: 'check a proof', authority: { spend: [] } });
+  const cap = {
+    id: 'zk:check',
+    required: () => ({ spend: [{ asset: 'zk:check', amount: '1', to: 'local:zk' }] }),
+    perform: async () => ({ ok: true, evidence: goodRequest() }),
+  };
+  const { receipt } = await runOperation(op, cap, {
+    ask: async () => ({ approved: true }),
+    verify: () => new Promise((resolve) => { setTimeout(() => resolve({ verified: true, checks: {}, reason: 'slow but honest' }), 40); }),
+    verifyTimeoutMs: 20,
+  });
+  assert.equal(receipt.verification.verified, false, 'a pairing slower than the budget is not a proof failure');
+  assert.equal(receipt.status, 'not_verified');
+});
