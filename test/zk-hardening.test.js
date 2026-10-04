@@ -358,20 +358,22 @@ test('K3H.13 the exported check vocabulary cannot be edited into a forged covera
   assert.deepEqual(zk.LIMIT_CHECKS, LIMITS);
 });
 
-// What the fix above does not reach, stated as a limit rather than hidden: `coverage` is derived
-// from the true checks a verifier reported, whatever their name, so a claim the kernel refused can
-// still be listed there. What the fix does guarantee is that it cannot make the receipt read
-// `verified`. Narrowing coverage to the checks a surviving claim supports would change what every
-// receipt means, so it is the owner's call.
-test('K3H.13b a refused zk claim leaves its own check names in coverage', {
-  todo: "decisión del dueño: coverage se deriva de los checks verdaderos que un verificador تقارير, con cualquier nombre; un zk refusado ya no puede volver verified el recibo, pero sus checks siguen listados como coverage",
-}, () => {
+// What the fix above did not reach, stated as a limit and then decided by the owner on 2026-10-04.
+// Decided on 2026-10-04 (owner, applied in k3e-zk-decisiones): `coverage` is derived only from the
+// frozen catalog the zk module defines, so a claim the kernel refused lists nothing at all and the
+// four limits are never coverage whatever anybody reports. That corpus lives in the k3e file; here
+// the same claim is observed in the place it was first found.
+test('K3H.13b a refused zk claim leaves no control of its own in coverage', () => {
   const forgedChecks = checks({ 'zk.presenter-authentication': true });
   const receipt = buildReceipt(receiptSpec({ verified: true, checks: forgedChecks, reason: 'forged', zk: evidence() }));
   assert.equal(receipt.status, 'not_verified');
   assert.equal(receipt.verification.verified, false);
   assert.ok(!receipt.coverage.includes('zk.presenter-authentication'),
     'no receipt lists a limit the claim that produced it did not support');
+  assert.deepEqual(receipt.coverage, [], 'and a refused claim supports nothing at all');
+  assert.ok(receipt.notCovered.includes('zk.presenter-authentication'),
+    'the limit it claimed is declared as not covered');
+  assert.ok(!('zk' in receipt.verification), 'the claim is removed, not repaired');
 });
 
 // C4. `claimsZk` is careful to read the descriptor without invoking a getter, and then both call
@@ -467,26 +469,25 @@ test('K3H.17 readZkEvidence returns an independent copy and claimsZk reads no ge
 });
 
 // C8. A key with `nPublic: 0` binds the proof to nothing: every request with an empty input list
-// reaches the backend and a `true` from it produces `verified`. The design allows nPublic 0, so
-// refusing it is the owner's call, not a silent tightening.
-test("K3H.18 a verification key with no public inputs is refused, or the port says it binds nothing", {
-  todo: "decisión del dueño: el diseño admite nPublic 0..maxPublicInputs y una clave sin entradas públicas verifica cualquier prueba; rechazarla cambia un contrato público",
-}, async () => {
+// would reach the backend and a `true` from it produces `verified`. Decided by the owner on
+// 2026-10-04: such a key is refused while the port is built, with the same public configuration error
+// as any other unreadable configuration. It stays readable, so it can still be digested and named,
+// and a request with fewer inputs than a bound key declares stays a malformed request.
+test('K3H.18 a verification key with no public inputs is refused while the port is built', () => {
   const unbound = fx.verificationKey();
   unbound.nPublic = 0;
   unbound.ic = [unbound.ic[0]];
   const digest = digestZkVerificationKey(unbound);
-  const verify = createZkVerifier({
+  assert.match(digest, /^[0-9a-f]{64}$/, 'the key is still a key this module can name');
+  assert.throws(() => createZkVerifier({
     verificationKey: unbound,
     expectedVkDigest: digest,
     circuitDigest: CIRCUIT_DIGEST,
     expectedPublicInputs: [],
     backend: () => true,
     backendDigest: BACKEND_DIGEST,
-  });
-  const out = await verify({ proof: fx.proof(), publicInputs: [] });
-  assert.notEqual(out.verified, true, 'a key with no public input binds no context');
-  assert.equal(out.checks['zk.public-inputs-bound'], false);
+  }), (err) => err instanceof TypeError && err.message === CONFIG_ERROR,
+  'a key that binds nothing never becomes a verifier');
 });
 
 // ===========================================================================
@@ -495,11 +496,11 @@ test("K3H.18 a verification key with no public inputs is refused, or the port sa
 
 // D1. `perform` returns the evidence and `io.verify` receives it. A host whose verifier hands the
 // evidence straight back turns the executor's own `verified: true` into the verdict, and a `zk`
-// inside the evidence becomes a zk claim. The kernel cannot tell an echo from a real answer, and
-// refusing the echo would change what a host may write, so this is stated, not decided here.
-test('K3H.19 a verifier that echoes the evidence does not let the executor hand itself a zk result', {
-  todo: "decisión del dueño: si el verificador devuelve el mismo objeto que recibió, el recibo puede heredar verified y un zk de la evidencia; rechazarlo define una frontera nueva entre host y executor",
-}, async () => {
+// inside the evidence becomes a zk claim. Decided by the owner on 2026-10-04: the echo fails closed
+// with a fixed public reason, so the answer has to be the verifier's own object. Only identity is
+// refused, and a copy of the same fields cannot be told from a forgery: that limit is measured in
+// k3e-zk-decisiones.
+test('K3H.19 a verifier that echoes the evidence does not let the executor hand itself a zk result', async () => {
   const forged = evidence();
   const op = createOperation({ goal: 'check a proof', authority: { spend: [] } });
   const cap = {
@@ -510,6 +511,9 @@ test('K3H.19 a verifier that echoes the evidence does not let the executor hand 
   const { receipt } = await runOperation(op, cap, { ask: async () => ({ approved: true }), verify: (e) => e });
   assert.notEqual(receipt.status, 'verified', 'the executor does not verify itself');
   assert.ok(!receipt.coverage.includes('zk.proof-valid'));
+  assert.equal(receipt.verification.verified, false);
+  assert.ok(!('zk' in receipt.verification), 'and the zk the executor carried never travels');
+  assert.equal(receipt.verification.reason, zk.ZK_ECHO_REASON, 'with the public fixed reason');
 });
 
 // D2. The zk evidence a receipt carries is self certification by the host's verifier: nothing in the

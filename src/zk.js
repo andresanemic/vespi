@@ -14,6 +14,12 @@
 // implementation expected for the audit record, and the host is the one who must guarantee that the
 // function it injects is those bytes. JavaScript does not certify code with a label, and this port
 // does not pretend otherwise.
+//
+// Three defaults were decided by the owner on 2026-10-04 and are part of this contract now. A
+// receipt's coverage comes only from the frozen catalog below, and a name outside it is refused
+// rather than repeated. A key with no public input binds nothing and never becomes a verifier. And
+// the answer a receipt travels on has to be the verifier's own object, which is why `src/operation.js`
+// refuses an `io.verify` that hands back the evidence it was given.
 
 const { createHash } = require('node:crypto');
 
@@ -55,11 +61,16 @@ const CHECK_KEYS = [
 ];
 const COVERED_CHECKS = new Set(CHECK_KEYS.slice(0, 3));
 const LIMIT_CHECKS = Object.freeze(CHECK_KEYS.slice(3));
+const CATALOG_CHECKS = new Set(CHECK_KEYS);
 
 // The vocabulary is fixed and cannot be edited from outside the module. Anything in the process that
 // can require this file could otherwise widen what `checksWith` credits and empty what
 // `reconcileZk` refuses, and mint a receipt whose coverage claims a limit no proof ever grants.
 Object.freeze(CHECK_KEYS);
+
+// The prefix the kernel reserves for its own controls. A name that looks like one of ours and is not
+// in the catalog is a name somebody made up, and a receipt never credits a name somebody made up.
+const CHECK_PREFIX = 'zk.';
 
 // What each result may claim as its code. A closed vocabulary, so a receipt cannot carry a result
 // and a code that tell different stories.
@@ -73,6 +84,16 @@ const RESULT_CODES = {
 // The one reason a receipt carries when a zk claim did not hold up. Fixed, so a reader can compare
 // it and so nothing from the rejected claim travels with it.
 const ZK_INCONSISTENT_REASON = 'zk evidence missing or inconsistent with the verdict; verification not confirmed';
+
+// The reason a receipt carries when a claim reported a control name the frozen catalog does not
+// enumerate. Fixed and public too: the name itself is somebody's invention and it stays out of the
+// receipt, so there is nothing to quote here.
+const ZK_FOREIGN_CHECK_REASON = 'zk claim reported a control outside the fixed zk vocabulary; verification not confirmed';
+
+// The reason the operation layer carries when `io.verify` handed back the object it was given. The
+// answer has to be the verifier's own object, or nobody verified anything. Fixed, like every other
+// reason here, and it names no part of the evidence.
+const ZK_ECHO_REASON = 'verifier returned the evidence it was given; verification not confirmed';
 
 // One fixed reason per outcome. Nothing from the request, the backend or an exception reaches it.
 const REASONS = {
@@ -312,6 +333,11 @@ function readConfig(raw) {
     const verificationKey = readVerificationKey(readData(raw, 'verificationKey'), maxPublicInputs);
     if (verificationKey === null) return null;
     if (verificationKey.nPublic > maxPublicInputs) return null;
+    // A key with no public input binds the proof to nothing: every request carrying an empty input
+    // list would reach the backend, and whatever the backend answered would be called verified. The
+    // key stays readable, so it can still be digested and named in an audit record; the port is what
+    // refuses it, before a verifier exists.
+    if (verificationKey.nPublic === 0) return null;
 
     const expectedVkDigest = readDigest(readData(raw, 'expectedVkDigest'));
     const circuitDigest = readDigest(readData(raw, 'circuitDigest'));
@@ -421,7 +447,47 @@ function readChecksForClaim(checks) {
     if (typeof value !== 'boolean') return null;
     read[key] = value;
   }
+  // A claim reports the fixed vocabulary and nothing else. A name that is not in it is refused here,
+  // which is the same refusal as a claim that does not hold up.
+  if (isForeignClaimCheck(checks)) return null;
   return read;
+}
+
+// A name the frozen catalog does not enumerate: any name at all inside a zk claim, and, outside a
+// claim, only the ones in the reserved `zk.` namespace. The names of another host are not ours to
+// refuse, and a receipt without a claim keeps the coverage it always had.
+function isForeignClaimCheck(checks) {
+  return readCatalogChecks(checks, { claimed: true }).foreign;
+}
+
+// The checks a claim may put into a receipt: names of the frozen catalog, and nothing else. A name
+// outside it is dropped instead of copied, so no receipt repeats somebody's invention, and `foreign`
+// says that one was there so the caller can fail closed with a fixed public reason.
+function readCatalogChecks(checks, { claimed } = {}) {
+  const kept = {};
+  let foreign = false;
+  try {
+    if (checks && typeof checks === 'object' && !Array.isArray(checks)) {
+      for (const key of Object.keys(checks)) {
+        if (!CATALOG_CHECKS.has(key)) {
+          // Inside a claim the vocabulary is all there is; outside one, only the reserved namespace
+          // is ours to refuse and the names of another host keep travelling as they always did.
+          if (claimed || key.startsWith(CHECK_PREFIX)) {
+            foreign = true;
+            continue;
+          }
+        }
+        // Through the descriptor, like every other read in this module: a container that only
+        // misbehaves on `get` is never consulted, so nothing it hides can travel or be refused on
+        // the strength of a trap.
+        kept[key] = readData(checks, key);
+      }
+    }
+  } catch {
+    // A container that cannot be read names nothing the receipt keeps.
+    return { checks: kept, foreign: true };
+  }
+  return { checks: kept, foreign };
 }
 
 function reconcileZk({ verified, checks, claimed, zk }) {
@@ -602,6 +668,7 @@ module.exports = {
   digestZkVerificationKey,
   readZkEvidence,
   readZkClaim,
+  readCatalogChecks,
   reconcileZk,
   claimsZk,
   VK_SCHEMA,
@@ -610,6 +677,8 @@ module.exports = {
   COVERED_CHECKS: new Set(COVERED_CHECKS),
   LIMIT_CHECKS,
   ZK_INCONSISTENT_REASON,
+  ZK_FOREIGN_CHECK_REASON,
+  ZK_ECHO_REASON,
   FP_MODULUS,
   SCALAR_MODULUS,
 };

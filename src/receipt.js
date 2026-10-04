@@ -4,7 +4,15 @@ const { createHash } = require('node:crypto');
 const { parseTime } = require('./time.js');
 // The zk vocabulary lives in one place (src/zk.js) so the port that writes the evidence and the
 // receipt that reads it cannot drift apart on what a valid claim is.
-const { readZkClaim, reconcileZk, ZK_INCONSISTENT_REASON } = require('./zk.js');
+const { readZkClaim, readCatalogChecks, reconcileZk, ZK_INCONSISTENT_REASON, ZK_FOREIGN_CHECK_REASON,
+  ZK_CHECK_KEYS, COVERED_CHECKS, LIMIT_CHECKS } = require('./zk.js');
+
+// The coverage vocabulary, read once from the frozen catalog the zk module defines. Sets built here
+// are private to this file, so the copy of the catalog that `zk.js` exports by reference cannot be
+// edited from the process into a wider coverage.
+const ZK_CATALOG = new Set(ZK_CHECK_KEYS);
+const ZK_COVERED = new Set(COVERED_CHECKS);
+const ZK_LIMITS = new Set(LIMIT_CHECKS);
 
 const RECEIPT_STATUSES = new Set([
   'verified',
@@ -43,13 +51,24 @@ function computeDigest(receipt) {
 }
 
 // A check counts as coverage only when it passed; a failed check is listed as not covered.
+//
+// The zk vocabulary is a closed catalog, so a name of ours is coverage only when it is one of the
+// three a proof can grant and the receipt carries a zk claim that held up. The four limits are never
+// coverage, whatever anybody reported, and a name the catalog does not enumerate never reaches this
+// function. Names that are not ours keep the behaviour they always had, so a receipt without a claim
+// still reports the controls its own verifier named.
 function readChecks(verification) {
   const covered = [];
   const failed = [];
   try {
     const checks = verification && verification.checks;
+    const claimed = Boolean(verification && verification.zk);
     if (checks !== null && typeof checks === 'object' && !Array.isArray(checks)) {
-      for (const key of Object.keys(checks)) (checks[key] === true ? covered : failed).push(key);
+      for (const key of Object.keys(checks)) {
+        const ours = ZK_CATALOG.has(key);
+        const isCoverage = !ours || (claimed && ZK_COVERED.has(key));
+        (isCoverage && !ZK_LIMITS.has(key) && checks[key] === true ? covered : failed).push(key);
+      }
     }
   } catch {
   }
@@ -271,6 +290,12 @@ function sanitizeVerification(verification) {
     return null;
   }
   const zkClaim = readZkClaim(verification);
+  // A zk claim reports the frozen catalog and nothing else: a name outside it is dropped instead of
+  // copied, and the verification fails closed with the fixed public reason.
+  const vocabulary = zkClaim.claimed
+    ? readCatalogChecks(safe.checks, { claimed: true })
+    : readCatalogChecks(safe.checks, { claimed: false });
+  safe.checks = vocabulary.checks;
   const reconciled = reconcileZk({
     verified: safe.verified === true,
     checks: safe.checks,
@@ -278,7 +303,10 @@ function sanitizeVerification(verification) {
     zk: zkClaim.value,
   });
   if (reconciled.zk !== null) safe.zk = reconciled.zk;
-  if (!reconciled.consistent) {
+  if (vocabulary.foreign) {
+    safe.verified = false;
+    safe.reason = ZK_FOREIGN_CHECK_REASON;
+  } else if (!reconciled.consistent) {
     safe.verified = false;
     safe.reason = ZK_INCONSISTENT_REASON;
   } else if (safe.verified !== reconciled.verified) {

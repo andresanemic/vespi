@@ -16,7 +16,8 @@
 
 const { sufficient } = require('./authority.js');
 const { buildReceipt } = require('./receipt.js');
-const { readZkClaim, reconcileZk, ZK_INCONSISTENT_REASON } = require('./zk.js');
+const { readZkClaim, readCatalogChecks, reconcileZk, ZK_INCONSISTENT_REASON, ZK_FOREIGN_CHECK_REASON,
+  ZK_ECHO_REASON } = require('./zk.js');
 const { createHash } = require('node:crypto');
 const { parseTime } = require('./time.js');
 
@@ -1015,6 +1016,14 @@ async function runOperationOnce(op, capability, io) {
   } catch (err) {
     verification = { verified: false, checks: {}, reason: `verifier error: ${errorText(err)}` };
   }
+  // The answer has to be the verifier's own object. `io.verify` was handed this evidence, and if it
+  // hands the very same object back then the executor answered itself: `verified: true` in the
+  // evidence is not a verification, and a `zk` the executor carried is not a claim. Identity is the
+  // whole test, because a copy of the same fields is a legitimate answer and cannot be told from a
+  // forgery by this kernel.
+  if (verification === capabilityResult.evidence) {
+    verification = { verified: false, checks: {}, reason: ZK_ECHO_REASON };
+  }
   let verified = false;
   let normalizedVerification;
   try {
@@ -1041,9 +1050,14 @@ async function runOperationOnce(op, capability, io) {
     // the checks, so an operation cannot end `succeeded` on a claim that does not hold up — which
     // would leave the state disagreeing with the receipt it just wrote.
     const zkClaim = readZkClaim(verifierResult);
-    const reconciled = reconcileZk({ verified, checks, claimed: zkClaim.claimed, zk: zkClaim.value });
+    const vocabulary = readCatalogChecks(checks, { claimed: zkClaim.claimed });
+    const reconciled = reconcileZk({ verified, checks: vocabulary.checks, claimed: zkClaim.claimed, zk: zkClaim.value });
+    normalizedVerification.checks = vocabulary.checks;
     if (reconciled.zk !== null) normalizedVerification.zk = reconciled.zk;
-    if (!reconciled.consistent) {
+    if (vocabulary.foreign) {
+      normalizedVerification.verified = false;
+      normalizedVerification.reason = ZK_FOREIGN_CHECK_REASON;
+    } else if (!reconciled.consistent) {
       normalizedVerification.verified = false;
       normalizedVerification.reason = ZK_INCONSISTENT_REASON;
     }

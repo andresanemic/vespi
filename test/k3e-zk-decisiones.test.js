@@ -100,9 +100,10 @@ function unboundKey() {
   return key;
 }
 
-function zkOperation(capability) {
+// One operation with a `zk:check` capability, so every case below measures the same boundary.
+function zkOperation(evidenceValue, verify) {
   const op = createOperation({ goal: 'check a proof', authority: { spend: [] } });
-  return runOperation(op, capability, { ask: async () => ({ approved: true }) });
+  return runOperation(op, checkCapability(evidenceValue), { ask: async () => ({ approved: true }), verify });
 }
 
 const checkCapability = (evidenceValue) => ({
@@ -179,7 +180,9 @@ test('K3E.4 a reserved zk name outside the catalog is refused with or without a 
     assert.equal(receipt.verification.reason, zk.ZK_FOREIGN_CHECK_REASON, `claim ${withClaim}`);
     assert.ok(!('zk.something-new' in receipt.verification.checks), `claim ${withClaim}: not copied`);
     assert.ok(!receipt.coverage.includes('zk.something-new'), `claim ${withClaim}: not coverage`);
-    assert.ok(receipt.coverage.includes('local'), `claim ${withClaim}: a host name is untouched`);
+    // A host name travels untouched when no claim was made, and is dropped when one was: a zk claim
+    // reports the closed catalog and nothing else.
+    assert.equal(receipt.coverage.includes('local'), !withClaim, `claim ${withClaim}: the host name`);
   }
 });
 
@@ -245,7 +248,7 @@ test('K3E.8 a verification key with no public inputs never becomes a verifier', 
 });
 
 // D8. The refusal happens before anything is asked: no verifier exists, so no request can be made.
-test('K3E.9 the unbound key is refused before any backend or request exists', () => {
+test('K3E.9 the unbound key is refused before any backend or request exists', async () => {
   let asked = 0;
   const key = unboundKey();
   const build = () => createZkVerifier(config({
@@ -256,11 +259,16 @@ test('K3E.9 the unbound key is refused before any backend or request exists', ()
   }));
   assert.throws(build, (err) => err instanceof TypeError && err.message === CONFIG_ERROR);
   assert.equal(asked, 0, 'nothing was asked of a backend');
-  // And the request that a key like this would have accepted is refused where it is built, too.
-  const built = createZkVerifier(config({ backend: () => { asked += 1; return true; } }));
-  assert.throws(() => built({ proof: fx.proof(), publicInputs: [] }), (err) => err instanceof TypeError
-    && err.message === CONFIG_ERROR, 'a request with fewer inputs than the key declares never runs');
-  assert.equal(asked, 0, 'still nothing was asked of a backend');
+  // What the refusal did not change, said out loud: a request that does not carry as many public
+  // inputs as the key declares is still answered as a malformed request, not as an exception. The
+  // decision was about the key, and a caller that never built a verifier with one cannot ask.
+  let askedMore = 0;
+  const bound = createZkVerifier(config({ backend: () => { askedMore += 1; return true; } }));
+  const answer = await bound({ proof: fx.proof(), publicInputs: [] });
+  assert.equal(answer.zk.code, 'malformed_input');
+  assert.equal(answer.verified, false);
+  assert.equal(answer.checks['zk.proof-valid'], false);
+  assert.equal(askedMore, 0, 'and the backend was never asked');
 });
 
 // D9. A key with at least one public input is untouched by the decision.
@@ -294,7 +302,7 @@ test('K3E.10 a key that binds at least one public input still verifies', async (
 // cannot hand itself a verdict and cannot smuggle a zk claim into the receipt.
 test('K3E.11 a verifier that returns the evidence it was given fails closed', async () => {
   const forged = evidence();
-  const { receipt } = await zkOperation(checkCapability({ verified: true, checks: checks(), zk: forged }));
+  const { receipt } = await zkOperation({ verified: true, checks: checks(), zk: forged }, (given) => given);
   assert.notEqual(receipt.status, 'verified', 'the executor does not verify itself');
   assert.equal(receipt.status, 'not_verified');
   assert.equal(receipt.verification.verified, false);
@@ -323,20 +331,18 @@ test('K3E.12 an evidence object edited by the verifier and handed back is still 
   assert.ok(!('zk.attacker-control' in tampered.receipt.verification.checks), 'and the name is not copied');
   assert.deepEqual(tampered.receipt.coverage, [], 'nothing of the echoed object is coverage');
   // An honest verifier over the same capability is untouched by the decision.
-  const honest = await runOperation(createOperation({ goal: 'check a proof', authority: { spend: [] } }),
-    checkCapability(goodRequest()),
-    { ask: async () => ({ approved: true }), verify: () => ({ verified: true, checks: checks(), reason: 'honest' }) });
+  const port = createZkVerifier(config({ backend: () => true }));
+  const honest = await zkOperation(goodRequest(), (given) => port({ ...given }));
   assert.equal(honest.receipt.status, 'verified', 'an honest verifier still ends verified');
   assert.deepEqual([...honest.receipt.coverage].sort(), [...COVERED].sort());
+  assert.equal(honest.receipt.verification.zk.result, 'verified');
 });
 
 // D12. Adversarial: only identity is a refusal. An answer the verifier built itself, even from the
 // same fields, is a real answer. This is the limit of the decision and it is measured here.
 test('K3E.13 an answer the verifier built itself is not an echo', async () => {
   const port = createZkVerifier(config({ backend: () => true }));
-  const { receipt } = await zkOperation({
-    ...checkCapability(goodRequest()),
-  });
+  const { receipt } = await zkOperation(goodRequest());
   assert.equal(receipt.status, 'not_verified', 'no verifier at all is still not verified');
   const honest = await runOperation(createOperation({ goal: 'check a proof', authority: { spend: [] } }),
     checkCapability(goodRequest()),
