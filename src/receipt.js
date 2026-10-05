@@ -350,4 +350,4 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
   return receipt;
 }
 
-module.exports = { buildReceipt, verifyReceipt, anchorReceipt, anchorReceiptAsync };
+module.exports = { buildReceipt, verifyReceipt, anchorReceipt, anchorReceiptAsync, computeDigest };
