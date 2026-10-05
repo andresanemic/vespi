@@ -33,13 +33,25 @@ const STATES = {
 
 const DEFAULT_EXIT = 'return to the person: change the agreement or cancel';
 
-function errorText(error) {
+// What a failure says. The text a port threw is not copied into a receipt, and not into the
+// digest either: `detail` is sealed, so a raw SDK message carrying a url with a key in it would
+// end up inside the chain of trust instead of outside it. This is the rule emergency.js and
+// x402.js already apply; operation.js was the one module that did not.
+// The only thing copied is `error.code`, and only when it looks like a code: uppercase letters,
+// digits and underscores, at most 64. That is a token a host chose, not a sentence, and it
+// cannot smuggle a url, a path or a body. Each call site supplies its own fixed phrase, because
+// the phrase has to say which step failed, and the code alone never does.
+function failureCode(error) {
   try {
-    if (error && typeof error.message === 'string') return error.message;
-    return String(error);
+    const code = error && error.code;
+    return typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? ` [${code}]` : '';
   } catch {
-    return 'unknown error';
+    return '';
   }
+}
+
+function refused(error, phrase) {
+  return `${phrase}${failureCode(error)}`;
 }
 
 const DEFAULT_OPERATION_TIMEOUT_MS = 15_000;
@@ -143,7 +155,7 @@ function readCapabilityResult(result) {
       settlementUnknown: true,
       impossible: false,
       ok: false,
-      error: `capability result invalid: ${errorText(error)}`,
+      error: refused(error, 'the capability result could not be read'),
       reason: null,
       exit: null,
       evidence: null,
@@ -564,7 +576,7 @@ async function runOperationOnce(op, capability, io) {
       operation: op,
       capabilityId: capabilityId,
       authority: op.authority,
-      outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+      outcome: { status: 'failed', exercised: [], detail: refused(err, 'the capability requirements could not be read') },
       evidence: null,
       verification: null,
     });
@@ -591,7 +603,7 @@ async function runOperationOnce(op, capability, io) {
       operation: op,
       capabilityId,
       authority: op.authority,
-      outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+      outcome: { status: 'failed', exercised: [], detail: refused(err, 'the authority check could not be read') },
       evidence: null,
       verification: null,
     });
@@ -651,7 +663,7 @@ async function runOperationOnce(op, capability, io) {
           ? await withTimeout(Promise.resolve().then(() => askFn.call(io, askPayload)), readTimeout(io, 'askTimeoutMs'), 'human gate')
           : null;
       } catch (err) {
-        gateError = `human gate error: ${errorText(err)}`;
+        gateError = refused(err, 'human gate failed');
       }
     }
     let explicitReject = false;
@@ -711,7 +723,7 @@ async function runOperationOnce(op, capability, io) {
           operation: op,
           capabilityId: capabilityId,
           authority: { ...op.authority, approval: 'human_gate_approved' },
-          outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+          outcome: { status: 'failed', exercised: [], detail: refused(err, 'the granted spend could not be read') },
           evidence: null,
           verification: null,
           ...(decidedBy ? { decidedBy } : {}),
@@ -804,7 +816,7 @@ async function runOperationOnce(op, capability, io) {
         if (gateApproved && typeof byValue === 'string' && byValue.length > 0) decidedBy = byValue;
       }
     } catch (err) {
-      gateError = `human gate error: ${errorText(err)}`;
+      gateError = refused(err, 'human gate failed');
     }
     if (gateError || !gateApproved) {
       op.state = STATES.NEEDS_DECISION;
@@ -854,7 +866,7 @@ async function runOperationOnce(op, capability, io) {
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval: 'human_gate_approved' },
-        outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+        outcome: { status: 'failed', exercised: [], detail: refused(err, 'the granted spend could not be read') },
         evidence: null,
         verification: null,
         ...(decidedBy ? { decidedBy } : {}),
@@ -900,7 +912,7 @@ async function runOperationOnce(op, capability, io) {
         operation: op,
         capabilityId,
         authority: { ...op.authority, approval },
-        outcome: { status: 'not_verified', exercised: requirements.map((r) => ({ ...r })), detail: errorText(err) },
+        outcome: { status: 'not_verified', exercised: requirements.map((r) => ({ ...r })), detail: refused(err, 'the capability did not answer before the timeout') },
         evidence: null,
         verification: { verified: false, checks: {}, reason: 'capability outcome unknown after timeout' },
         ...(decidedBy ? { decidedBy } : {}),
@@ -912,7 +924,7 @@ async function runOperationOnce(op, capability, io) {
       operation: op,
       capabilityId,
       authority: { ...op.authority, approval },
-      outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+      outcome: { status: 'failed', exercised: [], detail: refused(err, 'the capability could not be read') },
       evidence: null,
       verification: null,
       ...(decidedBy ? { decidedBy } : {}),
@@ -1014,7 +1026,7 @@ async function runOperationOnce(op, capability, io) {
       ? await withTimeout(Promise.resolve().then(() => verifyFn.call(io, capabilityResult.evidence)), readTimeout(io, 'verifyTimeoutMs'), 'verifier')
       : { verified: false, checks: {}, reason: 'no verifier' };
   } catch (err) {
-    verification = { verified: false, checks: {}, reason: `verifier error: ${errorText(err)}` };
+    verification = { verified: false, checks: {}, reason: refused(err, 'verifier failed') };
   }
   // The answer has to be the verifier's own object. `io.verify` was handed this evidence, and if it
   // hands the very same object back then the executor answered itself: `verified: true` in the
@@ -1066,7 +1078,7 @@ async function runOperationOnce(op, capability, io) {
     normalizedVerification = {
       verified: false,
       checks: {},
-      reason: `verifier error: ${errorText(err)}`,
+      reason: refused(err, 'verifier failed'),
     };
     verified = false;
   }
