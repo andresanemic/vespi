@@ -11,7 +11,10 @@
 //   F3  The authorization shape is closed to what this bridge declares: an envelope that carries
 //       more than the declared invocation is refused rather than verified.
 //   F4  The ledger read is bounded and cancellable, and an abort is revalidated on the way back.
-//   F5  Cancellation reaches Horizon while the settlement reader is reading.
+//   F5  Cancellation reaches Horizon while the settlement reader is reading: the signal is handed
+//       to the call, an abort tears the read down instead of being noticed afterwards, no read is
+//       opened after it, and a Horizon that fails answers in the closed vocabulary instead of
+//       throwing across to the host.
 //   F6  A body is cancelled even when the refusal happens before the reader is acquired.
 //   F7  The public claims of the bridge and of the example say what is proven and what is not.
 //
@@ -21,6 +24,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const http = require('node:http');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 const { pathToFileURL } = require('node:url');
@@ -354,30 +358,71 @@ test('F4b an abort that arrives during the ledger read makes the preparation not
 // F5 — cancellation reaches Horizon while the settlement reader is reading
 // ------------------------------------------------------------------------------------------
 
-test('F5a a cancelled signal is carried into the settlement reader, which then never reaches Horizon', async () => {
-  const { createStellarPorts } = await fixture();
-  const raw = await envelope();
-  const bridge = ports(createStellarPorts, async () => ({ x402Version: 2, payload: { transaction: raw } }), {
-    horizonUrl: 'http://127.0.0.1:1',
-  });
-  const evidence = { txHash: 'a'.repeat(64), payer: payer.publicKey(), network: expected.network, authDigest: 'b'.repeat(64) };
-  const request = { expected, authDigest: 'b'.repeat(64), signal: undefined };
+const ISSUER_ADDRESS = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 
-  // What the bridge hands the reader: the abort travels with the evidence, and the reader is the
-  // code that has to honour it. A port that drops the signal here leaves a cancelled run waiting on
-  // the ledger, which is the whole reason the signal exists.
-  const settlement = await import(pathToFileURL(path.join(DEMO, 'settlement.js')).href);
-  let horizonReads = 0;
-  const fakeHorizon = {
-    transactions: () => ({ transaction: () => ({ call: async () => { horizonReads++; throw new Error('no ledger here'); } }) }),
-    operations: () => ({ forTransaction: () => ({ call: async () => ({ records: [], _links: {} }) }) }),
+// A Horizon double that counts every read and behaves the way the SDK's `fetch` behaves: given a
+// signal, an abort tears the in-flight read down; given none, the read runs to its answer. The
+// second half matters, because without a signal the double is a Horizon that ignores the run, and
+// that is exactly the reader this case has to be able to tell apart from a reader that merely
+// refuses afterwards.
+//
+// Every step is a deferred the test opens by hand. Nothing here waits for a timer, so the case
+// cannot pass or fail by whichever branch happens to win a race.
+function countingHorizon({ answer, onCall } = {}) {
+  const state = { calls: 0, callsAfterAbort: 0, abortsAt: null, cancelledReads: 0, signals: [] };
+  const horizon = {
+    transactions: () => ({
+      transaction: () => ({
+        call: (signal) => {
+          state.calls++;
+          state.signals.push(signal);
+          if (state.abortsAt !== null && state.calls > state.abortsAt) state.callsAfterAbort++;
+          if (onCall) onCall(state);
+          return new Promise((resolve, reject) => {
+            // The signal the run handed down is the only thing that can end this read early, which
+            // is what makes the assertion below a fact about propagation rather than about a double
+            // that was told to fail.
+            if (signal) {
+              const onAbort = () => {
+                state.cancelledReads++;
+                reject(Object.assign(new Error('This operation was aborted'), { name: 'AbortError' }));
+              };
+              if (signal.aborted) onAbort();
+              else signal.addEventListener('abort', onAbort, { once: true });
+            }
+            state.answer = () => resolve(answer);
+          });
+        },
+      }),
+    }),
+    operations: () => ({
+      forTransaction: () => ({
+        call: (signal) => {
+          state.calls++;
+          state.signals.push(signal);
+          if (state.abortsAt !== null && state.calls > state.abortsAt) state.callsAfterAbort++;
+          return Promise.resolve({ records: [], _links: {} });
+        },
+      }),
+    }),
   };
+  return { horizon, state };
+}
+
+test('F5a an abort during the settlement read stops it: the signal reaches Horizon and no read is opened after it', async () => {
+  await fixture();
+  const settlement = await import(pathToFileURL(path.join(DEMO, 'settlement.js')).href);
+  const txHash = 'a'.repeat(64);
+  const evidence = { txHash, payer: payer.publicKey(), network: expected.network, authDigest: 'b'.repeat(64) };
+  const { horizon, state } = countingHorizon({
+    answer: { hash: txHash, successful: true, ledger_attr: 1000, envelope_xdr: '' },
+  });
   const base = {
-    horizon: fakeHorizon,
+    horizon,
     payer: expected.payer,
     payTo,
     amount: expected.amount,
-    issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
+    issuer: ISSUER_ADDRESS,
     assetContract: expected.asset,
     network: expected.network,
     requireAuthDigest: true,
@@ -385,29 +430,125 @@ test('F5a a cancelled signal is carried into the settlement reader, which then n
   };
 
   const c = new AbortController();
+  const pending = settlement.verifySettlement(evidence, { ...base, signal: c.signal });
+
+  // Hand the first read its answer only once the run has given up on it. The read is in flight now,
+  // and it is in flight with whatever the reader chose to hand Horizon.
+  while (state.calls === 0) await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(state.calls, 1, 'the reader did not open its first read');
+  assert.equal(state.signals[0], c.signal, 'the run signal never reached the Horizon call, so an abort in flight could not stop the read');
+
+  state.abortsAt = state.calls;
   c.abort();
-  // With the signal handed to the reader, a cancelled read stops before it opens a Horizon call.
-  const cancelled = await settlement.verifySettlement(evidence, { ...base, signal: c.signal });
-  assert.equal(cancelled.verified, false);
-  assert.equal(horizonReads, 0, 'the reader reached Horizon with an already cancelled signal');
+  // Released either way, so a reader that ignored the signal fails here instead of hanging: with the
+  // signal the read is already torn down and this is a no-op, without it the read finally lands and
+  // the assertions below say that it was noticed only after the fact.
+  state.answer();
+  const verdict = await pending;
 
-  // Without it, the same reader does go out, which is what makes the propagation above a fact about
-  // the signal rather than about the reader refusing for another reason.
-  await settlement.verifySettlement(evidence, base).catch(() => null);
-  assert.equal(horizonReads, 1, 'without the signal the reader does reach Horizon, so the first assertion was about the propagation and not about a reader that never reads');
+  assert.equal(state.calls, 1, 'the reader kept reading Horizon after the abort');
+  assert.equal(state.callsAfterAbort, 0, `the reader opened ${state.callsAfterAbort} reads after the abort`);
+  assert.equal(state.cancelledReads, 1, 'the in-flight read was abandoned only after the fact instead of being torn down by the signal');
+  assert.equal(verdict.verified, false, 'a cancelled settlement read was read as a verified one');
+  assert.match(String(verdict.reason), /cancel/i, `the refusal names the cancellation and not a read: ${verdict.reason}`);
+});
 
-  // And the port hands the signal down. Reading the source is enough here: the reader above is real,
-  // and what this shows is that the port does not drop the signal on the way to it.
+test('F5b a Horizon read that fails is a closed verdict, not an exception crossing to the host', async () => {
+  await fixture();
+  const settlement = await import(pathToFileURL(path.join(DEMO, 'settlement.js')).href);
+  const evidence = { txHash: 'a'.repeat(64), payer: payer.publicKey(), network: expected.network, authDigest: 'b'.repeat(64) };
+  let consulted = 0;
+  const exploding = {
+    transactions: () => ({ transaction: () => ({ call: async () => { consulted++; throw new Error('no ledger here'); } }) }),
+    operations: () => ({ forTransaction: () => ({ call: async () => ({ records: [], _links: {} }) }) }),
+  };
+  const verdict = await settlement.verifySettlement(evidence, {
+    horizon: exploding,
+    payer: expected.payer,
+    payTo,
+    amount: expected.amount,
+    issuer: ISSUER_ADDRESS,
+    assetContract: expected.asset,
+    network: expected.network,
+    requireAuthDigest: true,
+    authDigest: 'b'.repeat(64),
+  });
+  assert.equal(consulted, 1, 'the reader refused before it consulted the ledger, so this case is not about a Horizon that failed');
+  assert.equal(verdict.verified, false, 'a Horizon that failed was read as a verified settlement');
+  assert.equal(typeof verdict.reason, 'string');
+  // The host must not learn what the ledger host said, so the closed reason does not carry the
+  // message that came out of it.
+  assert.doesNotMatch(String(verdict.reason), /no ledger here/, 'the ledger host text crossed into the closed vocabulary');
+});
+
+test('F5c the signal the port carries reaches fetch through the real SDK, and tears the read down', async (t) => {
+  const { createStellarPorts } = await fixture();
+  const raw = await envelope();
+  // A Horizon that accepts the connection and then never answers: the only way this read can end is
+  // the abort arriving. Loopback only, so the case needs no network and no fixture server.
+  let requestAborted = false;
+  let requests = 0;
+  const quiet = http.createServer((req, res) => {
+    requests++;
+    req.on('aborted', () => { requestAborted = true; });
+  });
+  await new Promise((resolve) => quiet.listen(0, '127.0.0.1', resolve));
+  // Registered before anything can fail: a read left running on an open socket would keep the runner
+  // alive past the assertion that reported it.
+  t.after(() => {
+    quiet.closeAllConnections();
+    return new Promise((resolve) => quiet.close(resolve));
+  });
+  const horizonUrl = `http://127.0.0.1:${quiet.address().port}`;
+  const bridge = ports(createStellarPorts, async () => ({ x402Version: 2, payload: { transaction: raw } }), { horizonUrl });
+  const evidence = { txHash: 'a'.repeat(64), payer: payer.publicKey(), network: expected.network, authDigest: 'b'.repeat(64) };
+
+  const c = new AbortController();
+  // The request is opened before the abort, so what this measures is the read already in flight.
+  const pending = bridge.verifySettlement(evidence, { expected, authDigest: 'b'.repeat(64), signal: c.signal });
+  while (requests === 0) await new Promise((resolve) => setImmediate(resolve));
+  c.abort();
+
+  // A watchdog, not a mechanism. The evidence below is the abort on the socket and the verdict; this
+  // only exists so that a signal that never arrives shows up as a failure instead of a hung run, and
+  // it is asserted first precisely because tearing the socket down here also marks the request
+  // aborted and would otherwise look like the fix working.
+  let overdue = false;
+  const watchdog = setTimeout(() => {
+    overdue = true;
+    quiet.closeAllConnections();
+  }, 5000);
+  const verdict = await pending.then((v) => v, (e) => ({ verified: false, reason: String(e?.message ?? e) }));
+  clearTimeout(watchdog);
+
+  assert.equal(overdue, false, 'the read never ended: the signal never reached fetch, so the read was left running on the socket');
+  assert.equal(requests, 1, 'the settlement read did not reach the ledger host');
+  assert.equal(requestAborted, true, 'the signal never reached fetch, so the read was left running on the socket');
+  assert.equal(verdict.verified, false, 'a cancelled settlement still claimed a verdict');
+  assert.match(String(verdict.reason), /cancel|abort/i, `the refusal is the abort and not a read: ${verdict.reason}`);
+  assert.equal(typeof bridge.validateOutput, 'function', 'the port is otherwise intact');
+});
+
+test('F5d the port hands the signal down to the reader rather than dropping it', async () => {
+  const { createStellarPorts } = await fixture();
+  const raw = await envelope();
+  const bridge = ports(createStellarPorts, async () => ({ x402Version: 2, payload: { transaction: raw } }), {
+    horizonUrl: 'http://127.0.0.1:1',
+  });
+  const evidence = { txHash: 'a'.repeat(64), payer: payer.publicKey(), network: expected.network, authDigest: 'b'.repeat(64) };
+
+  // An already cancelled run must not open a socket at all: this is the gate in front of the reader,
+  // and it is the reason a caller who gave up early spends nothing.
+  const c = new AbortController();
+  c.abort();
+  const verdict = await bridge.verifySettlement(evidence, { expected, authDigest: 'b'.repeat(64), signal: c.signal })
+    .then((v) => v, (e) => ({ verified: false, reason: String(e?.message ?? e) }));
+  assert.equal(verdict.verified, false, 'an aborted settlement port still claimed a verdict');
+  assert.match(String(verdict.reason), /abort/i, `the refusal is the abort and not a read: ${verdict.reason}`);
+
+  // And the port does not drop the signal on the way to the reader.
   const source = fs.readFileSync(path.join(DEMO, 'ports.js'), 'utf8');
   assert.match(source, /readSettlementFromLedger\(evidence, \{[\s\S]*?signal/, 'the port passes the signal to the settlement reader');
-  // The real port, asked the same question, refuses. Its Horizon is an address nothing listens on, so
-  // a port that went ahead would fail on the connection; refusing on the abort is the answer that
-  // does not need a socket, and it is what this asserts.
-  const portVerdict = await bridge.verifySettlement(evidence, { ...request, signal: c.signal })
-    .then((v) => v, (e) => ({ verified: false, reason: String(e?.message ?? e) }));
-  assert.equal(portVerdict.verified, false, 'an aborted settlement port still claimed a verdict');
-  assert.match(String(portVerdict.reason), /abort/i, `the refusal is the abort and not a read: ${portVerdict.reason}`);
-  assert.equal(typeof bridge.validateOutput, 'function', 'the port is otherwise intact');
 });
 
 // ------------------------------------------------------------------------------------------
