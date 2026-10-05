@@ -62,7 +62,7 @@ export const LOCAL_EXPECTATIONS = Object.freeze({
         { file: 'demo/x402/capability.js', line: 15, contains: "const PRICE_ATOMIC = '100000'" },
         { file: 'demo/x402/capability.js', line: 285, contains: 'amount: PRICE_ATOMIC, to: recipient' },
         { file: 'demo/x402/capability.js', line: 335, contains: 'sorobanData' },
-        { file: 'demo/x402/run.js', line: 13, contains: "const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'" },
+        { file: 'demo/x402/run.js', line: 30, contains: "const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'" },
         { file: 'demo/x402/amount.js', line: 1, contains: 'const SCALE = 10_000_000n' },
         { file: 'experiments/002-x402-slice1/RUN.md', line: 32, contains: 'invoke_host_function' },
       ],
@@ -99,7 +99,11 @@ const X402_ADAPTER_CITATIONS = Object.freeze({
   price: { repository: KERNEL_REPOSITORY, file: 'demo/x402/capability.js', line: 15, contains: "const PRICE_ATOMIC = '100000'" },
   effect: { repository: KERNEL_REPOSITORY, file: 'demo/x402/capability.js', line: 285, contains: 'amount: PRICE_ATOMIC, to: recipient' },
   soroban: { repository: KERNEL_REPOSITORY, file: 'demo/x402/capability.js', line: 335, contains: 'sorobanData' },
-  issuer: { repository: KERNEL_REPOSITORY, file: 'demo/x402/run.js', line: 13, contains: "const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'" },
+  // The runner declares the issuer it configures this token with. The line moved when the runner
+  // gained the `--bridge` flag and the one claims store it hands to the bridge; the fragment is what
+  // this citation means, so a citation whose line does not carry it is a broken citation, not a
+  // citation to a declaration that no longer exists.
+  issuer: { repository: KERNEL_REPOSITORY, file: 'demo/x402/run.js', line: 30, contains: "const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'" },
   settlement: { repository: KERNEL_REPOSITORY, file: 'experiments/002-x402-slice1/RUN.md', line: 32, contains: 'invoke_host_function' },
 });
 const USDC_ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
@@ -432,7 +436,7 @@ const X402_RECEIPT_RUN = {
         derivations: {
           operation: 'This receipt comes from the kernel\'s own x402 demo adapter. experiments/002-x402-slice1/RUN.md records that official x402/Stellar settles through Soroban, and demo/x402/capability.js rebuilds the payload of this adapter with sorobanData, so the operation type of this run is invoke_host_function.',
           memo: 'No local record declares a memo for this run: the declared effect (capability.js:285) carries asset, amount and recipient and no memo, and the receipt has no memo field. The expectation is null: no memo. If the readback shows a memo, verification fails on it.',
-          asset: `The code ${code} is the asset the receipt exercised. The issuer is the one demo/x402/run.js:13 configures for this token; credit_alphanum4 is Horizon's name for a four character code. The contract in the receipt is the Soroban token contract, not the classic issuer.`,
+          asset: `The code ${code} is the asset the receipt exercised. The issuer is the one demo/x402/run.js:30 configures for this token; credit_alphanum4 is Horizon's name for a four character code. The contract in the receipt is the Soroban token contract, not the classic issuer.`,
           amount: `The receipt declares ${exercised.maxAmount} atomic units as the exercised effect and the adapter declares the same price (capability.js:15). The kernel declares the scale of 10000000 (demo/x402/amount.js), so that is ${atomicToDisplay(exercised.maxAmount)} in the display form the readback reports.`,
           recipient: 'The receipt declares the payTo of the grant this run exercised.',
         },

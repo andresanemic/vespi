@@ -208,7 +208,7 @@
           {
             "repository": "vespi-kernel",
             "file": "demo/x402/run.js",
-            "line": 13,
+            "line": 30,
             "contains": "const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'"
           },
           {
@@ -229,7 +229,7 @@
         "derivations": {
           "operation": "This receipt comes from the kernel's own x402 demo adapter. experiments/002-x402-slice1/RUN.md records that official x402/Stellar settles through Soroban, and demo/x402/capability.js rebuilds the payload of this adapter with sorobanData, so the operation type of this run is invoke_host_function.",
           "memo": "No local record declares a memo for this run: the declared effect (capability.js:285) carries asset, amount and recipient and no memo, and the receipt has no memo field. The expectation is null: no memo. If the readback shows a memo, verification fails on it.",
-          "asset": "The code USDC is the asset the receipt exercised. The issuer is the one demo/x402/run.js:13 configures for this token; credit_alphanum4 is Horizon's name for a four character code. The contract in the receipt is the Soroban token contract, not the classic issuer.",
+          "asset": "The code USDC is the asset the receipt exercised. The issuer is the one demo/x402/run.js:30 configures for this token; credit_alphanum4 is Horizon's name for a four character code. The contract in the receipt is the Soroban token contract, not the classic issuer.",
           "amount": "The receipt declares 100000 atomic units as the exercised effect and the adapter declares the same price (capability.js:15). The kernel declares the scale of 10000000 (demo/x402/amount.js), so that is 0.0100000 in the display form the readback reports.",
           "recipient": "The receipt declares the payTo of the grant this run exercised."
         }
@@ -456,7 +456,7 @@
           {
             "repository": "vespi-kernel",
             "file": "demo/x402/run.js",
-            "line": 13,
+            "line": 30,
             "contains": "const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'"
           },
           {
@@ -477,7 +477,7 @@
         "derivations": {
           "operation": "This receipt comes from the kernel's own x402 demo adapter. experiments/002-x402-slice1/RUN.md records that official x402/Stellar settles through Soroban, and demo/x402/capability.js rebuilds the payload of this adapter with sorobanData, so the operation type of this run is invoke_host_function.",
           "memo": "No local record declares a memo for this run: the declared effect (capability.js:285) carries asset, amount and recipient and no memo, and the receipt has no memo field. The expectation is null: no memo. If the readback shows a memo, verification fails on it.",
-          "asset": "The code USDC is the asset the receipt exercised. The issuer is the one demo/x402/run.js:13 configures for this token; credit_alphanum4 is Horizon's name for a four character code. The contract in the receipt is the Soroban token contract, not the classic issuer.",
+          "asset": "The code USDC is the asset the receipt exercised. The issuer is the one demo/x402/run.js:30 configures for this token; credit_alphanum4 is Horizon's name for a four character code. The contract in the receipt is the Soroban token contract, not the classic issuer.",
           "amount": "The receipt declares 100000 atomic units as the exercised effect and the adapter declares the same price (capability.js:15). The kernel declares the scale of 10000000 (demo/x402/amount.js), so that is 0.0100000 in the display form the readback reports.",
           "recipient": "The receipt declares the payTo of the grant this run exercised."
         }
@@ -689,7 +689,7 @@
           },
           {
             "file": "demo/x402/run.js",
-            "line": 13,
+            "line": 30,
             "contains": "const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'"
           },
           {
@@ -706,7 +706,7 @@
         "derivations": {
           "operation": "Soroban token transfer. experiments/002-x402-slice1/RUN.md records that official x402/Stellar settles through Soroban (`invoke_host_function`) and that the transfer shows up in `asset_balance_changes`; demo/x402/capability.js:335 rebuilds the payload of this same adapter with sorobanData, so the same settlement shape applies to this run.",
           "memo": "No local record declares a memo for this run. The declared effect (capability.js:285) carries asset, amount and recipient and no memo, and the receipt has no memo field, so the expectation is null: no memo. If the readback shows a memo, verification fails on it rather than being adjusted.",
-          "asset": "code USDC and its issuer come from the adapter (capability.js:14 asset contract, run.js:13 issuer) and the receipt asset string. `type: credit_alphanum4` is Horizon's name for an asset code of four characters, applied to the locally declared code USDC; it is a naming rule, not a value read from the network. The asset contract CBIELTK... is the Soroban contract the receipt records, not the classic issuer.",
+          "asset": "code USDC and its issuer come from the adapter (capability.js:14 asset contract, run.js:30 issuer) and the receipt asset string. `type: credit_alphanum4` is Horizon's name for an asset code of four characters, applied to the locally declared code USDC; it is a naming rule, not a value read from the network. The asset contract CBIELTK... is the Soroban contract the receipt records, not the classic issuer.",
           "amount": "The receipt records 100000 atomic units of USDC as the exercised effect (line 19) and the adapter declares the same PRICE_ATOMIC (capability.js:15). demo/x402/amount.js:1 states the scale of 10000000, so 100000 atomic is 0.0100000.",
           "recipient": "The receipt records the exercised recipient (line 20); it is the payTo the adapter was configured with and the only recipient the kernel was authorized to pay."
         }
