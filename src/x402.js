@@ -551,6 +551,17 @@ function readOperationIdentity(operation) {
   return id;
 }
 
+// A claims store has to answer synchronously. A store that answers with a promise is not a claim,
+// and its rejection is consumed here so it cannot reach the host process as an unhandled rejection.
+// Consuming it is not believing it: the answer below still has to be the word the store uses.
+function consumeThenable(value) {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return;
+  try {
+    if (typeof value.then === 'function') Promise.resolve(value).catch(() => {});
+  } catch {
+  }
+}
+
 // Claims live wherever the host put them; this factory is one explicit choice of store, kept for tests
 // and demos, and it lives in the memory of one process. The reservation is synchronous and indivisible:
 // there is no await between deciding and inserting, so two concurrent runs cannot both win. There is
@@ -1093,6 +1104,7 @@ async function performStages(ctx, spec) {
   let reserved;
   try {
     reserved = ctx.claims.reserveEffect(effectKey(ctx, spec));
+    consumeThenable(reserved);
   } catch {
     return failed(CODES.CLAIMS_CAPACITY);
   }
@@ -1146,6 +1158,7 @@ async function performStages(ctx, spec) {
     // The transaction is claimed as soon as there is a hash to claim, before anything is exposed: a
     // settlement the run then refuses is still a transaction this process has already seen.
     const claim = ctx.claims.claimTransaction(ctx.expected.network, settlement.txHash);
+    consumeThenable(claim);
     ctx.transactionUnique = claim === 'claimed';
     if (!ctx.transactionUnique) ctx.claimCode = claim === 'duplicate' ? CODES.DUPLICATE_TRANSACTION : CODES.CLAIMS_CAPACITY;
 
