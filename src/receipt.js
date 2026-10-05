@@ -112,8 +112,12 @@ function verifyAnchorBinding(receipt, expected) {
     }
     if (anchor.digest !== expected) return { ok: false, reason: 'anchor is bound to another receipt' };
     return { ok: true };
-  } catch (err) {
-    return { ok: false, reason: `anchor verify error: ${err && err.message ? err.message : String(err)}` };
+  } catch {
+    // A fixed phrase, not the thrown message. This reason is shown to whoever is verifying, and the
+    // thing that threw on the way can be the receipt itself: `err.message` is a getter a hostile body
+    // controls, and `String(err)` runs a `toString` it controls. Same rule as x402.js and
+    // emergency.js: nothing a body wrote comes back out in words (R1 finding H6).
+    return { ok: false, reason: 'the anchor could not be read' };
   }
 }
 
@@ -136,8 +140,11 @@ function verifyReceipt(receipt) {
     const bound = verifyAnchorBinding(receipt, expected);
     if (bound.ok !== true) return bound;
     return { ok: true, reason: 'digest matches' };
-  } catch (err) {
-    return { ok: false, reason: `verify error: ${err && err.message ? err.message : String(err)}` };
+  } catch {
+    // Same closed list as every other reason this function returns. A body that cannot be
+    // canonicalized at all (a BigInt, a cycle, a hostile getter) is refused in words of our own
+    // rather than in the words of the serializer that refused it.
+    return { ok: false, reason: 'receipt is not serializable' };
   }
 }
 
