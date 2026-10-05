@@ -10,7 +10,7 @@
 // chain with itself and would call the result verification. `expectationProvenance`
 // enforces the separation and the collector refuses to write a file that breaks it.
 
-import { readFile, writeFile, readdir, realpath } from 'node:fs/promises';
+import { readFile, writeFile, readdir, realpath, stat } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -21,6 +21,16 @@ const READ_TIMEOUT_MS = 10_000;
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 750;
 const LOCAL_RECORD_CLASSIFICATION = 'local_run_record';
+// A record root is a boundary of what will be read, and size was not part of it: the walk stopped
+// a link and checked the real path, then loaded whatever `.json` it found with `readFile`. A 5 MB
+// record was read whole before a byte of it was judged (R1 finding H2c, the half of H2 the fix did
+// not touch). The bound is asked of the file's own size, before the bytes exist in memory, so a
+// record cannot cost more to refuse than to read. One mebibyte sits far above what these roots hold
+// today: the largest `.json` under `demo/` or `experiments/` is a 63 KB package lock, and the largest
+// file any format recognises as a record is 2 KB.
+const MAX_RUN_RECORD_MIB = 1;
+const MAX_RUN_RECORD_BYTES = MAX_RUN_RECORD_MIB * 1024 * 1024;
+const OVERSIZED_REASON = `the record is larger than the ${MAX_RUN_RECORD_MIB} MiB bound and was not read`;
 
 const KERNEL_REPOSITORY = 'vespi-kernel';
 
@@ -483,14 +493,29 @@ function withinRoot(candidate, root) {
   return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
+// A file is measured before it is opened. The size comes from a `stat` of the accepted real path,
+// so the question is asked of the file the rules above already admitted and not of a name.
+async function recordSize(full) {
+  try {
+    const info = await stat(full);
+    return info.isFile() ? info.size : null;
+  } catch {
+    return null;
+  }
+}
+
 // Reads every run record under the given roots. Each root names the repository its
 // records come from, so every citation says which repository it is a citation into, and
 // optionally the directory inside that repository the records live in. A record file
 // whose shape no format recognises is listed with no format: a file is never mined for
 // facts because it happens to mention a hash.
+// A record over the size bound is not read at all and is not left out in silence: it is
+// reported as refused, with the size that refused it, because a record that was skipped is a
+// fact about the collection and the summary is where the collection says what it did.
 export async function loadRunRecords(roots = []) {
   const declarations = new Map();
   const files = [];
+  const refused = [];
   for (const root of roots ?? []) {
     if (typeof root?.repository !== 'string' || root.repository.trim() === '') throw new TypeError('every run record root must name the repository its records come from');
     if (typeof root?.directory !== 'string' || root.directory === '') throw new TypeError('every run record root must name a directory');
@@ -498,6 +523,11 @@ export async function loadRunRecords(roots = []) {
     for (const full of await jsonFiles(root.directory)) {
       const relative = path.relative(root.directory, full).split(path.sep).join('/');
       const file = `${prefix}${relative}`;
+      const bytes = await recordSize(full);
+      if (bytes !== null && bytes > MAX_RUN_RECORD_BYTES) {
+        refused.push({ repository: root.repository, file, bytes, reason: OVERSIZED_REASON });
+        continue;
+      }
       const text = await readFile(full, 'utf8');
       const record = JSON.parse(text);
       const format = RUN_RECORD_FORMATS.find((candidate) => { try { return candidate.detect(record); } catch { return false; } });
@@ -510,7 +540,7 @@ export async function loadRunRecords(roots = []) {
       }
     }
   }
-  return { declarations, files };
+  return { declarations, files, refused };
 }
 
 function citationShape(citation) {
@@ -636,7 +666,7 @@ export async function collectEvidence({
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1) throw new RangeError('maxAttempts must be a positive integer');
   if (!Number.isInteger(readTimeoutMs) || readTimeoutMs < 1) throw new RangeError('readTimeoutMs must be a positive integer');
 
-  const { declarations: runDeclarations, files: recordFiles } = await loadRunRecords(runRecordRoots);
+  const { declarations: runDeclarations, files: recordFiles, refused: refusedRecords } = await loadRunRecords(runRecordRoots);
   const rootsSearched = (runRecordRoots ?? []).map((root) => root?.repository).filter((name) => typeof name === 'string' && name !== '');
 
   const transactions = [];
@@ -720,6 +750,7 @@ export async function collectEvidence({
           ...(root.prefix ? { prefix: root.prefix } : {}),
           files: recordFiles.filter((file) => file.repository === root.repository),
           formats: [...new Set(recordFiles.filter((file) => file.repository === root.repository).map((file) => file.format))],
+          refused: refusedRecords.filter((file) => file.repository === root.repository),
         })),
       } : {}),
     },
