@@ -1,37 +1,29 @@
-// PENDING REFERENCE. Nothing imports this file and nothing runs it.
+﻿// The x402 paid-effect bridge: the kernel CONTRACT (src/x402.js) on one side, Stellar, the x402
+// HTTP client and Horizon on the other. The kernel owns the fixed declaration, the order, the
+// deduplication and the receipt verdict; this file owns the network, the signer and the ledger.
 //
-// The kernel ships the CONTRACT of the paid effect (src/x402.js) with the network, the signer and the
-// settlement reader injected as ports. This file was written to implement those ports on top of the
-// same SDK calls the historical adapter (capability.js) makes. The demo runner does not use it: run.js
-// drives the historical adapter capability, as it did before this branch.
+// EXECUTED BY demo/x402/bridge.test.mjs, which runs every port below against real Stellar SDK 16
+// objects (Keypair, Address, TransactionBuilder, Operation, xdr), a real Ed25519 authorization
+// signature from `basicNodeSigner`, real base64 XDR envelopes, the real `@x402/fetch` client and
+// the real `Horizon.Server` parsing real Horizon JSON, all served from loopback. What those tests
+// do NOT cover, and what no test in this tree covers: a live payment, a second provider, and a
+// durable claims store. The Soroban RPC of `ExactStellarScheme` cannot be emulated without a
+// ledger, so `createPaymentPayload` is the one injection point: by default it is the real scheme,
+// and a caller (or a test) may pass its own.
 //
-// NEVER EXECUTED WITH THE REAL SDK. The demo package carries its own dependencies (Stellar SDK, four
-// x402 packages, Express), so the payment path has never been executed: not the demo suite, not the
-// runner, not a payment, not a ledger readback, not an install. The port SHAPE is checked by reading
-// this file (test/x402.test.js, case K4-I1).
-//
-// One defect of this file was repaired on 2026-10-05, and it is named here because it is how a file
-// nobody runs stays wrong for free: the inner `verifySettlement` shadowed the imported reader of the
-// same name, so the port re-entered itself and the ledger was never read. The reader is now imported
-// as `verifySettlementFromLedger` and the port reaches it. What is proven about that is narrow, and
-// it is what test/sec-kernel.test.js case H4 asserts: with the demo's own node_modules present, the
-// port returns the settlement reader's own verdict instead of calling itself. Nothing else below has
-// ever been executed.
-//
-// DO NOT USE THIS FILE. Everything the kernel contract claims is covered by the kernel suite through
-// simulated ports (test/x402.test.js, test/k4-x402-advisor.test.js); this file proves none of it.
-import { Keypair, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
+// KNOWN LIMITS, unchanged from the contract: ports are trusted host code; the claims store has to be
+// synchronous; the default store lives in one process, so a restart allows a second attempt; and a
+// run refused before the wire keeps its effect key.
+import { Address, Horizon, Keypair, StrKey, Transaction, TransactionBuilder, buildAuthorizationEntryPreimage } from '@stellar/stellar-sdk';
 import { x402Client, x402HTTPClient } from '@x402/fetch';
 import { createEd25519Signer, getNetworkPassphrase } from '@x402/stellar';
 import { ExactStellarScheme } from '@x402/stellar/exact/client';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { requirePublicKey } from './config.js';
-// The reader is imported under an alias. The local const below carries the same name on purpose, so
-// the port object keeps the name the contract asks for; without the alias that const shadowed this
-// import and the call resolved to itself, so the port re-entered instead of reading the ledger and
-// the reader was never reached (R1 finding H4).
-import { authDigestFromEnvelope, verifyPreparedTransaction, verifySettlement as verifySettlementFromLedger } from './settlement.js';
+// Aliased on purpose: the port below is also called `verifySettlement`, and an unaliased import
+// would be shadowed by it, which is exactly the defect that used to make the bridge call itself.
+import { authDigestFromEnvelope, verifyPreparedTransaction, verifySettlement as readSettlementFromLedger } from './settlement.js';
 
 const require = createRequire(import.meta.url);
 const { createX402Payment } = require('../../src/x402.js');
@@ -42,7 +34,18 @@ const USDC_CONTRACT = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA'
 const PRICE_ATOMIC = '100000';
 const MAX_SIGNATURE_SECONDS = 300;
 const REQUEST_TIMEOUT_MS = 15_000;
+// The body of a paid answer has its own budget: a service that keeps the connection open without
+// sending a byte must not hold the port (and the engine's signal) for as long as it likes.
+const BODY_READ_TIMEOUT_MS = 15_000;
 const MAX_BODY_BYTES = 1024 * 1024;
+// The policy that turns a wall-clock ceiling into a ledger window. Both are named and validated here,
+// never inferred from a value that arrived from the network: Soroban targets a five second ledger,
+// and two ledgers of tolerance cover the next close.
+const LEDGER_SECONDS = 5;
+const LEDGER_TOLERANCE = 2;
+// At most this many prepared authorizations are kept, and each one is dropped by the send that
+// carries it: a port that never sends does not become a store of pending payments.
+const MAX_PENDING_AUTHORIZATIONS = 4;
 const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 
 export { NETWORK, PRICE_ATOMIC, USDC_CONTRACT, ISSUER };
@@ -57,22 +60,249 @@ function errorText(error) {
 }
 
 function isMarketingPlan(plan) {
-  return plan !== null && typeof plan === 'object' && !Array.isArray(plan)
-    && typeof plan.title === 'string' && plan.title.length > 0
-    && typeof plan.summary === 'string' && plan.summary.length > 0
-    && Array.isArray(plan.deliverables) && plan.deliverables.every((item) => typeof item === 'string')
-    && Array.isArray(plan.nextSteps) && plan.nextSteps.every((item) => typeof item === 'string');
+  return hasDataField(plan, 'title') && hasDataField(plan, 'summary')
+    && hasDataField(plan, 'deliverables') && hasDataField(plan, 'nextSteps');
 }
 
-// The body is read with a bound before it is parsed, and nothing from it is logged.
+// A shape is read through descriptors, so a getter on a body a service produced is never invoked:
+// whatever a getter would have returned is irrelevant to a delivery this port refuses anyway.
+function hasDataField(source, key) {
+  if (source === null || typeof source !== 'object' || Array.isArray(source)) return false;
+  let descriptor;
+  try {
+    descriptor = Object.getOwnPropertyDescriptor(source, key);
+  } catch {
+    return false;
+  }
+  if (!descriptor || !('value' in descriptor)) return false;
+  const value = descriptor.value;
+  if (typeof value === 'string') return value.length > 0;
+  if (!Array.isArray(value)) return false;
+  return value.every((item) => typeof item === 'string');
+}
+
+// The same discipline for the answer of the payload builder, which is host code: only the two
+// protocol fields are read, only as plain data properties, and each one is read once.
+function readDataField(source, key) {
+  let descriptor;
+  try {
+    descriptor = Object.getOwnPropertyDescriptor(source, key);
+  } catch {
+    throw new Error(`the payment payload field ${key} cannot be read`);
+  }
+  if (!descriptor) return undefined;
+  if (!('value' in descriptor)) throw new Error(`the payment payload field ${key} is not a plain value`);
+  return descriptor.value;
+}
+
+// What goes on the wire is this copy and nothing else. The builder's object is read once, closed into
+// two protocol fields, and dropped: a field it carried that the protocol does not admit (a debug
+// value, a secret, a method that would serialize itself) cannot reach the header, and no later
+// mutation of the builder's object can change what is sent.
+function closedPaymentPayload(raw) {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('the payment payload is not an object');
+  }
+  let proto;
+  try {
+    proto = Object.getPrototypeOf(raw);
+  } catch {
+    throw new Error('the payment payload cannot be inspected');
+  }
+  if (proto !== Object.prototype && proto !== null) {
+    throw new Error('the payment payload is not a plain object');
+  }
+  const version = readDataField(raw, 'x402Version');
+  if (version !== undefined && version !== 2 && version !== '2') {
+    throw new Error('the payment payload is not x402 version 2');
+  }
+  const inner = readDataField(raw, 'payload');
+  if (inner === null || typeof inner !== 'object' || Array.isArray(inner)) {
+    throw new Error('the payment payload carries no payload object');
+  }
+  const transaction = readDataField(inner, 'transaction');
+  if (typeof transaction !== 'string' || transaction.length === 0) {
+    throw new Error('the payment payload carries no transaction');
+  }
+  return { x402Version: version === undefined ? 2 : version, payload: { transaction } };
+}
+
+// The declared ceiling, read from the declaration and, when the terms that produced this
+// authorization named one, from those terms as well: the smaller of the two is the window.
+function readWindowSeconds(expected, preparedWindowSeconds) {
+  const candidates = [MAX_SIGNATURE_SECONDS, expected?.maxTimeoutSeconds, preparedWindowSeconds];
+  const valid = candidates.filter((value) => Number.isInteger(value) && value > 0);
+  return Math.min(...valid);
+}
+
+// One real Ed25519 check over the entry that is about to be authorized: the SDK's own authorization
+// preimage for this network, hashed the way the SDK hashes it, verified with the public key the
+// signature carries. A signature that is merely present is not a signature that was verified, and a
+// signature made for another network fails here because the network is part of the preimage.
+function verifyAuthorizationSignature(transaction, expected, passphrase) {
+  const entries = transaction?.operations?.[0]?.auth;
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return { verified: false, reason: 'payer authorization entry is missing' };
+  }
+  let sawPayer = false;
+  for (const entry of entries) {
+    let node;
+    let address;
+    let expiration;
+    let signature;
+    try {
+      const credentials = entry.credentials();
+      if (credentials.switch().name !== 'sorobanCredentialsAddress') continue;
+      node = credentials.address();
+    } catch {
+      return { verified: false, reason: 'payer authorization entry is invalid' };
+    }
+    try {
+      address = node.address();
+      expiration = node.signatureExpirationLedger();
+      signature = node.signature();
+    } catch {
+      return { verified: false, reason: 'payer authorization entry is invalid' };
+    }
+    try {
+      address = Address.fromScAddress(address).toString();
+    } catch {
+      return { verified: false, reason: 'payer authorization entry is invalid' };
+    }
+    if (address !== expected.payer) continue;
+    sawPayer = true;
+    let vector = null;
+    try {
+      vector = signature.switch().name === 'scvVec' && typeof signature.vec === 'function' ? signature.vec() : null;
+    } catch {
+      vector = null;
+    }
+    if (!Array.isArray(vector) || vector.length === 0) {
+      return { verified: false, reason: 'authorization signature is missing or unsupported' };
+    }
+    const first = vector[0];
+    let publicKey = null;
+    let raw = null;
+    try {
+      if (first.switch().name !== 'scvMap') throw new Error('not a map');
+      for (const item of first.map()) {
+        const name = item.key().sym().toString();
+        if (name === 'public_key') publicKey = item.val().bytes();
+        if (name === 'signature') raw = item.val().bytes();
+      }
+    } catch {
+      return { verified: false, reason: 'authorization signature is not an Ed25519 account signature' };
+    }
+    let signer = null;
+    try {
+      if (publicKey && publicKey.length === 32) signer = StrKey.encodeEd25519PublicKey(publicKey);
+    } catch {
+      signer = null;
+    }
+    if (!signer || signer !== expected.payer || !raw || raw.length !== 64) {
+      return { verified: false, reason: 'authorization signature does not carry the payer public key' };
+    }
+    let ok = false;
+    try {
+      const preimage = buildAuthorizationEntryPreimage(entry, expiration, passphrase);
+      const payload = createHash('sha256').update(preimage.toXDR()).digest();
+      ok = Keypair.fromPublicKey(signer).verify(payload, raw);
+    } catch {
+      ok = false;
+    }
+    if (!ok) return { verified: false, reason: 'authorization signature does not verify over this network' };
+    return { verified: true, expiration };
+  }
+  return sawPayer
+    ? { verified: false, reason: 'payer authorization entry is missing' }
+    : { verified: false, reason: 'payer authorization entry is missing' };
+}
+
+// The validity window is checked against the ledger that exists now, not against infinity: an
+// authorization that outlives the ceiling this effect declared would still be disclosed to the
+// service, so it is refused before the send rather than by the ledger afterwards.
+function expirationWithinWindow(expiration, currentLedger, windowSeconds) {
+  if (!Number.isSafeInteger(expiration) || expiration <= 0) return false;
+  if (!Number.isSafeInteger(currentLedger) || currentLedger < 0) return false;
+  if (expiration <= currentLedger) return false;
+  return expiration <= currentLedger + Math.ceil(windowSeconds / LEDGER_SECONDS) + LEDGER_TOLERANCE;
+}
+
+// The ledger of the configured network, read through the same bounded fetch as everything else. It
+// is the injection point `readCurrentLedger` replaces, so a host (or a test) can supply its own.
+function rpcLedgerReader(url) {
+  return async () => {
+    const response = await fetchBounded(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestLedger' }),
+    }, null);
+    if (!response || response.ok === false) throw new Error('the ledger could not be read');
+    let answer = null;
+    try {
+      answer = await response.json();
+    } catch {
+      throw new Error('the ledger reader returned no answer');
+    }
+    const sequence = answer?.result?.sequence;
+    if (!Number.isSafeInteger(sequence) || sequence < 0) throw new Error('the ledger reader returned no sequence');
+    return sequence;
+  };
+}
+
+// The body is read as a stream with a real bound on bytes, on time and on cancellation, and nothing
+// from it is logged. `response.text()` was the wrong door: it materialises whatever the service
+// chose to send before anything counts it, and it ignores the signal the engine handed down.
 async function readBodyWithLimit(response, signal) {
+  throwIfAborted(signal, 'read body');
   const declared = Number(response.headers?.get?.('content-length') || 0);
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) throw new Error('paid response body is too large');
-  const text = await response.text();
-  if (typeof text !== 'string' || Buffer.byteLength(text, 'utf8') > MAX_BODY_BYTES) {
-    throw new Error('paid response body is too large');
+  const body = response.body;
+  if (!body || typeof body.getReader !== 'function') {
+    // No stream to read: what is left is a body this reader cannot bound, so it is not read.
+    throw new Error('paid response body is not a readable stream');
   }
-  return JSON.parse(text);
+  const reader = body.getReader();
+  let timer = null;
+  let deadline = false;
+  const onAbort = () => {
+    // Cancelling the reader is what stops the service from still writing into us.
+    Promise.resolve(reader.cancel()).catch(() => {});
+  };
+  const onSignalAbort = onAbort;
+  try {
+    if (signal) signal.addEventListener('abort', onSignalAbort, { once: true });
+    timer = setTimeout(() => { deadline = true; onAbort(); }, BODY_READ_TIMEOUT_MS);
+  } catch {
+    onAbort();
+  }
+  const chunks = [];
+  let total = 0;
+  try {
+    for (;;) {
+      throwIfAborted(signal, 'read body');
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
+      total += chunk.byteLength;
+      if (total > MAX_BODY_BYTES) throw new Error('paid response body is too large');
+      chunks.push(Buffer.from(chunk));
+    }
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+    try {
+      if (signal) signal.removeEventListener('abort', onSignalAbort);
+    } catch {
+    }
+    try {
+      // A body nobody finished reading is released here rather than left open.
+      await reader.cancel();
+    } catch {
+    }
+  }
+  throwIfAborted(signal, 'read body');
+  if (deadline) throw new Error(`paid response body did not finish within ${BODY_READ_TIMEOUT_MS}ms`);
+  return JSON.parse(Buffer.concat(chunks, total).toString('utf8'));
 }
 
 function abortError(label) {
@@ -130,17 +360,36 @@ async function fetchBounded(url, options, externalSignal) {
 // `http`, the signer under `signer`, the three host-owned ports at the root and the optional claims
 // store beside them. Each one is a closure over the same signer, client and prepared authorization,
 // so grouping them changes nothing about what they do.
-export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER, network = NETWORK, rpcUrl = RPC_URL, horizonUrl, claims } = {}) {
+export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER, network = NETWORK, rpcUrl = RPC_URL, horizonUrl, claims, readCurrentLedger, createPaymentPayload } = {}) {
   const recipient = requirePublicKey(payTo);
   if (!secret) throw new Error('CLIENT_SECRET is required for the payment path');
-  const signer = createEd25519Signer(secret, network);
-  const client = new x402Client().register('stellar:*', new ExactStellarScheme(signer, { url: rpcUrl }));
-  const httpClient = new x402HTTPClient(client);
+  // The claims store is the host's, and the host has to say so. A store fabricated here would be one
+  // store per construction: two bridges in one process, or one bridge rebuilt after a restart, would
+  // each deduplicate on their own and the same operation could be paid twice. Refused before any I/O.
+  if (!claims || typeof claims.reserveEffect !== 'function' || typeof claims.claimTransaction !== 'function') {
+    throw new Error('the reference bridge requires an explicit claims store: pass claims (createMemoryPaymentClaims() lives in the memory of one process, so a recoverable application needs a durable atomic store of its own)');
+  }
+  // Building this object performs no I/O. `new x402Client()` reaches the network to read the
+  // facilitator kinds, so the client is built on first use and only when the payload builder is the
+  // real scheme: a bridge assembled with its own payload builder never opens a socket.
+  let client = null;
+  let httpClient = null;
+  const http = () => {
+    if (httpClient === null) {
+      client = new x402Client().register('stellar:*', new ExactStellarScheme(createEd25519Signer(secret, network), { url: rpcUrl }));
+      httpClient = new x402HTTPClient(client);
+    }
+    return httpClient;
+  };
   const payer = Keypair.fromSecret(secret).publicKey();
   const passphrase = getNetworkPassphrase(network);
-  // The payload built for the authorization that was just prepared. Kept so the paid request can
-  // encode exactly the transaction the kernel inspected, never a freshly built one.
-  let prepared = null;
+  // One record per prepared authorization, keyed by the authorization itself, holding the closed
+  // payload copy that goes on the wire. A second preparation cannot overwrite the first one, and the
+  // send that carries an authorization consumes its record, so what was inspected is what is sent.
+  const prepared = new Map();
+  // The ledger of this network, read before every inspection. Nothing is inspected as verified
+  // against a window nobody measured.
+  const ledgerReader = readCurrentLedger || rpcLedgerReader(rpcUrl);
 
   const discover = async ({ url, method, redirect, signal }) => {
     if (redirect !== 'error' || method !== 'GET') throw new Error('discovery is a GET without redirects');
@@ -148,7 +397,7 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     if (response.status !== 402) return { status: response.status };
     let paymentRequired;
     try {
-      paymentRequired = httpClient.getPaymentRequiredResponse((name) => response.headers.get(name));
+      paymentRequired = http().getPaymentRequiredResponse((name) => response.headers.get(name));
     } catch {
       return { status: response.status };
     }
@@ -157,18 +406,16 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
 
   const prepare = async ({ terms, expected, signal }) => {
     throwIfAborted(signal, 'prepare');
-    let payload = await client.createPaymentPayload({
-      x402Version: 2,
-      resource: { url: serviceUrl },
-      accepts: [terms],
-    });
-    const transaction = new Transaction(payload.payload.transaction, passphrase);
+    const request = { x402Version: 2, resource: { url: serviceUrl }, accepts: [terms] };
+    const raw = await (createPaymentPayload || ((req) => client.createPaymentPayload(req)))(request);
+    throwIfAborted(signal, 'prepare');
+    let closed = closedPaymentPayload(raw);
+    const transaction = new Transaction(closed.payload.transaction, passphrase);
     const sorobanData = transaction.toEnvelope().v1()?.tx()?.ext()?.sorobanData();
     if (sorobanData) {
-      payload = {
-        ...payload,
+      closed = {
+        x402Version: closed.x402Version,
         payload: {
-          ...payload.payload,
           transaction: TransactionBuilder
             .cloneFrom(transaction, { fee: '1', sorobanData, networkPassphrase: passphrase })
             .build()
@@ -177,8 +424,11 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
       };
     }
     throwIfAborted(signal, 'prepare');
-    prepared = { payload, authorization: payload.payload.transaction, expected };
-    return { authorization: payload.payload.transaction };
+    if (prepared.size >= MAX_PENDING_AUTHORIZATIONS) {
+      throw new Error(`prepared authorizations are not being sent: this port keeps ${MAX_PENDING_AUTHORIZATIONS} at most`);
+    }
+    prepared.set(closed.payload.transaction, { payload: closed, windowSeconds: terms?.maxTimeoutSeconds });
+    return { authorization: closed.payload.transaction };
   };
 
   const inspectPrepared = async (authorization, { expected, signal }) => {
@@ -197,6 +447,34 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     if (!verdict.verified) {
       return { verified: false, authDigest: authDigest || undefined, checks: verdict.checks || {}, reason: verdict.reason };
     }
+    // The structure matched. Now the two things a structure cannot tell: that the payer's signature
+    // really is an Ed25519 signature over this network's authorization preimage, and that the
+    // authorization is inside a window that still exists against the ledger of right now.
+    const signature = verifyAuthorizationSignature(transaction, expected, passphrase);
+    if (!signature.verified) {
+      return { verified: false, authDigest: authDigest || undefined, checks: verdict.checks || {}, reason: signature.reason };
+    }
+    let currentLedger;
+    try {
+      currentLedger = await ledgerReader();
+    } catch {
+      return {
+        verified: false,
+        authDigest: authDigest || undefined,
+        checks: verdict.checks || {},
+        reason: 'the current ledger could not be read, so the authorization window was not checked',
+      };
+    }
+    const record = prepared.get(authorization);
+    const windowSeconds = readWindowSeconds(expected, record?.windowSeconds);
+    if (!expirationWithinWindow(signature.expiration, currentLedger, windowSeconds)) {
+      return {
+        verified: false,
+        authDigest: authDigest || undefined,
+        checks: verdict.checks || {},
+        reason: `payer authorization expiration ${signature.expiration} is outside the ${windowSeconds}s window that ledger ${currentLedger} leaves open`,
+      };
+    }
     return {
       verified: true,
       authDigest,
@@ -207,18 +485,22 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
         payTo: expected.payTo,
         amount: expected.amount,
       },
-      checks: verdict.checks || { prepared: true },
+      checks: { ...(verdict.checks || { prepared: true }), signature: true, window: true },
       reason: verdict.reason || 'prepared transaction matches declared effect',
     };
   };
 
   const sendPaid = async ({ url, authorization, idempotencyKey, signal }) => {
     throwIfAborted(signal, 'send');
-    if (!prepared || prepared.authorization !== authorization) {
+    // The record is taken, not read, and only for the authorization this request carries: what the
+    // kernel inspected is what leaves, and an authorization that already left cannot leave again.
+    const record = typeof authorization === 'string' ? prepared.get(authorization) : undefined;
+    if (!record) {
       throw new Error('the paid request does not carry the authorization that was inspected');
     }
+    prepared.delete(authorization);
     const headers = {
-      ...httpClient.encodePaymentSignatureHeader(prepared.payload),
+      ...http().encodePaymentSignatureHeader(record.payload),
       // Only a hint: a provider that does not honour it is not made to honour it here.
       'idempotency-key': idempotencyKey,
     };
@@ -226,7 +508,7 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     throwIfAborted(signal, 'send');
     let settlement = null;
     try {
-      settlement = httpClient.getPaymentSettleResponse((name) => response.headers.get(name));
+      settlement = http().getPaymentSettleResponse((name) => response.headers.get(name));
     } catch {
       settlement = null;
     }
@@ -237,10 +519,21 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     };
   };
 
+  // HTTPS anywhere, plain HTTP only on loopback: the same rule the kernel applies to the service
+  // url, so a Horizon read cannot be pointed at a cleartext host that is not the local machine.
+  const horizonTarget = horizonUrl || 'https://horizon-testnet.stellar.org';
+  const horizonHost = (() => { try { return new URL(horizonTarget).hostname; } catch { return ''; } })();
+  const settlementHorizon = new Horizon.Server(horizonTarget, {
+    allowHttp: horizonHost === 'localhost' || horizonHost === '127.0.0.1' || horizonHost === '[::1]',
+  });
   const verifySettlement = async (evidence, { expected, authDigest, signal }) => {
     throwIfAborted(signal, 'verify settlement');
-    const verdict = await verifySettlementFromLedger({ ...evidence, authDigest }, {
-      horizon: new (await import('@stellar/stellar-sdk')).Horizon.Server(horizonUrl || 'https://horizon-testnet.stellar.org'),
+    // The reader from settlement.js, reached through the alias: this port used to be named after it
+    // and called itself, so every real payment ended `not_verified` without consulting the ledger.
+    // The evidence is passed as the kernel wrote it. Overwriting `authDigest` here would hide a
+    // disagreement between what the engine holds and what it is verifying.
+    const verdict = await readSettlementFromLedger(evidence, {
+      horizon: settlementHorizon,
       payer: expected.payer,
       payTo: expected.payTo,
       amount: expected.amount,
@@ -272,7 +565,7 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     inspectPrepared,
     verifySettlement,
     validateOutput,
-    ...(claims ? { claims } : {}),
+    claims,
   };
 }
 
@@ -286,9 +579,18 @@ function serviceEndpoint(base) {
 // The declaration and the ports together would be the whole capability: the kernel would own the
 // fixed effect, the order, the deduplication and the receipt verdict, and this adapter would own
 // Stellar, x402 and HTTP. Nothing calls this yet, see the header.
-export function createMarketingPlanPayment({ serviceUrl, payTo, secret, claims } = {}) {
+export function createMarketingPlanPayment({ serviceUrl, payTo, secret, claims, horizonUrl, rpcUrl, network, issuer, readCurrentLedger, createPaymentPayload } = {}) {
   const recipient = requirePublicKey(payTo);
   const payer = secret ? Keypair.fromSecret(secret).publicKey() : '';
+  // This factory declares one network and one asset. A caller that names another one is not
+  // configuring a variant: it is opening a payment that no terms of this reference could describe,
+  // and the contradiction is refused here, before any key is used.
+  if (network !== undefined && network !== NETWORK) {
+    throw new Error(`this reference factory declares ${NETWORK} and refuses a bridge on ${network}`);
+  }
+  if (issuer !== undefined && issuer !== ISSUER) {
+    throw new Error(`this reference factory declares issuer ${ISSUER} and refuses another issuer`);
+  }
   const endpoint = serviceEndpoint(serviceUrl);
   return createX402Payment({
     id: 'x402-marketing-plan',
@@ -301,7 +603,18 @@ export function createMarketingPlanPayment({ serviceUrl, payTo, secret, claims }
     payTo: recipient,
     amount: PRICE_ATOMIC,
     maxTimeoutSeconds: MAX_SIGNATURE_SECONDS,
-  }, createStellarPorts({ serviceUrl: endpoint, payTo: recipient, secret, claims }));
+  }, createStellarPorts({
+    serviceUrl: endpoint,
+    payTo: recipient,
+    secret,
+    claims,
+    horizonUrl,
+    rpcUrl,
+    network: NETWORK,
+    issuer: ISSUER,
+    readCurrentLedger,
+    createPaymentPayload,
+  }));
 }
 
 export { createX402Payment };
