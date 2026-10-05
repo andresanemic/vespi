@@ -213,10 +213,11 @@ test('H7 una salida que no se serializa deja outputDigest null y no lanza', () =
   assert.equal(d.outputDigest, null);
 });
 
-// H4: demo/x402/ports.js declares a port named verifySettlement, and inside it a local const of the
-// same name shadows the reader imported from settlement.js. The call at that line therefore resolves
-// to the const, so the port re-entered itself and the ledger was never read. The demo ships its own
-// node_modules, so this executes the real module rather than reading it.
+// H4: demo/x402/ports.js declares a port named verifySettlement, and an earlier version of it held a
+// local const of the same name that shadowed the reader imported from settlement.js. The call at that
+// line therefore resolved to the const, so the port re-entered itself and the ledger was never read.
+// The demo ships its own node_modules, so this executes the real module rather than reading it. The
+// bridge refuses to be built without a claims store, so the store is passed as the host has to pass it.
 test('H4 el puerto de liquidacion llama al lector y no a si mismo', async (t) => {
   const DEMO = path.join(__dirname, '..', 'demo', 'x402');
   let createStellarPorts;
@@ -236,6 +237,7 @@ test('H4 el puerto de liquidacion llama al lector y no a si mismo', async (t) =>
     payTo: account.publicKey(),
     secret: account.secret(),
     issuer: 'GISSUERISSUERISSUERISSUERISSUERISSUERISSUERISSUER',
+    claims: require('../src/x402.js').createMemoryPaymentClaims(),
   });
   // A payer that does not match is refused by settlement.js before it reads anything, so this needs
   // no network and still proves the reader was reached.

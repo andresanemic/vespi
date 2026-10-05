@@ -1602,8 +1602,8 @@ function readDemo(name) {
   return fs.readFileSync(path.join(DEMO, name), 'utf8');
 }
 
-// Source text only. demo/x402/ports.js is a pending reference that nothing loads, so what this reads
-// is what the file declares and how it reaches the kernel, never that any of it runs.
+// Source text only. What this reads is what the file declares and how it reaches the kernel. That
+// the ports run is asserted where the dependencies are installed: demo/x402/bridge.test.mjs.
 test('K4-I1 the bridge declares the six ports the contract asks for and reaches the kernel only through the contract', () => {
   const ports = readDemo('ports.js');
   for (const port of ['discover', 'sendPaid', 'prepare', 'inspectPrepared', 'verifySettlement', 'validateOutput']) {
@@ -1631,8 +1631,12 @@ test('K4-I2 the demo runner stays on the historical adapter and the adapter is l
   assert.match(runner, /x402Capability/, 'the runner drives the historical adapter capability');
   assert.match(runner, /runOperation\(/, 'the historical path goes through the engine');
   assert.match(runner, /verify: \(evidence\) => verify\(evidence, payer, payTo\)/, 'the historical path brings its own verifier');
-  assert.doesNotMatch(runner, /ports\.js/, 'the runner does not reach the pending reference');
-  assert.doesNotMatch(runner, /createMarketingPlanPayment/, 'the runner does not consume the contract');
+  // The bridge is reachable now, but only behind an explicit flag, so the default conduct of this
+  // runner (and of the receipts it seals) is unchanged.
+  assert.match(runner, /createMarketingPlanPayment/, 'the runner can consume the contract');
+  assert.match(runner, /--bridge/, 'and only when it is told to');
+  assert.match(runner, /bridgeRequested/, 'the flag is read as a value, not as presence');
+  assert.doesNotMatch(runner, /BRIDGE === '1'/, 'presence alone is not the request');
   const adapter = readDemo('capability.js');
   assert.match(adapter, /export function x402Capability/, 'the historical adapter is untouched');
   assert.match(adapter, /export \{ claimSettlement, claimTransaction/);

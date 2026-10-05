@@ -310,15 +310,14 @@ test('ADV17 a hostile settlement property after send keeps exercised uncertainty
 
 // The coordinator's decision on the final review round: the demo runner went back to the base
 // version, so nothing loads ports.js any more and there is no execution path to it. A file nothing
-// runs cannot be asserted to compose with the contract, and a stubbed evaluation of a body whose
-// module declarations were stripped is not evidence about a payment. What is left to check is the
-// trim itself and the honesty of the header: that the runner drives the historical adapter, that no
-// demo module reaches for ports.js, and that the file says out loud that it was never executed.
+// The bridge is no longer a pending reference: demo/x402/bridge.test.mjs executes it against real
+// Stellar SDK objects, real signatures and real Horizon JSON, all on loopback, and demo/x402/run.js
+// can drive it with `--bridge=1`. What has to stay true is narrower: no module loads the bridge by
+// accident, and the runner reaches it only behind that explicit flag.
 
 function demoSources() {
   const out = [];
   for (const entry of fs.readdirSync(DEMO, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name === 'node_modules') continue;
     if (entry.isDirectory()) {
       for (const inner of fs.readdirSync(path.join(DEMO, entry.name))) {
         if (/\.(mjs|js)$/.test(inner)) out.push(path.join(DEMO, entry.name, inner));
@@ -327,15 +326,25 @@ function demoSources() {
       out.push(path.join(DEMO, entry.name));
     }
   }
-  return out;
+  // The demo now carries its installed dependencies, so a name that ends in .js can still be a
+  // directory. Only files are read.
+  return out.filter((file) => fs.statSync(file).isFile());
 }
 
-test('ADV15 no demo module loads the reference bridge, and the runner drives the historical adapter', () => {
+test('ADV15 only the bridge suite and the explicit runner flag reach the reference bridge', () => {
   const runner = fs.readFileSync(path.join(DEMO, 'run.js'), 'utf8');
-  assert.doesNotMatch(runner, /ports\.js/, 'the runner does not reach the pending reference');
   assert.match(runner, /x402Capability/, 'the runner drives the historical adapter capability');
-  assert.match(runner, /runOperation\(/, 'the historical path drives the operation through the engine');
+  assert.match(runner, /runOperation\(/, 'the historical path goes through the engine');
+  // The bridge is ESM and lives beside the runner, which is always the entry point, so it is reached
+  // through a require of its own directory and only inside the branch the flag selected.
+  assert.match(runner, /load\('\.\/ports\.js'\)/, 'the bridge is loaded, and only where the flag leads');
+  assert.doesNotMatch(runner, /^import .*ports\.js/m, 'the bridge is never a static import of the runner');
+  assert.match(runner, /--bridge/, 'the bridge is behind an explicit flag');
+  assert.match(runner, /bridgeRequested/, 'the flag has a reader of its own value');
+  assert.doesNotMatch(runner, /BRIDGE === '1'/, 'presence alone is not the request');
   for (const file of demoSources()) {
+    // The two files allowed to load it: its own suite, and the runner behind the explicit flag.
+    if (path.basename(file) === 'bridge.test.mjs' || path.basename(file) === 'run.js') continue;
     assert.doesNotMatch(
       fs.readFileSync(file, 'utf8'),
       /from '\.\/ports\.js'|import\('\.\/ports\.js'\)|require\('\.\/ports\.js'\)/,
@@ -344,21 +353,30 @@ test('ADV15 no demo module loads the reference bridge, and the runner drives the
   }
 });
 
-test('ADV15 the reference bridge says it was never executed, and only its declared shape is read', () => {
+test('ADV15 the reference bridge says out loud what is proven and what is not', () => {
   const ports = fs.readFileSync(path.join(DEMO, 'ports.js'), 'utf8');
-  assert.match(ports, /PENDING REFERENCE\. Nothing imports this file and nothing runs it\./);
-  assert.match(ports, /NEVER EXECUTED WITH THE REAL SDK/, 'the header states the unexecuted truth');
-  assert.match(ports, /has never been executed/, 'the header states that the payment path is unproven');
-  assert.match(ports, /DO NOT USE THIS FILE/, 'the header tells the next reader what to do with it');
-  // The six ports are declared, and what is declared is what the contract asks for. Reading the text
-  // is the whole of the claim: nothing below these lines has ever been executed.
+  assert.match(ports, /EXECUTED BY demo\/x402\/bridge\.test\.mjs/, 'the header names what executes it');
+  assert.match(ports, /do NOT cover/, 'the header names what no test covers');
+  assert.match(ports, /live payment/, 'the header says a live payment was not made');
+  assert.match(ports, /durable claims store/, 'the header says durable claims are not proven');
+  // The defect this branch repaired: a port named after the reader it imports, which re-entered
+  // itself and made every real payment end `not_verified` without consulting the ledger.
+  assert.match(ports, /verifySettlement as readSettlementFromLedger/, 'the imported reader is aliased on import');
+  assert.match(ports, /await readSettlementFromLedger\(evidence,/, 'the port calls the reader it imported');
+  assert.doesNotMatch(ports, /await verifySettlement\(/, 'the port never calls itself');
+  // The six ports are declared, and what is declared is what the contract asks for.
   for (const port of ['discover', 'sendPaid', 'prepare', 'inspectPrepared', 'verifySettlement', 'validateOutput']) {
-    assert.match(ports, new RegExp(`\\b${port}\\b`), `ports.js declares ${port}`);
+    assert.match(ports, new RegExp(String.raw`\b${port}\b`), `ports.js declares ${port}`);
   }
 });
 
-test('ADV15c the reference bridge factory composes with the contract at run time', {
-  todo: "the claim the stubbed evaluation used to make: evaluate ports.js with its module declarations stripped and its SDK stubbed, then check that createStellarPorts() returns the port shape src/x402.js accepts and that a payment runs end to end. Withdrawn on the coordinator's decision for the final round, because it could not survive contact with the truth: the inner verifySettlement shadowed the imported reader of the same name, so the bridge called itself and never read the ledger, and a test that executes a pending reference keeps implying it works. Restore this when the demo suite runs where its dependencies exist.",
-}, () => {
-  assert.equal(typeof require('../src/x402.js').createX402Payment, 'function');
+// What used to be a withdrawn claim is now a real one, and it lives where the dependencies exist:
+// demo/x402/bridge.test.mjs group H runs one payment end to end through createX402Payment with the
+// real ports and counts the ledger readbacks. What this kernel-side check adds is that the contract
+// the bridge composes with is the one in this tree and still exports what it exported.
+test('ADV15c the bridge composes with the contract in this tree', () => {
+  const contract = require('../src/x402.js');
+  assert.equal(typeof contract.createX402Payment, 'function');
+  assert.equal(typeof contract.createMemoryPaymentClaims, 'function');
+  assert.equal(typeof contract.selectX402Terms, 'function');
 });
