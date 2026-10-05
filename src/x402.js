@@ -16,7 +16,10 @@
 // The operation identity is what deduplication is about: the effect key names the operation, so two
 // operations that want the same thing are two effects and a retry of one operation is its duplicate.
 // The idempotency key handed to the provider is only a hint: it is a function of the declared effect,
-// it is the same for two different operations, and no claim here rests on it.
+// it is the same for two different operations, and no claim here rests on it. The exported key version
+// lets a host that stores the keys its claims store receives tell which version they were built
+// under; it does not let a host recompute a key it never saw, because the idempotency key this
+// module hashes is not exported.
 //
 // Every port is trusted host code, not a sandbox. A port that ignores its signal can keep acting
 // after this module gave up, and a port that lies is believed only after an independent check
@@ -37,7 +40,8 @@
 // because a payment is not sent under a deadline the module shortened by itself. What a validator
 // hands back as `output` has to be a plain body or nothing: it is read by descriptors, not copied, so
 // a list, a class instance, an accessor and a proxy are a refused delivery rather than a body in the
-// host's hands.
+// host's hands. This is checked at the top level only: values nested inside the body are handed back
+// as the validator returned them.
 
 const { sufficient } = require('./authority.js');
 const { runOperation } = require('./operation.js');
@@ -976,9 +980,10 @@ function exceedsBodyLimit(value) {
 }
 
 // Delivery is covered only when the validator says the body is acceptable AND hands back a SHA-256
-// digest of it. Without the digest there is nothing to put on the receipt, nothing for a later run
-// to compare against and nothing that binds this run's output to the bytes that were paid for. The
-// validator's answer is read once inside the guard: a getter cannot answer twice.
+// digest of it. Without the digest there is nothing to put on the receipt and nothing for a later run
+// to compare against. The digest is the validator's word: this module checks its shape, records it,
+// and neither recomputes it nor compares it with `output`. The validator's answer is read once inside
+// the guard: a getter cannot answer twice.
 //
 // The `output` it hands back has to be a plain body, the same rule every other port answers to, and
 // it is not copied with JSON. A copy would be a second reading of host-written data by this module
@@ -1026,9 +1031,9 @@ async function readDelivery(response, ctx) {
   }
   if (!ok || digest === null) return { ok: false, output: null, digest: null };
   // Plainness here is stricter than the container check the ports answer to: a body has to be a
-  // plain object, and its own descriptors have to be plain as well. A list is not a body, an
-  // accessor is refused without ever being called, and a proxy is refused without being asked
-  // anything. Both checks read descriptors and never values.
+  // plain object, and its own top-level descriptors have to be plain as well; nested values are not
+  // inspected. A list is not a body, an accessor is refused without ever being called, and a proxy is
+  // refused without being asked anything. Both checks read descriptors and never values.
   if (output !== null && (!isPlainObject(output) || !isPlainContainer(output))) {
     return { ok: false, output: null, digest: null };
   }
