@@ -164,27 +164,24 @@ test('F2a pending records that can no longer be sent are removed instead of bloc
   for (let ledger = 1; ledger <= 8; ledger++) {
     dead.push(await envelope({ expiration: ledger }));
   }
-  let index = 0;
+  const live = await envelope({ expiration: FIXTURE_LEDGER + 30 });
+  let useLive = false;
   const bridge = ports(
     createStellarPorts,
-    async () => ({ x402Version: 2, payload: { transaction: dead[index++] ?? dead[dead.length - 1] } }),
-    // The ledger has moved far past every one of those expiration ledgers.
+    async () => ({ x402Version: 2, payload: { transaction: useLive ? live : dead.shift() } }),
+    // The ledger has moved far past every one of those expiration ledgers, and it is still inside
+    // the window of the live one.
     { readCurrentLedger: async () => FIXTURE_LEDGER },
   );
-  for (const _ of dead) {
+  for (let i = 0; i < 6; i++) {
     await bridge.signer.prepare({ terms, expected }).catch(() => {});
   }
   // A fresh, live authorization still goes through: the dead records were dropped, not the port.
-  const live = await envelope({ expiration: FIXTURE_LEDGER + 30 });
-  index = dead.length;
-  const answer = await bridge.signer.prepare({
-    terms,
-    expected,
-  });
-  assert.equal(typeof answer.authorization, 'string');
+  useLive = true;
+  const answer = await bridge.signer.prepare({ terms, expected });
+  assert.equal(answer.authorization, live, 'the live authorization was not the one the builder produced');
   const verdict = await bridge.inspectPrepared(answer.authorization, { expected });
   assert.equal(verdict.verified, true, `a live authorization was refused because dead records filled the port: ${verdict.reason}`);
-  assert.equal(live.length > 0, true);
 });
 
 test('F2b the fall-off of an unsendable record is written where the port is', () => {

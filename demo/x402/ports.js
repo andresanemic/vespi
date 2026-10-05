@@ -46,6 +46,16 @@ const LEDGER_TOLERANCE = 2;
 // At most this many prepared authorizations are kept, and each one is dropped by the send that
 // carries it: a port that never sends does not become a store of pending payments.
 const MAX_PENDING_AUTHORIZATIONS = 4;
+// THE FALL-OFF, written down where the port is written down. A reserved record can die without ever
+// being sent: the ledger advances past the expiration ledger its authorization names, and what the
+// ledger will accept is decided by the ledger. Such a record is DELETED from `prepared`, and it is
+// not a resend, because it was never sent: nothing left this port on its account, the kernel never
+// read a body through it, and no receipt names it. Deleting it gives the reservation back; keeping
+// it would only fill the bound, and a bound filled with dead records refuses live payments that are
+// entirely payable. A record whose expiration ledger cannot be read is NOT deleted on that ground:
+// an unreadable record is kept until a ledger says otherwise, so an unreadable ledger empties
+// nothing. The identity of a deleted record is also forgotten: the set of spent identities is what
+// keeps a payment from being sent twice, and a record that never left has nothing to protect.
 const ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 
 export { NETWORK, PRICE_ATOMIC, USDC_CONTRACT, ISSUER };
@@ -425,6 +435,33 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
   // The ledger of this network, read before every inspection. Nothing is inspected as verified
   // against a window nobody measured.
   const ledgerReader = readCurrentLedger || rpcLedgerReader(rpcUrl);
+  // The fall-off (see the header): before the bound is consulted, the records that can no longer be
+  // sent are removed. A record dies when the ledger of right now has already passed the expiration
+  // ledger its authorization names; that comparison needs a ledger, so an unreadable one removes
+  // nothing and the bound answers as it always did. Dropping a record is not a resend: it never
+  // left this port, and its identity is not added to `spent`, so the reservation it held is simply
+  // given back and the identity can be prepared again from fresh bytes.
+  const dropUnsendable = (currentLedger) => {
+    if (!Number.isSafeInteger(currentLedger) || currentLedger < 0) return 0;
+    let dropped = 0;
+    for (const [identity, record] of [...prepared]) {
+      const expiration = record?.expirationLedger;
+      if (!Number.isSafeInteger(expiration) || expiration <= 0) continue;
+      if (expiration > currentLedger) continue;
+      prepared.delete(identity);
+      dropped++;
+    }
+    return dropped;
+  };
+  // Read the ledger and drop what died. Never throws: this runs on the path of a payment and a
+  // failed read must leave the records alone rather than empty the map on a guess.
+  const sweepUnsendable = async (signal) => {
+    try {
+      return dropUnsendable(await ledgerReader(signal));
+    } catch {
+      return 0;
+    }
+  };
 
   const discover = async ({ url, method, redirect, signal }) => {
     if (redirect !== 'error' || method !== 'GET') throw new Error('discovery is a GET without redirects');
@@ -469,6 +506,12 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     }
     if (prepared.has(identity)) {
       throw new Error('this authorization is already reserved by an earlier preparation: a second record would overwrite the one the send reads');
+    }
+    // The fall-off runs before the bound: records that can no longer be sent are removed, so a bound
+    // filled with dead authorizations does not refuse a payment that is entirely payable. Only a
+    // bound still full of live records refuses, and it refuses with the bound in the message.
+    if (prepared.size >= MAX_PENDING_AUTHORIZATIONS) {
+      await sweepUnsendable(signal);
     }
     if (prepared.size >= MAX_PENDING_AUTHORIZATIONS) {
       throw new Error(`prepared authorizations are not being sent: this port keeps ${MAX_PENDING_AUTHORIZATIONS} at most`);
