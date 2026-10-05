@@ -14,6 +14,19 @@
 // KNOWN LIMITS, unchanged from the contract: ports are trusted host code; the claims store has to be
 // synchronous; the default store lives in one process, so a restart allows a second attempt; and a
 // run refused before the wire keeps its effect key.
+//
+// WHAT THIS BRIDGE ITSELF GUARANTEES, and where each is written below: one reserved record per
+// authorization identity, never overwritten and never resurrected (the fall-off and `spent`); pending
+// records that can no longer be sent are removed, with the fall-off written at MAX_PENDING_AUTHORIZATIONS;
+// the authorization shape is closed to one entry, checked before anything else (closedAuthorizationShape);
+// every JSON body goes through one bounded, cancellable door, and a refusal before the reader still
+// cancels the body (readBoundedJson); and the abort is carried into the ledger read and into the
+// settlement reader, which checks it before every Horizon read.
+//
+// WHAT NOBODY HAS PROVEN HERE: that the closed form admits every authorization a real `ExactStellarScheme`
+// produces for a legitimate multi-entry transaction (it admits exactly one, by design, and a provider
+// that needs more is not served by this bridge); that the fall-off's ledger read is affordable under the
+// per-payment budget when the injected reader is slow; and nothing at all about mainnet.
 import { Address, Horizon, Keypair, StrKey, Transaction, TransactionBuilder, buildAuthorizationEntryPreimage } from '@stellar/stellar-sdk';
 import { x402Client, x402HTTPClient } from '@x402/fetch';
 import { createEd25519Signer, getNetworkPassphrase } from '@x402/stellar';

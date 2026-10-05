@@ -203,8 +203,12 @@ async function main() {
   //   });
   //
   // The bridge is exercised for real by demo/x402/bridge.test.mjs, against real SDK objects, real
-  // signatures and Horizon JSON served on loopback. What that does not cover, and what no test here
-  // covers: a live payment, a second provider, and a durable claims store.
+  // signatures and Horizon JSON served on loopback, including one payment end to end through
+  // `createX402Payment` with these ports. That is the whole of what is proven about it: real objects,
+  // real signatures, real JSON, all synthetic and on loopback. What no test here covers: a live
+  // payment, a second provider, a durable claims store, and mainnet. `createMemoryPaymentClaims()`
+  // deduplicates inside one process only, so a host that has to recover needs its own durable atomic
+  // store — the bridge refuses to invent one, and that refusal is the point of the `claims` argument.
 }
 
 if (require.main === module) {
