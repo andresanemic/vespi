@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "generatedBy": "node scripts/judge-package.mjs",
   "packageVersion": "0.1.4",
-  "gitCommit": "aa474b9c7a86928870d5e2c250bfbf196a23b4d1",
+  "gitCommit": "003d9e255f982c0b537f04e81bb81047e36b7fb8",
   "fileHashes": {
     "demo/x402/README.md": "056237ad81b5a23deceee84cc260377742d01dfc0a8dda2853320e9f26714405",
     "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
@@ -35,8 +35,8 @@
     "docs/PRIOR_ART.md": "26b71f7476553d74a596e63e839c4e8cdd5637bef1922c54514ef4251681a9d4",
     "docs/RELEASE_0.0.1_GENESIS.md": "c4a77b6957661ddd8d31063e1a635d894502254eea90556d184660daa8a68ad0",
     "docs/RELEASE_0.1.3_KERNEL.md": "521d39710216dd0da66d17f01346d36f3cb416838c97e7e43923c4f1bb6f320b",
-    "docs/RELEASE_0.1.4_KERNEL.md": "e1a758e6f3c4859f0d4dbe2096afb563164d62d60283c99f813615d43e94b97a",
-    "docs/SUITE_RESULT.txt": "2190f3471547db540f3f222d9d7c7436217d539e68246d86644882f0e810be45",
+    "docs/RELEASE_0.1.4_KERNEL.md": "524aaa8e3d11a7ea42c1fc0b1e7ef8bcef0e2e413d9ac8d078d7bcec8f382c14",
+    "docs/SUITE_RESULT.txt": "25c802327f6400f6b3e6c74db05698483a9334e38f978bb543e3537f535bded8",
     "docs/TESTNET_EVIDENCE.md": "326d0fd3e91dedcf8ac107154bf2cf38ecb765f7da0eee3c885adf130e64de29",
     "docs/VERIFICATION.md": "003118f46ebe9dceb0a918b33b1b6570fa0c038aabb3cc5ed4c7813fe2dbbba7",
     "docs/WALKTHROUGH.md": "dd70ab7b30d1e9f5db69abad2f6cac969ce3f7dec506a445015cdc1d283f1d88",
@@ -70,7 +70,7 @@
     "docs/evidence-records/x402-corridas/corrida-2-verified.json": "d64416f3366ca7faef6ece65fa1dbc820606bc3ec379334cf930439aa64d1d90",
     "docs/evidence-records/x402-corridas/corrida-3-verified.json": "6ef1704124b8098c0d3bae9a0d77a8a506dee4c5def32f983947da9bbeec435c",
     "docs/testnet-evidence.json": "1e79bd7126d4e181cca411b392dc59091b717b2f6526e0914af039b1056e40e2",
-    "scripts/collect-testnet-evidence.mjs": "215bd32dc84035dba35497c19a541c940d4145a724f73c89e635f8c60bb9620b",
+    "scripts/collect-testnet-evidence.mjs": "d2550f730ffff605b77a33ae28b6045b2ac78599b4ab2fed901751aceaab829b",
     "scripts/judge-package.mjs": "53e99ddfe2ee34df2ddc184cf1e1f9207a9d22b54d011bbe49aebcd45f0fe523",
     "scripts/record-suite.mjs": "2b0eda5526ac845f25b0dc672bb6ba579eb7a891913d3c5656dcb5f21dcfd91f",
     "scripts/verify-testnet-evidence.mjs": "e5e061380d89b95d1fea63bf716a24b6a3f936915e1f7379faeedd2d216e7f8a",
@@ -78,14 +78,14 @@
     "src/continuity.js": "7e8187d27bf956febcdb4464449db7dd2682326006e023a99c3a8bb871e610ba",
     "src/delegation.js": "f70cf58b148a046cc801c76c3bb6a0bc6a36c5b770a31bc881d5ca35e6d98cee",
     "src/emergency.js": "427880bc50d371026a8c1de06d0a8455413802079d3a647c0125077b22831ce3",
-    "src/operation.js": "ba42b9321f2452cd49ee6f363d809be2f681161a6a67c98936cd7c6ea6186bf7",
+    "src/operation.js": "de0b1189d72c6078559f9022e6072796434a8f4ab6faf9029d256aa838578504",
     "src/receipt.js": "0beaf23c33df68fd4f311a55147ac27b38f87653adf54696fb42e3151985c431",
     "src/skill-provenance.js": "0379e617f2717e848b9ca71439f115e4da647a7bdad44b732f77bf822e61319e",
     "src/time.js": "1021a9d4bd921763d6e09a35af850c2c39afb14cb1ad73d3fa93485045595d31",
     "src/x402.js": "d1312adb9b0cf0753fa1eee9216d97776e7b394a18e1ee0dce7a70bebcfe7498",
     "src/zk-bn254-reference.js": "5662ecfb9143afb4f8d79128a9c8c4df700d34c0fcef8e94acec5e3e6720e8e6",
     "src/zk.js": "ad7c27bd522eef25019da5a905cf439efc17c7dbd11d20f93611d817809303cd",
-    "docs/JUDGE_PACKAGE.json": "ce1e0b1eaff8c732367efd63e4b54ea04c4b7c71e9e82bc9db1425b048cee11e"
+    "docs/JUDGE_PACKAGE.json": "3f7e183cfe26bc79bbe1e5e6e26368558633a4164155887172b0338e19f4fc2d"
   },
   "excludedPaths": [
     "**/node_modules/**",
@@ -93,8 +93,8 @@
   ],
   "tests": {
     "command": "node --test test/*.test.js",
-    "tests": 1182,
-    "passed": 1157,
+    "tests": 1191,
+    "passed": 1166,
     "failed": 0
   },
   "publicProjectRepositories": [
@@ -150,5 +150,5 @@
     }
   ],
   "hashNote": "Ordinary hashes use SHA-256 over exact bytes. Generated dependencies under node_modules and Git metadata under .git are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
-  "manifestSelfHash": "ce1e0b1eaff8c732367efd63e4b54ea04c4b7c71e9e82bc9db1425b048cee11e"
+  "manifestSelfHash": "3f7e183cfe26bc79bbe1e5e6e26368558633a4164155887172b0338e19f4fc2d"
 }
