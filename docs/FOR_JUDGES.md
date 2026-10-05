@@ -22,7 +22,7 @@ To create a manifest for the exact checkout you are judging, run:
 node scripts/judge-package.mjs
 ```
 
-This runs the kernel suite, hashes the cut and writes [JUDGE_PACKAGE.json](./JUDGE_PACKAGE.json), without a network. Check `packageVersion`, `gitCommit`, `tests` and `fileHashes` against your checkout. A saved manifest may belong to an earlier cut; regenerate it after the final version and files are fixed. It records project URLs, but does not fetch them or verify access.
+This runs the kernel suite, hashes files under `src`, `docs`, `demo` and `scripts`, and writes [JUDGE_PACKAGE.json](./JUDGE_PACKAGE.json), without a network; root README and CHANGELOG, tests and examples are outside that hash inventory. Check `packageVersion`, `gitCommit`, `tests` and `fileHashes` against your checkout. A saved manifest may belong to an earlier cut; regenerate it after the final version and files are fixed. Its project status strings come from an earlier static index, which omits Permamuseum and still mentions code and tests; those strings do not establish current access. Use the README schedule below. The manifest does not fetch projects, and its test counts omit the `todo` breakdown reported above.
 
 ## What entered from the 0.1.3 promise
 
@@ -76,7 +76,7 @@ Para crear un manifiesto de la copia exacta que revisas, ejecuta:
 node scripts/judge-package.mjs
 ```
 
-Esto corre la suite del kernel, calcula las huellas y escribe [JUDGE_PACKAGE.json](./JUDGE_PACKAGE.json), sin red. Contrasta `packageVersion`, `gitCommit`, `tests` y `fileHashes` con tu copia. Un manifiesto guardado puede corresponder a un corte anterior; regenéralo con la versión y los archivos finales. Registra URL de proyectos, pero no los descarga ni comprueba su acceso.
+Esto corre la suite del kernel, calcula huellas de `src`, `docs`, `demo` y `scripts`, y escribe [JUDGE_PACKAGE.json](./JUDGE_PACKAGE.json), sin red; README y CHANGELOG de la raíz, pruebas y ejemplos quedan fuera del inventario de huellas. Contrasta `packageVersion`, `gitCommit`, `tests` y `fileHashes` con tu copia. Un manifiesto guardado puede corresponder a un corte anterior; regenéralo con la versión y los archivos finales. Sus textos de estado vienen de un índice estático anterior, que omite Permamuseum y todavía menciona código y pruebas; esos textos no establecen el acceso actual. Usa el calendario del README indicado abajo. El manifiesto no descarga proyectos, y sus cifras de pruebas omiten el desglose de `todo` reportado arriba.
 
 ## Qué entró de lo anunciado en 0.1.3
 
