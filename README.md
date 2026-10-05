@@ -1,8 +1,8 @@
 # Vespi
 
-Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation. Kernel `0.1.4`: [fecha de publicación]. This is tested operation semantics, with host-managed storage and execution, not demonstrated autonomous work across hosts.
+Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation. Kernel `0.1.4`: candidate cut, publication date pending. This is tested operation semantics, with host-managed storage and execution, not demonstrated autonomous work across hosts.
 
-Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo. Kernel `0.1.4`: [fecha de publicación]. Es semántica de operación probada, con almacenamiento y ejecución a cargo del host, no trabajo autónomo demostrado entre hosts.
+Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo. Kernel `0.1.4`: corte candidato, fecha de publicación pendiente. Es semántica de operación probada, con almacenamiento y ejecución a cargo del host, no trabajo autónomo demostrado entre hosts.
 
 [![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
 
@@ -19,7 +19,7 @@ node examples/walkthrough.js
 node --test "test/*.test.js"
 ```
 
-The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The kernel suite reports 1173 tests, 1149 passed, 0 failed and 24 `todo`; those pending or boundary cases are not passing tests. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
+The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The [saved suite result](./docs/SUITE_RESULT.txt) records the command, exact counts, Node version and parent commit for this cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
 
 ### What this looks like for a person
 
@@ -107,7 +107,7 @@ The repositories remain public and currently contain README files only, accordin
 
 [Lore Plugin](https://github.com/andresanemic/lore-plugin) supplies criterion and the coordinator workflow; Vespi supplies the authority and receipt semantics around an operation. The [method](./docs/METHOD.md) describes loops, test-first work, specifications, bounded delegation, blind reading and separate verification; it is a workflow for host tools, not a kernel that generates apps or images itself. Lore Plugin carries a pinned kernel, so this source snapshot does not update an installed kit automatically.
 
-The prior agreement's why, what and how remain distinct: preserve your agency and avoid repeated decisions; keep bounded authority, a human gate and receipts; choose an implementation only where evidence supports it. The [verification record](./docs/VERIFICATION.md), [judge findings from the earlier cut](./docs/JUDGES_FINDINGS_0.1.4.md), [prior-art notes](./docs/PRIOR_ART.md) and [experiments](./experiments/) retain construction history. Model reviews independent of the builders are not an external security audit. The method credits [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar and the Lore/LUS work belong to the construction narrative, not proof that the whole product operates autonomously.
+The agreement keeps its order. Its purpose is to preserve your agency and avoid repeated decisions; its method coordinates bounded authority, a human gate and receipts; each operation's concrete result must be checked. The [verification record](./docs/VERIFICATION.md), [judge findings from the earlier cut](./docs/JUDGES_FINDINGS_0.1.4.md), [prior-art notes](./docs/PRIOR_ART.md) and [experiments](./experiments/) retain construction history. Model reviews independent of the builders are not an external security audit. The method credits [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar and the Lore/LUS work belong to the construction narrative, not proof that the whole product operates autonomously.
 
 ### Institutions, direction and construction history
 
@@ -144,7 +144,7 @@ node examples/walkthrough.js
 node --test "test/*.test.js"
 ```
 
-[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. La suite del kernel informa 1173 pruebas, 1149 aprobadas, 0 fallidas y 24 `todo`; esos casos pendientes o de frontera no son pruebas aprobadas. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
+[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El resultado guardado de la suite](./docs/SUITE_RESULT.txt) registra el comando, los conteos exactos, la versión de Node y el commit padre de este corte. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
 
 ### Cómo se ve para una persona
 
@@ -232,7 +232,7 @@ Los repositorios son siempre públicos y hoy contienen solo README, según el ca
 
 [Lore Plugin](https://github.com/andresanemic/lore-plugin) aporta el criterio y el flujo del coordinador; Vespi aporta la semántica de autoridad y recibos alrededor de una operación. [El método](./docs/METHOD.md) describe ciclos, pruebas primero, especificaciones, delegación acotada, lectura ciega y verificación separada; es un flujo de trabajo para herramientas del host, no un kernel que genere apps o imágenes por sí solo. Lore Plugin lleva una copia fija del kernel, por lo que este corte de código no actualiza automáticamente un kit instalado.
 
-El eje porqué/qué/cómo del acuerdo previo conserva sus partes: cuidar tu agencia y evitar decisiones repetidas; mantener autoridad acotada, puerta humana y recibos; elegir una implementación solo donde la evidencia la sostenga. [El registro de verificación](./docs/VERIFICATION.md), [los hallazgos de jueces del corte anterior](./docs/JUDGES_FINDINGS_0.1.4.md), [las notas de arte previo](./docs/PRIOR_ART.md) y [los experimentos](./experiments/) conservan la historia de construcción. Las revisiones por modelos independientes de sus constructores no son una auditoría de seguridad externa. El método acredita [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar y el trabajo de Lore/LUS pertenecen al relato de construcción, no prueban que el producto completo opere de forma autónoma.
+El acuerdo conserva su orden. La finalidad es cuidar tu agencia y evitar decisiones repetidas; el método coordina autoridad acotada, puerta humana y recibos; el resultado concreto debe comprobarse en cada operación. [El registro de verificación](./docs/VERIFICATION.md), [los hallazgos de jueces del corte anterior](./docs/JUDGES_FINDINGS_0.1.4.md), [las notas de arte previo](./docs/PRIOR_ART.md) y [los experimentos](./experiments/) conservan la historia de construcción. Las revisiones por modelos independientes de sus constructores no son una auditoría de seguridad externa. El método acredita [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar y el trabajo de Lore/LUS pertenecen al relato de construcción, no prueban que el producto completo opere de forma autónoma.
 
 ### Instituciones, rumbo e historia de construcción
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## [v0.1.4-kernel] | [fecha de publicación]
+## [v0.1.4-kernel] | candidate cut, publication date pending
 
 This cut preserves the authority you granted and the next agreed action while returning uncertain exercised effects to you for reconciliation. The previous version is `v0.1.3-kernel`; the [bilingual release note](./docs/RELEASE_0.1.4_KERNEL.md) explains what entered from its promise and the limits of each part.
 
@@ -20,7 +20,7 @@ This cut preserves the authority you granted and the next agreed action while re
 
 ### Evidence and compatibility
 
-`node --test test/*.test.js` reports 1173 tests, 1149 passed, 0 failed and 24 `todo`; pending cases are not passing tests. [Saved evidence](./docs/testnet-evidence.json) records 50 Horizon readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies, against local execution records rather than expectations taken from Horizon. This is testnet with fictional data and no real money, not evidence for the new bridge or integration with Casa Firme and Vela.
+The [saved suite result](./docs/SUITE_RESULT.txt) records the command and exact counts for this cut. [Saved evidence](./docs/testnet-evidence.json) records 50 Horizon readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies, against local execution records rather than expectations taken from Horizon. This is testnet with fictional data and no real money, not evidence for the new bridge or integration with Casa Firme and Vela.
 
 D3 stamps `stellar:testnet` in every newly built pending anchor, without affecting the digest; it becomes configurable in 0.1.5. Old receipts without `checks` retain their shape and digest in [regressions](./test/k3-zkref-r2-advisor.test.js), but unknown reserved `zk.` controls are now refused and change the rebuilt digest; unknown exercised shapes carry `exercisedUnknown`. Compatibility is not universal. D5 keeps Vela's demonstration content plaintext; a real deployment requires encryption at rest and third-party key custody.
 

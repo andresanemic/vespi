@@ -1,6 +1,6 @@
 # What Vespi can do
 
-Vespi keeps an operation's authority, checked result and next agreed action together so you can continue what still holds. [Continuation tests](../test/v014.test.js) cover that choice and returning uncertain exercised effects to a person, but the host must store the receipts, observe the effect and wake the process. Kernel `0.1.4`: [fecha de publicación].
+Vespi keeps an operation's authority, checked result and next agreed action together so you can continue what still holds. [Continuation tests](../test/v014.test.js) cover that choice and returning uncertain exercised effects to a person, but the host must store the receipts, observe the effect and wake the process. Kernel `0.1.4`: candidate cut, publication date pending.
 
 ## Authority and the human gate
 
@@ -44,7 +44,7 @@ The synchronous injected `io.now` supplies permission-check and receipt time, an
 
 `createZkVerifier` and `digestZkVerificationKey` pin a key digest and agreed public inputs, with a closed `zk.` check vocabulary, as [port tests](../test/k3b-zk-port.test.js) verify, but the cryptographic backend is injected and owns curve and subgroup checks. A backend label is not certification; a valid equation does not authenticate a presenter, attest an institution, prevent replay or prove transport privacy. The verifier-echo guard compares object identity, not content; post-effect verification is not a pre-effect gate.
 
-The internal [BN254 Groth16 reference](../src/zk-bn254-reference.js) has [arithmetic and fixture tests](../test/k3d-zk-groth16.test.js) and [independent fixture evidence](../test/fixtures/zk/independent-report.md), but is not exported as a public API, has no external audit and is not production ready. Proofs are malleable, so `proofDigest` cannot prevent replay; a degenerate key accepts forgeries, and setup quality remains outside the contract. Review measurements report about 370 ms of synchronous CPU per verification, which a Promise timeout cannot interrupt; exposure requires a host worker or process budget. It is not constant time. None of these modules demonstrates integration with Casa Firme or Vela. D5 keeps Vela's sealed content plaintext in the demonstration according to the owner; a real deployment requires encryption at rest and third-party key custody.
+The internal [BN254 Groth16 reference](../src/zk-bn254-reference.js) has [arithmetic and fixture tests](../test/k3d-zk-groth16.test.js) and [independent fixture evidence](../test/fixtures/zk/independent-report.md), but is not exported as a public API, has no external audit and is not production ready. Proofs are malleable, so `proofDigest` cannot prevent replay; a degenerate key accepts forgeries, and setup quality remains outside the contract. Verification consumes synchronous CPU that a Promise timeout cannot interrupt; exposure requires a host worker or process budget. It is not constant time. None of these modules demonstrates integration with Casa Firme or Vela. D5 keeps Vela's sealed content plaintext in the demonstration according to the owner; a real deployment requires encryption at rest and third-party key custody.
 
 ## A capability outside the kernel
 
@@ -60,7 +60,7 @@ Spend-authority narrowing stays out because of the inherited-setter defect in ba
 
 # Qué puede hacer Vespi
 
-Vespi conserva juntas la autoridad de una operación, el resultado comprobado y la siguiente acción acordada para que retomes lo que sigue valiendo. [Las pruebas de continuidad](../test/v014.test.js) cubren esa selección y devolver a una persona los efectos ejercidos inciertos, pero el host debe guardar recibos, observar el efecto y despertar el proceso. Kernel `0.1.4`: [fecha de publicación].
+Vespi conserva juntas la autoridad de una operación, el resultado comprobado y la siguiente acción acordada para que retomes lo que sigue valiendo. [Las pruebas de continuidad](../test/v014.test.js) cubren esa selección y devolver a una persona los efectos ejercidos inciertos, pero el host debe guardar recibos, observar el efecto y despertar el proceso. Kernel `0.1.4`: corte candidato, fecha de publicación pendiente.
 
 ## Autoridad y puerta humana
 
@@ -104,7 +104,7 @@ El reloj síncrono inyectado `io.now` aporta el tiempo de comprobación y del re
 
 `createZkVerifier` y `digestZkVerificationKey` fijan el digest de una clave y entradas públicas acordadas, con vocabulario cerrado de controles `zk.`, como verifican [las pruebas del puerto](../test/k3b-zk-port.test.js), pero el backend criptográfico es inyectado y comprueba curva y subgrupo. Una etiqueta de backend no es certificación; una ecuación válida no autentica a quien la presenta, acredita una institución, evita reuso ni prueba privacidad del transporte. El rechazo del eco del verificador compara identidad de objeto y no contenido; verificar después del efecto no es una puerta previa al efecto.
 
-La [referencia interna BN254 con Groth16](../src/zk-bn254-reference.js) tiene [pruebas de aritmética y fixtures](../test/k3d-zk-groth16.test.js) y [evidencia independiente de fixtures](../test/fixtures/zk/independent-report.md), pero no se exporta como API pública, no tiene auditoría externa y no es apta para producción. Las pruebas son maleables, por lo que `proofDigest` no evita reuso; una clave degenerada acepta falsificaciones y la calidad de preparación queda fuera. Las mediciones de revisión reportan unos 370 ms de CPU síncrona por verificación, que un timeout con Promise no interrumpe; exponerla exige un worker o proceso con presupuesto del host. No es de tiempo constante. Ningún módulo demuestra integración con Casa Firme o Vela. D5 mantiene en claro el contenido sellado de Vela en la demostración según el dueño; un despliegue real exige cifrado en reposo y custodia de claves de un tercero.
+La [referencia interna BN254 con Groth16](../src/zk-bn254-reference.js) tiene [pruebas de aritmética y fixtures](../test/k3d-zk-groth16.test.js) y [evidencia independiente de fixtures](../test/fixtures/zk/independent-report.md), pero no se exporta como API pública, no tiene auditoría externa y no es apta para producción. Las pruebas son maleables, por lo que `proofDigest` no evita reuso; una clave degenerada acepta falsificaciones y la calidad de preparación queda fuera. La verificación consume CPU síncrona que un timeout con Promise no interrumpe; exponerla exige un worker o proceso con presupuesto del host. No es de tiempo constante. Ningún módulo demuestra integración con Casa Firme o Vela. D5 mantiene en claro el contenido sellado de Vela en la demostración según el dueño; un despliegue real exige cifrado en reposo y custodia de claves de un tercero.
 
 ## Una capacidad fuera del kernel
 
