@@ -1,0 +1,87 @@
+{
+  "fecha": "2026-10-03T04:57:19.182Z",
+  "red": "stellar:testnet",
+  "importe_atomico": "100000",
+  "pagador": "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ",
+  "receptor": "GCH676SYEYEYR6ZXFY75AB5C3YM7CPSJB4VZEDHCA7JO3UPTDD7X6YPA",
+  "lectura": {
+    "clasica": {
+      "hash": "a7b8393c5295acfc445b857a026c016646f56ceb53193ece2ce09eebbf40830f",
+      "ledger": 4995969,
+      "operaciones": [
+        {
+          "tipo": "payment",
+          "funcion": null
+        }
+      ],
+      "eventos": [
+        {
+          "tipo": "contract",
+          "contrato": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+          "topics": [
+            "fee",
+            "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ"
+          ],
+          "datos": "100"
+        },
+        {
+          "tipo": "contract",
+          "contrato": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+          "topics": [
+            "transfer",
+            "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ",
+            "GCH676SYEYEYR6ZXFY75AB5C3YM7CPSJB4VZEDHCA7JO3UPTDD7X6YPA",
+            "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+          ],
+          "datos": "100000"
+        }
+      ]
+    },
+    "contrato": {
+      "hash": "44e0f75295004850dee7f6894d2111124d4c1a4d4e528bb777122878937a7542",
+      "ledger": 4995970,
+      "operaciones": [
+        {
+          "tipo": "invoke_host_function",
+          "funcion": "HostFunctionTypeHostFunctionTypeInvokeContract"
+        }
+      ],
+      "eventos": [
+        {
+          "tipo": "contract",
+          "contrato": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+          "topics": [
+            "fee",
+            "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ"
+          ],
+          "datos": "24205"
+        },
+        {
+          "tipo": "contract",
+          "contrato": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+          "topics": [
+            "fee",
+            "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ"
+          ],
+          "datos": "-9795"
+        },
+        {
+          "tipo": "contract",
+          "contrato": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+          "topics": [
+            "transfer",
+            "GAOAXETPOHNQS6CQB6XHRYRMLEDJDUCCRD7H7OHEW6JPSVU7BXNT66PQ",
+            "GCH676SYEYEYR6ZXFY75AB5C3YM7CPSJB4VZEDHCA7JO3UPTDD7X6YPA",
+            "USDC:GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+          ],
+          "datos": "100000"
+        }
+      ]
+    }
+  },
+  "eventos_transfer_clasica": 1,
+  "eventos_transfer_contrato": 1,
+  "evento_transfer_identico": true,
+  "tipos_distintos": true,
+  "conclusion": "El evento de transferencia es identico en los dos pagos; solo el tipo de la operacion en la transaccion dice como se hizo. Un evento no prueba el tipo de pago."
+}

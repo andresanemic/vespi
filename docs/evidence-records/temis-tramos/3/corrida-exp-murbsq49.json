@@ -1,0 +1,266 @@
+{
+  "fecha": "2026-10-02T18:59:22.843Z",
+  "red": "stellar:testnet",
+  "expediente_id": "exp-murbsq49",
+  "cuenta_ancla": "GDHTARIBSFDRQDPL7ASVIFFDZ74CBI3D2KVXJRB6LJLYF345HIAHF2AC",
+  "anclajes": [
+    {
+      "digest": "49196cdd683b39d251cb9f0b976e2813f58b017badc956a8ecd913d710a42767",
+      "evento": "acuerdo",
+      "hito": null,
+      "version": 1,
+      "hash": "bd459ea5fea594db726f9ac3728807f3de29779a711f131a9819c32c85f1edd4",
+      "ledger": 4988781
+    },
+    {
+      "digest": "96834945c87b27e072052930b0886574db5efdffd98f264498382ab33f4bfb38",
+      "evento": "hito_abierto",
+      "hito": "h1",
+      "version": 1,
+      "hash": "65512968234035225169cf4a920501f07005422cf84b60985fb89f4cd0827f58",
+      "ledger": 4988782
+    },
+    {
+      "digest": "0bd4fed9a7315c2597a58472cd689a319f54c9ee581674b82118265c026a0a88",
+      "evento": "declaracion",
+      "hito": "h1",
+      "version": 1,
+      "hash": "ea0231b92194350f698eb75355955a25ed3137ded5c7f992c21992d7d5d7ad0d",
+      "ledger": 4988783
+    },
+    {
+      "digest": "cc91150dd9e138970ef4e8770bfb3c37873de1d1b6bdaec47056f70846592884",
+      "evento": "anulacion",
+      "hito": "h1",
+      "version": 1,
+      "hash": "95689cb5cea3c3ae0c5a79f17cd57e028edd119eeea21b31c3e8461d887de167",
+      "ledger": 4988784
+    },
+    {
+      "digest": "a4792f67eb0d9ca5e6a82ebde7d01fb1d1909e5226e6ad27cf1998504a2cdea1",
+      "evento": "declaracion",
+      "hito": "h1",
+      "version": 2,
+      "hash": "143979b1fde532875d93dc2f63e25d064eb4d549f5a4f2a63c6f1f75f68e9a40",
+      "ledger": 4988785
+    },
+    {
+      "digest": "bf6b8c86f357198fc6e9ce55f9619e02a392f2b06c6de4e0e6400a08e7d206d6",
+      "evento": "contraste",
+      "hito": "h1",
+      "version": 1,
+      "hash": "423974ba56ec29d3d5080679a8e86cf1c7948d67329da7436e7a042251123a73",
+      "ledger": 4988786
+    },
+    {
+      "digest": "08ac9d8ec37b9092c03132ab610e818c97e19fa941667764817ae4af026743a9",
+      "evento": "cierre",
+      "hito": "h1",
+      "version": 1,
+      "hash": "86c12eedb07b7cb664d0542a3612fdc77c3da98016caab314e62feaf441b4c61",
+      "ledger": 4988787
+    },
+    {
+      "digest": "bd4c660e1e01359fe71a004d36b225ca3a78608a99eb0b4962495f0a14b6050c",
+      "evento": "hito_abierto",
+      "hito": "h2",
+      "version": 1,
+      "hash": "51118d23a1c5316cdeef4110a4634b056db7eb598ea1933c69c5a916215e1f6b",
+      "ledger": 4988788
+    },
+    {
+      "digest": "718e6093ca10e582aa1c35a6a18dea7d8b4d3296b02f8cd9e958df59e5bb8ab5",
+      "evento": "declaracion",
+      "hito": "h2",
+      "version": 1,
+      "hash": "56e4dbb3260e4915e6cb5bfd3442bfcc1255a9d81ec99449bfc911fecbd452e3",
+      "ledger": 4988789
+    },
+    {
+      "digest": "62100a6a1c0ef5a78697e633fcbc1d4115cff2968688eec48a96befcc45b9685",
+      "evento": "cierre",
+      "hito": "h2",
+      "version": 1,
+      "hash": "165df06b95c879cae9de38978239b0575f5cd7b828464b668d5cc92d448979d8",
+      "ledger": 4988790
+    },
+    {
+      "digest": "513d0b426b0208db20b6128318cd2b04aa3e09ac081deacf7889ca37ef7a610b",
+      "evento": "hito_abierto",
+      "hito": "h3",
+      "version": 1,
+      "hash": "493a6f1cf06bdec8e5ecb62f979230fb3fc2663b99310e79b99211a5597b756a",
+      "ledger": 4988791
+    },
+    {
+      "digest": "79bd40cda6a57a68ca4e8cc95366106c4f599d2ca6ae3c3a4b0cdeef05f13942",
+      "evento": "declaracion",
+      "hito": "h3",
+      "version": 1,
+      "hash": "221b5bb7952cb93b46f676f870f44c4e8ab267faf318860dc15838b1b11de7c1",
+      "ledger": 4988792
+    },
+    {
+      "digest": "72224fb14a4bf29e7d81bdbac864e3a5004e89f0314b414f7da5970334aa6749",
+      "evento": "declaracion",
+      "hito": "h3",
+      "version": 1,
+      "hash": "e93f8718064a8f6514c342378ed5af799a75b8429a1882cfb4f598b265555a46",
+      "ledger": 4988793
+    },
+    {
+      "digest": "b95240d2317a39223a54f14262b55d55c42894c2663547c85a0a091429b0b7b6",
+      "evento": "contraste",
+      "hito": "h3",
+      "version": 1,
+      "hash": "70d5c4bd4c650a31239371ca610a262bbe95fbd0771502648b1cc7f07d296dd0",
+      "ledger": 4988794
+    },
+    {
+      "digest": "41802fb8be66aa4de9fa8a0a6b7ca046fbd822a16048d8db8ba32be7389f7177",
+      "evento": "controversia",
+      "hito": null,
+      "version": 1,
+      "hash": "12b84c7ede24b753bb4b8e635d0daad92e23aff37d9c5658ccd0230b9270b835",
+      "ledger": 4988795
+    }
+  ],
+  "estados": {
+    "exp-murbsq49": {
+      "estado": "acordado",
+      "partes": [
+        {
+          "id": "alice",
+          "clave_publica": "cab1d8dc4689f6a19f11bf0aa7dff59d926f1c7d74d9a6756c7d2006ce4c1bd8"
+        },
+        {
+          "id": "bob",
+          "clave_publica": "dbf85da332d6fa2e1525d481691afe041d64677c5a9620bba7f5300eb117569b"
+        }
+      ],
+      "operador": "adcf10825deb231aa92559a39d3de1a12f9777260730148a8c378bc3e94e0d83",
+      "hitos": {
+        "h1": {
+          "estado": "cumplido"
+        },
+        "h2": {
+          "estado": "cumplido_no_confirmado"
+        },
+        "h3": {
+          "estado": "impugnado"
+        }
+      }
+    }
+  },
+  "estatus_de_lineas": [
+    {
+      "evento": "acuerdo",
+      "hito": null,
+      "estatus": "vigente",
+      "hash": "bd459ea5fea594db726f9ac3728807f3de29779a711f131a9819c32c85f1edd4",
+      "ledger": 4988781
+    },
+    {
+      "evento": "hito_abierto",
+      "hito": "h1",
+      "estatus": "vigente",
+      "hash": "65512968234035225169cf4a920501f07005422cf84b60985fb89f4cd0827f58",
+      "ledger": 4988782
+    },
+    {
+      "evento": "declaracion",
+      "hito": "h1",
+      "estatus": "anulada",
+      "hash": "ea0231b92194350f698eb75355955a25ed3137ded5c7f992c21992d7d5d7ad0d",
+      "ledger": 4988783
+    },
+    {
+      "evento": "anulacion",
+      "hito": "h1",
+      "estatus": "vigente",
+      "hash": "95689cb5cea3c3ae0c5a79f17cd57e028edd119eeea21b31c3e8461d887de167",
+      "ledger": 4988784
+    },
+    {
+      "evento": "declaracion",
+      "hito": "h1",
+      "estatus": "vigente",
+      "hash": "143979b1fde532875d93dc2f63e25d064eb4d549f5a4f2a63c6f1f75f68e9a40",
+      "ledger": 4988785
+    },
+    {
+      "evento": "contraste",
+      "hito": "h1",
+      "estatus": "vigente",
+      "hash": "423974ba56ec29d3d5080679a8e86cf1c7948d67329da7436e7a042251123a73",
+      "ledger": 4988786
+    },
+    {
+      "evento": "cierre",
+      "hito": "h1",
+      "estatus": "vigente",
+      "hash": "86c12eedb07b7cb664d0542a3612fdc77c3da98016caab314e62feaf441b4c61",
+      "ledger": 4988787
+    },
+    {
+      "evento": "hito_abierto",
+      "hito": "h2",
+      "estatus": "vigente",
+      "hash": "51118d23a1c5316cdeef4110a4634b056db7eb598ea1933c69c5a916215e1f6b",
+      "ledger": 4988788
+    },
+    {
+      "evento": "declaracion",
+      "hito": "h2",
+      "estatus": "vigente",
+      "hash": "56e4dbb3260e4915e6cb5bfd3442bfcc1255a9d81ec99449bfc911fecbd452e3",
+      "ledger": 4988789
+    },
+    {
+      "evento": "cierre",
+      "hito": "h2",
+      "estatus": "vigente",
+      "hash": "165df06b95c879cae9de38978239b0575f5cd7b828464b668d5cc92d448979d8",
+      "ledger": 4988790
+    },
+    {
+      "evento": "hito_abierto",
+      "hito": "h3",
+      "estatus": "vigente",
+      "hash": "493a6f1cf06bdec8e5ecb62f979230fb3fc2663b99310e79b99211a5597b756a",
+      "ledger": 4988791
+    },
+    {
+      "evento": "declaracion",
+      "hito": "h3",
+      "estatus": "vigente",
+      "hash": "221b5bb7952cb93b46f676f870f44c4e8ab267faf318860dc15838b1b11de7c1",
+      "ledger": 4988792
+    },
+    {
+      "evento": "declaracion",
+      "hito": "h3",
+      "estatus": "perdedora",
+      "hash": "e93f8718064a8f6514c342378ed5af799a75b8429a1882cfb4f598b265555a46",
+      "ledger": 4988793
+    },
+    {
+      "evento": "contraste",
+      "hito": "h3",
+      "estatus": "vigente",
+      "hash": "70d5c4bd4c650a31239371ca610a262bbe95fbd0771502648b1cc7f07d296dd0",
+      "ledger": 4988794
+    },
+    {
+      "evento": "controversia",
+      "hito": null,
+      "estatus": "vigente",
+      "hash": "12b84c7ede24b753bb4b8e635d0daad92e23aff37d9c5658ccd0230b9270b835",
+      "ledger": 4988795
+    }
+  ],
+  "cotejo_con_la_copia": {
+    "coincide": true,
+    "diferencias": []
+  }
+}

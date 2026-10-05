@@ -1,0 +1,97 @@
+{
+  "status": "verified",
+  "output": {
+    "service": "marketing-plan",
+    "paid": true,
+    "paidAt": "2026-10-02T17:48:20.865Z",
+    "title": "AI BORA Marketing Plan",
+    "summary": "A 90-day plan to move your B2B sales to on-chain proposals and instant settlements.",
+    "deliverables": [
+      "Landing page A/B test variants (hero copy + CTA)",
+      "LinkedIn outreach sequence for decision makers",
+      "On-chain proposal explainer video script"
+    ],
+    "nextSteps": [
+      "Launch week 1 campaign",
+      "Track proposal conversions on Stellar",
+      "Retarget warm leads"
+    ]
+  },
+  "receipt": {
+    "status": "verified",
+    "operation": {
+      "id": "op-mur9b1bs-0",
+      "goal": "obtain-marketing-plan (demo)"
+    },
+    "capability": "x402-marketing-plan",
+    "authority": {
+      "grants": [
+        {
+          "asset": "USDC:CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+          "maxAmount": "500000",
+          "to": "GD7MPNDYJO6YOQJ2NTSWDN2QDPZWORG2J7L7SCVIXU3IGVOMJNGZUV6J"
+        }
+      ],
+      "exercised": [
+        {
+          "asset": "USDC:CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+          "maxAmount": "100000",
+          "to": "GD7MPNDYJO6YOQJ2NTSWDN2QDPZWORG2J7L7SCVIXU3IGVOMJNGZUV6J"
+        }
+      ],
+      "approval": "preauthorized"
+    },
+    "outcome": "verified",
+    "evidence": {
+      "txHash": "e43e1ed80675d2b7d174167765beeec1f6b5226b8bd2950fa8231e9bb31a9f91",
+      "payer": "GAB3TBOXYG5T2OXF42NQJRMJEUJ7E7GTDT3P7QYYTKBIZEYJUQ6NQBN4",
+      "network": "stellar:testnet",
+      "authDigest": "9a2b045263edff29fe138388822fc95963d4bf90ececcd946402959f783767ad",
+      "planDigest": "c0a0760002a9c70a0a764bda913ac7d33a0a3abbd01d84e255d7ba61bd8c69d2"
+    },
+    "verification": {
+      "verified": true,
+      "checks": {
+        "transaction": "e43e1ed80675d2b7d174167765beeec1f6b5226b8bd2950fa8231e9bb31a9f91",
+        "invocation": true,
+        "authorization": true,
+        "contract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        "function": "transfer",
+        "changesSeen": 1,
+        "assetChanges": 1,
+        "recipientChanges": 1,
+        "transfer": true,
+        "payer": true,
+        "source": true,
+        "exactAmount": true,
+        "amountAtomic": "100000"
+      },
+      "reason": "settlement matches exact declared effect"
+    },
+    "coverage": [
+      "invocation",
+      "authorization",
+      "transfer",
+      "payer",
+      "source",
+      "exactAmount"
+    ],
+    "notCovered": [
+      "transaction",
+      "contract",
+      "function",
+      "changesSeen",
+      "assetChanges",
+      "recipientChanges",
+      "amountAtomic",
+      "external anchor"
+    ],
+    "anchor": {
+      "status": "pending",
+      "network": "stellar:testnet"
+    },
+    "detail": null,
+    "at": "2026-10-02T17:48:28.478Z",
+    "digest": "efa2846afd38b63f02143371a81d7b28d211075bceab1fe2bd24bb6e228dce02"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "fecha": "2026-10-03T04:58:07.573Z",
+  "facilitador": "https://x402.org/facilitator",
+  "red": "stellar:testnet",
+  "pagador": "GA3GPTNJYLLA7QL6K52EWEGFA52OKIA4GDSPWLUOSR3PTAJVBGXG3ZWT",
+  "receptor": "GDVYMG2UHVJKXFCOEIS7L66CW7OLCMJMMFNNC3DEEXKVTVXSIN2YLDJS",
+  "multiplexada": "MDVYMG2UHVJKXFCOEIS7L66CW7OLCMJMMFNNC3DEEXKVTVXSIN2YKAAAAAADVXTIWHQEK",
+  "id_multiplexado": "987654321",
+  "pasos": [
+    {
+      "etiqueta": "control: payTo G, construir payload y /verify",
+      "ok": true,
+      "respuesta": {
+        "isValid": true,
+        "payer": "GA3GPTNJYLLA7QL6K52EWEGFA52OKIA4GDSPWLUOSR3PTAJVBGXG3ZWT"
+      }
+    },
+    {
+      "etiqueta": "prueba: payTo M, construir el payload",
+      "ok": true,
+      "respuesta": {
+        "construido": true,
+        "tiene_authorization": true
+      }
+    },
+    {
+      "etiqueta": "prueba: payTo M, /verify",
+      "ok": true,
+      "respuesta": {
+        "isValid": false,
+        "invalidReason": "invalid_exact_stellar_payload_event_wrong_to",
+        "payer": "GA3GPTNJYLLA7QL6K52EWEGFA52OKIA4GDSPWLUOSR3PTAJVBGXG3ZWT"
+      }
+    }
+  ],
+  "resultado": "negativo: la payTo multiplexada no pasa por el facilitador (ver cada paso)"
+}
