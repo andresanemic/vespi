@@ -367,6 +367,14 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
       && safeVerification.zk.result === 'verified')) {
     status = 'not_verified';
   }
+  // The rule above only reaches a claim. A receipt may also be built by hand, with a status its maker
+  // chose and no claim at all, and then the only thing that can lower the status is its own
+  // verification: a verdict that ended false, here because a `zk.` name sat outside the closed
+  // catalog, cannot leave a receipt that reads `verified` (advisor R2-09).
+  if (status === 'verified' && safeVerification && safeVerification.verified === false
+    && safeVerification.reason === ZK_FOREIGN_CHECK_REASON) {
+    status = 'not_verified';
+  }
   const operationId = safeText(operation && operation.id) || 'unknown';
   const goal = safeText(operation && operation.goal) || '';
   const action = safeText(operation && operation.action);
