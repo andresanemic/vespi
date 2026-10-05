@@ -1,5 +1,9 @@
 # Judge findings for kernel 0.1.4
 
+This is the historical judge-review cut, before the integrated emergency, provenance, x402, ZK and evidence work. Its suite counts and missing-expectation finding describe that earlier checkout. The integrated [release note](./RELEASE_0.1.4_KERNEL.md) and [evidence guide](./TESTNET_EVIDENCE.md) record the current scope and the saved comparison: 50 readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies.
+
+Este documento conserva el corte histórico de revisión, anterior a la integración de emergencia, procedencia, x402, ZK y evidencia. Sus cifras de pruebas y el hallazgo de expectativas ausentes describen aquella copia. [La nota integrada](./RELEASE_0.1.4_KERNEL.md) y [la guía de evidencia](./TESTNET_EVIDENCE.md) registran el alcance actual y la comparación guardada: 50 lecturas, 5 casos verificados semánticamente, 45 parciales y 0 discrepancias.
+
 ## English
 
 Reviewed the findings in sections (b) and (f) of simulated judge reports A, B, and C against the local 0.1.4 kernel tree. No network calls were made. For each reported kernel behavior, the verdict and reproducible evidence follow.
