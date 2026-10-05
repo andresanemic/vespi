@@ -16,6 +16,8 @@
 
 const { sufficient } = require('./authority.js');
 const { buildReceipt } = require('./receipt.js');
+const { readZkClaim, readCatalogChecks, reconcileZk, ZK_INCONSISTENT_REASON, ZK_FOREIGN_CHECK_REASON,
+  ZK_ECHO_REASON } = require('./zk.js');
 const { createHash } = require('node:crypto');
 const { parseTime } = require('./time.js');
 
@@ -1004,12 +1006,23 @@ async function runOperationOnce(op, capability, io) {
   // do NOT rerun, do NOT claim verified.
   let verification;
   try {
-    const verifyFn = io && typeof io.verify === 'function' ? io.verify : null;
+    // Read once. `typeof io.verify` followed by `io.verify` is two reads of the same property, and
+    // the function that gets checked is then not the function that gets called.
+    const ioVerify = io ? io.verify : undefined;
+    const verifyFn = typeof ioVerify === 'function' ? ioVerify : null;
     verification = verifyFn
       ? await withTimeout(Promise.resolve().then(() => verifyFn.call(io, capabilityResult.evidence)), readTimeout(io, 'verifyTimeoutMs'), 'verifier')
       : { verified: false, checks: {}, reason: 'no verifier' };
   } catch (err) {
     verification = { verified: false, checks: {}, reason: `verifier error: ${errorText(err)}` };
+  }
+  // The answer has to be the verifier's own object. `io.verify` was handed this evidence, and if it
+  // hands the very same object back then the executor answered itself: `verified: true` in the
+  // evidence is not a verification, and a `zk` the executor carried is not a claim. Identity is the
+  // whole test, because a copy of the same fields is a legitimate answer and cannot be told from a
+  // forgery by this kernel.
+  if (verification === capabilityResult.evidence) {
+    verification = { verified: false, checks: {}, reason: ZK_ECHO_REASON };
   }
   let verified = false;
   let normalizedVerification;
@@ -1032,6 +1045,23 @@ async function runOperationOnce(op, capability, io) {
       checks,
       reason: validReason ? candidateReason : (verified ? 'verified' : 'verification not confirmed'),
     };
+    // A zk claim is read from the verifier's answer and nowhere else: never from `perform`, never
+    // from the evidence. It is validated with the closed schema and reconciled with the verdict and
+    // the checks, so an operation cannot end `succeeded` on a claim that does not hold up — which
+    // would leave the state disagreeing with the receipt it just wrote.
+    const zkClaim = readZkClaim(verifierResult);
+    const vocabulary = readCatalogChecks(checks, { claimed: zkClaim.claimed });
+    const reconciled = reconcileZk({ verified, checks: vocabulary.checks, claimed: zkClaim.claimed, zk: zkClaim.value });
+    normalizedVerification.checks = vocabulary.checks;
+    if (reconciled.zk !== null) normalizedVerification.zk = reconciled.zk;
+    if (vocabulary.foreign) {
+      normalizedVerification.verified = false;
+      normalizedVerification.reason = ZK_FOREIGN_CHECK_REASON;
+    } else if (!reconciled.consistent) {
+      normalizedVerification.verified = false;
+      normalizedVerification.reason = ZK_INCONSISTENT_REASON;
+    }
+    verified = normalizedVerification.verified === true;
   } catch (err) {
     normalizedVerification = {
       verified: false,

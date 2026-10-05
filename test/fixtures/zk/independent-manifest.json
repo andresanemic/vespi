@@ -1,0 +1,44 @@
+{
+  "python_version": "3.14.5",
+  "python_implementation": "CPython",
+  "py_ecc_version": "8.0.0",
+  "py_ecc_license": "MIT",
+  "py_ecc_author": "The Ethereum Foundation",
+  "py_ecc_homepage": "https://github.com/ethereum/py_ecc",
+  "generated_at_utc": "2026-10-04T17:09:59.764834+00:00",
+  "generation_command": ".\\.venv\\Scripts\\python.exe generar_vectores.py",
+  "verification_command": ".\\.venv\\Scripts\\python.exe test_vectors.py",
+  "vectors_sha256": "e94d5ba03570851c5cb71f86070d8dccc2eea74cdd4fce6e9c0a2a0adbacdd42",
+  "artifact_sha256": {
+    "generar_vectores.py": "aa1aed143c3b556507b21c535613743fd3516c042f7f944d948ac0d21cc9201b",
+    "test_vectors.py": "9794c01ae343256bc4d1a87cbd5ae23e19217397e7bdaca4b5f3483302f15553",
+    "rojo.txt": "0df7f27e437f288062eafbbf87bd2344c151535052501272bc5b287a2a0449f5"
+  },
+  "dependencies": {
+    "annotated-types": "0.8.0",
+    "cytoolz": "1.1.0",
+    "eth-hash": "0.8.0",
+    "eth-typing": "6.0.0",
+    "eth-utils": "6.0.0",
+    "pip": "26.1.1",
+    "py-ecc": "8.0.0",
+    "pydantic": "2.13.5",
+    "pydantic_core": "2.46.5",
+    "toolz": "1.1.0",
+    "typing-inspection": "0.4.4",
+    "typing_extensions": "4.16.0"
+  },
+  "vector_counts": {
+    "constants": "1",
+    "g1_arithmetic": "65",
+    "g2_arithmetic": "60",
+    "invalid_points": "16",
+    "full_pairings": "6",
+    "pairing_products": "12",
+    "synthetic_cases": "4",
+    "other_valid_reference": "1",
+    "total": "165"
+  },
+  "verification_status": "Generation assertions passed; consult verde.txt for the separate offline test run",
+  "limits": "Independent from the JavaScript engine, not an independent audit of py_ecc. No kernel code or kernel suite executed."
+}

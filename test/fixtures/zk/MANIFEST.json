@@ -1,0 +1,56 @@
+{
+  "note": "Provenance and expected results for the Groth16/BN254 fixture used by the Vespi kernel ZK tests. Any change to these files or to these values must be a deliberate, reviewed commit.",
+  "source": {
+    "repository": "https://github.com/stellar/soroban-examples",
+    "commit": "01a9a33dfd4078ea507d6c606906a88370186a6b",
+    "path": "groth16_verifier/contracts/bn254_verifier/tests/data/gnark",
+    "license": "Apache-2.0",
+    "notice": "Vendored verbatim as test data. The example is a demonstration of a verifier contract and is not audited; this kernel does not execute the contract, it only reads the artifacts.",
+    "retrieved": "2026-10-04",
+    "downloadedOver": "https://raw.githubusercontent.com/stellar/soroban-examples/01a9a33dfd4078ea507d6c606906a88370186a6b/groth16_verifier/contracts/bn254_verifier/tests/data/gnark/"
+  },
+  "files": {
+    "proof.json": {
+      "bytes": 891,
+      "sha256": "dc822fecbbac6cbbcac18f2d4c2b01fbd84afbfb4815c1d670ded98d651ffc1e"
+    },
+    "verification_key.json": {
+      "bytes": 3159,
+      "sha256": "1f14a3d613563c6b942dc9c7fb422033f0b8a37b86a7adc8f4cf725da81c1f75"
+    }
+  },
+  "circuit": {
+    "shape": "x^3 + x + 5 = y",
+    "prover": "gnark, via the Stellar soroban-examples fixture",
+    "nPublic": 1
+  },
+  "conversion": {
+    "g1": "[x, y, z] with z === '1' becomes [x, y]",
+    "g2": "[[x.c0, x.c1], [y.c0, y.c1], [z.c0, z.c1]] with z === ['1','0'] drops the third row",
+    "fp2Order": "c0 first (real part), c1 second. Measured against the twist curve y^2 = x^3 + 3/(9+u); reading the fixture the other way round puts every G2 point off the curve.",
+    "notUsed": "vk_alphabeta_12 is a cached pairing result, never a substitute for the fixed points."
+  },
+  "digests": {
+    "vkDomain": "vespi.zk.vk.v1",
+    "proofDomain": "vespi.zk.proof.v1",
+    "definition": "sha256(domain + '\\n' + JSON.stringify(canonical(value))), canonical = recursive lexicographic key order, arrays keep their order.",
+    "vkDigest": "ac15a1619729637dcc406bfa3ac34557a31e622eef0471aceb6564aedb789fee",
+    "proofDigest": "6be9857232ecf64dfbe7bd0265802a2699b794af8061ba7c124e04521aa03c42",
+    "note": "These are the kernel's normalized digests over the converted structures. They are not the file hashes above."
+  },
+  "expectedResults": {
+    "publicSignals": ["35"],
+    "accepts": [
+      { "publicInputs": ["35"], "verified": true, "why": "35 is the root of x^3 + x + 5 = 35 (3 + 3 + 5 = ... 3^3+3+5 = 35)." }
+    ],
+    "rejects": [
+      { "publicInputs": ["22"], "verified": false, "why": "22 is not a root of the circuit; the pairing equation does not hold." },
+      { "publicInputs": ["35", "1"], "verified": false, "why": "wrong number of public signals for nPublic === 1." },
+      { "publicInputs": [], "verified": false, "why": "wrong number of public signals for nPublic === 1." }
+    ]
+  },
+  "coverage": {
+    "independentVectors": "none yet. This fixture proves mathematical interoperability with one public circuit, nothing else. An authorized provider must still deliver independent vectors: a second circuit, a valid G2 point outside the subgroup, infinity cases, and pairing/arithmetic vectors contrasted against a separate implementation.",
+    "institutional": "none. This circuit proves a polynomial relation. It says nothing about an institution, a document or a presenter."
+  }
+}
