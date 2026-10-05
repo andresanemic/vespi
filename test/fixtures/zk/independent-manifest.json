@@ -8,7 +8,7 @@
   "generated_at_utc": "2026-10-04T17:09:59.764834+00:00",
   "generation_command": ".\\.venv\\Scripts\\python.exe generar_vectores.py",
   "verification_command": ".\\.venv\\Scripts\\python.exe test_vectors.py",
-  "vectors_sha256": "e94d5ba03570851c5cb71f86070d8dccc2eea74cdd4fce6e9c0a2a0adbacdd42",
+  "vectors_sha256": "9831709c877416bced867bc2c87dea36ccbf779c6020a0fa4355a00d7819bd2a",
   "artifact_sha256": {
     "generar_vectores.py": "aa1aed143c3b556507b21c535613743fd3516c042f7f944d948ac0d21cc9201b",
     "test_vectors.py": "9794c01ae343256bc4d1a87cbd5ae23e19217397e7bdaca4b5f3483302f15553",

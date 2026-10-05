@@ -4,3 +4,5 @@
 # a hash that nobody changed on purpose.
 test/fixtures/zk/proof.json -text
 test/fixtures/zk/verification_key.json -text
+test/fixtures/zk/independent-vectors.json -text
+test/fixtures/zk/independent-manifest.json -text
