@@ -38,7 +38,7 @@
     "run_record_roots": [
       {
         "repository": "TEMIS",
-        "directory": ".job/fuentes/temis-tramos",
+        "directory": "docs/evidence-records/temis-tramos",
         "prefix": "tramos",
         "files": [
           {
@@ -100,7 +100,7 @@
       },
       {
         "repository": "vespi-x402",
-        "directory": ".job/fuentes/x402-corridas",
+        "directory": "docs/evidence-records/x402-corridas",
         "files": [
           {
             "repository": "vespi-x402",

@@ -1,0 +1,58 @@
+{
+  "filas_del_tercero": 22,
+  "iguales": 22,
+  "distintos": [],
+  "estatus_solo_cuenta_ancla": {
+    "vigente": 13,
+    "anulada": 1,
+    "perdedora": 1,
+    "firmas_insuficientes": 1,
+    "anulacion_no_valida": 1,
+    "fuera_de_cadena": 1,
+    "sin_cuerpo": 1,
+    "cierre_sin_respaldo": 1,
+    "contraste_sin_objetivo": 1,
+    "digest_no_coincide": 1
+  },
+  "estatus_con_cuentas_ajenas": {
+    "vigente": 13,
+    "anulada": 1,
+    "perdedora": 1,
+    "cuenta_no_autorizada": 1,
+    "firmas_insuficientes": 1,
+    "anulacion_no_valida": 1,
+    "fuera_de_cadena": 1,
+    "sin_cuerpo": 1,
+    "cierre_sin_respaldo": 1,
+    "contraste_sin_objetivo": 1,
+    "digest_no_coincide": 1
+  },
+  "hitos": {
+    "h1": {
+      "estado": "cumplido"
+    },
+    "h2": {
+      "estado": "cumplido_no_confirmado"
+    },
+    "h3": {
+      "estado": "impugnado"
+    }
+  },
+  "cotejo_con_el_archivo": {
+    "coincide": false,
+    "diferencias": [
+      {
+        "digest": "17ba0bfbe03612c3a69e0e8aaf0ff7eaa7529aa3fd461a07a37d6242628287a6",
+        "tipo": "falta_en_el_historial"
+      },
+      {
+        "digest": "2ff737191bac8058a5cb11c65ef937969232dbe4b68aebdb4e8046393c88c7bf",
+        "tipo": "cuerpo_alterado"
+      },
+      {
+        "digest": "d5b3142e9708da9989af5c91eec5f27282fe6d36c8d0445f7d2145c8ad03ecd3",
+        "tipo": "falta_en_la_copia"
+      }
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "status": "not_verified",
+  "output": null,
+  "receipt": {
+    "status": "not_verified",
+    "operation": {
+      "id": "op-mur8v4jw-0",
+      "goal": "obtain-marketing-plan (demo)"
+    },
+    "capability": "x402-marketing-plan",
+    "authority": {
+      "grants": [
+        {
+          "asset": "USDC:CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+          "maxAmount": "500000",
+          "to": "GD7MPNDYJO6YOQJ2NTSWDN2QDPZWORG2J7L7SCVIXU3IGVOMJNGZUV6J"
+        }
+      ],
+      "exercised": [
+        {
+          "asset": "USDC:CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+          "maxAmount": "100000",
+          "to": "GD7MPNDYJO6YOQJ2NTSWDN2QDPZWORG2J7L7SCVIXU3IGVOMJNGZUV6J"
+        }
+      ],
+      "approval": "preauthorized"
+    },
+    "outcome": "not_verified",
+    "evidence": {
+      "txHash": "4748d366aafa23d9a65d3367238e43c610f97d5697c58fdc5958067651f64377",
+      "payer": "GAB3TBOXYG5T2OXF42NQJRMJEUJ7E7GTDT3P7QYYTKBIZEYJUQ6NQBN4",
+      "network": "stellar:testnet",
+      "authDigest": "40fee2eed6da69aed9a38e122814e2f6c149e07c495e7a31a2e7c1c5cb66ea9d",
+      "planDigest": "00c3006d0897b3c333a50ecfc74a81dc4a6b08c19ad3fc93f6c1d01807e00e1a"
+    },
+    "verification": {
+      "verified": false,
+      "checks": {},
+      "reason": "transaction ledger is missing or invalid"
+    },
+    "coverage": [],
+    "notCovered": [
+      "external anchor"
+    ],
+    "anchor": {
+      "status": "pending",
+      "network": "stellar:testnet"
+    },
+    "detail": null,
+    "at": "2026-10-02T17:36:03.822Z",
+    "digest": "4fe312fb300a0819a120871bd6bc1554fb8e581fe128defd34af4c039b289999"
+  }
+}
