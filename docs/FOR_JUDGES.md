@@ -1,137 +1,105 @@
-# Judge Vespi in five minutes
+# Judge Vespi
 
-**Vespi is a small JavaScript kernel that keeps a person's authority, a verifiable receipt and the next agreed action together when work changes hands.** Kernel `0.1.4` was published on 2026-10-05 as `v0.1.4-kernel`.
+Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. An uncertain exercised effect returns to you for reconciliation, as [continuation tests](../test/v014.test.js) verify, but the host must store receipts and run the next action. Kernel `0.1.4`: [fecha de publicación].
 
-From the repository root, run the offline proof:
+## Run the local evidence
+
+From the repository root, with Node.js available, run:
 
 ```sh
 node examples/walkthrough.js
-node --test test/*.test.js
+node --test "test/*.test.js"
+node scripts/verify-testnet-evidence.mjs --offline
+```
+
+Answer the walkthrough's terminal prompt with `Ada: approve`. Inspect the receipt's `status`, `coverage` and `notCovered`, then the next action selected by another process. [The walkthrough test](../test/walkthrough.test.js) checks a local observed effect, but the receipt is passed explicitly to that process; this does not establish automatic transfer, durable storage or authenticated human identity. [The bilingual walkthrough](./WALKTHROUGH.md) explains the source and transcript.
+
+The kernel suite reports 1173 tests, 1149 passed, 0 failed and 24 `todo`; pending and contract-boundary cases are not passing tests. The last command checks only shape and uniqueness of hashes, without comparing transaction facts or accessing a network. [The evidence guide](./TESTNET_EVIDENCE.md#recheck-the-saved-responses) gives the command for comparing saved responses with local expectations and an optional Horizon refresh. The saved comparison yields 50 readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies; the expected facts come from local execution records, not Horizon.
+
+To create a manifest for the exact checkout you are judging, run:
+
+```sh
 node scripts/judge-package.mjs
 ```
 
-The first command runs a full operation and prints its receipt and the next action selected by a second process. The second runs the kernel suite. The third runs that suite to record its counts, hashes the cut and writes [`JUDGE_PACKAGE.json`](./JUDGE_PACKAGE.json). It uses no network. For the operation's source, exact output and limits, see the bilingual [walkthrough](./WALKTHROUGH.md). For recorded Stellar testnet evidence, check `--offline` first, then decide whether to query Horizon as described below.
+This runs the kernel suite, hashes the cut and writes [JUDGE_PACKAGE.json](./JUDGE_PACKAGE.json), without a network. Check `packageVersion`, `gitCommit`, `tests` and `fileHashes` against your checkout. A saved manifest may belong to an earlier cut; regenerate it after the final version and files are fixed. It records project URLs, but does not fetch them or verify access.
 
-Five-minute route: (1) run the three commands above; (2) read `status`, `coverage` and `notCovered` in the printed receipt; (3) inspect `packageVersion`, `gitCommit`, `tests` and `fileHashes` in the JSON; (4) review the v0.1.4 release and historical v0.1.3 boundary below; (5) check the stated limits before weighing the testnet and project evidence.
+## What entered from the 0.1.3 promise
 
-## Version boundary: published 0.1.4 and historical 0.1.3
+The [0.1.3 note](./RELEASE_0.1.3_KERNEL.md) announced emergency access, zero knowledge, skill provenance and x402 in the kernel. [The bilingual 0.1.4 note](./RELEASE_0.1.4_KERNEL.md) records what entered and each independent review condition. [Emergency regressions](../test/k1-emergencia-r6-advisor.test.js) cover prior authority exercised by the grantee's opaque host-issued principal and reviews refused to the executor, but real identity, trusted time, storage, execution and effect verification remain the host's; D4 counts uses, not money. [Provenance regressions](../test/k2-procedencia-r5-advisor.test.js) cover the resolver's own evidence, without sending declared `author` or `contentDigest`, and hostile prototype data, but not same-process code replacing built-in functions after loading; `provenanceSource` distinguishes `verified` from `declared`, while the name stays declared.
 
-The published `v0.1.4-kernel` adds reconciliation before receipt-based continuation after an exercised uncertain effect, a stable idempotency key passed to `perform`, consultative delegation deadlines, per-action attempt limits, and an injectable operation clock. The destination must honor the key to deduplicate external effects. `v0.1.3-kernel` is the previous release; its historical behavior and evidence remain in [`RELEASE_0.1.3_KERNEL.md`](./RELEASE_0.1.3_KERNEL.md).
+[x402 regressions](../test/k4-x402-r3-advisor.test.js) cover an injected-port paid-effect contract with mandatory synchronous `claims` and operation identity in the effect key, but no durable claims store, reservation release or refunds. The validator declares the output digest; the kernel does not recompute it or inspect nested output values. The [reference bridge](../demo/x402/ports.js) has [SDK loopback tests](../demo/x402/bridge.test.mjs) reported by its builder, but no final independent review, verified live payment or exercised real Soroban RPC payload path. [The minimal example](../examples/x402-app.js) uses simulated ports:
 
-The walkthrough demonstrates the local verified path only. It does not prove durable cross-process storage, a scheduler or external identity authentication. See the complete release scope and limits in [`RELEASE_0.1.4_KERNEL.md`](./RELEASE_0.1.4_KERNEL.md).
+```sh
+node examples/x402-app.js
+```
 
-## What cannot be checked from this package yet
+The example belongs to the kernel suite. SDK tests are a separate demo suite requiring the dependencies in [demo/x402/package.json](../demo/x402/package.json); they are outside the kernel count above.
 
-- **Functional-project source code and project test suites.** This kernel repository contains evidence and links, not the application source. The [README's project index](../README.md#the-functional-projects) links to the public repositories. The package manifest records those URLs; it does not fetch them or establish their current access state. Escribano's link is listed but needs a live availability check. Permamuseum is described in the README as a study note without code.
-- **Stellar mainnet.** No mainnet transaction is claimed or linked. The verifiable chain evidence is Stellar testnet; no mainnet date or access mechanism is scheduled.
-- **A second payment provider.** Only the recorded x402 facilitator is evidenced. There is no second provider or scheduled access to one.
-- **A real independent superreview.** The repository has simulated judge reports and prior-art notes. No external review run is attached, and no reviewer or date is scheduled. A real review must arrive with its run and artifacts in this repository before it is credited.
+[ZK port tests](../test/k3b-zk-port.test.js) cover a pinned key and agreed public inputs, but trust an injected cryptographic backend. The internal [BN254 Groth16 reference](../src/zk-bn254-reference.js) has [reference tests](../test/k3d-zk-groth16.test.js), but is not a public API, is unaudited and is not production ready. Proofs are malleable, a degenerate key accepts forgeries and a Promise timeout cannot interrupt synchronous CPU verification. These tests do not demonstrate integration with Casa Firme or Vela.
 
-## Qué NO se puede comprobar todavía
+D3 stamps `stellar:testnet` in a newly built pending anchor, as [receipt.js](../src/receipt.js) shows, but does not affect the digest or prove a network submission; it becomes configurable in 0.1.5. D5 keeps Vela's sealed content plaintext in the demonstration according to the owner; a real deployment requires encryption at rest and third-party key custody.
 
-- **El código de los proyectos funcionales ni sus suites.** Este repositorio del kernel trae evidencia y enlaces, no el código de las aplicaciones. El [índice de proyectos del README](../README.md#the-functional-projects) enlaza a los repositorios públicos. El paquete registra esas URL, pero no las descarga ni confirma su acceso actual. El enlace de Escribano todavía necesita una comprobación en vivo. Permamuseum figura en el README como nota de estudio sin código.
-- **Stellar mainnet.** No se afirma ni enlaza una transacción de mainnet. La evidencia de cadena revisable corresponde a Stellar testnet. No hay fecha ni mecanismo de acceso previsto para mainnet.
-- **Un segundo proveedor de pagos.** Solo hay evidencia del facilitator x402 registrado. No hay otro proveedor ni acceso programado.
-- **Un superreview real e independiente.** El repositorio contiene informes simulados y notas de arte previo. No hay una corrida de revisión externa adjunta, ni revisor o fecha agendados. Para acreditarla, la revisión deberá entrar a este repositorio con su corrida y artefactos.
+## Historical evidence and project access
+
+Inspect [the saved x402 receipt](../demo/x402/receipts/live-testnet-2026-10-02.json): `status: "verified"`, `verification.verified: true`, `notCovered: ["external anchor"]` and `anchor.status: "pending"`. Its [transaction readback](./testnet-evidence.json) matches the declared payment, but belongs to the historical adapter and does not validate the new bridge. The first historical payment's receipt remains `not_verified` even though its later readback matches the declared facts. Everything here is Stellar testnet, with fictional data and no real money.
+
+The [functional-project repositories](../README.md#the-functional-projects) remain public and today contain README files only, according to the owner's schedule. Code is scheduled to enter the main branch by a push on 12 October 2026 at 20:29 Chile time and to leave it by another push on 16 October 2026 at 19:31. The margin is 30 minutes around deliberation, from 12 October at 20:59 to 16 October at 19:01. Removal by a new commit does not erase code from Git history, and an obtained copy cannot be withdrawn. This is an owner's commitment, not evidence that a future push happened. Project suites cannot be reproduced from README-only repositories today.
+
+## Qué NO trae el 0.1.4 y pasa al 0.1.5
+
+Spend-authority narrowing stays out because the base `grantSpend` constructor has an inherited-setter defect. [The release note](./RELEASE_0.1.4_KERNEL.md#what-014-does-not-bring-and-moves-to-015) gives each reason for x402 HX-09, HX-11, HX-12, HX-13, R2-05 and H11; provenance N07, N08, H12d and H13d; emergency H21; and withdrawn bridge cases R2-11 and R2-12. Other `todo` cases declare contract boundaries without promising future fixes. No autonomous cross-host runtime, scheduler, mainnet evidence, second payment provider, external security audit, regulatory certification or production readiness is demonstrated.
 
 ---
 
-# Verify Vespi
+# Revisar Vespi
 
-This guide checks the kernel tests, the recorded x402 receipt and Stellar testnet transactions. It uses the same commands in Windows PowerShell, Windows Command Prompt, macOS and Linux. Use Node.js 24 or later and Git. The x402 demo declares Node.js `>=24`; the kernel itself has no package installation step.
+Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Un efecto ejercido incierto vuelve a ti para reconciliarlo, como verifican [las pruebas de continuidad](../test/v014.test.js), pero el host debe guardar los recibos y ejecutar la siguiente acción. Kernel `0.1.4`: [fecha de publicación].
 
-## 1. Clone and enter the repository
+## Corre la evidencia local
 
-```sh
-git clone https://github.com/andresanemic/vespi.git
-cd vespi
-```
-
-You should now be in the repository root, where `README.md`, `src/`, `test/`, `scripts/` and `docs/` are present.
-
-## 2. Check Node.js and run the kernel suite
+Desde la raíz del repositorio, con Node.js disponible, ejecuta:
 
 ```sh
-node --version
+node examples/walkthrough.js
 node --test "test/*.test.js"
+node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-The first command prints your installed Node.js version, which should be `v24` or later. The second runs the kernel suite without installing packages, a wallet, credentials or network access. A successful run ends with a test summary and `fail 0`.
+Responde al terminal con `Ada: approve`. Revisa `status`, `coverage` y `notCovered` del recibo, y la siguiente acción seleccionada por otro proceso. [La prueba del recorrido](../test/walkthrough.test.js) comprueba un efecto local observado, pero el recibo se pasa explícitamente a ese proceso; no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El recorrido bilingüe](./WALKTHROUGH.md) explica el código y la transcripción.
 
-## 3. Inspect the recorded x402 receipt
+La suite del kernel informa 1173 pruebas, 1149 aprobadas, 0 fallidas y 24 `todo`; los casos pendientes y de frontera no son pruebas aprobadas. El último comando solo comprueba forma y unicidad de hashes, sin comparar hechos ni acceder a la red. [La guía de evidencia](./TESTNET_EVIDENCE.md#comparar-las-respuestas-guardadas) contiene el comando para comparar respuestas guardadas con expectativas locales y una consulta opcional a Horizon. La comparación guardada da 50 lecturas, 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias; los hechos esperados vienen de registros locales de ejecución, no de Horizon.
 
-Open [`demo/x402/receipts/live-testnet-2026-10-02.json`](../demo/x402/receipts/live-testnet-2026-10-02.json) in any text editor. Check `status: "verified"`, `verification.verified: true`, `coverage`, `notCovered: ["external anchor"]`, `anchor.status: "pending"`, and the `digest`. This is the saved receipt for the payment below; it does not claim an external anchor.
-
-## 4. Re-check all listed testnet transactions
-
-This step requires an internet connection. It only reads Horizon; it does not sign, submit or change transactions.
+Para crear un manifiesto de la copia exacta que revisas, ejecuta:
 
 ```sh
-node scripts/verify-testnet-evidence.mjs
+node scripts/judge-package.mjs
 ```
 
-When all listed transactions are still available and successful, the final count is `50 of 50 listed transactions are successful on Horizon testnet`. A smaller count or request error means Horizon did not confirm every item during this check. Stellar testnet can reset; the saved receipts and hashes in this repository remain available as the historical record.
+Esto corre la suite del kernel, calcula las huellas y escribe [JUDGE_PACKAGE.json](./JUDGE_PACKAGE.json), sin red. Contrasta `packageVersion`, `gitCommit`, `tests` y `fileHashes` con tu copia. Un manifiesto guardado puede corresponder a un corte anterior; regenéralo con la versión y los archivos finales. Registra URL de proyectos, pero no los descarga ni comprueba su acceso.
 
-## 5. Open example transactions on Horizon
+## Qué entró de lo anunciado en 0.1.3
 
-Open these links in a browser. Horizon shows the transaction record, including its success status and ledger. The first two are complementary examples from the evidence set.
+[La nota del 0.1.3](./RELEASE_0.1.3_KERNEL.md) anunció emergencia, conocimiento cero, procedencia de skills y x402 dentro del kernel. [La nota bilingüe del 0.1.4](./RELEASE_0.1.4_KERNEL.md) registra qué entró y cada condición de revisión independiente. [Las regresiones de emergencia](../test/k1-emergencia-r6-advisor.test.js) cubren autoridad anticipada ejercida por el principal opaco del grantee y revisión rechazada al ejecutor, pero identidad real, tiempo confiable, almacenamiento, ejecución y verificación del efecto corresponden al host; D4 cuenta usos, no dinero. [Las regresiones de procedencia](../test/k2-procedencia-r5-advisor.test.js) cubren evidencia propia del resolver, sin enviarle `author` ni `contentDigest` declarados, y datos hostiles en prototipos, pero no código del mismo proceso que reemplace funciones integradas después de cargar; `provenanceSource` distingue `verified` de `declared`, y el nombre sigue declarado.
 
-- [x402 payment, 0.01 USDC, ledger 4988161](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5)
-- [TEMIS agreement record, hash memo, ledger 4988781](https://horizon-testnet.stellar.org/transactions/bd459ea5fea594db726f9ac3728807f3de29779a711f131a9819c32c85f1edd4)
-- [Classic payment operation-type probe, ledger 4995969](https://horizon-testnet.stellar.org/transactions/a7b8393c5295acfc445b857a026c016646f56ceb53193ece2ce09eebbf40830f)
-- [Soroban asset-contract transfer operation-type probe, ledger 4995970](https://horizon-testnet.stellar.org/transactions/44e0f75295004850dee7f6894d2111124d4c1a4d4e528bb777122878937a7542)
-
-The payment receipt identifies the asset contract as `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`. The demo adapter checks the testnet issuer `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`.
-
-The recorded testnet payment and receipt can be checked without running the paid demo. The live demo is a separate testnet exercise that requires a funded testnet account, a trustline, a receiver, credentials and a reachable facilitator. It is not needed to verify the saved evidence.
-
----
-
-# Verificar Vespi
-
-Esta guía comprueba las pruebas del kernel, el recibo x402 guardado y las transacciones registradas en Stellar testnet. Usa los mismos comandos en Windows PowerShell, Windows Command Prompt, macOS y Linux. Necesitas Node.js 24 o posterior y Git. La demo x402 declara Node.js `>=24`; el kernel no requiere instalar paquetes.
-
-## 1. Clona el repositorio y entra en la carpeta
+[Las regresiones x402](../test/k4-x402-r3-advisor.test.js) cubren un contrato de efecto pagado por puertos inyectados con `claims` obligatorio y síncrono e identidad de operación en la clave del efecto, pero sin almacén durable, liberación de reservas ni reembolsos. El validador declara el digest de salida; el kernel no lo recalcula ni inspecciona valores anidados. [El puente de referencia](../demo/x402/ports.js) tiene [pruebas con SDK en loopback](../demo/x402/bridge.test.mjs) reportadas por el constructor, pero no revisión final independiente, pago en vivo verificado ni prueba del camino real Soroban RPC para el payload. [El ejemplo mínimo](../examples/x402-app.js) usa puertos simulados:
 
 ```sh
-git clone https://github.com/andresanemic/vespi.git
-cd vespi
+node examples/x402-app.js
 ```
 
-Debes quedar en la raíz del repositorio, donde están `README.md`, `src/`, `test/`, `scripts/` y `docs/`.
+El ejemplo pertenece a la suite del kernel. Las pruebas con SDK son otra suite de la demo, requieren las dependencias de [demo/x402/package.json](../demo/x402/package.json) y quedan fuera del conteo del kernel de arriba.
 
-## 2. Comprueba Node.js y corre la suite del kernel
+[Las pruebas del puerto ZK](../test/k3b-zk-port.test.js) cubren clave fijada y entradas públicas acordadas, pero confían en el backend criptográfico inyectado. La [referencia interna BN254 con Groth16](../src/zk-bn254-reference.js) tiene [pruebas de referencia](../test/k3d-zk-groth16.test.js), pero no es API pública, no está auditada y no es apta para producción. Las pruebas son maleables, una clave degenerada acepta falsificaciones y un timeout con Promise no interrumpe la verificación con CPU síncrona. Estas pruebas no demuestran integración con Casa Firme o Vela.
 
-```sh
-node --version
-node --test "test/*.test.js"
-```
+D3 estampa `stellar:testnet` en todo ancla pendiente nueva, como muestra [receipt.js](../src/receipt.js), pero no afecta el digest ni demuestra un envío a la red; se parametriza en 0.1.5. D5 mantiene en claro el contenido sellado de Vela en la demostración, según el dueño; un despliegue real requiere cifrado en reposo y custodia de claves de un tercero.
 
-El primer comando muestra la versión instalada de Node.js, que debe ser `v24` o posterior. El segundo corre la suite del kernel sin instalar paquetes y sin wallet, credenciales ni conexión a internet. Si termina bien, muestra un resumen con `fail 0`.
+## Evidencia histórica y acceso a los proyectos
 
-## 3. Abre el recibo x402 guardado
+Revisa [el recibo x402 guardado](../demo/x402/receipts/live-testnet-2026-10-02.json): `status: "verified"`, `verification.verified: true`, `notCovered: ["external anchor"]` y `anchor.status: "pending"`. Su [lectura guardada](./testnet-evidence.json) coincide con el pago declarado, pero corresponde al adaptador histórico y no valida el puente nuevo. El recibo del primer pago histórico sigue en `not_verified` aunque la lectura posterior coincida con los hechos declarados. Todo corresponde a Stellar testnet, con datos ficticios y sin dinero real.
 
-Abre [`demo/x402/receipts/live-testnet-2026-10-02.json`](../demo/x402/receipts/live-testnet-2026-10-02.json) en cualquier editor de texto. Comprueba `status: "verified"`, `verification.verified: true`, `coverage`, `notCovered: ["external anchor"]`, `anchor.status: "pending"` y `digest`. Este es el recibo guardado del pago que aparece abajo; no afirma que haya un anclaje externo.
+[Los repositorios de proyectos funcionales](../README.md#los-proyectos-funcionales) son siempre públicos y hoy contienen solo README, según el calendario del dueño. Su código entra por un push a la rama principal el 12 de octubre de 2026 a las 20:29, hora de Chile, y se retira de esa rama por otro push el 16 de octubre de 2026 a las 19:31. El margen es de 30 minutos alrededor de la deliberación, del 12 de octubre a las 20:59 al 16 de octubre a las 19:01. Retirarlo con un commit nuevo no lo borra del historial de Git, y una copia que ya obtuviste no se puede retirar. Es un compromiso del dueño, no evidencia de que el push futuro haya ocurrido. Hoy no puedes reproducir las suites de los proyectos desde repositorios que solo contienen README.
 
-## 4. Vuelve a comprobar las transacciones de testnet
+## Qué NO trae el 0.1.4 y pasa al 0.1.5
 
-Este paso necesita conexión a internet. Solo lee Horizon; no firma, envía ni cambia transacciones.
-
-```sh
-node scripts/verify-testnet-evidence.mjs
-```
-
-Si todas las transacciones siguen disponibles y son exitosas, el conteo final será `50 of 50 listed transactions are successful on Horizon testnet`. Un conteo menor o un error de consulta significa que Horizon no confirmó todos los elementos durante esta comprobación. Stellar puede reiniciar la testnet; los recibos y hashes guardados en este repositorio siguen disponibles como registro histórico.
-
-## 5. Abre transacciones de ejemplo en Horizon
-
-Abre estos enlaces en el navegador. Horizon muestra el registro de cada transacción, incluido su estado de éxito y ledger. Las dos primeras son ejemplos complementarios del conjunto de evidencia.
-
-- [Pago x402 de 0,01 USDC, ledger 4988161](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5)
-- [Registro de acuerdo de TEMIS con memo de hash, ledger 4988781](https://horizon-testnet.stellar.org/transactions/bd459ea5fea594db726f9ac3728807f3de29779a711f131a9819c32c85f1edd4)
-- [Prueba de tipo de operación con pago clásico, ledger 4995969](https://horizon-testnet.stellar.org/transactions/a7b8393c5295acfc445b857a026c016646f56ceb53193ece2ce09eebbf40830f)
-- [Prueba de tipo de operación con transferencia de contrato de activo Soroban, ledger 4995970](https://horizon-testnet.stellar.org/transactions/44e0f75295004850dee7f6894d2111124d4c1a4d4e528bb777122878937a7542)
-
-El recibo del pago identifica el contrato del activo como `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`. El adaptador de la demo comprueba el emisor de testnet `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`.
-
-Puedes comprobar el pago registrado y su recibo sin correr la demo pagada. La demo en vivo es una prueba aparte en testnet que requiere una cuenta financiada de testnet, trustline, receptor, credenciales y un facilitador accesible. No hace falta para verificar la evidencia guardada.
+La reducción de autoridad de gasto queda fuera por el defecto de setters heredados en el constructor base `grantSpend`. [La nota de versión](./RELEASE_0.1.4_KERNEL.md#qué-no-trae-el-014-y-pasa-al-015) da la razón de x402 HX-09, HX-11, HX-12, HX-13, R2-05 y H11; procedencia N07, N08, H12d y H13d; emergencia H21; y los casos retirados del puente R2-11 y R2-12. Otros `todo` declaran fronteras del contrato sin prometer arreglos futuros. No se demuestran runtime autónomo entre hosts, planificador, evidencia mainnet, segundo proveedor de pagos, auditoría externa de seguridad, certificación regulatoria ni preparación para producción.
