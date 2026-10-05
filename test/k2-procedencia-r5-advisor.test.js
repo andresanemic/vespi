@@ -152,6 +152,62 @@ test('G515 an inherited timeoutMs on Object.prototype sets a deadline nobody pas
   assert.equal(result.status, 'verified', `status=${result.status} reason=${result.reason}`);
 });
 
+// --- Two reads of the same class the grep for this round turned up, B05 and B06 ---
+//
+// The Advisor's six lines are the reads a test could reach. The grep over every read of caller or
+// resolver data turned up one more, `byteShapeOf`'s `value[index]`, and one more the six lines
+// already cover without a case of its own: `receiptField`, so an inherited field of the receipt spec
+// cannot reach a receipt. Both are data, both arrive through a merge that honored `__proto__`, and
+// neither can change a verdict: the byte check is uncovered either way, and an unreadable top-level
+// field produces an ordinary receipt that says nothing. What they can change is the sentence and
+// whether caller code runs at all, which is what these two ask about.
+
+test('B06 an inherited receipt field does not reach a receipt and an unreadable one is ordinary', async () => {
+  const registered = claim();
+  const result = await verifiedFor(registered);
+  const decision = loadSkill(registered, result, CONTENT, ['read']);
+  const spec = { ...RECEIPT_SPEC };
+  delete spec.capabilityId;
+  const restore = pollute(Object.prototype, { capabilityId: 'inherited-from-the-prototype' });
+  let receipt = null;
+  let threw = null;
+  try {
+    receipt = buildSkillReceipt(spec, decision);
+  } catch (err) {
+    threw = err.message;
+  } finally {
+    restore();
+  }
+  assert.equal(threw, null, `a receipt that reads nothing is still a receipt: ${threw}`);
+  assert.notEqual(receipt.capability, 'inherited-from-the-prototype', `capability=${receipt.capability}`);
+  assert.equal(receipt.capability, 'unknown');
+  assert.equal(verifyReceipt(receipt).ok, true);
+});
+
+test('B05 an inherited numeric index does not make a holey byte array read as bytes', async () => {
+  const registered = claim();
+  // A data property, which is the class this round closes: a merge that honored `__proto__` writes
+  // values, and a numeric index left on `Array.prototype` is one a value can reach. A holey array
+  // then reads that number as its own byte, and a payload of three holes names itself as three bytes.
+  // An accessor there is not used on purpose: a getter with no setter turns `Array.prototype.push`
+  // into a throw for the whole process, test runner included, and one with a setter breaks promise
+  // resolution the same way. Reading an evidence getter once is F406 and G509's business, not this.
+  const restore = pollute(Array.prototype, { 0: 104, 1: 105, 2: 106 });
+  const holey = new Array(3);
+  let result;
+  try {
+    result = await verifySkillProvenance(registered, () => observed({ content: holey }));
+  } finally {
+    restore();
+  }
+  assert.equal(result.status, 'not_verifiable');
+  assert.equal(result.contentRecomputed, false);
+  assert.match(result.reason, /an array that is not text/);
+  // The verdict was never in question: nothing was hashed, so nothing could be covered on the digest.
+  assert.ok(result.notCovered.includes('content_digest'));
+  assert.equal(loadSkill(registered, result, CONTENT, ['read']).authorized, false);
+});
+
 // --- Replacing built-in functions: outside the contract, and kept as the written edge ---
 
 test('G501 a replaced WeakMap.prototype.get links a hand-written result and authority is granted with no verification', {
