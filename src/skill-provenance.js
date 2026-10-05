@@ -36,7 +36,8 @@
 //     a claim that anyone can rewrite is not a grant, it is a suggestion.
 //   - The word `verified` is written only from four comparisons this kernel ran, never from four
 //     booleans it read. A check that was not compared is an uncovered check, and an inherited one is
-//     not a check at all (see the boundary below).
+//     not a check at all: both the accumulator and the evidence each comparison reads are read as own
+//     properties, so a field on `Object.prototype` can answer neither (see the boundary below).
 //
 // What this does NOT buy, stated plainly. It proves that an injected resolver said the repository,
 // the commit, the author and the bytes line up with what was declared, and that it was never given
@@ -50,11 +51,37 @@
 //
 // Two operational bounds, both stated rather than discovered. A list of capability names may hold at
 // most `MAX_LIST_LENGTH` entries and a declared length above it is refused before anything is copied,
-// because the copy is synchronous and no timer reaches it. And this module trusts the shared realm it
-// was loaded into: the boundary below holds against a caller and a resolver, not against a host that
-// rewrote the intrinsics first. The digest of a receipt is a further matter and belongs to
-// `receipt.js`: `computeDigest` canonicalizes with a live `Object.keys(...).sort()`, so replacing
-// `Array.prototype.sort` changes how a receipt hashes. That is base code and is not touched here.
+// because the copy is synchronous and no timer reaches it. And a resolver with no deadline set can wait
+// as long as it likes: the timers here are not injectable.
+//
+// The boundary, said as it is, in both directions.
+//
+// What this module defends. The data a caller or a resolver hands over. Every value is read once, only
+// as an own property, into an object this module built, so a getter cannot answer twice, and a field
+// left on `Object.prototype` or `Array.prototype` -- a polluted prototype, what a merge that honored
+// `__proto__` produces -- is never read as evidence, as a grant or as an option (F410 to F418, G506,
+// G514, G515). The reads that can still run a caller's own code, which are the ones on a caller's own
+// object, are each inside a guard whose catch answers with this module's own refusal.
+//
+// What this module does not defend. Code. It trusts the realm it runs in, before and during every
+// call. Code that replaces a built-in function -- `WeakMap.prototype.get`, `Set.add`, the hash
+// methods, `RegExp.prototype.exec`, `JSON.stringify`, `Buffer.from`, `setTimeout`, `Promise.race`,
+// `Array.prototype.sort` -- whether before the call, from a getter, or from inside the resolver, can
+// make this module grant authority and seal a `verified` receipt that no verification produced, and so
+// can any code that can reach this module's exports. The same code that replaced
+// `WeakMap.prototype.get` can replace this module's `authorizeSkill` in `require.cache`; that is not
+// a bug to fix here, it is the process being taken over (G501 to G505, G507, G508). A host that runs
+// untrusted code in the same process must freeze the intrinsics at startup and must not pass objects
+// with getters or proxies that come from that code.
+//
+// The receipt digest is a further matter and belongs to `receipt.js`: `computeDigest` canonicalizes
+// with a live `Object.keys(...).sort()`, so replacing `Array.prototype.sort` changes what a receipt
+// digest covers, and it has no key, so whoever can edit a receipt can reseal it (G513). That is base
+// code and is not touched here.
+//
+// One cost of the own-property rule, named because it is observable: a resolver that answers with a
+// class instance, or any object that keeps its fields on its prototype, has those fields left
+// uncovered now. A field the resolver does not own is not evidence it observed.
 
 const { createHash } = require('node:crypto');
 const { buildReceipt, computeDigest } = require('./receipt.js');
@@ -76,12 +103,14 @@ const { buildReceipt, computeDigest } = require('./receipt.js');
 //     of two quadrillion was copied element by element before anything was validated (F408, F409,
 //     F417, F418).
 //
-// So the primitives are taken here, once, at load, before any caller can run: from this point on the
-// module holds a reference and not a lookup, and the one function that can still reach caller code is
-// `copyList`, which reads each index exactly once, in order, and owns everything it produces. What
-// this does not buy: a host that replaced these primitives *before* this module was loaded still owns
-// the process, and a resolver is still code the host chose. This is a boundary against the data, not a
-// sandbox for JavaScript.
+// So the primitives that used to be reached by a lookup are taken here, once, at load, before any
+// caller can run. That settles the reads on this module's own side, and it is the whole of what it
+// settles: holding a reference to `hasOwn` is not what stops a polluted prototype, asking it is, and
+// `WeakMap.prototype.get`, `Set.add`, `Hash.prototype.update` and `digest`, `RegExp.prototype.exec`,
+// `JSON.stringify`, `Buffer.from`, `setTimeout` and `Promise.race` are still live lookups on the way
+// out. Code that replaces them, or that reaches this module's exports, owns the process, and the
+// boundary above is where this module stops being able to say anything about that. This is a boundary
+// against the data, not a sandbox for JavaScript.
 const hasOwn = Object.hasOwn;
 const isArray = Array.isArray;
 const viewIsArrayBufferView = ArrayBuffer.isView;
@@ -283,8 +312,9 @@ function capabilityName(value) {
 // registration hands over is read once, here, under its own guard, into an object with no prototype at
 // all and only the six keys this contract knows. What the rest of the file works on is that copy, so a
 // getter that answers once cannot answer differently later, and a field a host left on
-// `Object.prototype` is not a field the registry can see (F410, F411). The keys are the contract's, so
-// nothing a caller wrote on a spec beyond them is even looked at. A shape that cannot be read at all
+// `Object.prototype` is not a field the registry can see: only what the spec carries as its own reaches
+// the copy (F410, F411, G506). The keys are the contract's, so nothing a
+// caller wrote on a spec beyond them is even looked at. A shape that cannot be read at all
 // (a revoked proxy reaches `isArray` and throws) leaves an empty record behind, and an empty record
 // refuses everything with this module's own reasons (review H01, R206).
 const REGISTRATION_KEYS = frozen(['name', 'repository', 'commit', 'author', 'content', 'authority']);
@@ -1264,6 +1294,21 @@ function buildSkillReceipt(spec, decision) {
 //   - `authorizeSkill` can answer `not_verified` for a result whose status says `verified` and whose
 //     four checks were not all produced here. That state was unreachable before and is refused rather
 //     than trusted now, which is the point of the gate.
+//
+// What the fifth round changed in what a caller can observe. Same rule: the seven exports keep their
+// names and their types, and a receipt built without any of it keeps its digest. Two things a caller
+// can see, both about data rather than about the API:
+//   - a spec, an options object, a receipt spec or a piece of evidence whose field is not its own is
+//     now read as absent where the prototype would have answered. A resolver that returned
+//     `{ content }` under a polluted `Object.prototype` used to reach `verified` with three
+//     comparisons it never ran; it is `not_verifiable` now, and the reason names what was left
+//     unanswered (G506, G514, G515).
+//   - one sentence from `byteShapeOf`: an array with a hole in it is named `an array that is not text`
+//     even when a number on `Array.prototype` answers the missing index (B05). The verdict of a byte
+//     payload is unchanged, as it was in the fourth round: `content_digest` uncovered, load refused.
+// And one thing this round took out of the contract rather than into it: replacing a built-in function
+// after this module was loaded is now a declared limit (the header says so, and the seven attacks that
+// show it are in the suite marked `todo` so the edge stays visible instead of being forgotten).
 module.exports = {
   registerSkillProvenance,
   verifySkillProvenance,
