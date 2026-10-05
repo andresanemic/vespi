@@ -8,7 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "test": "node --test capability.adversarial.mjs amount.test.mjs cli.test.mjs config.test.mjs endpoint.test.mjs fetch-timeout.test.mjs idempotency.test.mjs settlement-finalization.test.mjs settlement-response.test.mjs verify.test.mjs",
+    "test": "node --test bridge.test.mjs capability.adversarial.mjs amount.test.mjs cli.test.mjs config.test.mjs endpoint.test.mjs fetch-timeout.test.mjs idempotency.test.mjs settlement-finalization.test.mjs settlement-response.test.mjs verify.test.mjs",
     "demo": "node run.js",
     "server": "node server.js"
   },
