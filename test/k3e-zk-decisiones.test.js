@@ -298,12 +298,14 @@ test('K3E.10 a key that binds at least one public input still verifies', async (
 // 3. The answer has to be the verifier's own object
 // ===========================================================================
 
-// D10. The `todo` this decision replaces (K3H.19). An executor that hands the evidence straight back
-// cannot hand itself a verdict and cannot smuggle a zk claim into the receipt.
+// D10. The `todo` this decision replaces (K3H.19). A verifier that hands back the very object it was
+// given is refused. The test is identity, not content: a verifier that returns a copy of the same
+// fields is a legitimate answer and this kernel cannot tell the two apart, so nothing here says the
+// executor cannot answer itself, only that its own object is not its answer.
 test('K3E.11 a verifier that returns the evidence it was given fails closed', async () => {
   const forged = evidence();
   const { receipt } = await zkOperation({ verified: true, checks: checks(), zk: forged }, (given) => given);
-  assert.notEqual(receipt.status, 'verified', 'the executor does not verify itself');
+  assert.notEqual(receipt.status, 'verified', 'the object it was handed is not its own answer');
   assert.equal(receipt.status, 'not_verified');
   assert.equal(receipt.verification.verified, false);
   assert.ok(!receipt.coverage.includes('zk.proof-valid'));
