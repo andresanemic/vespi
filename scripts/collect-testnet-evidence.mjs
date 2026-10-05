@@ -10,7 +10,7 @@
 // chain with itself and would call the result verification. `expectationProvenance`
 // enforces the separation and the collector refuses to write a file that breaks it.
 
-import { readFile, writeFile, readdir, stat } from 'node:fs/promises';
+import { readFile, writeFile, readdir, realpath } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -434,14 +434,53 @@ const X402_RECEIPT_RUN = {
 
 export const RUN_RECORD_FORMATS = Object.freeze([ANCHOR_RUN, CONCURRENCY_RACE, OPERATION_TYPE, PAYMENT_IDEMPOTENCE, X402_RECEIPT_RUN]);
 
-async function jsonFiles(directory) {
+// A record root is a boundary, not a starting point. `stat` follows a link and `readdir` without
+// `withFileTypes` hands back plain names, so a link planted anywhere under the root (`runrecords/
+// private -> anywhere`) made this walk out of the tree the declaration named and read whatever
+// `.json` it found there, token included, into the evidence file (R1 finding H2). Two rules now
+// hold it: a link is never followed, because `readdir(withFileTypes)` reports it with lstat
+// semantics and `isFile`/`isDirectory` are false for it; and every accepted file has its real path
+// checked against the real path of the root it was declared under, so a mount or a junction that
+// resolves elsewhere is left out too.
+async function jsonFiles(directory, boundary, seen) {
+  // `boundary` is the real path of the root this walk started from and never changes: it is the
+  // boundary every accepted file is measured against. `seen` holds the real path of each directory
+  // already walked, so two paths that resolve to one directory are not walked twice.
+  const root = boundary ?? await realpath(directory);
+  let here;
+  try {
+    here = await realpath(directory);
+  } catch {
+    return [];
+  }
+  const visited = seen ?? new Set();
+  if (visited.has(here)) return [];
+  visited.add(here);
   const found = [];
-  for (const entry of await readdir(directory)) {
-    const full = path.join(directory, entry);
-    if ((await stat(full)).isDirectory()) found.push(...await jsonFiles(full));
-    else if (entry.endsWith('.json')) found.push(full);
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (entry.isSymbolicLink()) continue;
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...await jsonFiles(full, root, visited));
+    } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      let resolved;
+      try {
+        resolved = await realpath(full);
+      } catch {
+        continue;
+      }
+      if (!withinRoot(resolved, root)) continue;
+      found.push(full);
+    }
   }
   return found.sort();
+}
+
+// A shared prefix is not containment: 'C:/out' is not inside 'C:/outside'. `path.relative` answers
+// the question the way `delegation.js:within` already answers it in this repository.
+function withinRoot(candidate, root) {
+  const rel = path.relative(root, candidate);
+  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
 // Reads every run record under the given roots. Each root names the repository its
