@@ -689,7 +689,7 @@ function readVerdict(verdict) {
 // it a signal, so a port that hangs is cancelled here, and the timer is cleared as soon as the port
 // answers so a finished run leaves nothing pending.
 async function callSettlementPort(ctx, evidence) {
-  const budget = readVerifyTimeout(ctx.io);
+  const budget = readVerifyTimeout({ verifyTimeoutMs: ctx.verifyTimeoutMs });
   const controller = new AbortController();
   let timer = null;
   const timeout = new Promise((resolve) => {
@@ -1233,6 +1233,11 @@ function buildRunIo(io, ctx) {
     const budget = runIo[key];
     if (typeof budget === 'number' && Number.isFinite(budget) && budget > MAX_TIMER_MS) throw ioError();
   }
+  // The budget the ceiling was judged on is the one the timer is armed with. Holding the value on
+  // the run's own context closes the gap between the copy that was checked and a host options object
+  // that changed while the payment was in flight: reading the raw options again would arm a timer
+  // nobody judged. This is the only verifier this module installs, so the value has one writer.
+  ctx.verifyTimeoutMs = runIo.verifyTimeoutMs;
   runIo.verify = (evidence) => verifySettlementEffect(ctx, evidence);
   return runIo;
 }
