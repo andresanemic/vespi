@@ -625,7 +625,17 @@ function verifyGroth16(rawVerificationKey, rawProof, rawPublicInputs) {
 // that is never read again, and every call compares the copy it receives with the one it was built
 // for. A mismatch throws, which the port reports as backend_error: never as verified.
 function createReferenceBackend(rawVerificationKey) {
-  const key = readVerificationKey(rawVerificationKey);
+  // One read of the caller's key, first, and everything below works on that copy. An object that shows
+  // one key to a descriptor walk and another to a plain read (a Proxy does) would otherwise leave the
+  // receipt naming a key the maths never used: the digest is read through descriptors and the pairing
+  // through `get` (advisor R2-06). Copying first is what makes "bound" true.
+  let bound;
+  try {
+    bound = frozenJsonCopy(rawVerificationKey);
+  } catch {
+    throw new TypeError('verification key is not readable by the BN254 reference');
+  }
+  const key = readVerificationKey(bound);
   if (key === null) throw new TypeError('verification key is not readable by the BN254 reference');
   if (!isValidG1(key.alpha) || !isValidG2(key.beta) || !isValidG2(key.gamma) || !isValidG2(key.delta)) {
     throw new TypeError('verification key holds a point off its curve or outside the subgroup');
@@ -639,13 +649,12 @@ function createReferenceBackend(rawVerificationKey) {
   // A key the port cannot read cannot be the pinned key of any receipt: refuse it here.
   let boundDigest;
   try {
-    boundDigest = digestZkVerificationKey(rawVerificationKey);
+    boundDigest = digestZkVerificationKey(bound);
   } catch {
     throw new TypeError('verification key is not readable by the zk port');
   }
-  // The caller's object is not the key any more. What this backend verifies is decided now, from a
-  // copy nothing can reach afterwards.
-  const bound = frozenJsonCopy(rawVerificationKey);
+  // `bound` is the caller's object no more: it is a private deep copy, frozen all the way down, and
+  // what this backend verifies is decided now, from that copy.
   return Object.freeze({
     label: 'bn254-bigint-reference',
     // The port has already read the ranges; this repeats them, because a reference that trusts its
