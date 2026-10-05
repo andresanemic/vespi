@@ -54,6 +54,10 @@ function digestOf(text) {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
+// What a delegation recorded when its delivered output could not be sealed. It is a marker of this
+// module, not text a delegate chose, so it can never be confused with a file that was touched.
+const UNSEALABLE_OUTPUT = 'the delivered output could not be sealed';
+
 function text(value) {
   return typeof value === 'string' && value.length > 0;
 }
@@ -230,7 +234,30 @@ function recordResult(d, { output, touched, spark } = {}) {
   const note = readSpark(spark);
   const files = list(touched);
   const violations = [...new Set([...d.violations, ...violationsFor(d, files)])];
-  d.outputDigest = digestOf(text(output) ? output : JSON.stringify(output === undefined ? null : output));
+  // Sealing the output is the one step here the delegate's own data can make fail: JSON.stringify
+  // throws a RangeError on an output nested past the stack, and a BigInt or a getter throws too. Left
+  // unguarded, that RangeError escaped recordResult, so the delegation stayed `running` with no
+  // outputDigest, no violation on record and no receipt at all: a failure that leaves no trace. A
+  // result this kernel cannot seal is refused in words of its own and recorded as a violation, so
+  // what happened is on the record instead of nowhere (R1 finding H7).
+  let sealed = null;
+  try {
+    const serialized = text(output) ? output : JSON.stringify(output === undefined ? null : output);
+    sealed = typeof serialized === 'string' ? digestOf(serialized) : null;
+  } catch {
+    sealed = null;
+  }
+  if (sealed === null) {
+    d.outputDigest = null;
+    d.touched = files;
+    d.violations = [...new Set([...violations, UNSEALABLE_OUTPUT])];
+    d.pendingCorrections = [];
+    if (note !== null) d.sparks.push(note);
+    push(d, 'out_of_bounds', d.delegate);
+    d.reason = 'the delivered output could not be sealed, so this kernel cannot say what came back';
+    return d;
+  }
+  d.outputDigest = sealed;
   d.touched = files;
   d.violations = violations;
   d.pendingCorrections = [];
