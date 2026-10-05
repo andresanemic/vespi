@@ -213,7 +213,23 @@ async function verifySettlement(evidence, options) {
     assetContract,
     network = 'stellar:testnet',
     decodeTransaction = decodeEnvelope,
+    // The signal the run handed down. A settlement read is three Horizon round trips, so the abort
+    // is checked before each one and once more after the last: a read nobody is waiting for is not
+    // a readback. Without it a cancelled run keeps the ledger busy and then answers with a verdict
+    // it produced after the payment was called off.
+    signal,
   } = options || {};
+  const aborted = () => {
+    try {
+      return signal?.aborted === true;
+    } catch {
+      return true;
+    }
+  };
+  // No check name is claimed here. The closed catalog does not carry a name for a cancelled read,
+  // and inventing one would be refused by the kernel anyway; what this says is only that there is
+  // nothing verified, and the reason says which phase stopped.
+  const stopped = (phase) => failure(`the settlement read was cancelled before ${phase}`);
   if (!evidence || typeof evidence.txHash !== 'string' || !evidence.txHash.trim()) {
     return failure('missing transaction hash');
   }
@@ -232,8 +248,11 @@ async function verifySettlement(evidence, options) {
   const expected = toDeclaredAtomic(amount);
   if (expected === null) return failure('invalid expected amount');
 
+  if (aborted()) return stopped('the transaction was read');
+
   const txHash = evidence.txHash.trim().toLowerCase();
   const txn = await horizon.transactions().transaction(txHash).call();
+  if (aborted()) return stopped('the transaction was read');
   if (typeof txn.hash !== 'string' || txn.hash.trim().toLowerCase() !== txHash) {
     return failure('Horizon transaction hash does not match requested hash', {}, { transaction: txHash });
   }
@@ -254,10 +273,15 @@ async function verifySettlement(evidence, options) {
   });
   if (!invocation.verified) return failure(invocation.reason, { invocation: false }, { transaction: txHash });
 
+  if (aborted()) return stopped('the operation page was read');
+
   const operations = await horizon.operations().forTransaction(txHash).call();
   if (operations._links && operations._links.next) return failure('Horizon operation page is not complete', {}, { transaction: txHash });
   const changes = [];
   for (const operation of operations.records || []) {
+    // Checked per operation and not once for the page: one page can hold many operations, and a run
+    // that gave up after the third should not have produced the fourth read.
+    if (aborted()) return stopped('every operation was read');
     const full = await horizon.operations().operation(operation.id).call();
     if (Array.isArray(full.asset_balance_changes)) changes.push(...full.asset_balance_changes);
   }
@@ -284,6 +308,8 @@ async function verifySettlement(evidence, options) {
   if (actual === null || actual !== expected) {
     return failure('transfer amount does not match exact amount', { ...checks, exactAmount: false }, { ...facts, amountAtomic: actual?.toString() });
   }
+
+  if (aborted()) return stopped('the verdict was formed');
 
   return {
     verified: true,

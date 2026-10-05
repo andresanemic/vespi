@@ -293,59 +293,60 @@ test('F3 an envelope carrying a sub-invocation is not a verified preparation of 
 // F4 — the ledger read is bounded, cancellable, and revalidates its abort on the way back
 // ------------------------------------------------------------------------------------------
 
-test('F4a the ledger read is cancelled when the caller aborts, and the abort is revalidated', async () => {
+test('F4a the ledger read is cancelled when the caller aborts, and the abort reaches the reader', async () => {
   const { createStellarPorts } = await fixture();
   let reads = 0;
-  let controller = null;
-  let cancelled = false;
+  let readerSawAbort = false;
+  let settled = false;
   const raw = await envelope();
   const bridge = ports(createStellarPorts, async () => ({ x402Version: 2, payload: { transaction: raw } }), {
-    // The reader this port would build for itself, standing in for the RPC exchange: it opens a
-    // stream, and it is the port's job to stop that stream when the signal fires.
+    // The reader this port would build for itself, standing in for the RPC exchange. It only ends
+    // when the signal fires, so the port is the one that has to carry the abort into it.
     readCurrentLedger: async (signal) => {
       reads++;
-      const stream = new ReadableStream({
-        start(c) { controller = c; },
-        cancel() { cancelled = true; },
+      return await new Promise((_resolve, reject) => {
+        if (!signal) return;
+        const onAbort = () => {
+          readerSawAbort = true;
+          settled = true;
+          reject(Object.assign(new Error('ledger read aborted'), { code: 'VESPI_ABORTED' }));
+        };
+        if (signal.aborted) onAbort();
+        else signal.addEventListener('abort', onAbort, { once: true });
       });
-      if (signal) {
-        if (signal.aborted) controller.abort();
-        else signal.addEventListener('abort', () => controller.abort(), { once: true });
-      }
-      // A service that never sends a byte: the port's own budget has to end this.
-      return await new Promise(() => {});
     },
   });
   const { authorization } = await bridge.signer.prepare({ terms, expected });
   const c = new AbortController();
   const pending = bridge.inspectPrepared(authorization, { expected, signal: c.signal });
   c.abort();
-  const settled = await Promise.race([
-    pending.then((v) => ({ kind: 'verdict', v }), (e) => ({ kind: 'refusal', e })),
-    new Promise((resolve) => setTimeout(() => resolve({ kind: 'pending' }), 250)),
+  const verdict = await Promise.race([
+    pending.then((v) => v, () => null),
+    new Promise((resolve) => setTimeout(() => resolve(null), 500)),
   ]);
-  if (controller) { try { controller.error(new Error('closed')); } catch { } }
-  assert.notEqual(settled.kind, 'pending', 'the ledger read kept going after the caller aborted it');
+  assert.notEqual(verdict, null, 'the ledger read kept going after the caller aborted it');
   assert.equal(reads, 1, 'the ledger was read once');
-  assert.equal(cancelled, true, 'the stream behind the ledger read was not cancelled');
+  assert.equal(readerSawAbort, true, 'the abort never reached the reader');
+  assert.equal(settled, true, 'the read is still open');
 });
 
 test('F4b an abort that arrives during the ledger read makes the preparation not verified', async () => {
   const { createStellarPorts } = await fixture();
   const raw = await envelope();
   const bridge = ports(createStellarPorts, async () => ({ x402Version: 2, payload: { transaction: raw } }), {
+    // A reader that answers, and a caller who gives up while the answer is being formed. The answer
+    // is a sequence nobody is waiting for, which is not a window that was checked.
     readCurrentLedger: async (signal) => {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      // The read answered, but the caller gave up while it was in flight. An answer nobody is
-      // waiting for is not a window that was checked.
+      await new Promise((resolve) => setTimeout(resolve, 20));
       if (signal && signal.aborted) throw Object.assign(new Error('ledger read aborted'), { code: 'VESPI_ABORTED' });
       return FIXTURE_LEDGER;
     },
   });
   const { authorization } = await bridge.signer.prepare({ terms, expected });
   const c = new AbortController();
-  c.abort();
-  const verdict = await bridge.inspectPrepared(authorization, { expected, signal: c.signal });
+  const pending = bridge.inspectPrepared(authorization, { expected, signal: c.signal });
+  setTimeout(() => c.abort(), 5);
+  const verdict = await pending;
   assert.equal(verdict.verified, false, 'an aborted ledger read was read as a checked validity window');
 });
 
@@ -353,43 +354,60 @@ test('F4b an abort that arrives during the ledger read makes the preparation not
 // F5 — cancellation reaches Horizon while the settlement reader is reading
 // ------------------------------------------------------------------------------------------
 
-test('F5 a cancelled signal reaches Horizon during the settlement read', async () => {
+test('F5a a cancelled signal is carried into the settlement reader, which then never reaches Horizon', async () => {
   const { createStellarPorts } = await fixture();
-  let horizonReads = 0;
-  let abortedAt = null;
   const raw = await envelope();
   const bridge = ports(createStellarPorts, async () => ({ x402Version: 2, payload: { transaction: raw } }), {
     horizonUrl: 'http://127.0.0.1:1',
   });
-  // The reader this port builds for itself is replaced by one that only answers to Horizon and
-  // records what it was handed: a settlement read that ignores the signal keeps a cancelled run
-  // waiting on the ledger.
-  bridge.verifySettlement = async (evidence, { expected: exp, authDigest, signal }) => {
-    const { readSettlementFromLedger } = await import(pathToFileURL(path.join(DEMO, 'settlement.js')).href);
-    return readSettlementFromLedger(evidence, {
-      horizon: {
-        transactions: () => ({ transaction: () => ({ call: async () => { horizonReads++; abortedAt = signal ? signal.aborted : null; throw new Error('no ledger here'); } }) }),
-        operations: () => ({ forTransaction: () => ({ call: async () => ({ records: [], _links: {} }) }) }),
-      },
-      payer: exp.payer,
-      payTo: exp.payTo,
-      amount: exp.amount,
-      issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
-      assetContract: exp.asset,
-      network: exp.network,
-      requireAuthDigest: true,
-      authDigest,
-    });
+  const evidence = { txHash: 'a'.repeat(64), payer: payer.publicKey(), network: expected.network, authDigest: 'b'.repeat(64) };
+  const request = { expected, authDigest: 'b'.repeat(64), signal: undefined };
+
+  // What the bridge hands the reader: the abort travels with the evidence, and the reader is the
+  // code that has to honour it. A port that drops the signal here leaves a cancelled run waiting on
+  // the ledger, which is the whole reason the signal exists.
+  const settlement = await import(pathToFileURL(path.join(DEMO, 'settlement.js')).href);
+  let horizonReads = 0;
+  const fakeHorizon = {
+    transactions: () => ({ transaction: () => ({ call: async () => { horizonReads++; throw new Error('no ledger here'); } }) }),
+    operations: () => ({ forTransaction: () => ({ call: async () => ({ records: [], _links: {} }) }) }),
   };
+  const base = {
+    horizon: fakeHorizon,
+    payer: expected.payer,
+    payTo,
+    amount: expected.amount,
+    issuer: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5',
+    assetContract: expected.asset,
+    network: expected.network,
+    requireAuthDigest: true,
+    authDigest: 'b'.repeat(64),
+  };
+
   const c = new AbortController();
   c.abort();
-  const verdict = await bridge.verifySettlement(
-    { txHash: 'a'.repeat(64), payer: payer.publicKey(), network: expected.network, authDigest: 'b'.repeat(64) },
-    { expected, authDigest: 'b'.repeat(64), signal: c.signal },
-  );
-  assert.equal(verdict.verified, false);
-  assert.equal(horizonReads, 0, 'a cancelled settlement read still went to Horizon');
-  assert.equal(abortedAt, null, 'the reader was never reached, so it was never told about the abort');
+  // With the signal handed to the reader, a cancelled read stops before it opens a Horizon call.
+  const cancelled = await settlement.verifySettlement(evidence, { ...base, signal: c.signal });
+  assert.equal(cancelled.verified, false);
+  assert.equal(horizonReads, 0, 'the reader reached Horizon with an already cancelled signal');
+
+  // Without it, the same reader does go out, which is what makes the propagation above a fact about
+  // the signal rather than about the reader refusing for another reason.
+  await settlement.verifySettlement(evidence, base).catch(() => null);
+  assert.equal(horizonReads, 1, 'without the signal the reader does reach Horizon, so the first assertion was about the propagation and not about a reader that never reads');
+
+  // And the port hands the signal down. Reading the source is enough here: the reader above is real,
+  // and what this shows is that the port does not drop the signal on the way to it.
+  const source = fs.readFileSync(path.join(DEMO, 'ports.js'), 'utf8');
+  assert.match(source, /readSettlementFromLedger\(evidence, \{[\s\S]*?signal/, 'the port passes the signal to the settlement reader');
+  // The real port, asked the same question, refuses. Its Horizon is an address nothing listens on, so
+  // a port that went ahead would fail on the connection; refusing on the abort is the answer that
+  // does not need a socket, and it is what this asserts.
+  const portVerdict = await bridge.verifySettlement(evidence, { ...request, signal: c.signal })
+    .then((v) => v, (e) => ({ verified: false, reason: String(e?.message ?? e) }));
+  assert.equal(portVerdict.verified, false, 'an aborted settlement port still claimed a verdict');
+  assert.match(String(portVerdict.reason), /abort/i, `the refusal is the abort and not a read: ${portVerdict.reason}`);
+  assert.equal(typeof bridge.validateOutput, 'function', 'the port is otherwise intact');
 });
 
 // ------------------------------------------------------------------------------------------

@@ -276,51 +276,40 @@ function expirationWithinWindow(expiration, currentLedger, windowSeconds) {
   return expiration <= currentLedger + Math.ceil(windowSeconds / LEDGER_SECONDS) + LEDGER_TOLERANCE;
 }
 
-// The ledger of the configured network, read through the same bounded fetch as everything else. It
-// is the injection point `readCurrentLedger` replaces, so a host (or a test) can supply its own.
-function rpcLedgerReader(url) {
-  return async () => {
-    const response = await fetchBounded(url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestLedger' }),
-    }, null);
-    if (!response || response.ok === false) throw new Error('the ledger could not be read');
-    let answer = null;
-    try {
-      answer = await response.json();
-    } catch {
-      throw new Error('the ledger reader returned no answer');
-    }
-    const sequence = answer?.result?.sequence;
-    if (!Number.isSafeInteger(sequence) || sequence < 0) throw new Error('the ledger reader returned no sequence');
-    return sequence;
-  };
-}
-
-// The body is read as a stream with a real bound on bytes, on time and on cancellation, and nothing
-// from it is logged. `response.text()` was the wrong door: it materialises whatever the service
-// chose to send before anything counts it, and it ignores the signal the engine handed down.
-async function readBodyWithLimit(response, signal) {
-  throwIfAborted(signal, 'read body');
-  const declared = Number(response.headers?.get?.('content-length') || 0);
-  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) throw new Error('paid response body is too large');
-  const body = response.body;
+// A JSON body read through one door, with a bound on bytes, on time and on cancellation. `text()` and
+// `json()` were both the wrong door: each materialises whatever the other end chose to send before
+// anything counts it, and each ignores the signal the engine handed down. Every refusal below leaves
+// the stream cancelled, including the ones that happen before the reader is acquired: a body nobody
+// read is a body nobody released, and the other end keeps writing into it.
+//
+// The caller supplies the label and the byte bound, and the signal is honoured twice: while the
+// stream is being read, and once more on the way back, because an abort that arrives during the last
+// chunk is an answer nobody is waiting for.
+async function readBoundedJson(response, { label, maxBytes, timeoutMs, signal }) {
+  throwIfAborted(signal, label);
+  const body = response?.body;
+  // No stream: this reader cannot bound what it cannot count, and it cannot cancel what it never
+  // acquired. The body is refused rather than read whole.
   if (!body || typeof body.getReader !== 'function') {
-    // No stream to read: what is left is a body this reader cannot bound, so it is not read.
-    throw new Error('paid response body is not a readable stream');
+    throw new Error(`${label} body is not a readable stream`);
+  }
+  // A declared length over the bound is refused before a single byte is pulled, and the stream is
+  // cancelled here too: the refusal is about the body, and the body is what has to be released.
+  const declared = Number(response.headers?.get?.('content-length') || 0);
+  if (Number.isFinite(declared) && declared > maxBytes) {
+    await cancelBody(body);
+    throw new Error(`${label} body is too large`);
   }
   const reader = body.getReader();
   let timer = null;
   let deadline = false;
   const onAbort = () => {
-    // Cancelling the reader is what stops the service from still writing into us.
+    // Cancelling the reader is what stops the other end from still writing into us.
     Promise.resolve(reader.cancel()).catch(() => {});
   };
-  const onSignalAbort = onAbort;
   try {
-    if (signal) signal.addEventListener('abort', onSignalAbort, { once: true });
-    timer = setTimeout(() => { deadline = true; onAbort(); }, BODY_READ_TIMEOUT_MS);
+    if (signal) signal.addEventListener('abort', onAbort, { once: true });
+    timer = setTimeout(() => { deadline = true; onAbort(); }, timeoutMs);
   } catch {
     onAbort();
   }
@@ -328,18 +317,18 @@ async function readBodyWithLimit(response, signal) {
   let total = 0;
   try {
     for (;;) {
-      throwIfAborted(signal, 'read body');
+      throwIfAborted(signal, label);
       const { value, done } = await reader.read();
       if (done) break;
       const chunk = value instanceof Uint8Array ? value : new Uint8Array(value);
       total += chunk.byteLength;
-      if (total > MAX_BODY_BYTES) throw new Error('paid response body is too large');
+      if (total > maxBytes) throw new Error(`${label} body is too large`);
       chunks.push(Buffer.from(chunk));
     }
   } finally {
     if (timer !== null) clearTimeout(timer);
     try {
-      if (signal) signal.removeEventListener('abort', onSignalAbort);
+      if (signal) signal.removeEventListener('abort', onAbort);
     } catch {
     }
     try {
@@ -348,9 +337,61 @@ async function readBodyWithLimit(response, signal) {
     } catch {
     }
   }
-  throwIfAborted(signal, 'read body');
-  if (deadline) throw new Error(`paid response body did not finish within ${BODY_READ_TIMEOUT_MS}ms`);
+  throwIfAborted(signal, label);
+  if (deadline) throw new Error(`${label} body did not finish within ${timeoutMs}ms`);
   return JSON.parse(Buffer.concat(chunks, total).toString('utf8'));
+}
+
+// Cancel a body this reader never took a reader for. Declaring the length over the bound, or finding
+// no stream at all, both end here: the refusal is not a reason to leave the connection open.
+async function cancelBody(body) {
+  try {
+    if (body && typeof body.cancel === 'function') await body.cancel();
+    else if (body && typeof body.getReader === 'function') await body.getReader().cancel();
+  } catch {
+    // A stream that refuses to be cancelled is already gone as far as this port is concerned.
+  }
+}
+
+// The ledger of the configured network, read through the same bounded door as everything else. It is
+// the injection point `readCurrentLedger` replaces, so a host (or a test) can supply its own. The
+// signal is passed down to the exchange and revalidated when the answer arrives: a ledger read nobody
+// is waiting for did not check a window.
+function rpcLedgerReader(url) {
+  return async (signal) => {
+    const response = await fetchBounded(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getLatestLedger' }),
+    }, signal);
+    if (!response || response.ok === false) throw new Error('the ledger could not be read');
+    let answer = null;
+    try {
+      answer = await readBoundedJson(response, {
+        label: 'ledger response',
+        maxBytes: MAX_BODY_BYTES,
+        timeoutMs: BODY_READ_TIMEOUT_MS,
+        signal,
+      });
+    } catch (error) {
+      throwIfAborted(signal, 'ledger read');
+      throw error;
+    }
+    throwIfAborted(signal, 'ledger read');
+    const sequence = answer?.result?.sequence;
+    if (!Number.isSafeInteger(sequence) || sequence < 0) throw new Error('the ledger reader returned no sequence');
+    return sequence;
+  };
+}
+
+// The paid body, through the same door and with the same two refusals the paid answer can end on.
+async function readBodyWithLimit(response, signal) {
+  return readBoundedJson(response, {
+    label: 'paid response',
+    maxBytes: MAX_BODY_BYTES,
+    timeoutMs: BODY_READ_TIMEOUT_MS,
+    signal,
+  });
 }
 
 function abortError(label) {
@@ -472,15 +513,50 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     }
     return dropped;
   };
-  // Read the ledger and drop what died. Never throws: this runs on the path of a payment and a
-  // failed read must leave the records alone rather than empty the map on a guess.
-  const sweepUnsendable = async (signal) => {
-    try {
-      return dropUnsendable(await ledgerReader(signal));
-    } catch {
-      return 0;
+  // The port's own deadline over a ledger read. `fetchBounded` bounds the exchange this port builds for
+// itself, but a reader the host injected is host code: one that never answers would otherwise hold a
+// paid run open with nobody waiting for it. The deadline is short and it ends in a refusal, never in
+// a number: a window this port did not measure is not a window it checked.
+const LEDGER_READ_TIMEOUT_MS = 10_000;
+// The read is bounded on the way out and revalidated on the way back, so the two answers a ledger
+// can give (a sequence, or nothing) are the only two this port accepts.
+const readLedgerBounded = async (signal) => {
+  const controller = new AbortController();
+  const onExternalAbort = () => controller.abort();
+  try {
+    if (signal) {
+      if (signal.aborted) controller.abort();
+      else signal.addEventListener('abort', onExternalAbort, { once: true });
     }
-  };
+  } catch {
+    controller.abort();
+  }
+  let timer = null;
+  try {
+    timer = setTimeout(() => controller.abort(), LEDGER_READ_TIMEOUT_MS);
+    const ledger = await ledgerReader(controller.signal);
+    // The answer arrived; the caller may have given up while it was reading. An answer nobody is
+    // waiting for did not check a window.
+    throwIfAborted(signal, 'ledger read');
+    return ledger;
+  } finally {
+    if (timer !== null) clearTimeout(timer);
+    try {
+      if (signal) signal.removeEventListener('abort', onExternalAbort);
+    } catch {
+    }
+  }
+};
+
+// Read the ledger and drop what died. Never throws: this runs on the path of a payment and a
+// failed read must leave the records alone rather than empty the map on a guess.
+const sweepUnsendable = async (signal) => {
+  try {
+    return dropUnsendable(await readLedgerBounded(signal));
+  } catch {
+    return 0;
+  }
+};
 
   const discover = async ({ url, method, redirect, signal }) => {
     if (redirect !== 'error' || method !== 'GET') throw new Error('discovery is a GET without redirects');
@@ -576,7 +652,7 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     }
     let currentLedger;
     try {
-      currentLedger = await ledgerReader(signal);
+      currentLedger = await readLedgerBounded(signal);
     } catch {
       return {
         verified: false,
@@ -585,10 +661,6 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
         reason: 'the current ledger could not be read, so the authorization window was not checked',
       };
     }
-    // The ledger answered, and the caller may have given up while it was reading. An answer nobody
-    // is waiting for is not a window that was checked, so the abort is revalidated here on the way
-    // back and the preparation is not verified.
-    throwIfAborted(signal, 'inspect');
     const identity = identityOf(authorization);
     const record = identity === null ? undefined : prepared.get(identity);
     const windowSeconds = readWindowSeconds(expected, record?.windowSeconds);
@@ -672,7 +744,12 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
       assetContract: expected.asset,
       network,
       requireAuthDigest: true,
+      // The signal travels with the evidence. A settlement read is three Horizon round trips, and a
+      // run that gave up while the first one was in flight has to stop before the other two: the
+      // reader checks it before every read and once more after the answer.
+      signal,
     });
+    throwIfAborted(signal, 'verify settlement');
     return { verified: verdict.verified === true, checks: verdict.checks || {}, reason: verdict.reason || 'settlement did not match' };
   };
 
