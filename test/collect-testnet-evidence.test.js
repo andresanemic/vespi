@@ -144,7 +144,11 @@ test('F1b-C5: a failing network read stops after the retry bound and the other c
   assert.equal(attempts, 3, 'the readback retry bound must be finite');
   const [first, second] = result.transactions;
   assert.equal(first.readback.status, 'failed');
-  assert.match(first.readback.reason, /Horizon 503/);
+  // The reader's own text stopped travelling in H3b: a reader that throws `Horizon 503 for
+  // https://...?apiKey=SECRET` wrote that secret into the evidence file, because the reason is
+  // written to disk with the evidence. The bound is still what this case checks.
+  assert.equal(first.readback.reason, 'the horizon read failed at every attempt');
+  assert.equal(JSON.stringify(result).includes('Horizon 503'), false, 'the reader message reached the evidence');
   assert.equal(first.historical_response, null);
   assert.deepEqual(first.expected, localRecord().expected);
   assert.equal(second.readback.status, 'read');

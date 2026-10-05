@@ -594,8 +594,16 @@ async function defaultSleep(ms) {
   if (ms > 0) await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// What a failed read says. The reader's own message is not copied: a reader that throws
+// `fetch failed: https://horizon-testnet.stellar.org/?apiKey=SUPERSECRETKEY` put the credential in
+// the reason, and the reason is written to disk with the evidence (R1 finding H3b, the channel H3
+// never chartered). The message is still read to tell a timeout from another failure, which is a
+// shape test and travels nowhere; every reason below is one of two fixed phrases, plus the three
+// `readbackShape` answers for a response that arrived and was malformed.
+const READ_FAILED_REASON = 'the horizon read failed at every attempt';
+const READ_TIMEOUT_REASON = 'the horizon read did not answer before the read timeout';
+
 async function readWithBounds(hash, readTransaction, { readTimeoutMs, maxAttempts, retryDelayMs, sleep }) {
-  let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       const response = await withTimeout(Promise.resolve().then(() => readTransaction(hash)), readTimeoutMs, `Horizon read of ${hash.slice(0, 8)}`);
@@ -603,13 +611,12 @@ async function readWithBounds(hash, readTransaction, { readTimeoutMs, maxAttempt
       if (malformed) return { status: 'malformed', attempts: attempt, reason: malformed, response: null };
       return { status: 'read', attempts: attempt, response };
     } catch (error) {
-      lastError = error;
       const timedOut = /timed out after/.test(error?.message ?? '');
       if (attempt < maxAttempts) await sleep(retryDelayMs);
-      if (timedOut) return { status: 'timeout', attempts: attempt, reason: error.message, response: null };
+      if (timedOut) return { status: 'timeout', attempts: attempt, reason: READ_TIMEOUT_REASON, response: null };
     }
   }
-  return { status: 'failed', attempts: maxAttempts, reason: lastError?.message ?? 'unknown read failure', response: null };
+  return { status: 'failed', attempts: maxAttempts, reason: READ_FAILED_REASON, response: null };
 }
 
 export async function collectEvidence({
