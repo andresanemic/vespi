@@ -98,7 +98,11 @@ test('K3B.2 the existing public exports keep their names and their arity', () =>
   const continuity = require('../src/continuity.js');
   const delegation = require('../src/delegation.js');
   assert.deepEqual(Object.keys(operation).sort(), ['DEFAULT_EXIT', 'STATES', 'createOperation', 'pauseOperation', 'resumeOperation', 'runOperation']);
-  assert.deepEqual(Object.keys(receipt).sort(), ['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt']);
+  // The four original names must stay; `computeDigest` was added later (skill provenance and emergency access seal extra
+  // fields with the same digest). An addition is compatible, a removal or rename is not.
+  const receiptNames = Object.keys(receipt).sort();
+  for (const name of ['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt']) assert.ok(receiptNames.includes(name), `receipt export ${name} must stay`);
+  assert.deepEqual(receiptNames.filter((n) => !['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt'].includes(n)), ['computeDigest']);
   assert.deepEqual(Object.keys(authority).sort(), ['grantSpend', 'sufficient']);
   assert.deepEqual(Object.keys(continuity).sort(), ['resumeFromReceipts']);
   assert.ok(Object.keys(delegation).length > 0);
