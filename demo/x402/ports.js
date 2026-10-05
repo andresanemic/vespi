@@ -164,15 +164,34 @@ function readWindowSeconds(expected, preparedWindowSeconds) {
   return Math.min(...valid);
 }
 
+// THE CLOSED FORM. This bridge declares one effect: one transfer, one payer, one authorization
+// entry. An envelope that carries more than that is not this effect, whatever each entry says on its
+// own: a second entry signed by the same payer is a second authorization the ledger would honor, and
+// an entry for somebody else is an authorization this payer never gave. Both are refused here, at the
+// bridge's own gate, before the settlement reader is ever reached. The check is on the shape, not on
+// the values: a shape this port does not admit is not narrowed by reading it and liking what it finds.
+//
+// It runs FIRST, before anything is read as structure or as a signature. What is refused has to be
+// refused for the reason this port admits: a reader that walks a list of entries finds something
+// wrong inside the first one and reports that instead, which answers a question nobody asked.
+function closedAuthorizationShape(entries) {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return 'payer authorization entry is missing';
+  }
+  if (entries.length !== 1) {
+    return `this bridge declares one authorization entry and this envelope carries ${entries.length}`;
+  }
+  return null;
+}
+
 // One real Ed25519 check over the entry that is about to be authorized: the SDK's own authorization
 // preimage for this network, hashed the way the SDK hashes it, verified with the public key the
 // signature carries. A signature that is merely present is not a signature that was verified, and a
 // signature made for another network fails here because the network is part of the preimage.
 function verifyAuthorizationSignature(transaction, expected, passphrase) {
   const entries = transaction?.operations?.[0]?.auth;
-  if (!Array.isArray(entries) || entries.length === 0) {
-    return { verified: false, reason: 'payer authorization entry is missing' };
-  }
+  const shapeError = closedAuthorizationShape(entries);
+  if (shapeError) return { verified: false, reason: shapeError };
   let sawPayer = false;
   for (const entry of entries) {
     let node;
@@ -529,6 +548,13 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     throwIfAborted(signal, 'inspect');
     const authDigest = authDigestFromEnvelope(authorization, network);
     const transaction = new Transaction(authorization, passphrase);
+    // The closed form comes first, before anything is read as structure or as a signature: an
+    // envelope this port does not admit is refused for the shape, not for whatever a reader finds
+    // while walking an envelope it was never meant to walk.
+    const shapeError = closedAuthorizationShape(transaction?.operations?.[0]?.auth);
+    if (shapeError) {
+      return { verified: false, authDigest: authDigest || undefined, checks: {}, reason: shapeError };
+    }
     // The names are adapted on purpose: the kernel speaks network/asset/payer/payTo/amount, the
     // settlement code speaks assetContract and issuer.
     const verdict = verifyPreparedTransaction(transaction, {

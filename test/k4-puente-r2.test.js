@@ -84,6 +84,65 @@ async function envelope({ recipient = payTo, expiration = 1050, subInvocations =
     .setTimebounds(0, 2000000000).build().toXDR();
 }
 
+// One envelope, and the authorization entries inside it. `otherEntry` is a second entry signed by
+// the same payer for a different contract call: nothing the bridge declared, and something a ledger
+// would honor if the envelope reached it.
+async function authorizationEntries() {
+  const args = [
+    nativeToScVal(payer.publicKey(), { type: 'address' }),
+    nativeToScVal(payTo, { type: 'address' }),
+    nativeToScVal(expected.amount, { type: 'i128' }),
+  ];
+  const fn = new xdr.InvokeContractArgs({ contractAddress: Address.fromString(expected.asset).toScAddress(), functionName: 'transfer', args });
+  const entry = new xdr.SorobanAuthorizationEntry({
+    credentials: xdr.SorobanCredentials.sorobanCredentialsAddress(new xdr.SorobanAddressCredentials({
+      address: Address.fromString(payer.publicKey()).toScAddress(),
+      nonce: new xdr.Int64(1),
+      signatureExpirationLedger: FIXTURE_LEDGER + 30,
+      signature: xdr.ScVal.scvVec([]),
+    })),
+    rootInvocation: new xdr.SorobanAuthorizedInvocation({
+      function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(fn),
+      subInvocations: [],
+    }),
+  });
+  const otherFn = new xdr.InvokeContractArgs({
+    contractAddress: Address.fromString(expected.asset).toScAddress(),
+    functionName: 'mint',
+    args: [nativeToScVal(payTo, { type: 'address' }), nativeToScVal('999999', { type: 'i128' })],
+  });
+  const otherEntry = new xdr.SorobanAuthorizationEntry({
+    credentials: xdr.SorobanCredentials.sorobanCredentialsAddress(new xdr.SorobanAddressCredentials({
+      address: Address.fromString(payer.publicKey()).toScAddress(),
+      nonce: new xdr.Int64(2),
+      signatureExpirationLedger: FIXTURE_LEDGER + 30,
+      signature: xdr.ScVal.scvVec([]),
+    })),
+    rootInvocation: new xdr.SorobanAuthorizedInvocation({
+      function: xdr.SorobanAuthorizedFunction.sorobanAuthorizedFunctionTypeContractFn(otherFn),
+      subInvocations: [],
+    }),
+  });
+  const signed = await authorizeEntry(entry, payer, FIXTURE_LEDGER + 30, Networks.TESTNET);
+  const signedOther = await authorizeEntry(otherEntry, payer, FIXTURE_LEDGER + 30, Networks.TESTNET);
+  return { fn, entry: signed, otherEntry: signedOther };
+}
+
+function envelopeWithEntries(entries, fn) {
+  const hostFn = fn || new xdr.InvokeContractArgs({
+    contractAddress: Address.fromString(expected.asset).toScAddress(),
+    functionName: 'transfer',
+    args: [
+      nativeToScVal(payer.publicKey(), { type: 'address' }),
+      nativeToScVal(payTo, { type: 'address' }),
+      nativeToScVal(expected.amount, { type: 'i128' }),
+    ],
+  });
+  return new TransactionBuilder(new Account(payer.publicKey(), '0'), { fee: '100', networkPassphrase: Networks.TESTNET })
+    .addOperation(Operation.invokeHostFunction({ func: xdr.HostFunction.hostFunctionTypeInvokeContract(hostFn), auth: entries }))
+    .setTimebounds(0, 2000000000).build().toXDR();
+}
+
 function ports(createStellarPorts, builder, opts = {}) {
   return createStellarPorts({
     serviceUrl,
@@ -196,6 +255,20 @@ test('F2b the fall-off of an unsendable record is written where the port is', ()
 // ------------------------------------------------------------------------------------------
 // F3 — the authorization shape is closed to what this bridge declares
 // ------------------------------------------------------------------------------------------
+
+// The bridge's own signature check is the gate that runs before the settlement reader is reached,
+// and it has to be closed by itself: a second authorization entry signed by the same payer for a
+// different contract call is not this effect, whatever the first entry says.
+test('F3b a second authorization entry by the same payer is refused by the bridge itself', async () => {
+  const { createStellarPorts } = await fixture();
+  const { entry, otherEntry, fn } = await authorizationEntries();
+  const raw = envelopeWithEntries([entry, otherEntry], fn);
+  const bridge = ports(createStellarPorts, async () => ({ x402Version: 2, payload: { transaction: raw } }));
+  const { authorization } = await bridge.signer.prepare({ terms, expected });
+  const verdict = await bridge.inspectPrepared(authorization, { expected });
+  assert.equal(verdict.verified, false, 'an envelope authorizing a second contract call was verified as this effect');
+  assert.match(String(verdict.reason), /one authorization|only the declared|entry/i, `the refusal names the shape: ${verdict.reason}`);
+});
 
 test('F3 an envelope carrying a sub-invocation is not a verified preparation of this effect', async () => {
   const { createStellarPorts } = await fixture();
