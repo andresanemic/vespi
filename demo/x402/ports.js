@@ -127,6 +127,25 @@ function closedPaymentPayload(raw) {
   return { x402Version: version === undefined ? 2 : version, payload: { transaction } };
 }
 
+// The ledger an authorization expires at, read out of the envelope itself. A record carries this so
+// that a record which can no longer be sent can be recognized as such: an expiration ledger the
+// network has already passed is a fact about the record, not about the service that answered.
+function expirationLedgerOf(authorization) {
+  try {
+    const entries = new Transaction(authorization, getNetworkPassphrase(NETWORK)).operations?.[0]?.auth;
+    if (!Array.isArray(entries)) return null;
+    for (const entry of entries) {
+      const credentials = entry.credentials();
+      if (credentials.switch().name !== 'sorobanCredentialsAddress') continue;
+      const ledger = credentials.address().signatureExpirationLedger();
+      if (Number.isSafeInteger(ledger) && ledger > 0) return ledger;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 // The declared ceiling, read from the declaration and, when the terms that produced this
 // authorization named one, from those terms as well: the smaller of the two is the window.
 function readWindowSeconds(expected, preparedWindowSeconds) {
@@ -387,6 +406,22 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
   // payload copy that goes on the wire. A second preparation cannot overwrite the first one, and the
   // send that carries an authorization consumes its record, so what was inspected is what is sent.
   const prepared = new Map();
+  // What left on the wire, kept as an identity and not as a payload. A record consumed by a send is
+  // deleted from `prepared` so it cannot be read twice, and this set is why it cannot be prepared
+  // again either: the same bytes coming back from the builder are the same authorization, and a
+  // second send of them would be a second payment for one preparation. The set holds digests, not
+  // envelopes, so nothing that was signed is kept in memory twice.
+  const spent = new Set();
+  // One authorization digest names one identity. A digest is read from the closed envelope, once,
+  // and it is what both `prepared` and `spent` are keyed by: an identity is a fact about the bytes,
+  // not about the object the builder happened to hand over this time.
+  const identityOf = (authorization) => {
+    try {
+      return createHash('sha256').update(authorization, 'utf8').digest('hex');
+    } catch {
+      return null;
+    }
+  };
   // The ledger of this network, read before every inspection. Nothing is inspected as verified
   // against a window nobody measured.
   const ledgerReader = readCurrentLedger || rpcLedgerReader(rpcUrl);
@@ -424,10 +459,26 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
       };
     }
     throwIfAborted(signal, 'prepare');
+    // The identity of this authorization is read once, here, and it decides what happens below: an
+    // identity already reserved is not reserved again, and an identity already spent is refused
+    // outright. Both refusals happen before a byte is signed twice and before any record is written.
+    const identity = identityOf(closed.payload.transaction);
+    if (identity === null) throw new Error('the prepared authorization has no readable identity');
+    if (spent.has(identity)) {
+      throw new Error('this authorization already went on the wire: preparing it again would pay the same authorization twice');
+    }
+    if (prepared.has(identity)) {
+      throw new Error('this authorization is already reserved by an earlier preparation: a second record would overwrite the one the send reads');
+    }
     if (prepared.size >= MAX_PENDING_AUTHORIZATIONS) {
       throw new Error(`prepared authorizations are not being sent: this port keeps ${MAX_PENDING_AUTHORIZATIONS} at most`);
     }
-    prepared.set(closed.payload.transaction, { payload: closed, windowSeconds: terms?.maxTimeoutSeconds });
+    prepared.set(identity, {
+      authorization: closed.payload.transaction,
+      payload: closed,
+      windowSeconds: terms?.maxTimeoutSeconds,
+      expirationLedger: expirationLedgerOf(closed.payload.transaction),
+    });
     return { authorization: closed.payload.transaction };
   };
 
@@ -456,7 +507,7 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     }
     let currentLedger;
     try {
-      currentLedger = await ledgerReader();
+      currentLedger = await ledgerReader(signal);
     } catch {
       return {
         verified: false,
@@ -465,7 +516,12 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
         reason: 'the current ledger could not be read, so the authorization window was not checked',
       };
     }
-    const record = prepared.get(authorization);
+    // The ledger answered, and the caller may have given up while it was reading. An answer nobody
+    // is waiting for is not a window that was checked, so the abort is revalidated here on the way
+    // back and the preparation is not verified.
+    throwIfAborted(signal, 'inspect');
+    const identity = identityOf(authorization);
+    const record = identity === null ? undefined : prepared.get(identity);
     const windowSeconds = readWindowSeconds(expected, record?.windowSeconds);
     if (!expirationWithinWindow(signature.expiration, currentLedger, windowSeconds)) {
       return {
@@ -494,11 +550,17 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
     throwIfAborted(signal, 'send');
     // The record is taken, not read, and only for the authorization this request carries: what the
     // kernel inspected is what leaves, and an authorization that already left cannot leave again.
-    const record = typeof authorization === 'string' ? prepared.get(authorization) : undefined;
-    if (!record) {
+    // The identity is the digest of the bytes this request carries, so a caller cannot name a record
+    // it did not prepare, and a record it already consumed is gone from the map and from here.
+    const identity = typeof authorization === 'string' ? identityOf(authorization) : null;
+    const record = identity === null ? undefined : prepared.get(identity);
+    if (!record || record.authorization !== authorization) {
       throw new Error('the paid request does not carry the authorization that was inspected');
     }
-    prepared.delete(authorization);
+    // Consumed before the wire, not after: whatever the answer turns out to be, these bytes have
+    // left this port once and only once, and `spent` is what says so for the rest of the process.
+    prepared.delete(identity);
+    spent.add(identity);
     const headers = {
       ...http().encodePaymentSignatureHeader(record.payload),
       // Only a hint: a provider that does not honour it is not made to honour it here.
