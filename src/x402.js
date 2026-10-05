@@ -31,11 +31,13 @@
 // like the other five ports, but it is the one port that is not handed the abort signal: a validator
 // that never settles is stopped by the run's own budget (`performTimeoutMs`), and the run then ends
 // with the effect on the wire and an unknown outcome, not as a failure with nothing exercised.
-// `verifyTimeoutMs` is a deadline this module arms a timer for, and a timer is 32-bit: a budget above
-// 2^31-1 ms is refused when the run options are built, never clamped, because a payment is not sent
-// under a deadline the module shortened by itself. What a validator hands back as `output` has to be
-// a plain body or nothing: it is read by descriptors, not copied, so a list, a class instance, an
-// accessor and a proxy are a refused delivery rather than a body in the host's hands.
+// Every deadline a timer is armed for on this payment's behalf (`verifyTimeoutMs`,
+// `performTimeoutMs`, `askTimeoutMs`, `decideTimeoutMs`) is a deadline a timer cannot hold, since a
+// timer is 32-bit: a budget above 2^31-1 ms is refused when the run options are built, never clamped,
+// because a payment is not sent under a deadline the module shortened by itself. What a validator
+// hands back as `output` has to be a plain body or nothing: it is read by descriptors, not copied, so
+// a list, a class instance, an accessor and a proxy are a refused delivery rather than a body in the
+// host's hands.
 
 const { sufficient } = require('./authority.js');
 const { runOperation } = require('./operation.js');
@@ -734,10 +736,10 @@ const ALLOWED_IO_KEYS = [
 // The module does not clamp it: a clamp answers with a budget the host did not ask for, and the
 // payment would carry a verdict produced under a deadline that was never agreed. The budget is
 // refused instead, when the run options are built, with the same fixed code as options that cannot
-// be read. `askTimeoutMs` and `performTimeoutMs` are the engine's own deadlines and are passed
-// through untouched: this module arms no timer for them.
+// be read. The engine arms timers for `performTimeoutMs`, `askTimeoutMs` and `decideTimeoutMs` on
+// this payment's behalf, so they are refused the same way.
 const MAX_TIMER_MS = 2 ** 31 - 1;
-const TIMER_DEADLINES = ['verifyTimeoutMs'];
+const TIMER_DEADLINES = ['verifyTimeoutMs', 'performTimeoutMs', 'askTimeoutMs', 'decideTimeoutMs'];
 const DEFAULT_VERIFY_TIMEOUT_MS = 15_000;
 
 // The run clock is a synchronous contract, the same one the engine uses. An injected clock that is
