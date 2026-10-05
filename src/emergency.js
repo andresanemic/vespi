@@ -240,8 +240,15 @@ function askPeople(port, snapshot) {
 //               callback this kernel BOUND (`authorizeGrantor`, `authorizeRenewal`) and a caller who
 //               presents nothing cannot replace that answer; a principal offered there is
 //               corroboration, checked and never trusted in place of the bound callback.
+//               Omitting `by` is always allowed here, so the `owner` role on these two verbs restricts
+//               only a principal that is OFFERED: any holder of the handle, the grantee included, may
+//               ask for a renewal, and what makes it legitimate is the bound approver answering for
+//               the owner. The approver is not told who asked. Read that as the size of the control,
+//               not as a hole in it (A01, N01).
 //   refusal  — the sentence a caller is refused with when its principal is not in that role. It says
-//               which role could have, because "not authorized" alone leaves the caller guessing.
+//               which role could have, because "not authorized" alone leaves the caller guessing. The
+//               declared names are spliced in as text, never as a replacement pattern, so a name that
+//               carries `$&`, `$'` or `` $` `` comes back the way it was declared (N10).
 //
 // The rule that holds over the table: the agent that spends the authority decides nothing about it,
 // whatever the grant declares and whatever principal the host issued for it (A01). The exercise is
@@ -1028,7 +1035,10 @@ async function createEmergencyPermission(grant, options = {}) {
   // there is `authorizeGrantor`, which this kernel bound and a caller cannot replace, and what this
   // check adds on top is a refusal when a principal IS offered and is not the owner. That is the
   // honest size of the guarantee — a principal for the grantor, declared and compared, not a second
-  // authentication this module could perform on its own.
+  // authentication this module could perform on its own. The same reading as on the renewal, so the
+  // `owner` row of the table does not get read as more than it is: here `authorizeGrantor` is handed
+  // over by the same caller that asks for the permission, so keeping that function out of the agent's
+  // hands is the host's duty, exactly as the module header says (A01, N01).
   const grantGate = authorizeTransition({ snapshot, people: people.people }, 'grant', by);
   if (!grantGate.ok) throw new Error(grantGate.reason);
   // The candidate is read once, frozen, and is the single source from here on: the host authorizes
@@ -1486,12 +1496,19 @@ function revokeEmergencyPermission(permission, options = {}) {
 // the object can hand the kernel its own approval, and a host that bound no approver cannot have the
 // clock extended at all.
 //
-// A third argument carries WHO is asking, read through the same door as every other transition and
-// refused unless it is the owner this permission names. It is not required, and the reason is the
-// sentence above rather than a convenience: the authority for this verb is the bound approver, which
-// is host-held, is asked exactly once and answers about a candidate nobody can substitute (R509). A
-// principal offered here is checked; the kernel does not pretend that checking one is what makes the
-// extension legitimate.
+// A third argument carries who is asking, read through the same door as every other transition: a
+// principal that is not the owner this permission names is refused with it. It is not required, and
+// the reason is the sentence above rather than a convenience: the authority for this verb is the bound
+// approver, which is host-held, is asked exactly once and answers about a candidate nobody can
+// substitute (R509). A principal offered here is checked; the kernel does not pretend that checking
+// one is what makes the extension legitimate.
+//
+// Omitting `by` is always allowed here, so the `owner` role restricts only a principal that is offered:
+// any holder of the handle, the grantee included, may ask for a renewal, and what makes it legitimate
+// is the bound approver answering for the owner. The approver is not told who asked, which is what the
+// candidate it receives shows: it is the grant, with the wider clock and no requester in it. So the
+// honest reading of this verb is "the owner's approver decides, and here is who asked if the caller
+// chose to say", not "the owner renews" (A01, N01).
 function renewEmergencyPermission(permission, changes, options = {}) {
   const bound = requireBinding(permission, bindingOf(permission), 'renewed');
   const requested = readOptions(options, ['by']);
