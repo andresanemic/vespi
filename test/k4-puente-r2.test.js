@@ -488,9 +488,14 @@ test('F5c the signal the port carries reaches fetch through the real SDK, and te
   // the abort arriving. Loopback only, so the case needs no network and no fixture server.
   let requestAborted = false;
   let requests = 0;
+  let sawAbort;
+  // The socket learns it was torn down on its own turn of the event loop, which is after the read has
+  // already given up. Awaiting this is what keeps the evidence below from being read too early, and it
+  // cannot outlive the watchdog: closing the connections also marks the request aborted.
+  const abortedOnSocket = new Promise((resolve) => { sawAbort = resolve; });
   const quiet = http.createServer((req, res) => {
     requests++;
-    req.on('aborted', () => { requestAborted = true; });
+    req.on('aborted', () => { requestAborted = true; sawAbort(); });
   });
   await new Promise((resolve) => quiet.listen(0, '127.0.0.1', resolve));
   // Registered before anything can fail: a read left running on an open socket would keep the runner
@@ -519,6 +524,7 @@ test('F5c the signal the port carries reaches fetch through the real SDK, and te
     quiet.closeAllConnections();
   }, 5000);
   const verdict = await pending.then((v) => v, (e) => ({ verified: false, reason: String(e?.message ?? e) }));
+  await abortedOnSocket;
   clearTimeout(watchdog);
 
   assert.equal(overdue, false, 'the read never ended: the signal never reached fetch, so the read was left running on the socket');

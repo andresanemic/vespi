@@ -230,6 +230,40 @@ async function verifySettlement(evidence, options) {
   // and inventing one would be refused by the kernel anyway; what this says is only that there is
   // nothing verified, and the reason says which phase stopped.
   const stopped = (phase) => failure(`the settlement read was cancelled before ${phase}`);
+
+  // One Horizon read, with the run's signal carried into it and with nothing left to throw.
+  //
+  // Two things were missing here and both were visible from outside. The signal was checked at the
+  // doors but never handed to the call, so an abort that arrived while a read was in flight could not
+  // stop it: the read ran to its answer against the ledger and the abort was noticed afterwards, one
+  // wasted round trip later. And the read was unguarded, so whatever the SDK raised — a network
+  // error, a 404, an aborted request — left this function as a raw exception and crossed to the host
+  // with the ledger host's own text on it.
+  //
+  // So the signal goes in with the read, and a read that ends badly ends in the closed vocabulary.
+  // Which of the two it was comes from the signal, not from the shape of the error: this SDK reports
+  // an aborted request as a plain Error carrying a message, with no abort name and no code, so
+  // matching on the error would mistake a cancelled run for a broken ledger.
+  //
+  // The two outcomes are told apart by which key is present, never by looking inside the answer: a
+  // Horizon record is not this function's to interpret, and a refusal could collide with a field of
+  // its own.
+  const readSettlementPage = async (read, phase) => {
+    if (aborted()) return { refused: stopped(phase) };
+    let answer;
+    try {
+      answer = await read(signal);
+    } catch {
+      // An abort is the caller answering and a failure is the ledger host answering. Neither is text
+      // this function may repeat, so both come back as a closed refusal with no check claimed.
+      return { refused: aborted() ? stopped(phase) : failure('the settlement read could not be completed', {}) };
+    }
+    // The abort can also land between the answer arriving and this line, and an answer nobody is
+    // waiting for is not a readback.
+    if (aborted()) return { refused: stopped(phase) };
+    return { answer };
+  };
+
   if (!evidence || typeof evidence.txHash !== 'string' || !evidence.txHash.trim()) {
     return failure('missing transaction hash');
   }
@@ -251,7 +285,16 @@ async function verifySettlement(evidence, options) {
   if (aborted()) return stopped('the transaction was read');
 
   const txHash = evidence.txHash.trim().toLowerCase();
-  const txn = await horizon.transactions().transaction(txHash).call();
+  // `read` hands the signal to the SDK, which takes no arguments on `call()` in this version: the
+  // port installs it on the client's own fetch options, where it reaches `fetch`. The argument is
+  // still passed, because a Horizon that is not this SDK — a double in a test, another adapter — is
+  // the one place where the signal can be honoured directly.
+  const firstRead = await readSettlementPage(
+    (readSignal) => horizon.transactions().transaction(txHash).call(readSignal),
+    'the transaction was read',
+  );
+  if (firstRead.refused) return firstRead.refused;
+  const txn = firstRead.answer;
   if (aborted()) return stopped('the transaction was read');
   if (typeof txn.hash !== 'string' || txn.hash.trim().toLowerCase() !== txHash) {
     return failure('Horizon transaction hash does not match requested hash', {}, { transaction: txHash });
@@ -275,14 +318,24 @@ async function verifySettlement(evidence, options) {
 
   if (aborted()) return stopped('the operation page was read');
 
-  const operations = await horizon.operations().forTransaction(txHash).call();
+  const pageRead = await readSettlementPage(
+    (readSignal) => horizon.operations().forTransaction(txHash).call(readSignal),
+    'the operation page was read',
+  );
+  if (pageRead.refused) return pageRead.refused;
+  const operations = pageRead.answer;
   if (operations._links && operations._links.next) return failure('Horizon operation page is not complete', {}, { transaction: txHash });
   const changes = [];
   for (const operation of operations.records || []) {
     // Checked per operation and not once for the page: one page can hold many operations, and a run
     // that gave up after the third should not have produced the fourth read.
     if (aborted()) return stopped('every operation was read');
-    const full = await horizon.operations().operation(operation.id).call();
+    const operationRead = await readSettlementPage(
+      (readSignal) => horizon.operations().operation(operation.id).call(readSignal),
+      'every operation was read',
+    );
+    if (operationRead.refused) return operationRead.refused;
+    const full = operationRead.answer;
     if (Array.isArray(full.asset_balance_changes)) changes.push(...full.asset_balance_changes);
   }
 

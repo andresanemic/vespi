@@ -51,6 +51,9 @@ const REQUEST_TIMEOUT_MS = 15_000;
 // sending a byte must not hold the port (and the engine's signal) for as long as it likes.
 const BODY_READ_TIMEOUT_MS = 15_000;
 const MAX_BODY_BYTES = 1024 * 1024;
+// A settlement read is three Horizon round trips and must not become a walk of redirects. This bounds
+// the Horizon client the same way the body of a paid answer is bounded above; see `horizonFor`.
+const MAX_REDIRECTS = 5;
 // The policy that turns a wall-clock ceiling into a ledger window. Both are named and validated here,
 // never inferred from a value that arrived from the network: Soroban targets a five second ledger,
 // and two ledgers of tolerance cover the next close.
@@ -739,9 +742,35 @@ const sweepUnsendable = async (signal) => {
   // url, so a Horizon read cannot be pointed at a cleartext host that is not the local machine.
   const horizonTarget = horizonUrl || 'https://horizon-testnet.stellar.org';
   const horizonHost = (() => { try { return new URL(horizonTarget).hostname; } catch { return ''; } })();
-  const settlementHorizon = new Horizon.Server(horizonTarget, {
-    allowHttp: horizonHost === 'localhost' || horizonHost === '127.0.0.1' || horizonHost === '[::1]',
-  });
+  const allowHorizonHttp = horizonHost === 'localhost' || horizonHost === '127.0.0.1' || horizonHost === '[::1]';
+
+  // A Horizon whose reads carry this run's signal all the way to `fetch`.
+  //
+  // The reader already passed the signal down, and already checked it before every read, and that was
+  // not enough: the checks only see an abort that arrives between reads, so a read already in flight
+  // ran to its answer and the abort was noticed one round trip later. The SDK gives a call builder no
+  // place to put a signal — `call()` takes no arguments, and its request path overwrites the signal on
+  // the config it is given — so the only channel left is the client's own fetch options, which is
+  // what the adapter ends up passing to `fetch`.
+  //
+  // It is installed per settlement read, on a Horizon built for that read, so two verifications
+  // running at once carry their own signals instead of whichever registered last. `maxRedirects` and
+  // `maxContentLength` are set because that is what engages this client's own bounded adapter, which
+  // is the path that honours `fetchOptions` and the bounds; the default one is not this port's to
+  // trust with an unbounded settlement read.
+  const horizonFor = (signal) => {
+    const server = new Horizon.Server(horizonTarget, { allowHttp: allowHorizonHttp });
+    if (signal && server.httpClient && server.httpClient.interceptors) {
+      server.httpClient.interceptors.request.use((config) => ({
+        ...config,
+        maxRedirects: MAX_REDIRECTS,
+        maxContentLength: MAX_BODY_BYTES,
+        fetchOptions: { ...(config.fetchOptions || {}), signal },
+      }));
+    }
+    return server;
+  };
+
   const verifySettlement = async (evidence, { expected, authDigest, signal }) => {
     throwIfAborted(signal, 'verify settlement');
     // The reader from settlement.js, reached through the alias: this port used to be named after it
@@ -749,7 +778,7 @@ const sweepUnsendable = async (signal) => {
     // The evidence is passed as the kernel wrote it. Overwriting `authDigest` here would hide a
     // disagreement between what the engine holds and what it is verifying.
     const verdict = await readSettlementFromLedger(evidence, {
-      horizon: settlementHorizon,
+      horizon: horizonFor(signal),
       payer: expected.payer,
       payTo: expected.payTo,
       amount: expected.amount,
@@ -757,9 +786,10 @@ const sweepUnsendable = async (signal) => {
       assetContract: expected.asset,
       network,
       requireAuthDigest: true,
-      // The signal travels with the evidence. A settlement read is three Horizon round trips, and a
-      // run that gave up while the first one was in flight has to stop before the other two: the
-      // reader checks it before every read and once more after the answer.
+      // The signal travels with the evidence, and the Horizon above carries it to `fetch`. A
+      // settlement read is three Horizon round trips, and a run that gave up while the first one was
+      // in flight has to stop that read as well as the other two: the reader checks the signal before
+      // every read and once more after the answer, and the read itself ends when the abort arrives.
       signal,
     });
     throwIfAborted(signal, 'verify settlement');
