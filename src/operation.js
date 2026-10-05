@@ -41,6 +41,9 @@ const DEFAULT_EXIT = 'return to the person: change the agreement or cancel';
 // digits and underscores, at most 64. That is a token a host chose, not a sentence, and it
 // cannot smuggle a url, a path or a body. Each call site supplies its own fixed phrase, because
 // the phrase has to say which step failed, and the code alone never does.
+// A port can also hand that text back as data instead of throwing it. `returnedCode` applies the
+// same closed vocabulary to the returned `error`, because a sentence travels the same distance a
+// thrown sentence does once it is sealed.
 function failureCode(error) {
   try {
     const code = error && error.code;
@@ -52,6 +55,33 @@ function failureCode(error) {
 
 function refused(error, phrase) {
   return `${phrase}${failureCode(error)}`;
+}
+
+// The sibling channel of the thrown text: `perform` may answer `{ ok: false, error }` instead of
+// throwing, and that string was copied whole into `detail`, which is sealed. So a port could put a
+// url with a key in it inside the chain of trust and verifyReceipt would bless it (R1 finding H1b,
+// the channel H1 did not charter). The same rule as the thrown text: a free sentence never travels.
+// What can travel is a token shaped like a code, uppercase letters, digits and underscores, at
+// most 64, because that is a token the host chose rather than a sentence and it cannot smuggle a
+// url, a path or a body. Everything else answers null and the call site says its own fixed phrase.
+function returnedCode(error) {
+  try {
+    if (typeof error === 'string') return /^[A-Z0-9_]{1,64}$/.test(error) ? error : null;
+    if (error == null || typeof error !== 'object') return null;
+    const code = error.code;
+    return typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+// The closed vocabulary, spoken the way the port that wrote it already speaks it: when a port names
+// its failure with a code-shaped token that token is the detail, which is the contract x402.js has
+// always had (`PREPARE_FAILED`, `SEND_UNKNOWN`). When it hands free text over, the kernel answers its
+// own fixed phrase and the text stays in the port. Either way `detail` is sealed and carries no
+// sentence a host wrote.
+function capabilityFailure(code, phrase) {
+  return code ?? phrase;
 }
 
 const DEFAULT_OPERATION_TIMEOUT_MS = 15_000;
@@ -137,14 +167,16 @@ function hasEvidence(value) {
 
 function readCapabilityResult(result) {
   try {
-    const error = result?.error;
+    const code = returnedCode(result?.error);
     const reason = result?.reason;
     const exit = result?.exit;
     return {
       settlementUnknown: result?.settlementUnknown === true,
       impossible: result?.impossible === true,
       ok: result?.ok === true,
-      error: typeof error === 'string' ? error : (error == null ? null : 'capability returned an invalid error'),
+      // A code-shaped token or null, never the words of the port: `capabilityFailure` adds it to
+      // the fixed phrase of the site that asks for it.
+      error: code,
       reason: typeof reason === 'string' && reason.length > 0 ? reason : null,
       exit: typeof exit === 'string' && exit.length > 0 ? exit : null,
       evidence: result?.evidence ?? null,
@@ -960,7 +992,7 @@ async function runOperationOnce(op, capability, io) {
 
   const capabilityResult = readCapabilityResult(result);
   if (capabilityResult.impossible) {
-    const reason = capabilityResult.reason || capabilityResult.error || 'impossible';
+    const reason = capabilityResult.reason || capabilityFailure(capabilityResult.error, 'impossible');
     const exit = capabilityResult.exit || operationExit(op);
     op.state = STATES.BLOCKED;
     const receipt = buildReceiptForRun({
@@ -983,7 +1015,7 @@ async function runOperationOnce(op, capability, io) {
       outcome: {
         status: 'not_verified',
         exercised: requirements.map((r) => ({ ...r })),
-        detail: capabilityResult.error || 'settlement outcome unknown',
+        detail: capabilityFailure(capabilityResult.error, 'settlement outcome unknown'),
       },
       evidence: capabilityResult.evidence,
       verification: { verified: false, checks: {}, reason: 'settlement outcome unknown' },
@@ -998,7 +1030,7 @@ async function runOperationOnce(op, capability, io) {
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval },
-      outcome: { status: 'failed', exercised: [], detail: capabilityResult.error || 'capability failed' },
+      outcome: { status: 'failed', exercised: [], detail: capabilityFailure(capabilityResult.error, 'capability failed') },
       evidence: capabilityResult.evidence,
       verification: null,
       ...(decidedBy ? { decidedBy } : {}),

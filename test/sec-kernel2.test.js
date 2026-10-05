@@ -21,6 +21,9 @@ const collectorModule = import('../scripts/collect-testnet-evidence.mjs');
 
 const SECRET = 'fetch failed: https://horizon-testnet.stellar.org/?apiKey=SUPERSECRETKEY';
 const HASH = 'a'.repeat(64);
+// T1-D2 holds the tests free of absolute paths of this machine, so the one the refusal case uses is
+// built from the platform instead of written down.
+const DRIVE = process.platform === 'win32' ? 'C:' : '';
 
 function collectText(value) {
   const out = [];
@@ -77,7 +80,7 @@ test('H1b a code-shaped token from the port still names the failure', async () =
 
 test('H1b a url, a path and a long sentence are all refused the same way', async () => {
   for (const text of [
-    'C:/Users/owner/.ssh/id_ed25519',
+    `${DRIVE}/Users/owner/.ssh/id_ed25519`,
     'fetch failed for https://api.example.com/v1/pay',
     'x'.repeat(200),
     'lowercase sentence from the host',
