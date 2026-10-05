@@ -116,7 +116,9 @@ test('H3 un hash malformado no emite ninguna peticion', async () => {
     });
     const entry = result.transactions[0];
     assert.equal(entry.readback.status, 'malformed', `hash ${JSON.stringify(bad)} was not marked malformed`);
-    assert.equal(entry.readback.reason.includes(bad) || asked.includes(bad), false);
+    assert.equal(entry.readback.attempts, 0, 'no attempt was made');
+    assert.equal(entry.historical_response, null);
+    if (bad !== '') assert.equal(entry.readback.reason.includes(bad), false, 'the raw hash is echoed in the reason');
   }
   assert.deepEqual(asked, [], 'a malformed hash reached the reader');
 });

@@ -635,8 +635,16 @@ export async function collectEvidence({
   const transactions = [];
   for (const entry of evidence.transactions) {
     const hash = entry?.hash;
-    const record = localExpectation(hash, localExpectations);
-    const fromRoots = (runDeclarations.get(typeof hash === 'string' ? hash.toLowerCase() : '') ?? []);
+    // The hash is interpolated into a Horizon url, so it is a shape and not a string. `isHash` was
+    // only ever applied to fields of a run record; the transaction list skipped it, and a hash of
+    // "../../" resolved the url to `path=/` while "x?limit=200&cursor=" added a query nobody asked
+    // for (R1 finding H3). Horizon is a literal constant, so this is not an SSRF and no credential
+    // can move: what it buys is an outgoing request nobody intended and a corrupted readback. The
+    // entry is kept and marked malformed rather than dropped, so the record of what was attempted
+    // stays complete.
+    const usableHash = isHash(hash);
+    const record = usableHash ? localExpectation(hash, localExpectations) : null;
+    const fromRoots = usableHash ? (runDeclarations.get(hash.toLowerCase()) ?? []) : [];
     const base = { ...entry };
     delete base.expected;
     delete base.declared;
@@ -646,7 +654,9 @@ export async function collectEvidence({
     delete base.historical_response;
     delete base.readback;
 
-    const read = await readWithBounds(hash, readTransaction, { readTimeoutMs, maxAttempts, retryDelayMs, sleep });
+    const read = usableHash
+      ? await readWithBounds(hash, readTransaction, { readTimeoutMs, maxAttempts, retryDelayMs, sleep })
+      : { status: 'malformed', attempts: 0, reason: 'the declared hash is not 64 hexadecimal characters, so no read was attempted', response: null };
     const collected = { ...base };
     if (record) {
       collected.expected = record.expected;
