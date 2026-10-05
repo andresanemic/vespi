@@ -1,0 +1,11 @@
+Vespi Kernel suite result
+Date (UTC): 2026-10-05T09:10:32.197Z
+Node version: v24.15.0
+HEAD SHA: 7e2348b8b59d982922a178b42d51ac0b2537ff47
+The HEAD SHA is the parent commit of the commit that stores this file.
+Command: node --test test/*.test.js
+Tests: 1191
+Passed: 1166
+Failed: 0
+Todo: 25
+Skipped: 0

@@ -1,0 +1,72 @@
+{
+  "fecha": "2026-10-03T05:12:42.416Z",
+  "facilitador": "https://x402.org/facilitator",
+  "pagador": "GAF2UQ2CJFFVISDHMZLPSQ7PVHOEQWVZCKUD6HRJDIR7D5GAW3XCQT6Q",
+  "receptor": "GC2TSKRK7FBZIBQ3RHCUKHNA23FCWW4Z5QIQRHY3G4QNFOQIFLVLNRS4",
+  "llamadas_al_facilitador_con_la_tabla": 1,
+  "abonos_en_la_red_con_la_tabla": 1,
+  "cobra_una_vez": true,
+  "el_facilitador_sin_tabla": "no cobro de nuevo (la autorizacion no se puede reutilizar)",
+  "pasos": [
+    {
+      "nombre": "1. primera liquidacion",
+      "estado": "liquidado",
+      "nueva": true,
+      "resultado": {
+        "tx": "5495a053cfde91f2ac2dd4eece581fc628072416cf9007d6ca78ab3becf4273a",
+        "red": "stellar:testnet",
+        "pagador": "GAF2UQ2CJFFVISDHMZLPSQ7PVHOEQWVZCKUD6HRJDIR7D5GAW3XCQT6Q"
+      },
+      "llamadas_al_facilitador": 1
+    },
+    {
+      "nombre": "2. reintento de la misma liquidacion",
+      "estado": "liquidado",
+      "nueva": false,
+      "mismo_resultado": true,
+      "llamadas_al_facilitador": 1
+    },
+    {
+      "nombre": "3. la entrega falla despues de cobrar",
+      "estado": "entrega_pendiente",
+      "error": "el servicio se cayo despues de cobrar",
+      "llamadas_al_facilitador": 1
+    },
+    {
+      "nombre": "4. se reintenta el cobro tras el fallo de entrega",
+      "estado": "liquidado",
+      "nueva": false,
+      "llamadas_al_facilitador": 1
+    },
+    {
+      "nombre": "5. la entrega se reintenta y sale",
+      "estado": "entregado",
+      "resultado": {
+        "servicio": "plan entregado"
+      },
+      "llamadas_al_facilitador": 1
+    },
+    {
+      "nombre": "6. abonos de USDC a la receptora en Horizon",
+      "abonos": 1,
+      "importes": [
+        "0.0100000"
+      ]
+    },
+    {
+      "nombre": "7. aparte: reenvio directo del mismo payload al /settle, sin la tabla",
+      "ok": true,
+      "respuesta": {
+        "success": false,
+        "errorReason": "invalid_exact_stellar_payload_simulation_failed",
+        "payer": "GAF2UQ2CJFFVISDHMZLPSQ7PVHOEQWVZCKUD6HRJDIR7D5GAW3XCQT6Q",
+        "transaction": "",
+        "network": "stellar:testnet"
+      }
+    },
+    {
+      "nombre": "8. abonos de USDC tras el reenvio directo",
+      "abonos": 1
+    }
+  ]
+}

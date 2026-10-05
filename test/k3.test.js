@@ -101,10 +101,11 @@ test('K3.9 anchorReceipt con txHash deja anchored y conserva digest válido', ()
   const out = receiptMod.anchorReceipt(r, (digest) => {
     seenDigest = digest;
     return { network: 'stellar:testnet', txHash: 'deadbeef' };
-  }, (txHash, digest) => txHash === 'deadbeef' && digest === r.digest);
-  assert.equal(seenDigest, r.digest);
+  }, (txHash, digest) => txHash === 'deadbeef' && digest === seenDigest);
   assert.equal(out.anchor.status, 'anchored');
   assert.equal(out.anchor.txHash, 'deadbeef');
+  assert.equal(out.digest, seenDigest);
+  assert.equal(out.anchor.digest, seenDigest);
   assert.equal(receiptMod.verifyReceipt(out).ok, true);
 });
 

@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "node scripts/judge-package.mjs",
+  "packageVersion": "0.1.4",
+  "gitCommit": "003d9e255f982c0b537f04e81bb81047e36b7fb8",
+  "fileHashes": {
+    "demo/x402/README.md": "056237ad81b5a23deceee84cc260377742d01dfc0a8dda2853320e9f26714405",
+    "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
+    "demo/x402/amount.test.mjs": "35904685364e1ce230d0a875c8411b0ddda1b2c56818d8aa264582a425b222fe",
+    "demo/x402/capability.adversarial.mjs": "8328200fbb73bc49fde9a01a3dd89da6c8c2fc2ea9e7215991318db872bee9e0",
+    "demo/x402/capability.js": "0ee8f86c33d004df96e734f68acd5e5604be64d49192a222ff13dd7a7de92678",
+    "demo/x402/cli.js": "ba0cd010e86cfa1920af348c7888846fd86d54bd19927feed944d448117b0587",
+    "demo/x402/cli.test.mjs": "b9bd20a5eebe9262368e9f5ef97a00c036e29163d45df2ec28576e226e13ee98",
+    "demo/x402/config.js": "4a8a41f5bd846e57e6964005c6b625758652789a8432139f1da9f0a79ec8b5d5",
+    "demo/x402/config.test.mjs": "6a0c62981315ba06e98d5dd5c815c447f656f0a1c18cf8f06f17c2885725f1f9",
+    "demo/x402/endpoint.test.mjs": "ad1cf563515ce7fd3428e83a986972ef09d2b0664009a12bdb334975abce01ef",
+    "demo/x402/fetch-timeout.test.mjs": "7cced9904b319fdcb731c9dce63bc64e0c90896617594e2fdb2ac8ee3890068b",
+    "demo/x402/idempotency.js": "3f2509a04a18a4d504a9641d31d4c860d5d76d385c2d3e71368ed069966c955d",
+    "demo/x402/idempotency.test.mjs": "a6fd7e35d38ef4c241b19d65dcd87908f6f9e84027fb8e1bd0450ca3eb92f49e",
+    "demo/x402/package-lock.json": "c827a189d46ca378a862e92b93bb2be77318a69ea121249b7a279da7e882e2b0",
+    "demo/x402/package.json": "211b76d774910004293029a1c40732ebac156d473391ffd9861d4509a63b52f0",
+    "demo/x402/ports.js": "ef2bf0a16ae74da57a0494fb20e3f5e8a61681d02ea709ca3ff8b569416203cb",
+    "demo/x402/receipts/live-testnet-2026-10-02.json": "ee37e4bd895a1cb16f7e832ef0a2785c16b26f494e5edbd6a572fec283841732",
+    "demo/x402/run.js": "2fb7b6b30bf9c1591074557ff45b889248ad0045b5c98f59fb65eb0a16f731b6",
+    "demo/x402/server.js": "0c0af0702db41b55a9b12e3418f4aafd9cc7f8914f19a95c3e211b6d67e2ec1c",
+    "demo/x402/settlement-finalization.test.mjs": "5262c7f92729d4fd80e35199e5d638e58ea713d7d5e80864ed40fa118535d004",
+    "demo/x402/settlement-response.test.mjs": "52db1adbc15d592115c13177d3e19b05c9b89ee2f0775db12d14b24eef89d510",
+    "demo/x402/settlement.js": "748561392df0ad80032264ec3d21d06f0aa4d3aeddc98c78d174939f01149119",
+    "demo/x402/verify.test.mjs": "71bc83afcf2aa5ea2f34213a9dba4ff29a43cd2591fae5405d269fec3c223116",
+    "docs/CAPABILITIES.md": "777a28fa352fc84f086913a5b9efb645bfc7fb449ef027a6e70a881da02b1c49",
+    "docs/FOR_JUDGES.md": "776a0db5f459323fcdf99b2f538bddfcd18091a66f631f8348ff62911d29da6c",
+    "docs/GENESIS.md": "24c76ec764ddaa54d85781ea894786b45ca80884df20e9e40580148519dd9971",
+    "docs/JUDGES_FINDINGS_0.1.4.md": "1b9b6e770861f6001f2541ded57044121d18ab08f6f4e9d1d9a8ed5d6f4b3962",
+    "docs/METHOD.md": "cd8a288b6752e77d36fd20b3434e15bee0f51ddb96a369901bcc2fdc8e63ca56",
+    "docs/PRIOR_ART.md": "26b71f7476553d74a596e63e839c4e8cdd5637bef1922c54514ef4251681a9d4",
+    "docs/RELEASE_0.0.1_GENESIS.md": "c4a77b6957661ddd8d31063e1a635d894502254eea90556d184660daa8a68ad0",
+    "docs/RELEASE_0.1.3_KERNEL.md": "521d39710216dd0da66d17f01346d36f3cb416838c97e7e43923c4f1bb6f320b",
+    "docs/RELEASE_0.1.4_KERNEL.md": "524aaa8e3d11a7ea42c1fc0b1e7ef8bcef0e2e413d9ac8d078d7bcec8f382c14",
+    "docs/SUITE_RESULT.txt": "25c802327f6400f6b3e6c74db05698483a9334e38f978bb543e3537f535bded8",
+    "docs/TESTNET_EVIDENCE.md": "326d0fd3e91dedcf8ac107154bf2cf38ecb765f7da0eee3c885adf130e64de29",
+    "docs/VERIFICATION.md": "003118f46ebe9dceb0a918b33b1b6570fa0c038aabb3cc5ed4c7813fe2dbbba7",
+    "docs/WALKTHROUGH.md": "dd70ab7b30d1e9f5db69abad2f6cac969ce3f7dec506a445015cdc1d283f1d88",
+    "docs/archive/README-v0.1.2-bilingual.md": "cbc0b135a805274a0b2f69bf6b660c5625954af962a1c2c725436c890eff2a0e",
+    "docs/evidence-records/temis-tramos/0/cambios-whitepaper.md": "fd9e5359a5094fab8a64593b121383678f0c048ae094791edeedc56d3cf84801",
+    "docs/evidence-records/temis-tramos/0/fuentes.md": "2ad097c0be7d47706c6bb23c42616787db5391caa398fd0d8b4870d8635f9775",
+    "docs/evidence-records/temis-tramos/0/kernel-citado.md": "c727171928c0f7ff786425fd94a23f08bb7ab08fc0429c0b6b29b0a291ce9700",
+    "docs/evidence-records/temis-tramos/0/observaciones.md": "2b7035d6a5a55dd90b719b07d6efd32d22fb815b7fd0ea22fbf0da2dec40e46c",
+    "docs/evidence-records/temis-tramos/1/advisor-1.md": "33a722d7d7255affbf7a1c4d97f311c0b831981b4ae07c890195e177451df658",
+    "docs/evidence-records/temis-tramos/1/forma-canonica.md": "fbcbbef3eed69677a488d808caa7d668cb47f9febf86043f92bdd58ffc8aaa51",
+    "docs/evidence-records/temis-tramos/1/fuzz/generar-casos.cjs": "983671c01e2a4cc59a507de8e0a6d30a65b50b0599d0adad53453a1f807ee951",
+    "docs/evidence-records/temis-tramos/1/fuzz/verificar.py": "bb60793f09f64f4ebe78e981c8e7032fbd941fd75da847c91bbfd495b3b5c89f",
+    "docs/evidence-records/temis-tramos/1/recibo.md": "d50493db13a14668faa127649772d1b2c35fc772aa34e8ce1b6aaa69363c106d",
+    "docs/evidence-records/temis-tramos/1/rojo-observado.txt": "a0da5197faebfb6ef5232af9ff4fe826b9bcfea90ed27624733fe247c0f64d70",
+    "docs/evidence-records/temis-tramos/2/advisor-2.md": "b87a2dd6ab9cdce4deb023d82c9d0f3cec598c62b1822d2076f3123fde4ac30b",
+    "docs/evidence-records/temis-tramos/2/cadena.md": "976ff82bf2a4031d06a54fb49a603a03249858029f70b8039644501182493e57",
+    "docs/evidence-records/temis-tramos/2/recibo.md": "050e39ce97e8bfffe5092e0d47b295ab5efd99cda3f25c0318140f92d846b925",
+    "docs/evidence-records/temis-tramos/2/rojo-observado.txt": "911919c808aa1967818e9001f83a1169311315409fd5eedc63b19b1ebca12d33",
+    "docs/evidence-records/temis-tramos/3/corrida-exp-murbsq49.json": "2a294b5331146bd6476294ccb9002772660c93983b40cce2a17c99e78b176dec",
+    "docs/evidence-records/temis-tramos/3/corrida-exp-murckqaa.json": "2fce48bb0a265d3d69d8c283ebb2e32f5d3d212918989e89040dbd155343f68c",
+    "docs/evidence-records/temis-tramos/3/cruce-con-tercero-exp-murckqaa.json": "1f201639421e3049f116463344ee05623ded5e17ea524872905c3b8a308fe319",
+    "docs/evidence-records/temis-tramos/3/recibo.md": "ba393f2945a6feeba5b60d10079f6a62f802ae127809658ea1ff40048537cb24",
+    "docs/evidence-records/temis-tramos/4/carrera.json": "3817d9970761409369f008dafcad19afe8e079832da93141abd218a2a53709f0",
+    "docs/evidence-records/temis-tramos/4/idempotencia.json": "d424f07c0765231ee7646e96b1694e155fd0daae7c2a756979e30dd294261c55",
+    "docs/evidence-records/temis-tramos/4/payto-multiplexada.json": "d548a9f2f8cb19c2621f69c27274c0d097b86f69ecf3e4bb233821b86f9b13b1",
+    "docs/evidence-records/temis-tramos/4/recibo.md": "e90e7fdfec9ab5e450a104882889d359e03ecdf2f1c3c5171defed5d5fc8ad28",
+    "docs/evidence-records/temis-tramos/4/tipo-operacion.json": "e5ca6706332983b4c0950cc0553339261439110526b898bf0cec13deafcf797f",
+    "docs/evidence-records/temis-tramos/5/recibo.md": "11ae5aef538ff21b8a273b3a86308e213a3eb6786271833dba64d6cc2ba70c05",
+    "docs/evidence-records/temis-tramos/5/token.json": "bb2783e102c1e09a66f5132fa73e6d566fff42bdb2b0efc4bb956b84ef122e49",
+    "docs/evidence-records/x402-corridas/corrida-1-not_verified.json": "5e2cc5a6d9a6bf4a96e78ed4ec8a24deeddc37faf677552991005f64f50070ee",
+    "docs/evidence-records/x402-corridas/corrida-2-verified.json": "d64416f3366ca7faef6ece65fa1dbc820606bc3ec379334cf930439aa64d1d90",
+    "docs/evidence-records/x402-corridas/corrida-3-verified.json": "6ef1704124b8098c0d3bae9a0d77a8a506dee4c5def32f983947da9bbeec435c",
+    "docs/testnet-evidence.json": "1e79bd7126d4e181cca411b392dc59091b717b2f6526e0914af039b1056e40e2",
+    "scripts/collect-testnet-evidence.mjs": "d2550f730ffff605b77a33ae28b6045b2ac78599b4ab2fed901751aceaab829b",
+    "scripts/judge-package.mjs": "53e99ddfe2ee34df2ddc184cf1e1f9207a9d22b54d011bbe49aebcd45f0fe523",
+    "scripts/record-suite.mjs": "2b0eda5526ac845f25b0dc672bb6ba579eb7a891913d3c5656dcb5f21dcfd91f",
+    "scripts/verify-testnet-evidence.mjs": "e5e061380d89b95d1fea63bf716a24b6a3f936915e1f7379faeedd2d216e7f8a",
+    "src/authority.js": "defde75b56de3883690f00dd12588de7f487393d028f7e2ba2dfabb6b5067d2b",
+    "src/continuity.js": "7e8187d27bf956febcdb4464449db7dd2682326006e023a99c3a8bb871e610ba",
+    "src/delegation.js": "f70cf58b148a046cc801c76c3bb6a0bc6a36c5b770a31bc881d5ca35e6d98cee",
+    "src/emergency.js": "427880bc50d371026a8c1de06d0a8455413802079d3a647c0125077b22831ce3",
+    "src/operation.js": "de0b1189d72c6078559f9022e6072796434a8f4ab6faf9029d256aa838578504",
+    "src/receipt.js": "0beaf23c33df68fd4f311a55147ac27b38f87653adf54696fb42e3151985c431",
+    "src/skill-provenance.js": "0379e617f2717e848b9ca71439f115e4da647a7bdad44b732f77bf822e61319e",
+    "src/time.js": "1021a9d4bd921763d6e09a35af850c2c39afb14cb1ad73d3fa93485045595d31",
+    "src/x402.js": "d1312adb9b0cf0753fa1eee9216d97776e7b394a18e1ee0dce7a70bebcfe7498",
+    "src/zk-bn254-reference.js": "5662ecfb9143afb4f8d79128a9c8c4df700d34c0fcef8e94acec5e3e6720e8e6",
+    "src/zk.js": "ad7c27bd522eef25019da5a905cf439efc17c7dbd11d20f93611d817809303cd",
+    "docs/JUDGE_PACKAGE.json": "3f7e183cfe26bc79bbe1e5e6e26368558633a4164155887172b0338e19f4fc2d"
+  },
+  "excludedPaths": [
+    "**/node_modules/**",
+    "**/.git/**"
+  ],
+  "tests": {
+    "command": "node --test test/*.test.js",
+    "tests": 1191,
+    "passed": 1166,
+    "failed": 0
+  },
+  "publicProjectRepositories": [
+    {
+      "name": "Queen",
+      "url": "https://github.com/andresanemic/queen",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Casa Firme",
+      "url": "https://github.com/andresanemic/casa-firme",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Ficha Contigo",
+      "url": "https://github.com/andresanemic/ficha-contigo",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Cátedra",
+      "url": "https://github.com/andresanemic/catedra",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Escribano",
+      "url": "https://github.com/andresanemic/escribano",
+      "status": "public repository link in README; availability was not checked by this offline script"
+    },
+    {
+      "name": "Llavero",
+      "url": "https://github.com/andresanemic/llavero",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Farolero",
+      "url": "https://github.com/andresanemic/farolero",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Marea",
+      "url": "https://github.com/andresanemic/marea",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "Vela",
+      "url": "https://github.com/andresanemic/vela",
+      "status": "public project repository; code and tests listed in the kernel README"
+    },
+    {
+      "name": "TEMIS",
+      "url": "https://github.com/andresanemic/temis",
+      "status": "public project repository; code and tests listed in the kernel README"
+    }
+  ],
+  "hashNote": "Ordinary hashes use SHA-256 over exact bytes. Generated dependencies under node_modules and Git metadata under .git are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
+  "manifestSelfHash": "3f7e183cfe26bc79bbe1e5e6e26368558633a4164155887172b0338e19f4fc2d"
+}

@@ -1,5 +1,7 @@
 'use strict';
 
+const { parseTime } = require('./time.js');
+
 // Authority: pure data + one predicate. No I/O, no host, no capabilities.
 function grantSpend(asset, maxAmount, to, expiresAt) {
   const grant = { asset, maxAmount };
@@ -19,22 +21,9 @@ function atomic(value) {
 function parseNow(now) {
   try {
     if (now === undefined || now === null) return Date.now();
-    if (typeof now === 'number' && Number.isFinite(now)) return now;
-    if (typeof now === 'string' && now.length > 0) {
-      const parsed = Date.parse(now);
-      return Number.isNaN(parsed) ? Date.now() : parsed;
-    }
-    if (now instanceof Date) {
-      const ms = now.getTime();
-      return Number.isNaN(ms) ? Date.now() : ms;
-    }
-    if (typeof now === 'object') {
-      const ms = Date.parse(String(now));
-      return Number.isNaN(ms) ? Date.now() : ms;
-    }
-    return Date.now();
+    return parseTime(now);
   } catch {
-    return Date.now();
+    return null;
   }
 }
 
@@ -46,6 +35,7 @@ function sufficient(requirements, authority, options) {
   if (!Array.isArray(grants)) return { ok: false, reason: 'authority spend must be an array' };
 
   const nowMs = parseNow(options && options.now);
+  if (nowMs === null) return { ok: false, reason: 'invalid or unrepresentable current time' };
 
   for (const requirement of reqs) {
     if (!requirement || !text(requirement.asset) || !text(requirement.to) || atomic(requirement.amount) === null) {
@@ -57,7 +47,7 @@ function sufficient(requirements, authority, options) {
       return { ok: false, reason: 'invalid spend grant' };
     }
     if (grant.expiresAt !== undefined) {
-      if (!text(grant.expiresAt) || Number.isNaN(Date.parse(grant.expiresAt))) {
+      if (parseTime(grant.expiresAt) === null) {
         return { ok: false, reason: 'invalid spend grant' };
       }
     }
@@ -65,7 +55,7 @@ function sufficient(requirements, authority, options) {
 
   function isExpired(grant) {
     if (grant.expiresAt === undefined) return false;
-    const expiry = Date.parse(grant.expiresAt);
+    const expiry = parseTime(grant.expiresAt);
     return nowMs !== null && expiry <= nowMs;
   }
 

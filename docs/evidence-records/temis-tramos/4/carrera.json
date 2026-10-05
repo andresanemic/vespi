@@ -1,0 +1,113 @@
+{
+  "fecha": "2026-10-03T05:01:40.165Z",
+  "red": "stellar:testnet",
+  "rondas": 3,
+  "todas_ok": true,
+  "ganan_A": 1,
+  "ganan_B": 2,
+  "en_el_mismo_ledger": 0,
+  "resultados": [
+    {
+      "ronda": 1,
+      "expediente": "carrera-murx9j0e-1",
+      "cuenta_ancla": "GBUJ2OIMWU2XMRBDYBATO76CWXY3VZMYR3RUIO22IGOYUHUHDPYNRLW5",
+      "escritura_A": {
+        "digest": "ecad7344cc1520045e22b3e83c30906fcc4b401d55d7ec2a8c5584dc9d6c3511",
+        "hash": "eaa79b261b4c8ef0dc4717a73fe72593d02c733e47afd121cfaa87e557fda451",
+        "ledger": 4996000,
+        "intentos": 2,
+        "ms": 35998,
+        "orden_en_red": {
+          "ledger": 4996000,
+          "indice": 2
+        }
+      },
+      "escritura_B": {
+        "digest": "eb01e10e5c141e2ab249d07db86613d9d3eddaa69170d63b111557b22eea27ec",
+        "hash": "72c4e3db6e42ef352263d1a2a382d2343020d071ac7a981848d057d05fff18b2",
+        "ledger": 4995994,
+        "intentos": 1,
+        "ms": 6000,
+        "orden_en_red": {
+          "ledger": 4995994,
+          "indice": 1
+        }
+      },
+      "mismo_ledger": false,
+      "ganadora_esperada": "B",
+      "estatus_A": "perdedora",
+      "estatus_B": "vigente",
+      "estatus_A_libro_invertido": "perdedora",
+      "estatus_B_libro_invertido": "vigente",
+      "ok": true
+    },
+    {
+      "ronda": 2,
+      "expediente": "carrera-murxaojj-2",
+      "cuenta_ancla": "GBJQ3C746LWEUXNBBCJJNZOWDYE2T27MSRNI4WMI7LRESMF5FIHJCC4R",
+      "escritura_A": {
+        "digest": "1d8ca4d9e53202942f889efe1bc8baf6dd5f349521d68eb297e15349d1451580",
+        "hash": "725ec0a7645f8cb525004b78001d9b9a6c882512588016b5232a834865efbcbf",
+        "ledger": 4996011,
+        "intentos": 2,
+        "ms": 35997,
+        "orden_en_red": {
+          "ledger": 4996011,
+          "indice": 5
+        }
+      },
+      "escritura_B": {
+        "digest": "9d5e90aa946a4e808ce8a5f81ba834fd7eb4aa3f3bd9ce54aa2b44d86278f640",
+        "hash": "64069991758381e8f9ca84b44ec10dfca022fdf05a69a9be714c77071396cb32",
+        "ledger": 4996005,
+        "intentos": 1,
+        "ms": 5995,
+        "orden_en_red": {
+          "ledger": 4996005,
+          "indice": 2
+        }
+      },
+      "mismo_ledger": false,
+      "ganadora_esperada": "B",
+      "estatus_A": "perdedora",
+      "estatus_B": "vigente",
+      "estatus_A_libro_invertido": "perdedora",
+      "estatus_B_libro_invertido": "vigente",
+      "ok": true
+    },
+    {
+      "ronda": 3,
+      "expediente": "carrera-murxbuy8-3",
+      "cuenta_ancla": "GBDVO2MBRWENFH2EOFQS4FFMG7S2DGM4WVKSYTRC4IABC2ZFZP7LT23K",
+      "escritura_A": {
+        "digest": "949c72fa2aca7944e40eaaa86bd30a4a72f959313880a1f00d016a5c834ea71b",
+        "hash": "2a427fea35a153ec7cec59907d885546c19b9bc60eca4357345e7393311ce357",
+        "ledger": 4996016,
+        "intentos": 1,
+        "ms": 5997,
+        "orden_en_red": {
+          "ledger": 4996016,
+          "indice": 4
+        }
+      },
+      "escritura_B": {
+        "digest": "ce501b3d1346cf5e165e80b19a48bdcb1de116f0b7714138e5503f988df67a5a",
+        "hash": "1e7bf39958f208824480ad2da12acb27bfbac59370427993e91fe6066b9c2bcd",
+        "ledger": 4996022,
+        "intentos": 2,
+        "ms": 35998,
+        "orden_en_red": {
+          "ledger": 4996022,
+          "indice": 1
+        }
+      },
+      "mismo_ledger": false,
+      "ganadora_esperada": "A",
+      "estatus_A": "vigente",
+      "estatus_B": "perdedora",
+      "estatus_A_libro_invertido": "vigente",
+      "estatus_B_libro_invertido": "perdedora",
+      "ok": true
+    }
+  ]
+}

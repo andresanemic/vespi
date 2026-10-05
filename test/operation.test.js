@@ -265,7 +265,8 @@ test('adversarial capability results fail closed with a terminal receipt', async
   });
   assert.ok([STATES.FAILED, STATES.NOT_VERIFIED].includes(res.status));
   assert.ok(res.receipt);
-  assert.match(res.receipt.detail || '', /result getter exploded|unknown error/);
+  assert.equal(res.receipt.detail, 'the capability could not be read');
+  assert.equal(/exploded/.test(res.receipt.detail || ''), false, 'the port error text leaked into the receipt');
 });
 
 test('hostile verifier errors do not escape receipt construction', async () => {
@@ -277,7 +278,7 @@ test('hostile verifier errors do not escape receipt construction', async () => {
   });
   assert.equal(res.status, STATES.NOT_VERIFIED);
   assert.equal(res.receipt.verification.verified, false);
-  assert.equal(res.receipt.verification.reason, 'verifier error: unknown error');
+  assert.equal(res.receipt.verification.reason, 'verifier failed');
 });
 
 test('adversarial verifier getters fail closed with a terminal receipt', async () => {
@@ -325,7 +326,8 @@ test('F1: verifier throw after success keeps evidence, no rerun, not_verified re
   assert.equal(res.status, STATES.NOT_VERIFIED);
   assert.deepEqual(res.receipt.evidence, { tx: 'X' });
   assert.equal(res.receipt.verification.verified, false);
-  assert.match(res.receipt.verification.reason, /verifier exploded/);
+  assert.equal(res.receipt.verification.reason, 'verifier failed');
+  assert.equal(/exploded/.test(res.receipt.verification.reason), false, 'the verifier error text leaked into the reason');
 });
 
 test('F2: split requirements on same grant cannot exceed its max', async () => {
@@ -591,7 +593,7 @@ test('async or missing required contracts fail closed', async () => {
     const res = await runOperation(createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') }), cap, { verify: verifierOk, ask: silentAsk });
     assert.equal(res.status, STATES.FAILED);
     assert.equal(performed, 0);
-    assert.match(res.receipt.detail, /spend/);
+    assert.equal(res.receipt.detail, 'the capability requirements could not be read');
   }
 });
 
@@ -604,7 +606,7 @@ test('a non-array spend requirement returns a failed receipt before the gate', a
   const op = createOperation({ goal: 'demo', authority: { spend: [] } });
   const res = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
   assert.equal(res.status, STATES.FAILED);
-  assert.match(res.receipt.detail, /spend array|requirements must be an array/);
+  assert.equal(res.receipt.detail, 'the capability requirements could not be read');
 });
 
 test('empty spend requirements cannot execute an undeclared capability', async () => {
@@ -628,7 +630,7 @@ test('a capability contract error returns a failed receipt before execution', as
   const op = createOperation({ goal: 'demo', authority: grantSpend('USDC:test', '500000') });
   const res = await runOperation(op, cap, { verify: verifierOk, ask: silentAsk });
   assert.equal(res.status, STATES.FAILED);
-  assert.match(res.receipt.detail, /invalid contract/);
+  assert.equal(res.receipt.detail, 'the capability requirements could not be read');
 });
 
 test('receipts drop unrecognized evidence fields', () => {
@@ -658,7 +660,7 @@ test('human gate exceptions return a decision boundary receipt', async () => {
   });
   assert.equal(res.status, STATES.NEEDS_DECISION);
   assert.equal(res.receipt.status, 'needs_human_decision');
-  assert.match(res.receipt.detail, /gate unavailable/);
+  assert.equal(res.receipt.detail, 'human gate failed');
   assert.equal(cap.calls(), 0);
 });
 

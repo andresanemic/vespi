@@ -16,6 +16,10 @@
 
 const { sufficient } = require('./authority.js');
 const { buildReceipt } = require('./receipt.js');
+const { readZkClaim, readCatalogChecks, reconcileZk, ZK_INCONSISTENT_REASON, ZK_FOREIGN_CHECK_REASON,
+  ZK_ECHO_REASON } = require('./zk.js');
+const { createHash } = require('node:crypto');
+const { parseTime } = require('./time.js');
 
 const STATES = {
   NEEDS_DECISION: 'needs_human_decision',
@@ -29,13 +33,55 @@ const STATES = {
 
 const DEFAULT_EXIT = 'return to the person: change the agreement or cancel';
 
-function errorText(error) {
+// What a failure says. The text a port threw is not copied into a receipt, and not into the
+// digest either: `detail` is sealed, so a raw SDK message carrying a url with a key in it would
+// end up inside the chain of trust instead of outside it. This is the rule emergency.js and
+// x402.js already apply; operation.js was the one module that did not.
+// The only thing copied is `error.code`, and only when it looks like a code: uppercase letters,
+// digits and underscores, at most 64. That is a token a host chose, not a sentence, and it
+// cannot smuggle a url, a path or a body. Each call site supplies its own fixed phrase, because
+// the phrase has to say which step failed, and the code alone never does.
+// A port can also hand that text back as data instead of throwing it. `returnedCode` applies the
+// same closed vocabulary to the returned `error`, because a sentence travels the same distance a
+// thrown sentence does once it is sealed.
+function failureCode(error) {
   try {
-    if (error && typeof error.message === 'string') return error.message;
-    return String(error);
+    const code = error && error.code;
+    return typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? ` [${code}]` : '';
   } catch {
-    return 'unknown error';
+    return '';
   }
+}
+
+function refused(error, phrase) {
+  return `${phrase}${failureCode(error)}`;
+}
+
+// The sibling channel of the thrown text: `perform` may answer `{ ok: false, error }` instead of
+// throwing, and that string was copied whole into `detail`, which is sealed. So a port could put a
+// url with a key in it inside the chain of trust and verifyReceipt would bless it (R1 finding H1b,
+// the channel H1 did not charter). The same rule as the thrown text: a free sentence never travels.
+// What can travel is a token shaped like a code, uppercase letters, digits and underscores, at
+// most 64, because that is a token the host chose rather than a sentence and it cannot smuggle a
+// url, a path or a body. Everything else answers null and the call site says its own fixed phrase.
+function returnedCode(error) {
+  try {
+    if (typeof error === 'string') return /^[A-Z0-9_]{1,64}$/.test(error) ? error : null;
+    if (error == null || typeof error !== 'object') return null;
+    const code = error.code;
+    return typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+// The closed vocabulary, spoken the way the port that wrote it already speaks it: when a port names
+// its failure with a code-shaped token that token is the detail, which is the contract x402.js has
+// always had (`PREPARE_FAILED`, `SEND_UNKNOWN`). When it hands free text over, the kernel answers its
+// own fixed phrase and the text stays in the port. Either way `detail` is sealed and carries no
+// sentence a host wrote.
+function capabilityFailure(code, phrase) {
+  return code ?? phrase;
 }
 
 const DEFAULT_OPERATION_TIMEOUT_MS = 15_000;
@@ -92,7 +138,7 @@ function readDecideTimeoutMs(io) {
 
 // Jev, Paper2Agent or any decision model: an optional connection (decision 20 of Vespi). It ADVISES:
 // a confident suggestion is shown to the person on the ask payload, and it never consents for them
-// (decisions 16 and 19; orchestrator review R42 of the 0.1.3 build).
+// (decisions 16 and 19; orchestrator review R42 before the 0.1.4 release).
 async function consultDecisionModel(io, question) {
   try {
     const decideFn = io && typeof io.decide === 'function' ? io.decide : null;
@@ -121,14 +167,16 @@ function hasEvidence(value) {
 
 function readCapabilityResult(result) {
   try {
-    const error = result?.error;
+    const code = returnedCode(result?.error);
     const reason = result?.reason;
     const exit = result?.exit;
     return {
       settlementUnknown: result?.settlementUnknown === true,
       impossible: result?.impossible === true,
       ok: result?.ok === true,
-      error: typeof error === 'string' ? error : (error == null ? null : 'capability returned an invalid error'),
+      // A code-shaped token or null, never the words of the port: `capabilityFailure` adds it to
+      // the fixed phrase of the site that asks for it.
+      error: code,
       reason: typeof reason === 'string' && reason.length > 0 ? reason : null,
       exit: typeof exit === 'string' && exit.length > 0 ? exit : null,
       evidence: result?.evidence ?? null,
@@ -139,7 +187,7 @@ function readCapabilityResult(result) {
       settlementUnknown: true,
       impossible: false,
       ok: false,
-      error: `capability result invalid: ${errorText(error)}`,
+      error: refused(error, 'the capability result could not be read'),
       reason: null,
       exit: null,
       evidence: null,
@@ -213,7 +261,8 @@ function snapshotAuthority(authority) {
     const spend = rawSpend.map((grant) => {
       if (!grant || typeof grant !== 'object') return grant;
       const copy = { asset: grant.asset, maxAmount: grant.maxAmount, to: grant.to };
-      if (typeof grant.expiresAt === 'string' && grant.expiresAt.length > 0) copy.expiresAt = grant.expiresAt;
+      if ((typeof grant.expiresAt === 'string' && grant.expiresAt.length > 0)
+        || (typeof grant.expiresAt === 'number' && Number.isFinite(grant.expiresAt))) copy.expiresAt = grant.expiresAt;
       return copy;
     });
     const snapshot = { spend };
@@ -279,6 +328,83 @@ function safeBuildReceipt(spec) {
       at: new Date().toISOString(),
     };
   }
+}
+
+// The copy is built without a prototype on purpose. Assigning to `{}` runs the inherited
+// `__proto__` setter, so a body carrying that key as its own property (JSON.parse makes one, and a
+// receipts file read from disk is full of them) either changed this copy's prototype and lost the
+// key or replaced it, and the key then never reached the sealed text: two different bodies hashed to
+// the same digest and verifyReceipt answered ok on both (R1 finding H5). With no prototype there is
+// no inherited setter, every key of the body becomes exactly the data property it was, and the
+// string this returns for a body without that key is byte for byte the one a plain object gave.
+// This is the copy emergency.js:497 already builds, and the reason it does.
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === 'object') {
+    const out = Object.create(null);
+    for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
+    return out;
+  }
+  return value;
+}
+
+function operationIdempotencyKey(op, requirements) {
+  // Hash the canonical effect, never renewable permission metadata.
+  const content = {
+    goal: op.goal,
+    action: op.action,
+    requirements: Array.isArray(requirements) ? requirements.map((requirement) => {
+      const amount = requirement?.amount;
+      let canonicalAmount = amount;
+      try {
+        if (typeof amount === 'string' && /^\d+$/.test(amount)) canonicalAmount = BigInt(amount).toString();
+      } catch {}
+      return { asset: requirement?.asset, amount: canonicalAmount, to: requirement?.to };
+    }) : requirements,
+  };
+  return createHash('sha256').update(JSON.stringify(canonicalize(content)), 'utf8').digest('hex');
+}
+
+// An injected clock is a synchronous contract; asynchronous clocks cannot authorize an effect.
+function readInjectedTime(io) {
+  let clock;
+  try {
+    clock = io?.now;
+  } catch {
+    return { present: true, valid: false };
+  }
+  if (typeof clock !== 'function') return { present: false, valid: true };
+
+  let value;
+  try {
+    value = clock.call(io);
+  } catch {
+    return { present: true, valid: false };
+  }
+  if (value !== null && (typeof value === 'object' || typeof value === 'function')) {
+    try {
+      if (typeof value.then === 'function') {
+        // Consume any eventual rejection while refusing to wait for an asynchronous clock.
+        Promise.resolve(value).catch(() => {});
+        return { present: true, valid: false };
+      }
+    } catch {
+      return { present: true, valid: false };
+    }
+  }
+  const now = parseTime(value);
+  return now === null ? { present: true, valid: false } : { present: true, valid: true, now };
+}
+
+function checkSufficient(requirements, authority, io) {
+  const clock = readInjectedTime(io);
+  if (!clock.present) return sufficient(requirements, authority);
+  if (!clock.valid) {
+    return { ok: false, reason: 'injected clock returned an invalid or unrepresentable time', invalidClock: true };
+  }
+  const now = clock.now;
+  if (now === null) return { ok: false, reason: 'injected clock returned an invalid or unrepresentable time', invalidClock: true };
+  return sufficient(requirements, authority, { now });
 }
 
 function createOperation({ goal, authority, agent, exit, action }) {
@@ -436,6 +562,28 @@ async function runOperation(op, capability, io) {
 }
 
 async function runOperationOnce(op, capability, io) {
+  const buildReceiptForRun = (spec) => {
+    // Preserve the legacy receipt body unless the host injects a clock.
+    let at;
+    let clockFailure = false;
+    try {
+      const clock = readInjectedTime(io);
+      if (!clock.present) return safeBuildReceipt(spec);
+      if (!clock.valid) throw new Error('invalid injected time');
+      at = new Date(clock.now).toISOString();
+    } catch {
+      at = new Date(Date.now()).toISOString();
+      clockFailure = true;
+    }
+    const receiptSpec = clockFailure
+      ? { ...spec, outcome: { ...spec.outcome, detail: [spec.outcome?.detail, 'receipt time used system clock after an invalid injected clock'].filter(Boolean).join('; ') } }
+      : spec;
+    try {
+      return buildReceipt({ ...receiptSpec, at });
+    } catch {
+      return safeBuildReceipt({ ...receiptSpec, at });
+    }
+  };
   const capabilityId = safeCapabilityId(capability);
   if (op.state === STATES.PAUSED) return { status: STATES.PAUSED, receipt: op.receipt, output: op.output };
   if (op.state === STATES.RUNNING) throw new Error('operation is already running');
@@ -448,7 +596,7 @@ async function runOperationOnce(op, capability, io) {
     if (impossible) {
       const exit = impossible.exit || operationExit(op);
       op.state = STATES.BLOCKED;
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: op.authority,
@@ -464,11 +612,11 @@ async function runOperationOnce(op, capability, io) {
     requirements = snapshotRequirements(declared.spend);
   } catch (err) {
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: op.authority,
-      outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+      outcome: { status: 'failed', exercised: [], detail: refused(err, 'the capability requirements could not be read') },
       evidence: null,
       verification: null,
     });
@@ -476,7 +624,7 @@ async function runOperationOnce(op, capability, io) {
   }
   if (!Array.isArray(requirements)) {
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: op.authority,
@@ -488,14 +636,26 @@ async function runOperationOnce(op, capability, io) {
   }
   let check;
   try {
-    check = sufficient(requirements, op.authority);
+    check = checkSufficient(requirements, op.authority, io);
   } catch (err) {
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId,
       authority: op.authority,
-      outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+      outcome: { status: 'failed', exercised: [], detail: refused(err, 'the authority check could not be read') },
+      evidence: null,
+      verification: null,
+    });
+    return finish(op, receipt);
+  }
+  if (check.invalidClock) {
+    op.state = STATES.FAILED;
+    const receipt = buildReceiptForRun({
+      operation: op,
+      capabilityId,
+      authority: op.authority,
+      outcome: { status: 'failed', exercised: [], detail: check.reason },
       evidence: null,
       verification: null,
     });
@@ -508,7 +668,7 @@ async function runOperationOnce(op, capability, io) {
   if (signersCfg && signersCfg.present && !signersCfg.valid) {
     const gateExit = operationExit(op);
     op.state = STATES.NEEDS_DECISION;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval: 'human_gate_no_decision' },
@@ -543,7 +703,7 @@ async function runOperationOnce(op, capability, io) {
           ? await withTimeout(Promise.resolve().then(() => askFn.call(io, askPayload)), readTimeout(io, 'askTimeoutMs'), 'human gate')
           : null;
       } catch (err) {
-        gateError = `human gate error: ${errorText(err)}`;
+        gateError = refused(err, 'human gate failed');
       }
     }
     let explicitReject = false;
@@ -579,7 +739,7 @@ async function runOperationOnce(op, capability, io) {
       } else {
         detail = missingSignersDetail(signersCfg.required, have);
       }
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval: gateRejected ? 'human_gate_rejected' : 'human_gate_no_decision' },
@@ -599,11 +759,11 @@ async function runOperationOnce(op, capability, io) {
         });
       } catch (err) {
         op.state = STATES.FAILED;
-        const receipt = safeBuildReceipt({
+        const receipt = buildReceiptForRun({
           operation: op,
           capabilityId: capabilityId,
           authority: { ...op.authority, approval: 'human_gate_approved' },
-          outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+          outcome: { status: 'failed', exercised: [], detail: refused(err, 'the granted spend could not be read') },
           evidence: null,
           verification: null,
           ...(decidedBy ? { decidedBy } : {}),
@@ -618,10 +778,10 @@ async function runOperationOnce(op, capability, io) {
         signers: { required: signersCfg.required, allowed: [...signersCfg.allowed] },
         ...(pausers.length > 0 ? { pausers } : {}),
       };
-      check = sufficient(requirements, op.authority);
+      check = checkSufficient(requirements, op.authority, io);
       if (!check.ok) {
         op.state = STATES.FAILED;
-        const receipt = safeBuildReceipt({
+        const receipt = buildReceiptForRun({
           operation: op,
           capabilityId: capabilityId,
           authority: { ...op.authority, approval: 'human_gate_approved' },
@@ -696,7 +856,7 @@ async function runOperationOnce(op, capability, io) {
         if (gateApproved && typeof byValue === 'string' && byValue.length > 0) decidedBy = byValue;
       }
     } catch (err) {
-      gateError = `human gate error: ${errorText(err)}`;
+      gateError = refused(err, 'human gate failed');
     }
     if (gateError || !gateApproved) {
       op.state = STATES.NEEDS_DECISION;
@@ -723,7 +883,7 @@ async function runOperationOnce(op, capability, io) {
         // that does not reach the declared scope — indistinguishable in the receipt (T2-R1).
         detail = check.reason;
       }
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval: gateRejected ? 'human_gate_rejected' : 'human_gate_no_decision' },
@@ -742,11 +902,11 @@ async function runOperationOnce(op, capability, io) {
       });
     } catch (err) {
       op.state = STATES.FAILED;
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval: 'human_gate_approved' },
-        outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+        outcome: { status: 'failed', exercised: [], detail: refused(err, 'the granted spend could not be read') },
         evidence: null,
         verification: null,
         ...(decidedBy ? { decidedBy } : {}),
@@ -757,11 +917,11 @@ async function runOperationOnce(op, capability, io) {
     // authority survives (R1 finding M4).
     const pausers = readPausers(op);
     op.authority = { spend: approvedGrants, ...(pausers.length > 0 ? { pausers } : {}) };
-    check = sufficient(requirements, op.authority);
+    check = checkSufficient(requirements, op.authority, io);
     approval = 'human_gate_approved';
     if (!check.ok) {
       op.state = STATES.FAILED;
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId: capabilityId,
         authority: { ...op.authority, approval },
@@ -776,18 +936,23 @@ async function runOperationOnce(op, capability, io) {
 
   op.state = STATES.RUNNING;
   let result;
+  let finalCheck = null;
   const controller = new AbortController();
   try {
-    const performPromise = Promise.resolve().then(() => capability.perform({ operation: op, authority: op.authority, signal: controller.signal }));
+    const performPromise = Promise.resolve().then(() => {
+      finalCheck = checkSufficient(requirements, op.authority, io);
+      if (!finalCheck.ok) return undefined;
+      return capability.perform({ operation: op, authority: op.authority, signal: controller.signal, idempotencyKey: operationIdempotencyKey(op, requirements) });
+    });
     result = await withTimeout(performPromise, readTimeout(io, 'performTimeoutMs'), 'capability perform', () => controller.abort());
   } catch (err) {
     if (isTimeout(err)) {
       op.state = STATES.NOT_VERIFIED;
-      const receipt = safeBuildReceipt({
+      const receipt = buildReceiptForRun({
         operation: op,
         capabilityId,
         authority: { ...op.authority, approval },
-        outcome: { status: 'not_verified', exercised: requirements.map((r) => ({ ...r })), detail: errorText(err) },
+        outcome: { status: 'not_verified', exercised: requirements.map((r) => ({ ...r })), detail: refused(err, 'the capability did not answer before the timeout') },
         evidence: null,
         verification: { verified: false, checks: {}, reason: 'capability outcome unknown after timeout' },
         ...(decidedBy ? { decidedBy } : {}),
@@ -795,11 +960,11 @@ async function runOperationOnce(op, capability, io) {
       return finish(op, receipt);
     }
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId,
       authority: { ...op.authority, approval },
-      outcome: { status: 'failed', exercised: [], detail: errorText(err) },
+      outcome: { status: 'failed', exercised: [], detail: refused(err, 'the capability could not be read') },
       evidence: null,
       verification: null,
       ...(decidedBy ? { decidedBy } : {}),
@@ -807,12 +972,30 @@ async function runOperationOnce(op, capability, io) {
     return finish(op, receipt);
   }
 
+  if (finalCheck && !finalCheck.ok) {
+    op.state = finalCheck.invalidClock ? STATES.FAILED : STATES.NEEDS_DECISION;
+    const receipt = buildReceiptForRun({
+      operation: op,
+      capabilityId,
+      authority: { ...op.authority },
+      outcome: {
+        status: finalCheck.invalidClock ? 'failed' : 'needs_human_decision',
+        exercised: [],
+        detail: finalCheck.reason,
+        ...(finalCheck.invalidClock ? {} : { exit: operationExit(op) }),
+      },
+      evidence: null,
+      verification: null,
+    });
+    return finish(op, receipt);
+  }
+
   const capabilityResult = readCapabilityResult(result);
   if (capabilityResult.impossible) {
-    const reason = capabilityResult.reason || capabilityResult.error || 'impossible';
+    const reason = capabilityResult.reason || capabilityFailure(capabilityResult.error, 'impossible');
     const exit = capabilityResult.exit || operationExit(op);
     op.state = STATES.BLOCKED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval },
@@ -825,14 +1008,14 @@ async function runOperationOnce(op, capability, io) {
   }
   if (capabilityResult.settlementUnknown) {
     op.state = STATES.NOT_VERIFIED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval },
       outcome: {
         status: 'not_verified',
         exercised: requirements.map((r) => ({ ...r })),
-        detail: capabilityResult.error || 'settlement outcome unknown',
+        detail: capabilityFailure(capabilityResult.error, 'settlement outcome unknown'),
       },
       evidence: capabilityResult.evidence,
       verification: { verified: false, checks: {}, reason: 'settlement outcome unknown' },
@@ -843,11 +1026,11 @@ async function runOperationOnce(op, capability, io) {
 
   if (!capabilityResult.ok) {
     op.state = STATES.FAILED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId: capabilityId,
       authority: { ...op.authority, approval },
-      outcome: { status: 'failed', exercised: [], detail: capabilityResult.error || 'capability failed' },
+      outcome: { status: 'failed', exercised: [], detail: capabilityFailure(capabilityResult.error, 'capability failed') },
       evidence: capabilityResult.evidence,
       verification: null,
       ...(decidedBy ? { decidedBy } : {}),
@@ -857,7 +1040,7 @@ async function runOperationOnce(op, capability, io) {
 
   if (!hasEvidence(capabilityResult.evidence)) {
     op.state = STATES.NOT_VERIFIED;
-    const receipt = safeBuildReceipt({
+    const receipt = buildReceiptForRun({
       operation: op,
       capabilityId,
       authority: { ...op.authority, approval },
@@ -875,12 +1058,23 @@ async function runOperationOnce(op, capability, io) {
   // do NOT rerun, do NOT claim verified.
   let verification;
   try {
-    const verifyFn = io && typeof io.verify === 'function' ? io.verify : null;
+    // Read once. `typeof io.verify` followed by `io.verify` is two reads of the same property, and
+    // the function that gets checked is then not the function that gets called.
+    const ioVerify = io ? io.verify : undefined;
+    const verifyFn = typeof ioVerify === 'function' ? ioVerify : null;
     verification = verifyFn
       ? await withTimeout(Promise.resolve().then(() => verifyFn.call(io, capabilityResult.evidence)), readTimeout(io, 'verifyTimeoutMs'), 'verifier')
       : { verified: false, checks: {}, reason: 'no verifier' };
   } catch (err) {
-    verification = { verified: false, checks: {}, reason: `verifier error: ${errorText(err)}` };
+    verification = { verified: false, checks: {}, reason: refused(err, 'verifier failed') };
+  }
+  // The answer has to be the verifier's own object. `io.verify` was handed this evidence, and if it
+  // hands the very same object back then the executor answered itself: `verified: true` in the
+  // evidence is not a verification, and a `zk` the executor carried is not a claim. Identity is the
+  // whole test, because a copy of the same fields is a legitimate answer and cannot be told from a
+  // forgery by this kernel.
+  if (verification === capabilityResult.evidence) {
+    verification = { verified: false, checks: {}, reason: ZK_ECHO_REASON };
   }
   let verified = false;
   let normalizedVerification;
@@ -903,16 +1097,33 @@ async function runOperationOnce(op, capability, io) {
       checks,
       reason: validReason ? candidateReason : (verified ? 'verified' : 'verification not confirmed'),
     };
+    // A zk claim is read from the verifier's answer and nowhere else: never from `perform`, never
+    // from the evidence. It is validated with the closed schema and reconciled with the verdict and
+    // the checks, so an operation cannot end `succeeded` on a claim that does not hold up — which
+    // would leave the state disagreeing with the receipt it just wrote.
+    const zkClaim = readZkClaim(verifierResult);
+    const vocabulary = readCatalogChecks(checks, { claimed: zkClaim.claimed });
+    const reconciled = reconcileZk({ verified, checks: vocabulary.checks, claimed: zkClaim.claimed, zk: zkClaim.value });
+    normalizedVerification.checks = vocabulary.checks;
+    if (reconciled.zk !== null) normalizedVerification.zk = reconciled.zk;
+    if (vocabulary.foreign) {
+      normalizedVerification.verified = false;
+      normalizedVerification.reason = ZK_FOREIGN_CHECK_REASON;
+    } else if (!reconciled.consistent) {
+      normalizedVerification.verified = false;
+      normalizedVerification.reason = ZK_INCONSISTENT_REASON;
+    }
+    verified = normalizedVerification.verified === true;
   } catch (err) {
     normalizedVerification = {
       verified: false,
       checks: {},
-      reason: `verifier error: ${errorText(err)}`,
+      reason: refused(err, 'verifier failed'),
     };
     verified = false;
   }
   op.state = verified ? STATES.SUCCEEDED : STATES.NOT_VERIFIED;
-  const receipt = safeBuildReceipt({
+  const receipt = buildReceiptForRun({
     operation: op,
     capabilityId: capabilityId,
     authority: { ...op.authority, approval },

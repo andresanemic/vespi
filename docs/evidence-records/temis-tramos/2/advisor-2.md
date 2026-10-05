@@ -1,0 +1,19 @@
+# Advisor, segundo punto fijo — reporte (2026-10-02)
+
+Modelo: Opus (subagente de Claude Code, sin escritura ni red); 96 s. Leyó `cadena.md`, `src/cadena.js` y las secciones 6, 10 y 11 del informe del tercero; **no** leyó `firma.js` ni las pruebas, y lo dijo. Contenido, sin edición:
+
+**Huecos que la corrida no ejercitó.** (1) La anulación no exige ser autor de lo anulado: A declara y B impugna; A o el operador anulan la impugnación y el operador cierra `cumplido_no_confirmado`; y una parte puede anular un `incumplimiento` del operador. (2) El contraste no apunta a ninguna declaración y el cierre ignora una impugnación vigente: A declara v1, B acepta, A publica una v2 distinta y el operador cierra `cumplido` apoyado en la aceptación de otra declaración; o B acepta y luego impugna con un contraste v2 y el cierre `cumplido` pasa y tiene prioridad. (3) El operador decide el orden y la cabeza es única por expediente: ancla antes una línea propia y la de B queda `fuera_de_cadena`, y el operador cierra `cumplido_no_confirmado`. (4) `reconstruir` no vuelve a validar la forma del cuerpo: un `evento` desconocido cae en la última rama de `firmaExigida` y queda `vigente`; `version` no se comprueba y con `"01"` se republica una «v1» sin ser `perdedora`.
+
+**`cuenta_ancla`.** Conviene declararla en el acuerdo, firmada por las dos partes, y dar a toda transacción de otra cuenta un estatus propio. Rompe: la forma del libro (no traía la cuenta de origen), la firma de `reconstruir` y sus pruebas, la corrida anterior (sin cuenta declarada), y cambiar de cuenta (el acuerdo no se anula). Dice qué cuenta vale, no quién la controla.
+
+**La frase ambigua.** «Una línea anulada conserva su clave: la clave `(expediente_id, hito, version, evento)` sigue ganada por ella, y toda línea posterior con esa clave es `perdedora`. La anulada deja de contar para el estado del hito. Para corregir hay que publicar otra versión.» Además: el código evalúa `perdedora` antes que `cierre_sin_respaldo` y el tercero lo hacía al revés; cambia el diagnóstico, no el estado.
+
+**El recibo.** «Verificada» exagera: solo aparecían 3 de los 15 estatus; no se ejercita la autenticidad de las transacciones de Stellar, ni la identidad del operador, ni la completitud del archivo; el canonicalizador solo quedó probado en un subconjunto; y «sin ver el código» lo declara el agente, no está comprobado.
+
+## Qué se hizo con esto
+
+Los cuatro huecos eran reales y se corrigieron con rojos primero (11 pruebas rojas, ahora en verde; 103/103 en total): la anulación solo la firma el autor de la línea (declaración y contraste: la parte; `hito_abierto`, `cierre`, `incumplimiento`: el operador); un `contraste` apunta con `contenido.declaracion` a la declaración vigente o es `contraste_sin_objetivo`, y el cierre `cumplido` exige una aceptación y ninguna impugnación a esa declaración; `cuerpo_invalido` por forma (la `version` es un entero); y la cadena es el conjunto de líneas aceptadas, de modo que una línea cita cualquiera de ellas (no la última). La `cuenta_ancla` entra al acuerdo y el libro trae la `fuente` de cada transacción (`cuenta_no_autorizada`). La frase ambigua y el orden de evaluación quedaron escritos en `cadena.md`, y el orden lo fija una prueba.
+
+**Lo que no se adoptó, y por qué:** el hueco 3 se mitiga (el orden de las citas ya no deja a nadie fuera de cadena por una línea intercalada) pero no se elimina: el operador, que controla la cuenta ancla, sigue decidiendo el orden del libro, y por tanto qué escritura gana una clave. Es el riesgo de una sola cuenta ancla que el whitepaper §4.3 asume, y su defensa es el cotejo con las copias de las partes, no la cadena. Los cambios de la `cuenta_ancla` quedan como un hecho del acuerdo: cambiarla exige un acuerdo nuevo (no hay todavía evento para eso).
+
+Los motivos de cada hueco y su corrección están en `tramos/2/recibo.md`.

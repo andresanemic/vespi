@@ -1,0 +1,6 @@
+# The Groth16 fixture under test/fixtures/zk/ is vendored byte for byte and its SHA-256 hashes are
+# recorded in its manifest, so end-of-line conversion must not touch it. Without this rule a checkout
+# on a machine with core.autocrlf=true would rewrite the files and the provenance test would fail on
+# a hash that nobody changed on purpose.
+test/fixtures/zk/proof.json -text
+test/fixtures/zk/verification_key.json -text
