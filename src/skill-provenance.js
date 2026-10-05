@@ -251,7 +251,7 @@ function text(value) {
 // object fails the check instead of deciding the outcome.
 function readString(source, key) {
   try {
-    const value = source[key];
+    const value = hasOwn(source, key) ? source[key] : undefined;
     return text(value) ? value : null;
   } catch {
     return null;
@@ -263,7 +263,7 @@ function readString(source, key) {
 // rest of the answer is still worth reading (A18).
 function readFlag(source, key) {
   try {
-    const value = source[key];
+    const value = hasOwn(source, key) ? source[key] : undefined;
     return value === true ? true : value === false ? false : null;
   } catch {
     return null;
@@ -296,7 +296,7 @@ function registrationSource(spec) {
     for (let index = 0; index < REGISTRATION_KEYS.length; index += 1) {
       const key = REGISTRATION_KEYS[index];
       try {
-        out[key] = spec[key];
+        out[key] = hasOwn(spec, key) ? spec[key] : undefined;
       } catch {
         out[key] = undefined;
       }
@@ -744,7 +744,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const settings = options !== null && typeof options === 'object' ? options : {};
   let timeoutMs;
   try {
-    timeoutMs = settings.timeoutMs;
+    timeoutMs = hasOwn(settings, 'timeoutMs') ? settings.timeoutMs : undefined;
   } catch {
     throw new Error(`timeoutMs must be a whole number of milliseconds between 1 and ${MAX_TIMER_MS}`);
   }
@@ -825,7 +825,7 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   const contentDigest = readString(evidence, 'contentDigest');
   let content = null;
   try {
-    content = evidence.content;
+    content = hasOwn(evidence, 'content') ? evidence.content : null;
   } catch {
     content = null;
   }
@@ -1152,7 +1152,7 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
 // (review N08).
 function receiptField(spec, key) {
   try {
-    return spec !== null && typeof spec === 'object' ? spec[key] : undefined;
+    return spec !== null && typeof spec === 'object' && hasOwn(spec, key) ? spec[key] : undefined;
   } catch {
     return undefined;
   }
