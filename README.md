@@ -12,7 +12,7 @@ Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la s
 
 ### Start with an operation
 
-Run the [offline walkthrough](./docs/WALKTHROUGH.md), answer its terminal prompt with `Ada: approve`, and inspect the returned `status`, `coverage` and `notCovered`:
+From a source checkout of this repository, with Node.js 24 available, run the [offline walkthrough](./docs/WALKTHROUGH.md), answer its terminal prompt with `Ada: approve`, and inspect the returned `status`, `coverage` and `notCovered`:
 
 ```sh
 node examples/walkthrough.js
@@ -61,7 +61,7 @@ holds, what was verified and what changed before choosing the next action.
 An uncertain exercised effect stays pending reconciliation.
 ```
 
-What you can run today is the local walkthrough above and the kernel around an effect of your own. The combined coordinator workflow lives in Lore Plugin and the host's tools. Installing the kit and consuming this source cut are separate choices: its pinned kernel does not change merely because a new source snapshot exists. The fictional example describes the intended experience; no novice-user trial, institutional pilot or autonomous transfer is established by it.
+What you can run today is the local walkthrough above and the kernel around an effect of your own. The combined coordinator workflow lives in Lore Plugin and the host's tools. Installing the kit and consuming this source cut are separate choices: its pinned kernel does not change merely because a new source snapshot exists. This illustration describes the intended experience; no novice-user trial, institutional pilot or autonomous transfer is established by it.
 
 ### Why keep the operation separate from the app?
 
@@ -137,7 +137,7 @@ Andrés Peña Mellado, Digital Art Director & Creative Developer. [Telegram](htt
 
 ### Empieza con una operación
 
-Corre el [recorrido local](./docs/WALKTHROUGH.md), responde al terminal con `Ada: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
+Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde al terminal con `Ada: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
 ```sh
 node examples/walkthrough.js
