@@ -350,4 +350,8 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
   return receipt;
 }
 
+// Exported so a module that seals extra fields onto a receipt (skill provenance) writes the same
+// digest this file writes, instead of keeping a second copy of the canonicalization that can drift.
+// Nothing here changed: `computeDigest` is the same function `buildReceipt` and `verifyReceipt` have
+// always called.
 module.exports = { buildReceipt, verifyReceipt, anchorReceipt, anchorReceiptAsync, computeDigest };
