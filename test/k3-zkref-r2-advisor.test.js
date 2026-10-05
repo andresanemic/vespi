@@ -76,7 +76,7 @@ test('R2-08b a receipt without checks reads no coverage and no failed check', ()
   const receipt = buildReceipt(receiptSpec({ verified: true }));
   assert.deepEqual(receipt.verification, { verified: true });
   assert.deepEqual(receipt.coverage, []);
-  assert.deepEqual(receipt.failedChecks, []);
+  assert.deepEqual(receipt.notCovered, ['external anchor'], 'an absent record is not an empty one');
 });
 
 // R2-09 / advisor fix 2: the catalog refusal lowers the verdict inside the verification, and a direct

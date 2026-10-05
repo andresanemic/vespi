@@ -292,10 +292,12 @@ function sanitizeVerification(verification) {
   const zkClaim = readZkClaim(verification);
   // A zk claim reports the frozen catalog and nothing else: a name outside it is dropped instead of
   // copied, and the verification fails closed with the fixed public reason.
-  const vocabulary = zkClaim.claimed
-    ? readCatalogChecks(safe.checks, { claimed: true })
-    : readCatalogChecks(safe.checks, { claimed: false });
-  safe.checks = vocabulary.checks;
+  const vocabulary = readCatalogChecks(safe.checks, { claimed: zkClaim.claimed });
+  // The catalog decides what a name is allowed to be called, not whether the record exists at all: a
+  // verification that arrived without `checks` leaves without it, which is the shape and the digest
+  // a receipt built before the zk vocabulary existed already has. A patch release cannot move a
+  // digest that is already in a file somewhere (advisor R2-08).
+  if (safe.checks !== undefined) safe.checks = vocabulary.checks;
   const reconciled = reconcileZk({
     verified: safe.verified === true,
     checks: safe.checks,
