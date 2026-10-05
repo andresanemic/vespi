@@ -318,6 +318,7 @@ test('ADV17 a hostile settlement property after send keeps exercised uncertainty
 function demoSources() {
   const out = [];
   for (const entry of fs.readdirSync(DEMO, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name === 'node_modules') continue;
     if (entry.isDirectory()) {
       for (const inner of fs.readdirSync(path.join(DEMO, entry.name))) {
         if (/\.(mjs|js)$/.test(inner)) out.push(path.join(DEMO, entry.name, inner));
