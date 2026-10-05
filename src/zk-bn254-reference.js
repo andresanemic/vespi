@@ -3,6 +3,10 @@
 // Experimental BN254 reference, derived from field and affine curve equations.
 // This is not audited, not production-ready, not constant-time, and has no CPU budget.
 // A valid proof does not authenticate a presenter, attest an institution or prevent replay.
+// Groth16 proofs are malleable: a valid proof yields others with a different proofDigest.
+// It does not judge whether a key comes from a sound setup; a degenerate key (gamma == delta) accepts
+// forgeries. Curve and subgroup membership are judged here, not by the port, which checks shape only.
+// One verification costs a few hundred milliseconds of synchronous CPU that a timeout cannot stop.
 
 const { FP_MODULUS: P, SCALAR_MODULUS: R, digestZkVerificationKey } = require('./zk.js');
 

@@ -16,7 +16,7 @@
 // does not pretend otherwise.
 //
 // Three defaults were decided by the owner on 2026-10-04 and are part of this contract now. A
-// receipt's coverage comes only from the frozen catalog below, and a name outside it is refused
+// receipt's zk coverage comes only from the frozen catalog below, and a name outside it is refused
 // rather than repeated. A key with no public input binds nothing and never becomes a verifier. And
 // the answer a receipt travels on has to be the verifier's own object, which is why `src/operation.js`
 // refuses an `io.verify` that hands back the evidence it was given.
