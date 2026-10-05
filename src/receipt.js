@@ -30,10 +30,18 @@ const ANCHOR_NETWORKS = new Set([DEFAULT_NETWORK, 'stellar:pubnet']);
 
 const PENDING_ANCHOR = { status: 'pending', network: DEFAULT_NETWORK };
 
+// The copy is built without a prototype on purpose. Assigning to `{}` runs the inherited
+// `__proto__` setter, so a body carrying that key as its own property (JSON.parse makes one, and a
+// receipts file read from disk is full of them) either changed this copy's prototype and lost the
+// key or replaced it, and the key then never reached the sealed text: two different bodies hashed to
+// the same digest and verifyReceipt answered ok on both (R1 finding H5). With no prototype there is
+// no inherited setter, every key of the body becomes exactly the data property it was, and the
+// string this returns for a body without that key is byte for byte the one a plain object gave.
+// This is the copy emergency.js:497 already builds, and the reason it does.
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value !== null && typeof value === 'object') {
-    const out = {};
+    const out = Object.create(null);
     for (const key of Object.keys(value).sort()) out[key] = canonicalize(value[key]);
     return out;
   }
@@ -41,7 +49,9 @@ function canonicalize(value) {
 }
 
 function computeDigest(receipt) {
-  const stripped = {};
+  // Without a prototype here too, for the same reason: a `__proto__` key of the receipt has to be a
+  // key of the sealed text rather than a write to an inherited setter that goes nowhere.
+  const stripped = Object.create(null);
   for (const key of Object.keys(receipt)) {
     if (key === 'digest' || key === 'anchor') continue;
     stripped[key] = receipt[key];
