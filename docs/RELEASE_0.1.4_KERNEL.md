@@ -42,6 +42,8 @@ The experimental [BN254 Groth16 reference](../src/zk-bn254-reference.js) is incl
 
 The [saved suite result](./SUITE_RESULT.txt) records the command and exact counts for this cut. A `todo` is not a passing test. These are local kernel tests; no reference-bridge SDK suite is part of this cut. Review verdicts are model reviews independent of their builders, not an external security audit. The new modules have not demonstrated integration with Casa Firme or Vela.
 
+That file names the commit the suite ran on: the parent of the commit that stores it. The later commits of this cut change documents and not `src/`, and you can check that with `git diff <tested commit> HEAD --stat -- src`, which must print nothing. Two commits carry the 0.1.4 name, the one the suite ran on and the one that stores its result, so read the count with that distinction in mind.
+
 [Saved testnet evidence](./testnet-evidence.json) contains 50 Horizon readbacks: 5 cases are semantically verified against operation, memo, asset, amount and recipient, and 45 are partially verified against only the facts their local run records declared, with 0 discrepancies. Expectations come from local execution records, never from Horizon. [The evidence guide](./TESTNET_EVIDENCE.md) explains how to recompute that comparison and what remains unchecked; chain success is not complete semantic verification. Everything is Stellar testnet with fictional data and no real money. The 0.1.3 receipt is historical evidence for the earlier adapter only.
 
 ## Functional-project source access
@@ -109,6 +111,8 @@ La [referencia BN254 con Groth16](../src/zk-bn254-reference.js) experimental ent
 ## Qué se probó y qué no
 
 El [resultado guardado de la suite](./SUITE_RESULT.txt) registra el comando y los conteos exactos de este corte. Un `todo` no es una prueba aprobada. Son pruebas locales del kernel; este corte no incluye una suite de SDK para el puente de referencia. Los veredictos de revisión provienen de modelos independientes de sus constructores, no de una auditoría de seguridad externa. Los módulos nuevos no han demostrado integración con Casa Firme o Vela.
+
+Ese archivo nombra el commit sobre el que se corrió la suite: el padre del commit que lo guarda. Los commits posteriores de este corte cambian documentos y no `src/`, y eso se comprueba con `git diff <commit probado> HEAD --stat -- src`, que debe salir vacío. Dos commits llevan el nombre 0.1.4, el sobre el que se corrió la suite y el que guarda su resultado, así que hay que leer el conteo con esa distinción presente.
 
 [La evidencia de testnet guardada](./testnet-evidence.json) contiene 50 lecturas de Horizon: 5 casos verificados semánticamente contra operación, memo, activo, monto y destinatario, y 45 parcialmente verificados solo contra los hechos que declararon sus registros locales de ejecución, con 0 discrepancias. Las expectativas vienen de esos registros, nunca de Horizon. [La guía de evidencia](./TESTNET_EVIDENCE.md) explica cómo recalcular esa comparación y qué queda sin comprobar; el éxito en cadena no equivale a verificación semántica completa. Todo corresponde a Stellar testnet con datos ficticios y sin dinero real. El recibo del 0.1.3 es evidencia histórica del adaptador anterior.
 
