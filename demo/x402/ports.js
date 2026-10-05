@@ -5,17 +5,21 @@
 // same SDK calls the historical adapter (capability.js) makes. The demo runner does not use it: run.js
 // drives the historical adapter capability, as it did before this branch.
 //
-// NEVER EXECUTED WITH THE REAL SDK. The demo package has its own dependencies (Stellar SDK, four x402
-// packages, Express) and they are not installed in this checkout, so nothing below was ever run: not
-// the demo suite, not the runner, not a payment, not a ledger readback. Only the port SHAPE is
-// checked, by reading this file (test/x402.test.js, case K4-I1); the payment path, including
-// settlement verification, has never been executed. Two known defects are left in place on purpose:
-// the inner `verifySettlement` below shadows the imported reader of the same name, so calling it
-// re-enters itself instead of reading the ledger, and no test can catch that while nothing runs it.
+// NEVER EXECUTED WITH THE REAL SDK. The demo package carries its own dependencies (Stellar SDK, four
+// x402 packages, Express), so the payment path has never been executed: not the demo suite, not the
+// runner, not a payment, not a ledger readback, not an install. The port SHAPE is checked by reading
+// this file (test/x402.test.js, case K4-I1).
 //
-// DO NOT USE THIS FILE until the demo suite runs where its dependencies exist and the shadow is
-// repaired. Everything the kernel contract claims is covered by the kernel suite through simulated
-// ports (test/x402.test.js, test/k4-x402-advisor.test.js); this file proves none of it.
+// One defect of this file was repaired on 2026-10-05, and it is named here because it is how a file
+// nobody runs stays wrong for free: the inner `verifySettlement` shadowed the imported reader of the
+// same name, so the port re-entered itself and the ledger was never read. The reader is now imported
+// as `verifySettlementFromLedger` and the port reaches it. What is proven about that is narrow, and
+// it is what test/sec-kernel.test.js case H4 asserts: with the demo's own node_modules present, the
+// port returns the settlement reader's own verdict instead of calling itself. Nothing else below has
+// ever been executed.
+//
+// DO NOT USE THIS FILE. Everything the kernel contract claims is covered by the kernel suite through
+// simulated ports (test/x402.test.js, test/k4-x402-advisor.test.js); this file proves none of it.
 import { Keypair, Transaction, TransactionBuilder } from '@stellar/stellar-sdk';
 import { x402Client, x402HTTPClient } from '@x402/fetch';
 import { createEd25519Signer, getNetworkPassphrase } from '@x402/stellar';
@@ -23,7 +27,11 @@ import { ExactStellarScheme } from '@x402/stellar/exact/client';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { requirePublicKey } from './config.js';
-import { authDigestFromEnvelope, verifyPreparedTransaction, verifySettlement } from './settlement.js';
+// The reader is imported under an alias. The local const below carries the same name on purpose, so
+// the port object keeps the name the contract asks for; without the alias that const shadowed this
+// import and the call resolved to itself, so the port re-entered instead of reading the ledger and
+// the reader was never reached (R1 finding H4).
+import { authDigestFromEnvelope, verifyPreparedTransaction, verifySettlement as verifySettlementFromLedger } from './settlement.js';
 
 const require = createRequire(import.meta.url);
 const { createX402Payment } = require('../../src/x402.js');
@@ -231,7 +239,7 @@ export function createStellarPorts({ serviceUrl, payTo, secret, issuer = ISSUER,
 
   const verifySettlement = async (evidence, { expected, authDigest, signal }) => {
     throwIfAborted(signal, 'verify settlement');
-    const verdict = await verifySettlement({ ...evidence, authDigest }, {
+    const verdict = await verifySettlementFromLedger({ ...evidence, authDigest }, {
       horizon: new (await import('@stellar/stellar-sdk')).Horizon.Server(horizonUrl || 'https://horizon-testnet.stellar.org'),
       payer: expected.payer,
       payTo: expected.payTo,

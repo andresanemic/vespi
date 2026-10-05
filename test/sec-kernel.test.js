@@ -9,6 +9,8 @@ const assert = require('node:assert');
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs/promises');
+const { pathToFileURL } = require('node:url');
+const { createRequire } = require('node:module');
 
 const { createOperation, runOperation, STATES } = require('../src/operation.js');
 const { grantSpend } = require('../src/authority.js');
@@ -209,4 +211,40 @@ test('H7 una salida que no se serializa deja outputDigest null y no lanza', () =
   }
   assert.equal(threw, null, `recordResult threw ${threw && threw.name}: ${threw && threw.message}`);
   assert.equal(d.outputDigest, null);
+});
+
+// H4: demo/x402/ports.js declares a port named verifySettlement, and inside it a local const of the
+// same name shadows the reader imported from settlement.js. The call at that line therefore resolves
+// to the const, so the port re-entered itself and the ledger was never read. The demo ships its own
+// node_modules, so this executes the real module rather than reading it.
+test('H4 el puerto de liquidacion llama al lector y no a si mismo', async (t) => {
+  const DEMO = path.join(__dirname, '..', 'demo', 'x402');
+  let createStellarPorts;
+  let Keypair;
+  try {
+    // Resolved from the demo directory the way ports.js resolves them, not from this test's own
+    // directory: the kernel has no dependencies and the demo's are the demo's.
+    const requireFromDemo = createRequire(pathToFileURL(path.join(DEMO, 'ports.js')).href);
+    ({ createStellarPorts } = await import(pathToFileURL(path.join(DEMO, 'ports.js')).href));
+    ({ Keypair } = requireFromDemo('@stellar/stellar-sdk'));
+  } catch (err) {
+    return t.skip(`the demo dependencies are not installed here: ${err.message}`);
+  }
+  const account = Keypair.random();
+  const ports = createStellarPorts({
+    serviceUrl: 'https://example.test/plan',
+    payTo: account.publicKey(),
+    secret: account.secret(),
+    issuer: 'GISSUERISSUERISSUERISSUERISSUERISSUERISSUERISSUER',
+  });
+  // A payer that does not match is refused by settlement.js before it reads anything, so this needs
+  // no network and still proves the reader was reached.
+  const verdict = await ports.verifySettlement(
+    { txHash: 'a'.repeat(64), payer: 'GNOTTHEPAYER', network: 'stellar:testnet', authDigest: 'd' },
+    { expected: { payer: account.publicKey(), payTo: account.publicKey(), amount: '100000', asset: 'USDC' }, authDigest: 'd' },
+  );
+  assert.equal(typeof verdict, 'object', `the port returned ${verdict}`);
+  assert.equal(verdict.verified, false);
+  assert.deepEqual(verdict.checks, { payer: false }, 'the verdict did not come from the settlement reader');
+  assert.match(verdict.reason, /payer/i);
 });
