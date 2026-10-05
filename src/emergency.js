@@ -328,7 +328,15 @@ function authorizeTransition(target, verb, by) {
   const independence = verb === 'exercise' ? null : refuseGrantee(target, signer);
   if (independence) return { ok: false, reason: independence };
   const entry = entries.find((item) => samePrincipal(item.principal, signer));
-  if (!entry) return { ok: false, reason: rule.refusal.replace('{names}', entries.map((item) => item.name).join(', ')) };
+  // The declared names go in as TEXT. `String.prototype.replace` reads its replacement as a pattern, so
+  // a declared name carrying `$&`, `$'`, `` $` `` or `$1` came back expanded or eaten and the refusal
+  // named a role nobody holds (`rev$'x` was reported as `rev]x]`). The caller was refused either way, so
+  // no authority turns on this line; what turns on it is whether the sentence can be believed. This is
+  // the only place in this module where caller-declared text is spliced into a sentence (A01, N10).
+  if (!entry) {
+    const names = entries.map((item) => item.name).join(', ');
+    return { ok: false, reason: rule.refusal.split('{names}').join(names) };
+  }
   return { ok: true, signer, entry };
 }
 
