@@ -40,7 +40,7 @@ The experimental [BN254 Groth16 reference](../src/zk-bn254-reference.js) is incl
 
 ## What was tested, and what was not
 
-The [saved suite result](./SUITE_RESULT.txt) records the command and exact counts for this cut. A `todo` is not a passing test. These are local kernel tests; no reference-bridge SDK suite is part of this cut. Review verdicts are model reviews independent of their builders, not an external security audit. The new modules have not demonstrated integration with Casa Firme or Vela.
+The [saved suite result](./SUITE_RESULT.txt) records the command and exact counts for this cut. A `todo` is not a passing test. These are local kernel tests; no reference-bridge SDK suite is part of this cut. Review verdicts are model reviews independent of their builders, not an external security audit. The new modules have not demonstrated integration with Casa Firme or Vela. A simulated security review (three reviewers on OpenCode models plus a verifier that reproduced each finding; it is not a review by Anthropic) found ten issues in this cut, all fixed with a red test first; a real `security-review` is planned before the next freeze.
 
 That file names the commit the suite ran on: the parent of the commit that stores it. The later commits of this cut change documents and not `src/`, and you can check that with `git diff <tested commit> HEAD --stat -- src`, which must print nothing. Two commits carry the 0.1.4 name, the one the suite ran on and the one that stores its result, so read the count with that distinction in mind.
 
@@ -110,7 +110,7 @@ La [referencia BN254 con Groth16](../src/zk-bn254-reference.js) experimental ent
 
 ## Qué se probó y qué no
 
-El [resultado guardado de la suite](./SUITE_RESULT.txt) registra el comando y los conteos exactos de este corte. Un `todo` no es una prueba aprobada. Son pruebas locales del kernel; este corte no incluye una suite de SDK para el puente de referencia. Los veredictos de revisión provienen de modelos independientes de sus constructores, no de una auditoría de seguridad externa. Los módulos nuevos no han demostrado integración con Casa Firme o Vela.
+El [resultado guardado de la suite](./SUITE_RESULT.txt) registra el comando y los conteos exactos de este corte. Un `todo` no es una prueba aprobada. Son pruebas locales del kernel; este corte no incluye una suite de SDK para el puente de referencia. Los veredictos de revisión provienen de modelos independientes de sus constructores, no de una auditoría de seguridad externa. Los módulos nuevos no han demostrado integración con Casa Firme o Vela. Una revisión de seguridad simulada (tres revisores con modelos de OpenCode y un verificador que reprodujo cada hallazgo; no es una revisión de Anthropic) encontró diez problemas en este corte, todos corregidos con una prueba roja primero; antes del siguiente congelamiento se prevé un `security-review` real.
 
 Ese archivo nombra el commit sobre el que se corrió la suite: el padre del commit que lo guarda. Los commits posteriores de este corte cambian documentos y no `src/`, y eso se comprueba con `git diff <commit probado> HEAD --stat -- src`, que debe salir vacío. Dos commits llevan el nombre 0.1.4, el sobre el que se corrió la suite y el que guarda su resultado, así que hay que leer el conteo con esa distinción presente.
 
