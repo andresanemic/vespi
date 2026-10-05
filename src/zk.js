@@ -401,6 +401,11 @@ function readZkEvidence(value) {
     if (proofDigestRaw !== null && (typeof proofDigestRaw !== 'string' || !DIGEST_PATTERN.test(proofDigestRaw))) return null;
     const publicInputs = readPublicInputs(readData(value, 'publicInputs'), MAX_PUBLIC_INPUTS_CEILING);
     if (publicInputs === null) return null;
+    // `nPublic = 0` binds nothing, so the port refuses such a key while it is built. This is the second
+    // barrier, for a verifier that is not the port and for an answer somebody edited on the way: a
+    // claim that names no public input says the proof holds for no signal at all, and it is not a
+    // claim (advisor R2-10, owner decision).
+    if (publicInputs.length === 0) return null;
     const result = readData(value, 'result');
     const code = readData(value, 'code');
     if (typeof result !== 'string' || !Object.prototype.hasOwnProperty.call(RESULT_CODES, result)) return null;
