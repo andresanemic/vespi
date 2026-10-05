@@ -720,7 +720,11 @@ function byteShapeOf(value) {
     if (!safeInteger(length) || length <= 0) return 'an array that is not text';
     if (length > MAX_SHAPE_SCAN) return 'an array too long to name here';
     for (let index = 0; index < length; index += 1) {
-      if (typeof value[index] !== 'number') return 'an array that is not text';
+      // `hasOwn` before the read, for the reason every other read of the caller's data has it: an
+      // index this array does not own is answered by `Array.prototype`, and three numbers left there
+      // named a payload of three holes as bytes. The payload is not hashed either way, so this is
+      // about the sentence being true and not about the verdict.
+      if (!hasOwn(value, index) || typeof value[index] !== 'number') return 'an array that is not text';
     }
     return 'an array of bytes';
   } catch {
