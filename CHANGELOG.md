@@ -1,36 +1,34 @@
 # Changelog
 
-## [v0.1.4-kernel] — 2026-10-05
+## [v0.1.4-kernel] | [fecha de publicación]
 
-Published on 2026-10-05 as `v0.1.4-kernel`; the previous release is `v0.1.3-kernel`.
+This cut preserves the authority you granted and the next agreed action while returning uncertain exercised effects to you for reconciliation. The previous version is `v0.1.3-kernel`; the [bilingual release note](./docs/RELEASE_0.1.4_KERNEL.md) explains what entered from its promise and the limits of each part.
 
-### Added
+### Continuity, authority and receipts
 
-- Uncertain effects are not proposed again blindly: `resumeFromReceipts` returns `needsPerson: true` with `reconciliation_required` after an exercised `not_verified` receipt or a `failed` receipt with `settlementUnknown`. Only a later `verified` receipt closes the uncertainty.
-- `perform` receives a SHA-256 `idempotencyKey` derived from the canonical effect: goal, action and requirements. It is stable across attempts and resumes, and excludes time, operation id and renewable permission metadata.
-- Delegations can carry `deadlineMs`; `delegationStatus(d, now)` reports `{ overdue, dueAt }` when queried. It does not run or schedule anything.
-- Agreements can set `maxAttempts` per action. Duplicate receipts count once; the limit returns `needsPerson: true` with `attempts_exhausted`.
-- `io.now` can supply the clock used to check permission validity and issue each receipt.
+[Continuation tests](./test/v014.test.js) cover `reconciliation_required` after exercised uncertainty, a stable `idempotencyKey` passed to `perform`, per-action attempt limits and an injected synchronous clock, but receipt storage, trusted time, destination deduplication and waking the process remain host responsibilities. Delegation deadlines report status when queried; they do not schedule work. [Anchor regressions](./test/anchor-digest-stability.test.js) preserve the digest sent and confirmed, but a digest proves integrity, not authenticity.
 
-### Changed
+### What entered from the 0.1.3 scope
 
-- `docs/METHOD.md` gains the section "Stop and search after repeated failures" (English and Spanish), the same text Lore Plugin 2.4.9 carries in `skills/vespi/method.md`.
-- No public export was removed or renamed. A receipt built without the new clock retains its previous digest.
+[Emergency regressions](./test/k1-emergencia-r6-advisor.test.js) cover prior grants, declared triggers and separate post-use reviews based on opaque host-issued principals, but do not authenticate real people, persist state, supply trusted time or execute and verify effects. Exercise requires the grantee's principal; independence follows the host's identity mapping. D4 counts uses, with money ceilings imposed by the consuming project.
 
-### Fixed
+[Provenance regressions](./test/k2-procedencia-r5-advisor.test.js) cover comparison against a resolver's own evidence without passing declared `author` or `contentDigest` to it, but the resolver is not authenticated and built-in function replacement by same-process code is outside the contract. Hostile data, including polluted prototype data, is in scope. Receipts distinguish verified from declared provenance; the name remains declared.
 
-- Resume no longer loses an unresolved possibly-executed effect or lets an older receipt hide a later uncertainty.
+[x402 regressions](./test/k4-x402-r3-advisor.test.js) cover a paid-effect contract with injected ports, mandatory synchronous `claims` and operation identity in the effect key, but the memory store is not durable, reservations are not released, and the validator's output digest is not recomputed by the kernel. The [reference bridge](./demo/x402/ports.js) has [SDK loopback tests](./demo/x402/bridge.test.mjs) reported by its builder and a [simulated minimal example](./examples/x402-app.js), but no final independent review, verified live payment or exercised real Soroban RPC payload path.
 
-### Not in this release
+[ZK port tests](./test/k3b-zk-port.test.js) cover a pinned key and agreed public inputs, but the cryptographic backend is injected. The [internal BN254 Groth16 reference](./src/zk-bn254-reference.js) has [independent fixture evidence](./test/fixtures/zk/independent-report.md), but is unexported as a public API, unaudited, not constant time and not production ready. Proofs are malleable, a degenerate key accepts forgeries, and synchronous CPU work cannot be interrupted by a Promise timeout. It does not authenticate a presenter, attest an institution or prevent replay.
 
-- Lightweight receipt chaining with `prev`, recording intent before the effect, and accumulated budgets across operations.
-- `narrow(parent, child)` and a resume epoch.
-- Leases and leader election, a scheduler, and a project-owned Merkle log are not recommended for this kernel cut.
-- Six independent verification passes; every defect they reproduced (eight in the first, more in time handling, unknown-shape signals and asynchronous clocks later) was corrected with a red-first test; those passes recorded 267 tests, and the final release prep suite passed 277/277.
+### Evidence and compatibility
 
-All notable public changes to Vespi will be recorded here.
+`node --test test/*.test.js` reports 1173 tests, 1149 passed, 0 failed and 24 `todo`; pending cases are not passing tests. [Saved evidence](./docs/testnet-evidence.json) records 50 Horizon readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies, against local execution records rather than expectations taken from Horizon. This is testnet with fictional data and no real money, not evidence for the new bridge or integration with Casa Firme and Vela.
 
-This project is experimental. Before `v1.0.0`, version numbers describe public snapshots of a system still under active arbitration.
+D3 stamps `stellar:testnet` in every newly built pending anchor, without affecting the digest; it becomes configurable in 0.1.5. Old receipts without `checks` retain their shape and digest in [regressions](./test/k3-zkref-r2-advisor.test.js), but unknown reserved `zk.` controls are now refused and change the rebuilt digest; unknown exercised shapes carry `exercisedUnknown`. Compatibility is not universal. D5 keeps Vela's demonstration content plaintext; a real deployment requires encryption at rest and third-party key custody.
+
+### Qué NO trae el 0.1.4 y pasa al 0.1.5
+
+Spend-authority narrowing stays out because the base `grantSpend` constructor has an inherited-setter defect. The [release note](./docs/RELEASE_0.1.4_KERNEL.md#what-014-does-not-bring-and-moves-to-015) records the exact reasons for x402 HX-09, HX-11, HX-12, HX-13, R2-05 and H11; provenance N07, N08, H12d and H13d; emergency H21; and bridge R2-11 and R2-12. Recursive x402 output inspection is also later work; other boundary `todo` cases do not promise future fixes. No durable stores, refunds, shared money budgets, scheduler, autonomous cross-host runtime, mainnet evidence or production readiness enter this cut.
+
+All notable public changes to Vespi are recorded here. Earlier sections below are historical evidence, not current suite counts or current scope.
 
 ## [v0.1.3-kernel] — 2026-10-03 (historical)
 

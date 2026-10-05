@@ -1,537 +1,127 @@
 # Vespi
 
-**Vespi is a JavaScript kernel that records a person's authority, an independently checked effect and the next agreed action in receipts.** Kernel `0.1.4` was published on 2026-10-05 as [`v0.1.4-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.4-kernel).
+Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation. Kernel `0.1.4`: [fecha de publicación]. This is tested operation semantics, with host-managed storage and execution, not demonstrated autonomous work across hosts.
 
-Run the live, offline operation and inspect its receipt:
-
-```text
-> node examples/walkthrough.js
-receipt: {"status":"verified","digest":"c77177d686e1d745e39d5877aab742bf09b6c622ff5b206816d9ae1ab17af446","coverage":["effect_present","recipient_matches"],"notCovered":["network_anchor","external anchor"]}
-```
-
-The digest changes on each run. The bilingual [walkthrough](./docs/WALKTHROUGH.md) contains the full transcript, terminal approval, second-process continuation and limits. The [five-minute judge route](./docs/FOR_JUDGES.md) gives the exact verification commands and the version boundary. [Project context and the full narrative](#english) follow below.
-
-**Vespi es un kernel JavaScript que registra en recibos la autoridad de una persona, un efecto comprobado por separado y la siguiente acción acordada.** El kernel `0.1.4` se publicó el 2026-10-05 como [`v0.1.4-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.4-kernel).
-
-Corre la operación local y revisa su recibo con `node examples/walkthrough.js`. El [recorrido bilingüe](./docs/WALKTHROUGH.md) contiene la salida real, sus límites y la prueba que lo ejecuta. La [ruta de cinco minutos para jueces](./docs/FOR_JUDGES.md) reúne los comandos y distingue lo publicado de lo que trae `0.1.4`.
-
----
-
-<details>
-<summary><b>Read in English</b></summary>
-
-<a id="english"></a>
+Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo. Kernel `0.1.4`: [fecha de publicación]. Es semántica de operación probada, con almacenamiento y ejecución a cargo del host, no trabajo autónomo demostrado entre hosts.
 
 [![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
 
-<p align="center">
-  <a href="https://github.com/andresanemic/vespi/releases/tag/v0.1.4-kernel"><img src="https://img.shields.io/badge/version-v0.1.4-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.4"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
-  <a href="#the-functional-projects"><img src="https://img.shields.io/badge/projects-10_listed-D7B698?style=for-the-badge&labelColor=07111A" alt="Projects listed: 10, including one idea without code"></a>
-  <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet_transactions-50_verified-E0C170?style=for-the-badge&labelColor=07111A" alt="50 successful transactions on Stellar testnet"></a>
-  <a href="./demo/x402/"><img src="https://img.shields.io/badge/built_with-Stellar_%C2%B7_x402_%C2%B7_Raven_MCP-E0C170?style=for-the-badge&labelColor=07111A" alt="Built with Stellar, x402 and Raven MCP"></a>
-</p>
+## English
 
-<p align="center">
-  <b>Vespi is the kernel that helps you reach great results with AI without having to know its hardest parts. Its method already covers loops, test-first development, specifications, master plans, blind readers, bounded subagents and independent verification: you say what you want.</b><br><br>
-  The kernel gives the work authority granted by a person, a receipt anyone can check and an operation another agent can resume from receipts when the next action is safe to continue.
-</p>
+<a id="english"></a>
 
-<p align="center">
-  <a href="https://github.com/andresanemic/lore-plugin">Lore Plugin</a> prepares the ground. Vespi operates on it.
-</p>
+### Start with an operation
 
-<p align="center">
-  Building on Stellar or judging Find Your Way or Meridian? x402 and Stellar are one integrated capability among others. Together with Lore Plugin and Raven MCP, Vespi aims to become the operating system for the Stellar ecosystem.
-</p>
+Run the [offline walkthrough](./docs/WALKTHROUGH.md), answer its terminal prompt with `Ada: approve`, and inspect the returned `status`, `coverage` and `notCovered`:
 
-**Vespi keeps an operation alive as the people, agents and tools around it change.**
-
-> **The unit is not the agent. The unit is the operation.**
-
-**Why.** Lore lets anyone use AI and get strong results on any task, without already knowing how to direct every difficult part. Vespi gives the work authority a person grants, a receipt anyone can check and an operation another agent can resume tomorrow.
-
-## Who it is for
-
-Use it for writing, software development, graphic design, publishing or another result you want to make with AI. The kernel can supervise effects with AI or without it, and with a blockchain or without one. The repository is dependency-free JavaScript; it does not call a network. Stellar and x402 are one integrated capability in the demo, not the kernel's focus.
-
-**If you are judging Find Your Way or Meridian, start here.**
-
-1. **What it is.** One idea, in [In one minute](#in-one-minute): the unit is the operation, not the agent.
-2. **What is on Stellar.** A live x402 payment of 0.01 USDC [confirmed on Horizon](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5), receipts that can be anchored on Stellar, and [50 successful testnet transactions](./docs/TESTNET_EVIDENCE.md). Details are under *Evidence you can open*.
-3. **Check it yourself.** Follow the [judge's verification guide](./docs/FOR_JUDGES.md) for the exact commands, expected suite output, receipt file and Horizon checks. The kernel suite runs offline; checking transactions against Horizon needs a network.
-4. **See what is built on it.** Ten projects on fictional data, nine with code and tests and one idea without code, in *The functional projects*.
-5. **What we do not claim.** No mainnet, no second provider and no production readiness. See *What it does not do yet, and what is not verified*.
-
-## In one minute
-
-When you work with an agent, the session ends and the next one has to begin. What usually survives is a summary, and a summary does not say **who allowed this**, **how much**, **until when**, **to whom**, or **whether it actually happened**. Those are not details of a summary; they are the operation.
-
-So Vespi starts from the operation. It carries a goal and an authority a person granted it (with a clock, a budget and a destination). Since `0.1.4`, resuming from an exercised uncertain receipt requires reconciliation by a person before that action can be selected again. Verification stays **separate**, and the receipt says what was covered and what was not. The [release note](./docs/RELEASE_0.1.4_KERNEL.md) records the continuity gate, stable effect key, consultative delegation deadline, attempt cap and injectable operation clock.
-
-## What it looks like in practice
-
-For a non-trivial task, the coordinator classifies the ask, defines done, gathers evidence, decides, acts, verifies by observation apart from the builder, and reports the result. The loop is in [docs/METHOD.md](./docs/METHOD.md); the operation carries its authority, receipts and continuity.
-
-**Fictional example.** Maya asks for a small booking app for her neighborhood hair salon, “La Esquina”. The names, schedule, prices and money below are invented.
-
-```text
-[COORDINATOR]
-For this project, we will work this way:
-1. Draft the agreement and name the authority, budget ceiling and publication gate.
-2. Write a master plan and specifications for booking, cancellation and opening hours.
-3. Define the acceptance observations and write the tests before the app code.
-4. Ask blind readers to judge the finished flow without seeing how it was built.
-5. Give bounded tasks to subagents; each returns its artifact and receipt.
-6. Have a separate verifier check the result against the agreement and evidence.
-
-I need three decisions from you: who grants authority, what money limit applies,
-and whether you approve publishing. I will ask again before anything is published.
-
-[MAYA]
-I grant authority for a local prototype, with no paid services. Do not publish
-until I approve the final preview.
-```
-
-The coordinator helps draft the agreement and documentation, build the app, prepare social posts and generate images through the available host tools. Loops, checks and delegated work happen behind the scenes; Maya does not need to know their mechanics. The human gate stops the operation before a post or app is published.
-
-```text
-[COORDINATOR]
-The booking flow and its checks are ready. Here are the preview and the proposed
-posts. Nothing has been published. Do you approve this exact publication?
-
-[MAYA]
-Not yet. Change Tuesday's hours, then show me the preview again.
-```
-
-**What exists today.** The kernel already provides operations, granted authority, human decisions, receipts, bounded delegations and resuming from receipts; see [docs/CAPABILITIES.md](./docs/CAPABILITIES.md). The coordinator's loop is documented in [docs/METHOD.md](./docs/METHOD.md). The Lore Plugin kit supplies the coordinator workflow and host skills; the host's available tools produce the app, copy and images. This fictional walk-through describes their combined use, not a built-in app generator or image feature of the kernel.
-
-```text
-[NEXT DAY]
-The coordinator reads the receipts and checks the last verified state. With the
-0.1.4 kernel, it checks whether an uncertain external effect was reconciled
-before continuing that action. It does not restart from a summary.
-```
-
-This applies when Claude Code, Codex or OpenCode has Lore Plugin's skills installed, or when the standalone Vespi skill is available and installed. The standalone skill is not yet published. With only the kernel, clone the repository and use it in your own way.
-
-**What it looked like on a real operation.** The first combined Lore Plugin and Vespi operation built TEMIS, a bilateral-agreement record on testnet with fictional data. An independent advisor found four design gaps; a worker implemented against tests; separate verification found eight more; a third agent rebuilt the record from public Stellar history alone. See *Evidence you can open*.
-
-## Why Vespi, and not building it yourself
-
-Writing an app is the easy part. What takes months, and usually gets skipped, is everything around the work: who may do what, up to when and for how much; proof of what happened; stopping honestly when an outcome is uncertain; resuming tomorrow where you stopped; a human decision where one is needed; and a check by someone who did not do the work. Vespi gives you those as a tested kernel, so each app does not reinvent them and the person with the idea does not have to be an expert in how they are done.
-
-| You need | What Vespi gives you | Where it lives |
-|---|---|---|
-| Permission with limits | A grant with an asset, a ceiling, a destination and an expiry; one budget that cannot be spent twice; an expired grant is refused; several named people can be required | `authority`: `{ asset, maxAmount, to, expiresAt }`, `signers`, `pausers` |
-| Proof of what happened | A receipt with a SHA-256 fingerprint, the checks that came back true, and what was not covered, by name | `buildReceipt`, `verifyReceipt`, `notCovered` |
-| Honest stops | A task with no legitimate exit comes back blocked with its way out; receipt-based resume requires reconciliation before selecting an uncertain exercised action | `impossible`, `not_verified`, `resumeFromReceipts` |
-| A human where one is needed | A gate that shows the cost first, never lets the agent consent for the person, and names the exit in every refusal | the human gate and its four gestures |
-| A guided method | The coordinator can run loops, work test first, write specifications and master plans, use blind readers, delegate bounded tasks and verify independently; the kernel records the operation around that work | [docs/METHOD.md](./docs/METHOD.md), the Lore Plugin kit and Vespi skill |
-| Continuing tomorrow | Resuming from receipts: the last verified state, the next action, and whether a person must step in when an uncertain effect needs reconciliation | `resumeFromReceipts(receipts, agreement)` |
-| An independent check | The verifier is never the executor; blind readers judge without seeing how it was made; a third agent without code access rebuilds the result | [`docs/METHOD.md`](./docs/METHOD.md), [`experiments/`](./experiments/) |
-| Public proof, if you want it | An anchor on Stellar that only counts when a verifier confirms the digest and the network | `anchorReceipt`: `pending` → `submitted` → `anchored` |
-
-**Every function and capability of the kernel, explained in plain language, one by one: [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md).**
-
-## Institutions and Chilean law
-
-**Designed with Chile's new laws in mind.** Vespi was designed with Chile's personal data protection law (21.719) and clinical record interoperability law (21.668) in mind. Permissions name who may act, on what, up to how much and until when; receipts carry fingerprints and named checks, not the content. This is design intent, not legal compliance: no regulator or lawyer has certified it.
-
-**Why institutions can pilot it.** It is an Apache 2.0 library with no dependencies or hosted service, so a pilot can run in the institution's own environment. The functional projects are proofs of concept for coordinated work, not finished products.
-
-## Where this is going
-
-**Origin and context.** Vespi grows from work on criterion, continuity and operational authority, not from a payment protocol; x402 on Stellar testnet was the first economic pressure that exposed real authority questions. Find Your Way + Tellus is the current public context and the [HackMeridian event](https://meridian.stellar.org/event-details) a public horizon. No ownership, sponsorship, endorsement, partnership, funding or official affiliation is claimed.
-
-The goal is for Vespi, together with Lore and Raven MCP, to become the operating system for the Stellar ecosystem. We are also evaluating a Vespi token on Stellar; nothing has been issued, and any design would require an economic problem that justifies it.
-
-## How to use it today
-
-The kernel is plain JavaScript: import it and wrap your effect. For AI-assisted work, install the [Lore Plugin](https://github.com/andresanemic/lore-plugin) kit and use its Vespi skill. Lore Plugin v2.4.9 and kernel v0.1.4 were published on 2026-10-05. The standalone Vespi skill is not published separately.
-
-## Vespi and Lore Plugin: an operating system for working with AI
-
-```
-  you        say what you want, in your own words
-  ──────────────────────────────────────────────────────────────────────────
-  hosts      Claude Code · Codex · OpenCode          where the agent runs
-  ──────────────────────────────────────────────────────────────────────────
-  Lore Plugin   the ground: your criterion (Lore), the routing that opens the
-                right criterion for each task, the coordinator's method, and
-                the hooks that keep a session honest
-  ──────────────────────────────────────────────────────────────────────────
-  Vespi         the kernel: operations under granted authority, verification
-                apart from execution, receipts, continuity from the last
-                verified state
-  ──────────────────────────────────────────────────────────────────────────
-  apps          what gets built on top: the functional projects below
-```
-
-You say what you want. The coordinator opens the criterion that governs it, defines what done will look like, and asks you only for what is yours to decide: authority, money, publishing. It hands bounded stretches of work to other models, each with its own question, its own limits and a receipt, verifies apart, and writes one checkpoint in the project's `FASES.md`. The next session resumes from the receipts, not from a summary. You never need to know the kernel exists.
-
-Lore Plugin `2.4.9` brings the flow into the kit: one checkpoint per project, tasks by role through the tools the host really exposes, and the economy of an operation declared before it runs. [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_en.md) and Lore Plugin are Vespi's genealogy and criterion: Lore Plugin provides the durable ground an operation needs and Vespi operates inside those boundaries, with no second path for learning or writing.
-
-## What 0.1.4 brings
-
-The 0.1.4 release adds reconciliation before continuing an uncertain exercised effect, a stable idempotency key passed to `perform`, consultative delegation deadlines, per-action attempt limits and an injectable clock for expiry checks and receipts. These changes and their limits are described in the [release note](./docs/RELEASE_0.1.4_KERNEL.md). The [0.1.3 release note](./docs/RELEASE_0.1.3_KERNEL.md) remains as historical evidence.
-
-## Evidence you can open
-
-Published as [`v0.1.4-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.4-kernel) on 2026-10-05 (previous: [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel)). The [0.1.4 release note](./docs/RELEASE_0.1.4_KERNEL.md) describes the changes and their limits. The 0.1.3 note remains available as historical release evidence. The complete kernel suite is recorded in [`docs/JUDGE_PACKAGE.json`](./docs/JUDGE_PACKAGE.json).
-
-The newest record is the Stellar testnet evidence below. The first experiments that formed the kernel (RUN 01 to 05) are in [`experiments/`](./experiments/), with their blind reads and verifier reports; RUN 05 is **closed** within its declared local, offline scope. They were the first tests, not the latest work.
-
-**A live x402 payment on Stellar testnet is verified for this release.** On 2026-10-02 the repaired adapter paid 0.01 USDC through the real facilitator, the receipt came back `verified`, and Horizon confirmed the transaction separately (`abb968e8…`, ledger 4988161). It is one of the 50 transactions below, on testnet, and its receipt still lists `external anchor` in `notCovered`: no mainnet, no second provider, no one else's run. The paid example lives in [`demo/x402/`](./demo/x402/), the only place that knows x402, Stellar or USDC.
-
-The payment's receipt is available at [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). It records `verified: true`, `anchor.status: pending` and `external anchor` under `notCovered`. The testnet USDC contract is `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`; the adapter checks issuer `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` in `demo/x402/run.js`.
-
-**It was not one transaction.** Between 2026-10-02 and 2026-10-03 the work around Vespi wrote **50 successful testnet transactions** from 8 accounts to the Stellar testnet (ledgers 4987795 to 4996153), on fictional data and with no real money. Every hash is in [docs/TESTNET_EVIDENCE.md](./docs/TESTNET_EVIDENCE.md) and in a [machine-readable file](./docs/testnet-evidence.json), and `node scripts/verify-testnet-evidence.mjs` asks Horizon about each one (50 of 50 were successful when this was written).
-
-| What was exercised on Stellar | Transactions | What it shows |
-|---|---|---|
-| Full agreement lifecycle of TEMIS (registration, signature and counter-signature, anchor, milestone, challenge, correction, dispute), run twice | 38 | Commitments written as ordered ledger transactions with their digest in a hash memo. A third agent with no access to the code rebuilt the record from Horizon history alone: 22 of 22 statuses matched, and it found a defect no test had seen. |
-| Concurrent anchors, two processes, three rounds | 6 | Two writers racing from one account: the loser retries and the order by (ledger, index) stays deterministic. |
-| Operation-type probe: a classic payment and a Soroban asset-contract transfer | 2 | Both emit the same `transfer` event, so an event alone does not prove how a payment was made. |
-| Idempotent x402 payment | 1 | One call, one real credit, and a retried delivery was not charged twice. |
-| x402 payment runs through the real facilitator | 3 | The first came back `not_verified` because of our own bug (we read the wrong field); the repaired adapter verified, and Horizon confirmed it separately. |
-
-Two more findings came from testnet without a transaction: the facilitator rejects a muxed-account `payTo` at `/verify` (`invalid_exact_stellar_payload_event_wrong_to`), and a payload that was already settled is rejected when it is replayed at `/settle`. What this exercises on Stellar: classic payments, hash-memo anchoring, a Soroban asset-contract transfer, the x402 `exact` scheme through the real facilitator, concurrent writers, and read-back from Horizon. All of it is testnet, with one facilitator and one payer. Stellar resets the testnet a few times a year, so the receipts in this repository are the lasting record.
-
-A second capability lives outside the kernel: [`capabilities/respaldo/`](./capabilities/respaldo/LEEME.md) copies a person's working tree into a folder that Drive, Dropbox or OneDrive already sync, never deletes, and verifies every hash. It does not encrypt, upload through APIs or keep versions yet. 17 tests.
-
-## The functional projects
-
-Vespi is a kernel, not an app. What shows it works is what gets built on it: ten projects, each with its **own agreement written before its code**, on **fictional data**. Their stage was read on **2026-10-02** by running each project's own suite against the kernel installed at that time (`0.1.3`). Nine have code and tests; Permamuseum is a study note without code.
-
-The project records explain the why, the how and the what: how each works, who takes part and with what rights, and what evidence it has. The Escribano repository link still needs confirmation. During the judging period of the Find Your Way hackathon, the project code is intended to open for review under a review-only license; legal review of that draft is pending. The aim is to show how Vespi works, not only to tell it.
-
-| # | Project | What it is | Stage today | Suite today |
-|---|---|---|---|---|
-| 1 | [**Queen**](https://github.com/andresanemic/queen) | The marketing agency of the Stellar ecosystem: budgets inside the ceiling it was granted and charges through a **simulated** x402 layer. | Agreement + code + tests | 42 / 45 |
-| 2 | [**Permamuseum**](https://github.com/andresanemic/permamuseum) | Latin American cultural heritage on Stellar, with provenance and permissions. | Idea: a study note, no code | — |
-| 3 | [**Casa Firme**](https://github.com/andresanemic/casa-firme) | Housing for informal settlements: authority born in the committee's assembly; every donation leaves a trace. | Agreement + code + tests | 21 / 24 |
-| 4 | [**Ficha Contigo**](https://github.com/andresanemic/ficha-contigo) | The clinical record: the institution uses only what the patient granted; emergency access is granted in advance. | Agreement + code + tests | 7 / 13 |
-| 5 | [**Cátedra**](https://github.com/andresanemic/catedra) | The university: declared AI use, grades signed by the professor, degrees as verifiable credentials. | Agreement + code + tests | 34 / 35 |
-| 6 | [**Escribano**](https://github.com/andresanemic/escribano) | A DAO with a legal record of every change to its contract (Wyoming W.S. 17-31). | Agreement + code + tests; public repository link needs confirmation | 8 / 13 |
-| 7 | [**Llavero**](https://github.com/andresanemic/llavero) | "My data": who asks for it, for what, under which permission, and what was refused. | Agreement + code + tests | 8 / 14 |
-| 8 | [**Farolero**](https://github.com/andresanemic/farolero) | Authority for agents without code: delegating only narrows; what does not fit comes back blocked. | Agreement + code + tests | 8 / 13 |
-| 9 | [**Marea**](https://github.com/andresanemic/marea) | Verifying climate commitments between countries (Paris Agreement art. 6.2) without counting a reduction twice. | Agreement + code + tests | 25 / 25 |
-| 10 | [**Vela**](https://github.com/andresanemic/vela) | Protecting whoever tells the truth through a legal channel; the zero-knowledge membership proof is pending. | Agreement + code + tests | 10 / 11 |
-| — | [**TEMIS**](https://github.com/andresanemic/temis) | Legal validation for bilateral agreements by milestones: signed, counter-signed and anchored so a third party can rebuild what happened. The first real operation of Lore Plugin and Vespi as one. | Whitepaper + MVP: tests 0 to 8 run on Stellar testnet with fictional data (a full lifecycle run twice, 38 transactions, plus concurrent anchors and an idempotent x402 payment); owner's certificate and legal review pending | 135 / 135 |
-
-**How to read the last column.** Nine of the ten were built on 2026-09-29 against the kernel cut `54c20c7` and their own records report them green there; that was not re-run here. Each pins the kernel it consumes by digest and fails on purpose when the kernel moves. Re-pinning those project copies to `0.1.4` remains pending, as does any claim that these ten are ready: the evidence shows a working path, not a finished product.
-
-The Escribano repository link returned 404 during the simulated review. Its row remains as project evidence, but a working public link has not been confirmed.
-
-## How this was built
-
-A claim without a receipt does not go in. These are the reviews that formed Vespi:
-
-<details>
-<summary><b>The reviews and sources that formed Vespi</b></summary>
-
-- **Discipline: how it is verified.** Tests first, someone else verifying, attacks written as tests, and a security review with Anthropic's method that found a real flaw in our own kit and was fixed test first. What is simulated so far (the superreview) and what comes next are listed with their limits in [`docs/VERIFICATION.md`](./docs/VERIFICATION.md).
-- **Raven and the Stellar ecosystem.** Raven, the MCP over the ecosystem's project directory, was active during the whole construction: without it x402 and Stellar would not have been possible, and the study it enabled showed that the missing piece was a kernel to coordinate the projects that exist, not another payment project.
-- **The Fable Method.** The coordinator's loop is Vespi's own wording of [The Fable Method](https://github.com/Sahir619/fable-method) by Sahir619 (MIT), distilled so that it depends on no installed skill: see [`docs/METHOD.md`](./docs/METHOD.md).
-- **Prior art.** [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) summarizes the technical comparisons and their limits.
-- **The OpenAI report.** [OpenAI — Hugging Face Incident, Technical Report](https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf): an operation is authorized before it acts, a task with no legitimate exit pushes an agent off the edge, and verification has to live outside the agent.
-- **Ultrareview.** [Its documentation](https://code.claude.com/docs/en/ultrareview) gave the human gate its four gestures.
-- **The fly.** The [Eon Systems connectome of the adult fly brain](https://github.com/eonsystemspbc/fly-brain) shows behaviour coming out of structure, which is why the kernel governs with structure and does not depend on the model. It enters as a story and nothing else: Vespi is not a brain and does not learn.
-- **The skills.** The `writing-skills` discipline of [Superpowers](https://github.com/obra/superpowers) (MIT) gave the kernel its red first; skill provenance is queued for `0.1.4`.
-
-</details>
-
-Reviews launched by the person rather than by the agent (an ultrareview, a security review) enter this repository with their run, report or session log attached, or they do not enter.
-
-## The search in the ecosystem
-
-We searched so as to offer something new and not repeat what other projects already do. Each was read in its own repository and confirmed on **2026-09-28**; credit, never disparagement. [REAPP](https://github.com/mks044/reapp-poc) (signed mandates for agent payments, enforced in a Soroban registry) arrived at a shape close to this kernel from the other side. The [Stellar AI Agent Kit](https://github.com/JoseCToscano/stellar-mcp) turns any Soroban contract into an MCP server. Trustless Work, Soroban Governor, Teken, Trustful and Chaincerts already cover escrow, governance, multisig and credentials; Vespi does not rebuild them, they are its capabilities. What we saw: the ecosystem is rich in pieces and no piece coordinates an operation across several people and organizations from beginning to end. That gap is where Vespi sits; it is a claim about a moving landscape, not a law.
-
-## What it does not do yet, and what is not verified
-
-<details>
-<summary><b>What is not built or not verified</b></summary>
-
-- **Limits of `0.1.4`:** a receipt is not durable by itself, its digest proves integrity rather than authenticity, and an external destination must honor the idempotency key to deduplicate effects. Delegation deadlines report status when queried; they do not schedule or execute work. The kernel does not provide cross-host runtime, scheduler, durable storage, external identity authentication or production readiness. The walkthrough demonstrates a local verified path, not these broader properties. See the [prior-art study](./docs/PRIOR_ART.md) and the [release note](./docs/RELEASE_0.1.4_KERNEL.md).
-- **The receipt is not durable by itself, and its fingerprint proves integrity, not authenticity.** Whoever calls the kernel owns where it lives, and anyone who can rewrite the receipts can recompute the digest; authenticity belongs to whoever stores and hands them over.
-- **No cross-host runtime, scheduler, daemon, migration engine or quota manager.** The continuation semantics are here; what wakes the process is the host's.
-- **Not verified:** x402 on mainnet, with more than one provider, or run by someone else; production readiness, regulatory compliance or a stable protocol.
-
-</details>
-
-**Terms.** A **capability** is an available action. A **grant** is the authority for an effect. A **human gate** is the decision surface consulted when authority is insufficient, not a signature system. A **receipt** is the structured object the operation returns, not automatic durable persistence.
-
-## Quickstart
-
-**Level 1, kernel, nothing external:**
-
-```bash
-git clone https://github.com/andresanemic/vespi.git
-cd vespi
+```sh
+node examples/walkthrough.js
 node --test "test/*.test.js"
-node scripts/verify-testnet-evidence.mjs   # re-checks the 50 testnet transactions against Horizon (needs a network)
 ```
 
-Use Node.js 24 or later, matching the version declared by the x402 demo. The quoted test pattern is passed to Node so the command works in PowerShell, Command Prompt, macOS and Linux. The first command runs the kernel tests only and needs no wallet or network. The second command checks the listed transactions against Horizon and needs a network. See the [judge's verification guide](./docs/FOR_JUDGES.md) for expected output and direct links to the receipt and sample transactions.
+The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The kernel suite reports 1173 tests, 1149 passed, 0 failed and 24 `todo`; those pending or boundary cases are not passing tests. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
 
-**Level 2, bounded x402 testnet demo:** see [`demo/x402/README.md`](./demo/x402/README.md). The paid route needs a funded testnet account, a USDC trustline, a receiver, environment variables and network access. One live testnet payment is verified; that is all it certifies.
+### Authority, a human gate and receipts
 
-**Why publish this early?** Because the history is part of the evidence: what survives, what fails, what changes and what gets rejected stays inspectable while the project is still becoming itself.
+The kernel is JavaScript without runtime dependencies. A capability declares its requirements; the operation checks authority before `perform`, asks the human gate when required and obtains a separate verification result. [Authority tests](./test/k2.test.js) cover asset, ceiling, destination, expiry and distinct named approvals, but ordinary approval names are labels rather than authenticated signatures and money budgets are not accumulated across operations. The host controls its tools, identities, clock and storage.
 
-## Author
+[Receipt tests](./test/k3.test.js) cover the SHA-256 digest, named successful checks and omissions, but the digest proves integrity rather than authenticity and can be recomputed by anyone who rewrites the receipt. An external anchor requires a separate confirmation of digest and network. D3: newly built receipts stamp `stellar:testnet` in their pending anchor even for local work; [receipt.js](./src/receipt.js) excludes that anchor from the digest, and the default becomes configurable in 0.1.5. All chain evidence here is testnet, on fictional data and with no real money.
 
-**Andrés Peña Mellado**, Digital Art Director & Creative Developer working across AI agents, Web3, design and research.
+The [capability catalog](./docs/CAPABILITIES.md) explains the API and host responsibilities. [Respaldo](./capabilities/respaldo/LEEME.md), a capability outside the kernel, copies a working tree into a folder that a sync service can watch, as [its tests](./test/respaldo.test.js) demonstrate, but does not encrypt, upload through service APIs or keep backup versions.
 
-[<img src="./assets/icons/v2/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="./assets/icons/v2/x-dark.svg"><img src="./assets/icons/v2/x.svg" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/v2/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/) &nbsp;&nbsp; <img src="./assets/icons/v2/discord.svg" width="28" alt="Discord">
+### What 0.1.4 brings
 
-</details>
+The [continuation tests](./test/v014.test.js) cover reconciliation before repeating an uncertain exercised action, a stable key passed to `perform`, attempt limits and an injected synchronous clock, but destination deduplication, trustworthy time and waking the process belong to the host. Delegation deadlines remain consultative.
 
-<details>
-<summary><b>Leer en español</b></summary>
+The [0.1.3 note](./docs/RELEASE_0.1.3_KERNEL.md) announced emergency access, zero knowledge, skill provenance and x402 inside the kernel. All enter 0.1.4 under the limits in the [bilingual release note](./docs/RELEASE_0.1.4_KERNEL.md). [Emergency tests](./test/k1-emergencia-r6-advisor.test.js) cover prior authority and reviews using host-issued opaque principals, but the kernel does not authenticate real people, persist the ledger, execute or verify the effect, or provide trusted time; D4 counts uses, with the money ceiling left to the project. [Provenance tests](./test/k2-procedencia-r5-advisor.test.js) cover a resolver's own evidence and hostile data, including polluted prototype data, but not built-in function replacement by same-process code; `provenanceSource` distinguishes verified from declared evidence and the skill name stays declared.
 
-<a id="español"></a>
+[x402 tests](./test/k4-x402-r3-advisor.test.js) exercise the paid-effect contract through injected ports with mandatory synchronous `claims` and operation identity in the effect key, but the memory store is not durable, reservations are not released and the validator's body digest is not recomputed by the kernel. The [SDK bridge tests](./demo/x402/bridge.test.mjs) exercise real SDK objects over loopback according to the builder's report, but the bridge has no final independent review, no verified live payment and no tested real Soroban RPC payload path. [The minimal example](./examples/x402-app.js) uses simulated ports.
 
-**Vespi mantiene viva una operación cuando cambian las personas, los agentes y las herramientas que la rodean.**
+[ZK tests](./test/k3b-zk-port.test.js) cover a pinned key and agreed public inputs, but trust the injected backend. The internal [BN254 Groth16 reference](./src/zk-bn254-reference.js) has [fixture and arithmetic evidence](./test/fixtures/zk/independent-report.md), but proofs are malleable, a degenerate key accepts forgeries, synchronous verification cannot be interrupted by a Promise timeout, and there is no external audit or production readiness. These modules do not demonstrate integration with Casa Firme or Vela. D5: Vela's sealed content remains plaintext in the demonstration according to the owner's declaration; a real deployment requires encryption at rest and third-party key custody.
 
-> **La unidad no es el agente. La unidad es la operación.**
+### Evidence you can open
 
-**Por qué.** Lore permite que cualquiera use IA y obtenga buenos resultados en cualquier tarea, sin tener que saber de antemano cómo dirigir cada parte difícil. Vespi da al trabajo una autoridad otorgada por una persona, un recibo que cualquiera puede comprobar y una operación que otro agente puede retomar mañana.
+[The evidence file](./docs/testnet-evidence.json) records 50 successful testnet transactions read back from Horizon, with 5 cases semantically verified and 45 partially verified, and 0 discrepancies. Expectations come from local execution records rather than Horizon; partial checks do not fill in missing facts. [The evidence guide](./docs/TESTNET_EVIDENCE.md) owns the transaction links, field coverage and historical payment details, including the older adapter's saved x402 receipt. That history does not validate the new bridge. Check file shape offline with `node scripts/verify-testnet-evidence.mjs --offline`; the guide also provides a comparison against saved responses and an optional network refresh.
 
-## Para quién es
+### The functional projects
 
-Úsalo para redactar, desarrollar software, hacer diseño gráfico, publicar o crear con IA el resultado que necesites. El kernel puede supervisar efectos con IA o sin ella, y con blockchain o sin ella. Este repositorio es JavaScript sin dependencias y no llama a ninguna red. Stellar y x402 son una capacidad integrada en la demo, no el foco del kernel.
+The projects explore uses of bounded authority and receipts with fictional data. [Queen](https://github.com/andresanemic/queen) explores marketing budgets and paid services; [Permamuseum](https://github.com/andresanemic/permamuseum) cultural heritage and provenance; [Casa Firme](https://github.com/andresanemic/casa-firme) housing committees and donation records; [Ficha Contigo](https://github.com/andresanemic/ficha-contigo) patient-granted clinical access; [Cátedra](https://github.com/andresanemic/catedra) declared AI use and academic credentials; [Escribano](https://github.com/andresanemic/escribano) governance records; [Llavero](https://github.com/andresanemic/llavero) data permissions; [Farolero](https://github.com/andresanemic/farolero) delegated authority; [Marea](https://github.com/andresanemic/marea) climate commitments; and [Vela](https://github.com/andresanemic/vela) protected sources. [TEMIS](https://github.com/andresanemic/temis) supplies the bilateral-agreement run records used in the testnet evidence. These are evidence candidates for Vespi, not separate claims of institutional adoption, production readiness or integration with this new kernel.
 
-**Si estás evaluando Find Your Way o Meridian, empieza aquí.**
+The repositories remain public and currently contain README files only, according to the owner's access schedule. Code is scheduled to enter the main branch by a push on 12 October 2026 at 20:29 Chile time and to be removed from that branch by another push on 16 October at 19:31. The margin is 30 minutes around deliberation, from 12 October at 20:59 to 16 October at 19:01. Removing code with a new commit does not erase it from Git history, and an obtained copy cannot be withdrawn. Project suites cannot be reproduced from README-only repositories today; this kernel suite does not replace them.
 
-1. **Qué es.** Una idea, en [En un minuto](#en-un-minuto): la unidad es la operación, no el agente.
-2. **Qué hay en Stellar.** Un pago x402 en vivo de 0,01 USDC [confirmado en Horizon](https://horizon-testnet.stellar.org/transactions/abb968e86d8997f6f555c4efe50dd5a70671dc5064b8220a7f2ea221de7650d5), recibos que se pueden anclar en Stellar y [50 transacciones exitosas en testnet](./docs/TESTNET_EVIDENCE.md). El detalle está en *Evidencia que puedes abrir*.
-3. **Compruébalo tú.** Sigue la [guía de verificación para jueces](./docs/FOR_JUDGES.md) para ver los comandos exactos, la salida esperada, el archivo del recibo y las comprobaciones en Horizon. La suite del kernel corre sin red; consultar Horizon requiere conexión.
-4. **Mira lo que se construye encima.** Diez proyectos con datos ficticios, nueve con código y pruebas y uno como idea sin código, en *Los proyectos funcionales*.
-5. **Lo que no afirmamos.** Nada de mainnet, ni un segundo proveedor, ni listo para producción. Mira *Lo que todavía no hace, y lo que no está verificado*.
+### Lore Plugin and the build method
 
-## En un minuto
+[Lore Plugin](https://github.com/andresanemic/lore-plugin) supplies criterion and the coordinator workflow; Vespi supplies the authority and receipt semantics around an operation. The [method](./docs/METHOD.md) describes loops, test-first work, specifications, bounded delegation, blind reading and separate verification; it is a workflow for host tools, not a kernel that generates apps or images itself. Lore Plugin carries a pinned kernel, so this source snapshot does not update an installed kit automatically.
 
-Cuando trabajas con un agente, la sesión termina y la siguiente tiene que empezar. Lo que suele sobrevivir es un resumen, y un resumen no dice **quién permitió esto**, **cuánto**, **hasta cuándo**, **a quién** ni **si de verdad ocurrió**. Eso no son detalles de un resumen: son la operación.
+The prior agreement's why, what and how remain distinct: preserve your agency and avoid repeated decisions; keep bounded authority, a human gate and receipts; choose an implementation only where evidence supports it. The [verification record](./docs/VERIFICATION.md), [judge findings from the earlier cut](./docs/JUDGES_FINDINGS_0.1.4.md), [prior-art notes](./docs/PRIOR_ART.md) and [experiments](./experiments/) retain construction history. Model reviews independent of the builders are not an external security audit. The method credits [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar and the Lore/LUS work belong to the construction narrative, not proof that the whole product operates autonomously.
 
-Por eso Vespi parte de la operación. Lleva un objetivo y una autoridad que una persona le otorgó (con un reloj, un presupuesto y un destino). Desde `0.1.4`, retomar desde un recibo incierto con efecto ejercido exige la reconciliación de una persona antes de volver a seleccionar esa acción. La verificación sigue **separada**, y el recibo dice qué se cubrió y qué no. La [nota de versión](./docs/RELEASE_0.1.4_KERNEL.md) describe la puerta de continuidad, la clave de efecto estable, el plazo consultivo para delegaciones, el tope de intentos y el reloj inyectable.
+### What 0.1.4 does NOT bring and moves to 0.1.5
 
-## Cómo se ve en la práctica
+Spend-authority narrowing stays out because the base `grantSpend` constructor has an inherited-setter defect. The [release note](./docs/RELEASE_0.1.4_KERNEL.md#what-014-does-not-bring-and-moves-to-015) gives each reason for deferring x402 HX-09, HX-11, HX-12, HX-13, R2-05 and H11; provenance N07, N08, H12d and H13d; emergency H21; and bridge R2-11 and R2-12. The remaining `todo` cases document declared contract boundaries, including same-process function replacement and validator output limits, rather than all promising future fixes.
 
-Ante una tarea no trivial, el coordinador clasifica el encargo, define qué significa terminar, reúne evidencia, decide, actúa, verifica por observación aparte de quien construyó y reporta el resultado. El ciclo está en [docs/METHOD.md](./docs/METHOD.md); la operación conserva autoridad, recibos y continuidad.
+There is no durable emergency or payment store, autonomous cross-host runtime, scheduler, mainnet evidence, second payment provider, external security audit, regulatory certification or production readiness. In the working architecture, operation semantics remain `SUPPORTED`, autonomous operation `UNTESTED`, and the Final Vespi Gate `READY_FOR_MUSE_DISCOVERY` and `NOT_READY_FOR_IMPLEMENTATION`. Those labels describe candidates and limits, not runtime capabilities delivered to users.
 
-**Ejemplo ficticio.** Maya pide una pequeña app de reservas para la peluquería de su barrio, «La Esquina». Los nombres, horarios, precios y montos son inventados.
+### Author and license
 
-```text
-[COORDINADOR]
-Para este proyecto vamos a trabajar así:
-1. Redactar el acuerdo y definir la autoridad, el tope de dinero y la compuerta de publicación.
-2. Escribir un plan maestro y las especificaciones de reservas, cancelaciones y horarios.
-3. Definir las observaciones de aceptación y escribir las pruebas antes del código.
-4. Pedir a lectores ciegos que evalúen el flujo terminado sin ver cómo se construyó.
-5. Dar tareas acotadas a subagentes; cada uno entrega su artefacto y su recibo.
-6. Pedir a un verificador aparte que contraste el resultado con el acuerdo y la evidencia.
-
-Solo necesito tres decisiones tuyas: quién otorga la autoridad, cuál es el límite
-de dinero y si apruebas publicar. Te volveré a preguntar antes de publicar algo.
-
-[MAYA]
-Otorgo autoridad para un prototipo local, sin servicios pagados. No publiques
-hasta que apruebe la vista previa final.
-```
-
-El coordinador ayuda a redactar el acuerdo y la documentación, crear la app, preparar publicaciones para redes y generar imágenes con las herramientas disponibles en el host. Los ciclos, las comprobaciones y el trabajo delegado ocurren por detrás; Maya no necesita conocer su mecánica. La compuerta humana detiene la operación antes de publicar una entrada o la app.
-
-```text
-[COORDINADOR]
-El flujo de reservas y sus comprobaciones están listos. Aquí están la vista previa
-y las publicaciones propuestas. No se ha publicado nada. ¿Apruebas esta publicación exacta?
-
-[MAYA]
-Todavía no. Cambia el horario del martes y vuelve a mostrarme la vista previa.
-```
-
-**Qué existe hoy.** El kernel ya ofrece operaciones, autoridad otorgada, decisiones humanas, recibos, delegaciones acotadas y reanudación desde recibos; mira [docs/CAPABILITIES.md](./docs/CAPABILITIES.md). El ciclo del coordinador está documentado en [docs/METHOD.md](./docs/METHOD.md). El kit de Lore Plugin aporta el flujo del coordinador y las skills del host; las herramientas disponibles en el host producen la app, los textos y las imágenes. Este recorrido ficticio muestra su uso combinado, no un generador de apps o una función de imágenes incorporados al kernel.
-
-```text
-[DÍA SIGUIENTE]
-El coordinador lee los recibos y comprueba el último estado verificado. Con el kernel 0.1.4, comprueba si un efecto externo incierto se reconcilió antes de continuar esa acción. No vuelve a empezar desde un resumen.
-```
-
-Esto funciona cuando Claude Code, Codex u OpenCode tiene instaladas las skills de Lore Plugin, o cuando la skill independiente de Vespi esté disponible e instalada. La skill independiente aún no se publica. Si trabajas solo con el kernel, clona el repositorio y úsalo a tu manera.
-
-**Cómo se vio en una operación real.** La primera operación conjunta de Lore Plugin y Vespi construyó TEMIS, un registro de acuerdos bilaterales en testnet con datos ficticios. Un asesor independiente encontró cuatro vacíos de diseño; un trabajador implementó contra las pruebas; la verificación aparte encontró ocho más; un tercer agente reconstruyó el registro solo desde el historial público de Stellar. Mira *Evidencia que puedes abrir*.
-
-## Por qué Vespi, y no hacerlo uno mismo
-
-Escribir una app es la parte fácil. Lo que toma meses, y casi siempre se omite, es todo lo que rodea al trabajo: quién puede hacer qué, hasta cuándo y por cuánto; la prueba de lo que ocurrió; detenerse con honestidad cuando un resultado es incierto; retomar mañana donde quedaste; una decisión humana donde hace falta; y una verificación hecha por alguien que no hizo el trabajo. Vespi te da todo eso como un kernel probado, para que cada app no lo reinvente y para que la persona con la idea no tenga que ser experta en cómo se hace.
-
-| Necesitas | Lo que te da Vespi | Dónde vive |
-|---|---|---|
-| Permiso con límites | Una autorización con un activo, un tope, un destino y un vencimiento; un solo presupuesto que no se puede gastar dos veces; una autorización vencida se rechaza; se puede exigir a varias personas con nombre | `authority`: `{ asset, maxAmount, to, expiresAt }`, `signers`, `pausers` |
-| Prueba de lo que ocurrió | Un recibo con huella SHA-256, las comprobaciones que dieron verdadero y lo que no se cubrió, por nombre | `buildReceipt`, `verifyReceipt`, `notCovered` |
-| Detenciones honestas | Una tarea sin salida legítima vuelve bloqueada con su salida; retomar desde recibos exige reconciliación antes de seleccionar una acción incierta cuyo efecto se ejerció | `impossible`, `not_verified`, `resumeFromReceipts` |
-| Una persona donde hace falta | Una puerta que muestra el costo primero, nunca deja que el agente consienta por la persona y nombra la salida en cada rechazo | la puerta humana y sus cuatro gestos |
-| Un método guiado | El coordinador puede seguir ciclos, trabajar con pruebas primero, escribir especificaciones y planes maestros, usar lectores ciegos, delegar tareas acotadas y verificar aparte; el kernel registra la operación que rodea ese trabajo | [docs/METHOD.md](./docs/METHOD.md), kit Lore Plugin y skill Vespi |
-| Continuar mañana | Reanudar desde los recibos: el último estado verificado, la próxima acción y si debe intervenir una persona cuando un efecto incierto requiere reconciliación | `resumeFromReceipts(receipts, agreement)` |
-| Una verificación independiente | Quien verifica nunca es quien ejecuta; lectores ciegos juzgan sin ver cómo se hizo; un tercer agente sin acceso al código reconstruye el resultado | [`docs/METHOD.md`](./docs/METHOD.md), [`experiments/`](./experiments/) |
-| Prueba pública, si la quieres | Un anclaje en Stellar que solo cuenta cuando un verificador confirma el digest y la red | `anchorReceipt`: `pending` → `submitted` → `anchored` |
-
-**Cada función y capacidad del kernel, explicada en lenguaje claro y una por una: [`docs/CAPABILITIES.md`](./docs/CAPABILITIES.md).**
-
-## Instituciones y leyes chilenas
-
-**Pensado con las nuevas leyes de Chile en mente.** Vespi se diseñó pensando en la ley chilena de protección de datos personales (21.719) y la de interoperabilidad de fichas clínicas (21.668). Los permisos nombran quién puede actuar, sobre qué, hasta cuánto y hasta cuándo; los recibos llevan huellas y comprobaciones con nombre, no el contenido. Es intención de diseño, no cumplimiento legal: ninguna autoridad ni abogado lo certificó.
-
-**Por qué las instituciones pueden hacer pilotos.** Es una biblioteca Apache 2.0, sin dependencias ni servicio alojado, así que un piloto puede correr en el entorno de la propia institución. Los proyectos funcionales son pruebas de concepto de trabajo coordinado, no productos terminados.
-
-## Hacia dónde va
-
-**Origen y contexto.** Vespi nace de trabajo sobre criterio, continuidad y autoridad operativa, no de un protocolo de pagos; x402 sobre Stellar testnet fue la primera presión económica que expuso preguntas reales de autoridad. Find Your Way + Tellus es el contexto público actual y el [evento HackMeridian](https://meridian.stellar.org/event-details) un horizonte público. No se reclama propiedad, patrocinio, respaldo, alianza, financiamiento ni afiliación oficial.
-
-La meta es que Vespi, junto con Lore y Raven MCP, se convierta en el sistema operativo del ecosistema Stellar. También se evalúa un token de Vespi en Stellar; no se ha emitido nada y cualquier diseño tendría que responder a un problema económico que lo justifique.
-
-## Cómo usarlo hoy
-
-El kernel es JavaScript simple: lo importas y envuelves tu efecto. Para trabajar con IA, instala el kit de [Lore Plugin](https://github.com/andresanemic/lore-plugin) y usa su skill de Vespi. Lore Plugin v2.4.9 y el kernel v0.1.4 se publicaron el 2026-10-05. La skill independiente de Vespi no se publica por separado.
-
-## Vespi y Lore Plugin: un sistema operativo para trabajar con IA
-
-```
-  tú         dices lo que quieres, con tus palabras
-  ──────────────────────────────────────────────────────────────────────────
-  hosts      Claude Code · Codex · OpenCode          donde corre el agente
-  ──────────────────────────────────────────────────────────────────────────
-  Lore Plugin   el terreno: tu criterio (Lore), el enrutamiento que abre el
-                criterio correcto para cada tarea, el método del coordinador
-                y los hooks que mantienen honesta una sesión
-  ──────────────────────────────────────────────────────────────────────────
-  Vespi         el kernel: operaciones bajo autoridad otorgada, verificación
-                aparte de la ejecución, recibos, continuidad desde el último
-                estado verificado
-  ──────────────────────────────────────────────────────────────────────────
-  apps          lo que se construye encima: los proyectos funcionales de abajo
-```
-
-Tú dices qué quieres. El coordinador abre el criterio que lo gobierna, define cómo se verá terminado y te pide solo lo que te toca decidir: autoridad, dinero, publicar. Reparte tramos acotados de trabajo a otros modelos, cada uno con su pregunta, sus límites y un recibo, verifica aparte y escribe un checkpoint en el `FASES.md` del proyecto. La sesión siguiente retoma desde los recibos, no desde un resumen. Nunca necesitas saber que existe el kernel.
-
-Lore Plugin `2.4.9` trae el flujo al kit: un checkpoint por proyecto, tareas por rol con las herramientas que el host realmente expone y la economía de una operación declarada antes de correr. [LUS](https://github.com/andresanemic/lore-plugin/blob/main/docs/LUS_es.md) y Lore Plugin son la genealogía y el criterio de Vespi: Lore Plugin aporta el terreno durable que una operación necesita y Vespi opera dentro de esos límites, sin un segundo camino para aprender o escribir.
-
-## Qué trae 0.1.4
-
-La versión 0.1.4 agrega reconciliación antes de retomar un efecto ejercido con resultado incierto, una clave de idempotencia estable que se pasa a `perform`, plazos consultivos para delegaciones, topes de intentos por acción y un reloj inyectable para vencimientos y recibos. La [nota de versión](./docs/RELEASE_0.1.4_KERNEL.md) describe estos cambios y sus límites. La [nota de 0.1.3](./docs/RELEASE_0.1.3_KERNEL.md) queda como registro histórico.
-
-## Evidencia que puedes abrir
-
-Publicado como [`v0.1.4-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.4-kernel) el 2026-10-05 (anterior: [`v0.1.3-kernel`](https://github.com/andresanemic/vespi/releases/tag/v0.1.3-kernel)). La [nota de versión 0.1.4](./docs/RELEASE_0.1.4_KERNEL.md) describe los cambios y sus límites. La nota de 0.1.3 queda como registro histórico. La suite completa del kernel está registrada en [`docs/JUDGE_PACKAGE.json`](./docs/JUDGE_PACKAGE.json).
-
-El registro más nuevo es la evidencia en la testnet de Stellar de más abajo. Los primeros experimentos que formaron el kernel (RUN 01 a 05) están en [`experiments/`](./experiments/), con sus lecturas ciegas y los informes del verificador; el RUN 05 está **cerrado** dentro de su alcance local y sin red declarado. Fueron las primeras pruebas, no lo último que se hizo.
-
-**Un pago x402 en vivo en Stellar testnet está verificado para esta versión.** El 2026-10-02 el adaptador reparado pagó 0,01 USDC a través del facilitador real, el recibo volvió `verified` y Horizon confirmó la transacción por separado (`abb968e8…`, ledger 4988161). Es una de las 50 transacciones de abajo, en testnet, y su recibo todavía lista `external anchor` en `notCovered`: sin mainnet, sin un segundo proveedor, sin la corrida de otra persona. El ejemplo pagado vive en [`demo/x402/`](./demo/x402/), el único lugar que conoce x402, Stellar o USDC.
-
-El recibo del pago está en [`demo/x402/receipts/live-testnet-2026-10-02.json`](./demo/x402/receipts/live-testnet-2026-10-02.json). Registra `verified: true`, `anchor.status: pending` y `external anchor` dentro de `notCovered`. El contrato del activo USDC de testnet es `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`; el adaptador comprueba el emisor `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` en `demo/x402/run.js`.
-
-**No fue una sola transacción.** Entre el 2026-10-02 y el 2026-10-03 el trabajo alrededor de Vespi escribió **50 transacciones exitosas en testnet** desde 8 cuentas en la testnet de Stellar (ledgers 4987795 a 4996153), con datos de fantasía y sin dinero real. Cada hash está en [docs/TESTNET_EVIDENCE.md](./docs/TESTNET_EVIDENCE.md) y en un [archivo legible por máquina](./docs/testnet-evidence.json), y `node scripts/verify-testnet-evidence.mjs` le pregunta a Horizon por cada una (50 de 50 estaban exitosas al escribir esto).
-
-| Qué se ejerció en Stellar | Transacciones | Qué muestra |
-|---|---|---|
-| Ciclo completo de un acuerdo de TEMIS (alta, firma y contrafirma, anclaje, hito, impugnación, corrección, disputa), corrido dos veces | 38 | Compromisos escritos como transacciones ordenadas por ledger, con su digest en un memo de hash. Un tercer agente sin acceso al código reconstruyó el registro solo desde el historial de Horizon: coincidieron 22 de 22 estatus y encontró un defecto que ninguna prueba había visto. |
-| Anclajes concurrentes, dos procesos, tres rondas | 6 | Dos escritores compitiendo desde una cuenta: el que pierde reintenta y el orden por (ledger, índice) sigue siendo determinista. |
-| Prueba de tipo de operación: un pago clásico y una transferencia del contrato de activo de Soroban | 2 | Ambas emiten el mismo evento `transfer`, así que un evento solo no prueba cómo se hizo el pago. |
-| Pago x402 idempotente | 1 | Una llamada, un abono real, y una entrega reintentada no se cobró dos veces. |
-| Corridas de pago x402 a través del facilitador real | 3 | La primera volvió `not_verified` por un error nuestro (leíamos el campo equivocado); el adaptador reparado verificó, y Horizon lo confirmó por separado. |
-
-Otros dos hallazgos salieron de testnet sin una transacción: el facilitador rechaza en `/verify` una `payTo` de cuenta multiplexada (`invalid_exact_stellar_payload_event_wrong_to`), y un payload ya liquidado se rechaza cuando se reenvía a `/settle`. Lo que esto ejerce en Stellar: pagos clásicos, anclaje con memo de hash, una transferencia del contrato de activo de Soroban, el esquema `exact` de x402 a través del facilitador real, escritores concurrentes y lectura de vuelta desde Horizon. Todo es testnet, con un facilitador y un pagador. Stellar reinicia la testnet unas veces al año, así que los recibos de este repositorio son el registro duradero.
-
-Una segunda capacidad vive fuera del kernel: [`capabilities/respaldo/`](./capabilities/respaldo/LEEME.md) copia el árbol de trabajo de una persona a una carpeta que Drive, Dropbox o OneDrive ya sincronizan, nunca borra y verifica cada hash. Todavía no cifra, no sube por APIs ni guarda versiones. 17 pruebas.
-
-## Los proyectos funcionales
-
-Vespi es un kernel, no una aplicación. Lo que demuestra que funciona es lo que se construye encima: diez proyectos, cada uno con **su propio acuerdo escrito antes de su código**, sobre **datos ficcionados**. Su estado se leyó el **2026-10-02** corriendo la suite propia de cada proyecto contra el kernel instalado entonces (`0.1.3`). Nueve tienen código y pruebas; Permamuseum es una nota de estudio sin código.
-
-Los registros de los proyectos explican el porqué, el cómo y el qué: cómo funciona cada uno, quién participa y con qué derechos, y qué evidencia tiene. Falta confirmar el enlace al repositorio de Escribano. Durante el periodo de revisión de los jueces de Find Your Way, está previsto abrir el código con una licencia de solo revisión; el borrador sigue pendiente de revisión legal. La idea es mostrar cómo funciona Vespi, no solo contarlo.
-
-| # | Proyecto | Qué es | Estado hoy | Su suite hoy |
-|---|---|---|---|---|
-| 1 | [**Queen**](https://github.com/andresanemic/queen) | La agencia de marketing del ecosistema Stellar: presupuesta dentro del techo que se le otorgó y cobra con una capa x402 **simulada**. | Acuerdo + código + pruebas | 42 / 45 |
-| 2 | [**Permamuseum**](https://github.com/andresanemic/permamuseum) | Patrimonio cultural latinoamericano en Stellar, con procedencia y permisos. | Idea: una nota de estudio, sin código | — |
-| 3 | [**Casa Firme**](https://github.com/andresanemic/casa-firme) | Vivienda para asentamientos informales: la autoridad nace en la asamblea del comité; cada donación deja rastro. | Acuerdo + código + pruebas | 21 / 24 |
-| 4 | [**Ficha Contigo**](https://github.com/andresanemic/ficha-contigo) | La ficha clínica: la institución usa solo lo que el paciente otorgó; el acceso de emergencia se otorga de antemano. | Acuerdo + código + pruebas | 7 / 13 |
-| 5 | [**Cátedra**](https://github.com/andresanemic/catedra) | La universidad: uso declarado de IA, notas firmadas por el profesor, títulos como credenciales verificables. | Acuerdo + código + pruebas | 34 / 35 |
-| 6 | [**Escribano**](https://github.com/andresanemic/escribano) | Una DAO con registro legal de cada cambio de su contrato (Wyoming W.S. 17-31). | Acuerdo + código + pruebas; falta confirmar el enlace al repositorio público | 8 / 13 |
-| 7 | [**Llavero**](https://github.com/andresanemic/llavero) | «Mis datos»: quién los pide, para qué, bajo qué permiso y qué se rechazó. | Acuerdo + código + pruebas | 8 / 14 |
-| 8 | [**Farolero**](https://github.com/andresanemic/farolero) | Autoridad para agentes sin código: delegar solo estrecha; lo que no cabe vuelve bloqueado. | Acuerdo + código + pruebas | 8 / 13 |
-| 9 | [**Marea**](https://github.com/andresanemic/marea) | Verificar compromisos climáticos entre países (Acuerdo de París art. 6.2) sin contar una reducción dos veces. | Acuerdo + código + pruebas | 25 / 25 |
-| 10 | [**Vela**](https://github.com/andresanemic/vela) | Proteger a quien dice la verdad por un canal legal; la prueba de conocimiento cero de pertenencia está pendiente. | Acuerdo + código + pruebas | 10 / 11 |
-| — | [**TEMIS**](https://github.com/andresanemic/temis) | Validación legal de acuerdos bilaterales por hitos: firmados, contrafirmados y anclados para que un tercero reconstruya lo ocurrido. La primera operación real de Lore Plugin y Vespi como uno. | Whitepaper + MVP: pruebas 0 a 8 corridas en Stellar testnet con datos ficcionados (un ciclo completo corrido dos veces, 38 transacciones, más anclajes concurrentes y un pago x402 idempotente); falta el certificado de su dueño y la revisión jurídica | 135 / 135 |
-
-**Cómo leer la última columna.** Nueve de los diez se construyeron el 2026-09-29 contra el corte `54c20c7` del kernel y sus propios registros los dan en verde ahí; aquí no se volvió a correr. Cada uno fija por digest el kernel que consume y falla a propósito cuando el kernel se mueve. Sigue pendiente re-anclar esas copias de proyecto a `0.1.4`, igual que afirmar que los diez están listos: la evidencia muestra un camino que funciona, no un producto terminado.
-
-El enlace al repositorio de Escribano devolvió 404 durante la revisión simulada. La fila se conserva como evidencia de proyecto, pero aún no se confirmó un enlace público que funcione.
-
-## Cómo se construyó
-
-Una afirmación sin recibo no entra. Estas son las revisiones que formaron a Vespi:
-
-<details>
-<summary><b>Las revisiones y fuentes que formaron a Vespi</b></summary>
-
-- **Disciplina: cómo se verifica.** La prueba primero, otro verificando, ataques escritos como pruebas y una revisión de seguridad con el método de Anthropic que encontró un fallo real en nuestro propio kit y se corrigió con la prueba primero. Lo que es simulado hasta ahora (el superreview) y lo que viene está con sus límites en [`docs/VERIFICATION.md`](./docs/VERIFICATION.md).
-- **Raven y el ecosistema Stellar.** Raven, el MCP sobre el directorio de proyectos del ecosistema, estuvo activo durante toda la construcción: sin él no se habrían podido hacer x402 y Stellar, y el estudio que habilitó mostró que la pieza que faltaba era un kernel para coordinar los proyectos que existen, no otro proyecto de pagos.
-- **The Fable Method.** El ciclo del coordinador es la redacción propia de Vespi de [The Fable Method](https://github.com/Sahir619/fable-method), de Sahir619 (MIT), destilada para que no dependa de ninguna skill instalada: mira [`docs/METHOD.md`](./docs/METHOD.md).
-- **Arte previo.** [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) resume las comparaciones técnicas y sus límites.
-- **El informe de OpenAI.** [OpenAI — Hugging Face Incident, Technical Report](https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf): una operación se autoriza antes de actuar, una tarea sin salida legítima empuja a un agente al borde y la verificación tiene que vivir fuera del agente.
-- **Ultrareview.** [Su documentación](https://code.claude.com/docs/en/ultrareview) le dio a la puerta humana sus cuatro gestos.
-- **La mosca.** El [conectoma del cerebro de la mosca adulta de Eon Systems](https://github.com/eonsystemspbc/fly-brain) muestra conducta que sale de la estructura, por eso el kernel gobierna con estructura y no depende del modelo. Entra solo como relato: Vespi no es un cerebro y no aprende.
-- **Las skills.** La disciplina `writing-skills` de [Superpowers](https://github.com/obra/superpowers) (MIT) le dio al kernel su rojo primero; la procedencia de skills queda en cola para `0.1.4`.
-
-</details>
-
-Las revisiones que lanza la persona y no el agente (un ultrareview, una revisión de seguridad) entran a este repositorio con su corrida, informe o registro de sesión adjunto, o no entran.
-
-## La búsqueda en el ecosistema
-
-Buscamos para ofrecer algo nuevo y no repetir lo que otros proyectos ya hacen. Cada uno se leyó en su propio repositorio y se confirmó el **2026-09-28**; crédito, nunca menosprecio. [REAPP](https://github.com/mks044/reapp-poc) (mandatos firmados para pagos de agentes, aplicados en un registro Soroban) llegó a una forma cercana a este kernel desde el otro lado. El [Stellar AI Agent Kit](https://github.com/JoseCToscano/stellar-mcp) convierte cualquier contrato Soroban en un servidor MCP. Trustless Work, Soroban Governor, Teken, Trustful y Chaincerts ya cubren escrow, gobernanza, multifirma y credenciales; Vespi no los reconstruye, son sus capacidades. Lo que vimos: el ecosistema es rico en piezas y ninguna coordina una operación entre varias personas y organizaciones de principio a fin. Ahí está el hueco de Vespi; es una afirmación sobre un paisaje que se mueve, no una ley.
-
-## Lo que todavía no hace, y lo que no está verificado
-
-<details>
-<summary><b>Lo que no está construido o no está verificado</b></summary>
-
-- **Límites de `0.1.4`:** un recibo no es durable por sí solo, su digest prueba integridad y no autenticidad, y el destino externo debe respetar la clave de idempotencia para deduplicar efectos. Los plazos de delegación informan el estado cuando se consultan; no programan ni ejecutan trabajo. El kernel no ofrece runtime entre hosts, scheduler, almacenamiento durable, autenticación de identidad externa ni preparación para producción. El recorrido muestra una operación local verificada, no esas propiedades más amplias. Mira el [estudio de arte previo](./docs/PRIOR_ART.md) y la [nota de versión](./docs/RELEASE_0.1.4_KERNEL.md).
-- **El recibo no es durable por sí solo, y su huella prueba integridad, no autenticidad.** Quien llama al kernel decide dónde vive, y quien pueda reescribir los recibos puede recalcular el digest; la autenticidad es de quien los guarda y los entrega.
-- **No hay runtime entre hosts, scheduler, demonio, motor de migración ni gestor de cuotas.** La semántica de continuación está aquí; lo que despierta el proceso es del host.
-- **No verificado:** x402 en mainnet, con más de un proveedor o corrido por otra persona; preparación para producción, cumplimiento regulatorio o un protocolo estable.
-
-</details>
-
-**Términos.** Una **capability** es una acción disponible. Un **grant** es la autoridad para un efecto. Una **puerta humana** es la superficie que se consulta cuando la autoridad no basta; no es un sistema de firmas. Un **recibo** es el objeto estructurado que devuelve la operación, no persistencia durable automática.
-
-## Quickstart
-
-**Nivel 1, kernel, nada externo:**
-
-```bash
-git clone https://github.com/andresanemic/vespi.git
-cd vespi
-node --test "test/*.test.js"
-node scripts/verify-testnet-evidence.mjs   # vuelve a comprobar las 50 transacciones de testnet contra Horizon (necesita red)
-```
-
-Usa Node.js 24 o posterior, la versión declarada por la demo x402. El patrón de pruebas va entre comillas para que Node lo reciba igual en PowerShell, Command Prompt, macOS y Linux. El primer comando corre solo las pruebas del kernel y no necesita wallet ni red. El segundo consulta las transacciones en Horizon y necesita red. La [guía de verificación para jueces](./docs/FOR_JUDGES.md) explica qué salida esperar y enlaza el recibo y transacciones de ejemplo.
-
-**Nivel 2, demo x402 acotada en testnet:** mira [`demo/x402/README.md`](./demo/x402/README.md). La ruta pagada necesita una cuenta de testnet con fondos, una línea de confianza a USDC, un receptor, variables de entorno y acceso a red. Un pago en vivo en testnet está verificado; eso es todo lo que certifica.
-
-**¿Por qué publicarlo tan temprano?** Porque la historia es parte de la evidencia: lo que sobrevive, lo que falla, lo que cambia y lo que se rechaza queda a la vista mientras el proyecto todavía se está volviendo a sí mismo.
-
-## Autor
-
-**Andrés Peña Mellado**, Director de Arte Digital y Desarrollador Creativo que trabaja entre agentes de IA, Web3, diseño e investigación.
-
-[<img src="./assets/icons/v2/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="./assets/icons/v2/x-dark.svg"><img src="./assets/icons/v2/x.svg" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/v2/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/) &nbsp;&nbsp; <img src="./assets/icons/v2/discord.svg" width="28" alt="Discord">
+Andrés Peña Mellado, Digital Art Director & Creative Developer. [Telegram](https://t.me/andresanemic), [X](https://x.com/andresanemic), [LinkedIn](https://www.linkedin.com/in/andresanemic/). Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 ---
 
-[Génesis](./docs/GENESIS.md) · [Changelog](./CHANGELOG.md) · [Nota de la versión 0.1.4](./docs/RELEASE_0.1.4_KERNEL.md) · [Método del coordinador](./docs/METHOD.md) · [Experimentos](./experiments/) · [Última etiqueta v0.1.4-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.4-kernel) · [Licencia Apache 2.0](./LICENSE) · [NOTICE](./NOTICE)
+## Español
 
-</details>
+<a id="español"></a>
+
+### Empieza con una operación
+
+Corre el [recorrido local](./docs/WALKTHROUGH.md), responde al terminal con `Ada: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
+
+```sh
+node examples/walkthrough.js
+node --test "test/*.test.js"
+```
+
+[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. La suite del kernel informa 1173 pruebas, 1149 aprobadas, 0 fallidas y 24 `todo`; esos casos pendientes o de frontera no son pruebas aprobadas. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
+
+### Autoridad, puerta humana y recibos
+
+El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus requisitos; la operación comprueba autoridad antes de `perform`, consulta la puerta humana cuando corresponde y recibe una verificación separada. [Las pruebas de autoridad](./test/k2.test.js) cubren activo, techo, destino, vencimiento y aprobaciones con nombres distintos, pero los nombres de aprobación ordinaria son etiquetas y no firmas autenticadas, y los presupuestos de dinero no se acumulan entre operaciones. El host controla herramientas, identidades, reloj y almacenamiento.
+
+[Las pruebas de recibos](./test/k3.test.js) cubren el digest SHA-256, comprobaciones exitosas con nombre y omisiones, pero el digest demuestra integridad y no autenticidad, y cualquiera que reescriba el recibo puede recalcularlo. Un ancla externa exige confirmar por separado digest y red. D3: todo recibo nuevo estampa `stellar:testnet` en su ancla pendiente incluso para trabajo local; [receipt.js](./src/receipt.js) excluye el ancla del digest, y el valor predeterminado se parametriza en 0.1.5. Toda evidencia de cadena aquí es testnet, con datos ficticios y sin dinero real.
+
+[El catálogo de capacidades](./docs/CAPABILITIES.md) explica la API y las responsabilidades del host. [Respaldo](./capabilities/respaldo/LEEME.md), una capacidad fuera del kernel, copia el árbol de trabajo a una carpeta que puede observar un servicio de sincronización, como demuestran [sus pruebas](./test/respaldo.test.js), pero no cifra, no sube por API de servicios ni conserva versiones del respaldo.
+
+### Qué trae el 0.1.4
+
+[Las pruebas de continuidad](./test/v014.test.js) cubren reconciliación antes de repetir una acción ejercida incierta, una clave estable que recibe `perform`, topes de intentos y un reloj síncrono inyectado, pero la deduplicación en el destino, el tiempo confiable y despertar el proceso corresponden al host. Los plazos de delegación siguen siendo consultivos.
+
+[La nota del 0.1.3](./docs/RELEASE_0.1.3_KERNEL.md) anunció emergencia, conocimiento cero, procedencia de skills y x402 dentro del kernel. Todo entra al 0.1.4 con los límites de [la nota bilingüe](./docs/RELEASE_0.1.4_KERNEL.md). [Las pruebas de emergencia](./test/k1-emergencia-r6-advisor.test.js) cubren autoridad anticipada y revisión con principales opacos del host, pero el kernel no autentica personas reales, no persiste el registro, no ejecuta ni verifica el efecto y no aporta tiempo confiable; D4 cuenta usos y deja el techo en dinero al proyecto. [Las pruebas de procedencia](./test/k2-procedencia-r5-advisor.test.js) cubren evidencia propia del resolver y datos hostiles, incluidos datos en prototipos contaminados, pero no sustitución de funciones integradas por código del mismo proceso; `provenanceSource` distingue evidencia verificada de declarada y el nombre de la skill sigue declarado.
+
+[Las pruebas x402](./test/k4-x402-r3-advisor.test.js) ejercitan el contrato de efecto pagado por puertos inyectados con `claims` obligatorio y síncrono e identidad de operación en la clave del efecto, pero el almacén en memoria no es durable, las reservas no se liberan y el kernel no recalcula el digest del cuerpo que declara el validador. [Las pruebas del puente con SDK](./demo/x402/bridge.test.mjs) ejercitan objetos reales del SDK en loopback según el informe del constructor, pero el puente no tiene revisión final independiente, pago en vivo verificado ni prueba del camino real Soroban RPC para el payload. [El ejemplo mínimo](./examples/x402-app.js) usa puertos simulados.
+
+[Las pruebas ZK](./test/k3b-zk-port.test.js) cubren clave fijada y entradas públicas acordadas, pero confían en el backend inyectado. La [referencia interna BN254 con Groth16](./src/zk-bn254-reference.js) tiene [evidencia de fixtures y aritmética](./test/fixtures/zk/independent-report.md), pero las pruebas son maleables, una clave degenerada acepta falsificaciones, un timeout con Promise no puede interrumpir la verificación síncrona y no hay auditoría externa ni preparación para producción. Estos módulos no demuestran integración con Casa Firme o Vela. D5: el contenido sellado de Vela queda en claro en la demostración según la declaración del dueño; un despliegue real exige cifrado en reposo y custodia de claves de un tercero.
+
+### Evidencia que puedes abrir
+
+[El archivo de evidencia](./docs/testnet-evidence.json) registra 50 transacciones exitosas en testnet leídas de Horizon, con 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias. Las expectativas vienen de registros locales de ejecución y no de Horizon; las comprobaciones parciales no completan hechos ausentes. [La guía de evidencia](./docs/TESTNET_EVIDENCE.md) contiene los enlaces de transacciones, la cobertura por campos y los detalles de pagos históricos, incluido el recibo x402 del adaptador anterior. Esa historia no valida el puente nuevo. Comprueba la forma del archivo sin red con `node scripts/verify-testnet-evidence.mjs --offline`; la guía también permite comparar respuestas guardadas y volver a consultar la red de forma opcional.
+
+### Los proyectos funcionales
+
+Los proyectos exploran usos de autoridad acotada y recibos con datos ficticios. [Queen](https://github.com/andresanemic/queen) explora presupuestos de marketing y servicios pagados; [Permamuseum](https://github.com/andresanemic/permamuseum), patrimonio cultural y procedencia; [Casa Firme](https://github.com/andresanemic/casa-firme), comités de vivienda y registros de donaciones; [Ficha Contigo](https://github.com/andresanemic/ficha-contigo), acceso clínico otorgado por pacientes; [Cátedra](https://github.com/andresanemic/catedra), uso declarado de IA y credenciales académicas; [Escribano](https://github.com/andresanemic/escribano), registros de gobernanza; [Llavero](https://github.com/andresanemic/llavero), permisos de datos; [Farolero](https://github.com/andresanemic/farolero), autoridad delegada; [Marea](https://github.com/andresanemic/marea), compromisos climáticos; y [Vela](https://github.com/andresanemic/vela), fuentes protegidas. [TEMIS](https://github.com/andresanemic/temis) aporta los registros de acuerdos bilaterales usados en la evidencia de testnet. Son candidatas de evidencia para Vespi, no afirmaciones separadas de adopción institucional, preparación para producción ni integración con este kernel nuevo.
+
+Los repositorios son siempre públicos y hoy contienen solo README, según el calendario de acceso del dueño. El código entra por un push a la rama principal el 12 de octubre de 2026 a las 20:29, hora de Chile, y se retira de esa rama por otro push el 16 de octubre a las 19:31. El margen es de 30 minutos alrededor de la deliberación, del 12 de octubre a las 20:59 al 16 de octubre a las 19:01. Retirar el código con un commit nuevo no lo borra del historial de Git, y una copia que ya obtuviste no se puede retirar. Hoy no puedes reproducir las suites de los proyectos desde repositorios que solo contienen README; la suite de este kernel no las reemplaza.
+
+### Lore Plugin y el método de construcción
+
+[Lore Plugin](https://github.com/andresanemic/lore-plugin) aporta el criterio y el flujo del coordinador; Vespi aporta la semántica de autoridad y recibos alrededor de una operación. [El método](./docs/METHOD.md) describe ciclos, pruebas primero, especificaciones, delegación acotada, lectura ciega y verificación separada; es un flujo de trabajo para herramientas del host, no un kernel que genere apps o imágenes por sí solo. Lore Plugin lleva una copia fija del kernel, por lo que este corte de código no actualiza automáticamente un kit instalado.
+
+El eje porqué/qué/cómo del acuerdo previo conserva sus partes: cuidar tu agencia y evitar decisiones repetidas; mantener autoridad acotada, puerta humana y recibos; elegir una implementación solo donde la evidencia la sostenga. [El registro de verificación](./docs/VERIFICATION.md), [los hallazgos de jueces del corte anterior](./docs/JUDGES_FINDINGS_0.1.4.md), [las notas de arte previo](./docs/PRIOR_ART.md) y [los experimentos](./experiments/) conservan la historia de construcción. Las revisiones por modelos independientes de sus constructores no son una auditoría de seguridad externa. El método acredita [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar y el trabajo de Lore/LUS pertenecen al relato de construcción, no prueban que el producto completo opere de forma autónoma.
+
+### Qué NO trae el 0.1.4 y pasa al 0.1.5
+
+El comparador de reducción de autoridad de gasto queda fuera por un defecto de setters heredados en el constructor base `grantSpend`. [La nota de versión](./docs/RELEASE_0.1.4_KERNEL.md#qué-no-trae-el-014-y-pasa-al-015) da el motivo de cada punto diferido: x402 HX-09, HX-11, HX-12, HX-13, R2-05 y H11; procedencia N07, N08, H12d y H13d; emergencia H21; puente R2-11 y R2-12. Los demás `todo` documentan fronteras declaradas del contrato, como sustitución de funciones dentro del proceso y límites de la salida del validador, sin prometer un arreglo futuro para todas ellas.
+
+No hay almacén durable de emergencia ni de pagos, runtime autónomo entre hosts, planificador, evidencia de mainnet, segundo proveedor de pagos, auditoría de seguridad externa, certificación regulatoria ni preparación para producción. En la arquitectura de trabajo, la semántica de operación sigue `SUPPORTED`, la operación autónoma `UNTESTED` y el Final Vespi Gate `READY_FOR_MUSE_DISCOVERY` y `NOT_READY_FOR_IMPLEMENTATION`. Esas etiquetas describen candidatas y límites, no capacidades de runtime entregadas a usuarios.
+
+### Autor y licencia
+
+Andrés Peña Mellado, Digital Art Director & Creative Developer. [Telegram](https://t.me/andresanemic), [X](https://x.com/andresanemic), [LinkedIn](https://www.linkedin.com/in/andresanemic/). Licencia del kernel: [Apache-2.0](./LICENSE), con atribución en [NOTICE](./NOTICE).
