@@ -6,7 +6,21 @@ import { spawnSync } from 'node:child_process';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = path.join(ROOT, 'docs', 'JUDGE_PACKAGE.json');
-const DIRECTORIES = ['src', 'docs', 'demo', 'scripts'];
+const DIRECTORIES = ['src'];
+const ROOT_FILES = ['README.md', 'CHANGELOG.md', 'package.json', 'LICENSE', 'NOTICE'];
+const PUBLIC_DEMO_FILES = ['demo/x402'];
+const PUBLIC_DEMO_EXTENSIONS = new Set(['.js', '.mjs']);
+const PUBLIC_DOCS = [
+  'docs/GENESIS.md',
+  'docs/RELEASE_0.1.5_KERNEL.md',
+  'docs/SUITE_RESULT_0.1.5.txt',
+];
+const PUBLIC_BENCH = ['bench/unidad-operacion.test.mjs'];
+const EXCLUDED_PATHS = [
+  '**/node_modules/**', '**/.git/**', '**/.job/**', '**/.env*', '**/*auth.json',
+  '**/*.db', '**/*.db-shm', '**/*.db-wal', '**/snapshot/**',
+  'test/**', 'scripts/**', 'docs/** except the three listed public release files',
+];
 const PROJECT_REPOSITORIES = [
   { name: 'Queen', url: 'https://github.com/andresanemic/queen', status: 'public project repository; code and tests listed in the kernel README' },
   { name: 'Casa Firme', url: 'https://github.com/andresanemic/casa-firme', status: 'public project repository; code and tests listed in the kernel README' },
@@ -49,9 +63,24 @@ async function listFiles(directory, base = directory) {
 }
 
 async function fileHashes() {
-  const files = (await Promise.all(DIRECTORIES.map((dir) => listFiles(path.join(ROOT, dir)))))
-    .flat()
-    .sort();
+  const demoFiles = [];
+  for (const dir of PUBLIC_DEMO_FILES) {
+    const entries = await readdir(path.join(ROOT, dir), { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      if (['README.md', 'package.json', 'package-lock.json'].includes(entry.name)
+        || PUBLIC_DEMO_EXTENSIONS.has(path.extname(entry.name))) {
+        demoFiles.push(`${dir}/${entry.name}`);
+      }
+    }
+  }
+  const files = [
+    ...ROOT_FILES,
+    ...(await Promise.all(DIRECTORIES.map((dir) => listFiles(path.join(ROOT, dir))))).flat(),
+    ...demoFiles,
+    ...PUBLIC_DOCS,
+    ...PUBLIC_BENCH,
+  ].sort();
   const hashes = {};
   for (const relativePath of files) {
     if (relativePath === 'docs/JUDGE_PACKAGE.json') continue;
@@ -90,11 +119,12 @@ export async function buildPackage({ counts, commit = currentCommit() } = {}) {
     generatedBy: 'node scripts/judge-package.mjs',
     packageVersion: packageJson.version,
     gitCommit: commit,
+    sourceSnapshotNote: 'gitCommit identifies the repository baseline; fileHashes bind the exact files read from this working tree, including local changes.',
     fileHashes: hashes,
-    excludedPaths: ['**/node_modules/**', '**/.git/**'],
+    excludedPaths: EXCLUDED_PATHS,
     tests: { command: 'node --test test/*.test.js', ...counts },
     publicProjectRepositories: PROJECT_REPOSITORIES,
-    hashNote: 'Ordinary hashes use SHA-256 over exact bytes. Generated dependencies under node_modules and Git metadata under .git are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes["docs/JUDGE_PACKAGE.json"], to avoid a self-referential hash.',
+    hashNote: 'Hashes use SHA-256 over exact bytes and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, 0.1.5 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes["docs/JUDGE_PACKAGE.json"], to avoid a self-referential hash.',
   };
   const manifestSelfHash = sha256(`${JSON.stringify(payload, null, 2)}\n`);
   payload.fileHashes['docs/JUDGE_PACKAGE.json'] = manifestSelfHash;

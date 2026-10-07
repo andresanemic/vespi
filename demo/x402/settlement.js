@@ -203,7 +203,7 @@ function failure(reason, checks = {}, facts = {}) {
   return { verified: false, checks, facts, reason };
 }
 
-async function verifySettlement(evidence, options) {
+async function verifySettlementUnchecked(evidence, options) {
   const {
     horizon,
     payer,
@@ -370,6 +370,17 @@ async function verifySettlement(evidence, options) {
     facts: { ...facts, amountAtomic: actual.toString() },
     reason: 'settlement matches exact declared effect',
   };
+}
+
+// Horizon is external data, and a successful HTTP call can still resolve to a malformed SDK object.
+// Keep that shape boundary inside the same closed vocabulary as a rejected read; do not let a
+// TypeError containing response-controlled details escape into the paid operation's host.
+async function verifySettlement(evidence, options) {
+  try {
+    return await verifySettlementUnchecked(evidence, options);
+  } catch {
+    return failure('the settlement response could not be checked');
+  }
 }
 
 export { authDigestFromEnvelope, authEntriesDigest, toAtomic, verifyPreparedTransaction, verifySettlement };

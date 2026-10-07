@@ -1,8 +1,8 @@
 # Vespi
 
-Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation. Kernel `0.1.4`: candidate cut, publication date pending. This is tested operation semantics, with host-managed storage and execution, not demonstrated autonomous work across hosts.
+Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation. Kernel `0.1.4` was published on 2026-10-05; `0.1.5` is a candidate cut with publication date pending. This is tested operation semantics, with host-managed storage and execution, not demonstrated autonomous work across hosts.
 
-Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo. Kernel `0.1.4`: corte candidato, fecha de publicación pendiente. Es semántica de operación probada, con almacenamiento y ejecución a cargo del host, no trabajo autónomo demostrado entre hosts.
+Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo. El kernel `0.1.4` se publicó el 2026-10-05; `0.1.5` es un corte candidato, con fecha de publicación pendiente. Es semántica de operación probada, con almacenamiento y ejecución a cargo del host, no trabajo autónomo demostrado entre hosts.
 
 [![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
 
@@ -19,7 +19,7 @@ node examples/walkthrough.js
 node --test "test/*.test.js"
 ```
 
-The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The [saved suite result](./docs/SUITE_RESULT.txt) records the command, exact counts, Node version and parent commit for this cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
+The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The [saved suite result](./docs/SUITE_RESULT_0.1.5.txt) records the command, exact counts, Node version and Git baseline for this candidate. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
 
 ### What this looks like for a person
 
@@ -73,11 +73,17 @@ This is why the goal is to return time and agency rather than fill every recover
 
 The kernel is JavaScript without runtime dependencies. A capability declares its requirements; the operation checks authority before `perform`, asks the human gate when required and obtains a separate verification result. [Authority tests](./test/k2.test.js) cover asset, ceiling, destination, expiry and distinct named approvals, but ordinary approval names are labels rather than authenticated signatures and money budgets are not accumulated across operations. The host controls its tools, identities, clock and storage.
 
-[Receipt tests](./test/k3.test.js) cover the SHA-256 digest, named successful checks and omissions, but the digest proves integrity rather than authenticity and can be recomputed by anyone who rewrites the receipt. An external anchor requires a separate confirmation of digest and network. D3: newly built receipts stamp `stellar:testnet` in their pending anchor even for local work; [receipt.js](./src/receipt.js) excludes that anchor from the digest, and the default becomes configurable in 0.1.5. All chain evidence here is testnet, on fictional data and with no real money.
+[Receipt tests](./test/k3.test.js) cover the SHA-256 digest, named successful checks and omissions, but the digest proves integrity rather than authenticity and can be recomputed by anyone who rewrites the receipt. An external anchor requires a separate confirmation of digest and network. D3: `buildReceipt({ anchorNetwork })` accepts `stellar:testnet` (the unchanged default) or `stellar:pubnet`; unsupported networks throw. The pending anchor still proves no network interaction, and its network stays outside the receipt digest. All chain evidence here is testnet, on fictional data and with no real money.
 
 The [capability catalog](./docs/CAPABILITIES.md) explains the API and host responsibilities. [Respaldo](./capabilities/respaldo/LEEME.md), a capability outside the kernel, copies a working tree into a folder that a sync service can watch, as [its tests](./test/respaldo.test.js) demonstrate, but does not encrypt, upload through service APIs or keep backup versions.
 
-### What 0.1.4 brings
+### What 0.1.5 changes
+
+`buildReceipt({ anchorNetwork })` keeps `stellar:testnet` as its default and accepts `stellar:pubnet` when a pending anchor should name that network. Unsupported values throw. The network remains outside the body digest; selecting it does not submit an anchor.
+
+The reference x402 bridge is an opt-in example under [`demo/x402/`](./demo/x402/), available only through `--bridge=1`. It admits one payer authorization for its declared transfer and verifies settlement through the Stellar SDK against the declared network, recipient and amount. Its tests use real SDK objects and local fixtures; they do not make a live testnet payment. The bridge does not change the kernel API under `src/`.
+
+### What 0.1.4 added (historical)
 
 The [continuation tests](./test/v014.test.js) cover reconciliation before repeating an uncertain exercised action, a stable key passed to `perform`, attempt limits and an injected synchronous clock, but destination deduplication, trustworthy time and waking the process belong to the host. Delegation deadlines remain consultative.
 
@@ -144,7 +150,7 @@ node examples/walkthrough.js
 node --test "test/*.test.js"
 ```
 
-[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El resultado guardado de la suite](./docs/SUITE_RESULT.txt) registra el comando, los conteos exactos, la versión de Node y el commit padre de este corte. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
+[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.5.txt) registra el comando, los conteos exactos, la versión de Node y la base Git de esta candidata. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
 
 ### Cómo se ve para una persona
 
@@ -198,11 +204,17 @@ Por eso la meta es devolverte tiempo y agencia, en vez de llenar cada minuto rec
 
 El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus requisitos; la operación comprueba autoridad antes de `perform`, consulta la puerta humana cuando corresponde y recibe una verificación separada. [Las pruebas de autoridad](./test/k2.test.js) cubren activo, techo, destino, vencimiento y aprobaciones con nombres distintos, pero los nombres de aprobación ordinaria son etiquetas y no firmas autenticadas, y los presupuestos de dinero no se acumulan entre operaciones. El host controla herramientas, identidades, reloj y almacenamiento.
 
-[Las pruebas de recibos](./test/k3.test.js) cubren el digest SHA-256, comprobaciones exitosas con nombre y omisiones, pero el digest demuestra integridad y no autenticidad, y cualquiera que reescriba el recibo puede recalcularlo. Un ancla externa exige confirmar por separado digest y red. D3: todo recibo nuevo estampa `stellar:testnet` en su ancla pendiente incluso para trabajo local; [receipt.js](./src/receipt.js) excluye el ancla del digest, y el valor predeterminado se parametriza en 0.1.5. Toda evidencia de cadena aquí es testnet, con datos ficticios y sin dinero real.
+[Las pruebas de recibos](./test/k3.test.js) cubren el digest SHA-256, comprobaciones exitosas con nombre y omisiones, pero el digest demuestra integridad y no autenticidad, y cualquiera que reescriba el recibo puede recalcularlo. Un ancla externa exige confirmar por separado digest y red. D3: `buildReceipt({ anchorNetwork })` acepta `stellar:testnet` (el valor por defecto, sin cambio) o `stellar:pubnet`; una red no admitida produce un error. El ancla pendiente no prueba interacción con una red y su network no entra al digest del recibo. Toda evidencia de cadena aquí es testnet, con datos ficticios y sin dinero real.
 
 [El catálogo de capacidades](./docs/CAPABILITIES.md) explica la API y las responsabilidades del host. [Respaldo](./capabilities/respaldo/LEEME.md), una capacidad fuera del kernel, copia el árbol de trabajo a una carpeta que puede observar un servicio de sincronización, como demuestran [sus pruebas](./test/respaldo.test.js), pero no cifra, no sube por API de servicios ni conserva versiones del respaldo.
 
-### Qué trae el 0.1.4
+### Qué cambia el 0.1.5
+
+`buildReceipt({ anchorNetwork })` mantiene `stellar:testnet` como valor por defecto y acepta `stellar:pubnet` cuando se quiere nombrar esa red en un ancla pendiente. Una red no admitida produce un error. La red sigue fuera del digest del cuerpo; elegirla no envía un ancla.
+
+El puente de referencia x402 es un ejemplo opt-in en [`demo/x402/`](./demo/x402/), disponible solo con `--bridge=1`. Admite una autorización de pagador para la transferencia declarada y verifica la liquidación con el SDK de Stellar contra la red, destinatario y monto declarados. Sus pruebas usan objetos reales del SDK y fixtures locales; no hacen un pago vivo en testnet. El puente no cambia la API del kernel en `src/`.
+
+### Qué aportó el 0.1.4 (histórico)
 
 [Las pruebas de continuidad](./test/v014.test.js) cubren reconciliación antes de repetir una acción ejercida incierta, una clave estable que recibe `perform`, topes de intentos y un reloj síncrono inyectado, pero la deduplicación en el destino, el tiempo confiable y despertar el proceso corresponden al host. Los plazos de delegación siguen siendo consultivos.
 

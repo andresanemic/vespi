@@ -1653,7 +1653,7 @@ test('K4-I3 the kernel package gains no dependency and no export surface', () =>
   assert.equal(manifest.private, true);
   assert.equal(manifest.dependencies, undefined);
   assert.equal(manifest.exports, undefined);
-  assert.equal(manifest.version, '0.1.4');
+  assert.equal(manifest.version, '0.1.5');
   const lockfile = path.join(DEMO, 'package-lock.json');
   assert.equal(fs.existsSync(lockfile), true, 'the demo lockfile is in place');
   assert.match(fs.readFileSync(lockfile, 'utf8'), /@stellar\/stellar-sdk/);

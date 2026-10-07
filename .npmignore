@@ -1,0 +1,11 @@
+.env*
+**/.env*
+.job/
+**/.job/**
+**/*auth.json
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/snapshot/**
+**/node_modules/**
+demo/x402/node_modules/

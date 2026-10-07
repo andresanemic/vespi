@@ -3,6 +3,8 @@
 
 > Historical origin and working theses. The current local implementation and support status are maintained in `README.md` and `CHANGELOG.md`.
 
+> Current kernel candidate: `0.1.5`; `0.1.4` was published on 2026-10-05. The approved D3 input is `buildReceipt({ anchorNetwork })`, defaulting to `stellar:testnet` and accepting `stellar:pubnet`; this names a pending anchor and does not submit one. Candidate status and limits remain in the current README and changelog sections.
+
 > **Vespi is being defined in public. This repository records not only what survives, but what gets rejected.**
 
 ## Why this repository exists

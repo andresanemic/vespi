@@ -1,6 +1,21 @@
 {
   "name": "vespi-kernel",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
-  "description": "Source checkout metadata for the Vespi kernel judge package"
+  "description": "Source checkout metadata for the Vespi kernel judge package",
+  "files": [
+    "src/",
+    "demo/x402/*.js",
+    "demo/x402/*.mjs",
+    "demo/x402/package.json",
+    "demo/x402/package-lock.json",
+    "bench/unidad-operacion.test.mjs",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "NOTICE",
+    "docs/GENESIS.md",
+    "docs/RELEASE_0.1.5_KERNEL.md",
+    "docs/SUITE_RESULT_0.1.5.txt"
+  ]
 }

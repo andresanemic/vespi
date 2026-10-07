@@ -28,6 +28,30 @@ test('K3.1 buildReceipt incluye digest SHA-256 hex y verifyReceipt lo acepta', (
   assert.equal(v.ok, true);
 });
 
+test('D3 buildReceipt accepts an explicit supported anchor network while retaining the testnet default', () => {
+  const fixedSpec = { ...baseSpec(), at: '2040-01-01T00:00:00.000Z' };
+  const defaultReceipt = receiptMod.buildReceipt(fixedSpec);
+  const publicNetworkReceipt = receiptMod.buildReceipt({ ...fixedSpec, anchorNetwork: 'stellar:pubnet' });
+
+  assert.equal(defaultReceipt.anchor.status, 'pending');
+  assert.equal(defaultReceipt.anchor.network, 'stellar:testnet');
+  assert.equal(defaultReceipt.digest, 'f0b02a2487a4fca245bf0eea5a306e9c09253626bdb309cbf795c3f2bfa85147');
+  assert.equal(publicNetworkReceipt.anchor.status, 'pending');
+  assert.equal(publicNetworkReceipt.anchor.network, 'stellar:pubnet');
+  assert.equal(receiptMod.verifyReceipt(publicNetworkReceipt).ok, true);
+  const failedAnchor = receiptMod.anchorReceipt(publicNetworkReceipt,
+    () => ({ network: 'stellar:future', txHash: 'tx' }));
+  assert.equal(failedAnchor.anchor.status, 'pending');
+  assert.equal(failedAnchor.anchor.network, 'stellar:pubnet');
+});
+
+test('D3 buildReceipt refuses an unsupported anchor network', () => {
+  assert.throws(() => receiptMod.buildReceipt({ ...baseSpec(), anchorNetwork: 'stellar:future' }), {
+    name: 'TypeError',
+    message: 'anchorNetwork must be stellar:testnet or stellar:pubnet',
+  });
+});
+
 test('K3.2 cualquier cambio en el recibo hace fallar verifyReceipt', () => {
   const r = receiptMod.buildReceipt(baseSpec());
   for (const mutate of [

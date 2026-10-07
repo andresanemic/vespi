@@ -1,6 +1,6 @@
 # Judge Vespi
 
-Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. An uncertain exercised effect returns to you for reconciliation, as [continuation tests](../test/v014.test.js) verify, but the host must store receipts and run the next action. Kernel `0.1.4`: candidate cut, publication date pending.
+Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. An uncertain exercised effect returns to you for reconciliation, as [continuation tests](../test/v014.test.js) verify, but the host must store receipts and run the next action. Kernel `0.1.5`: candidate cut, publication date pending.
 
 ## Run the local evidence
 
@@ -14,7 +14,7 @@ node scripts/verify-testnet-evidence.mjs --offline
 
 Answer the walkthrough's terminal prompt with `Ada: approve`. Inspect the receipt's `status`, `coverage` and `notCovered`, then the next action selected by another process. [The walkthrough test](../test/walkthrough.test.js) checks a local observed effect, but the receipt is passed explicitly to that process; this does not establish automatic transfer, durable storage or authenticated human identity. [The bilingual walkthrough](./WALKTHROUGH.md) explains the source and transcript.
 
-The [saved suite result](./SUITE_RESULT.txt) records the command and exact counts for this cut. The last command checks only shape and uniqueness of hashes, without comparing transaction facts or accessing a network. [The evidence guide](./TESTNET_EVIDENCE.md#recheck-the-saved-responses) gives the command for comparing saved responses with local expectations and an optional Horizon refresh. The saved comparison yields 50 readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies; the expected facts come from local execution records, not Horizon.
+The [saved suite result](./SUITE_RESULT_0.1.5.txt) records the command and exact counts for this candidate. The last command checks only shape and uniqueness of hashes, without comparing transaction facts or accessing a network. [The evidence guide](./TESTNET_EVIDENCE.md#recheck-the-saved-responses) gives the command for comparing saved responses with local expectations and an optional Horizon refresh. The saved comparison yields 50 readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies; the expected facts come from local execution records, not Horizon.
 
 To create a manifest for the exact checkout you are judging, run:
 
@@ -32,7 +32,7 @@ The [0.1.3 note](./RELEASE_0.1.3_KERNEL.md) announced emergency access, zero kno
 
 [ZK port tests](../test/k3b-zk-port.test.js) cover a pinned key and agreed public inputs, but trust an injected cryptographic backend. The internal [BN254 Groth16 reference](../src/zk-bn254-reference.js) has [reference tests](../test/k3d-zk-groth16.test.js), but is not a public API, is unaudited and is not production ready. Proofs are malleable, a degenerate key accepts forgeries and a Promise timeout cannot interrupt synchronous CPU verification. These tests do not demonstrate integration with Casa Firme or Vela.
 
-D3 stamps `stellar:testnet` in a newly built pending anchor, as [receipt.js](../src/receipt.js) shows, but does not affect the digest or prove a network submission; it becomes configurable in 0.1.5. D5 keeps Vela's sealed content plaintext in the demonstration according to the owner; a real deployment requires encryption at rest and third-party key custody.
+D3: `buildReceipt({ anchorNetwork })` accepts `stellar:testnet` by default or `stellar:pubnet`; another value throws. This names the network in a pending anchor, without affecting the digest or proving a network submission. D5 keeps Vela's sealed content plaintext in the demonstration according to the owner; a real deployment requires encryption at rest and third-party key custody.
 
 ## Historical evidence and project access
 
@@ -62,7 +62,7 @@ node scripts/verify-testnet-evidence.mjs --offline
 
 Responde al terminal con `Ada: approve`. Revisa `status`, `coverage` y `notCovered` del recibo, y la siguiente acción seleccionada por otro proceso. [La prueba del recorrido](../test/walkthrough.test.js) comprueba un efecto local observado, pero el recibo se pasa explícitamente a ese proceso; no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El recorrido bilingüe](./WALKTHROUGH.md) explica el código y la transcripción.
 
-El [resultado guardado de la suite](./SUITE_RESULT.txt) registra el comando y los conteos exactos de este corte. El último comando solo comprueba forma y unicidad de hashes, sin comparar hechos ni acceder a la red. [La guía de evidencia](./TESTNET_EVIDENCE.md#comparar-las-respuestas-guardadas) contiene el comando para comparar respuestas guardadas con expectativas locales y una consulta opcional a Horizon. La comparación guardada da 50 lecturas, 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias; los hechos esperados vienen de registros locales de ejecución, no de Horizon.
+El [resultado guardado de la suite](./SUITE_RESULT_0.1.5.txt) registra el comando y los conteos exactos de esta candidata. El último comando solo comprueba forma y unicidad de hashes, sin comparar hechos ni acceder a la red. [La guía de evidencia](./TESTNET_EVIDENCE.md#comparar-las-respuestas-guardadas) contiene el comando para comparar respuestas guardadas con expectativas locales y una consulta opcional a Horizon. La comparación guardada da 50 lecturas, 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias; los hechos esperados vienen de registros locales de ejecución, no de Horizon.
 
 Para crear un manifiesto de la copia exacta que revisas, ejecuta:
 
@@ -80,7 +80,7 @@ Esto corre la suite del kernel, calcula huellas de `src`, `docs`, `demo` y `scri
 
 [Las pruebas del puerto ZK](../test/k3b-zk-port.test.js) cubren clave fijada y entradas públicas acordadas, pero confían en el backend criptográfico inyectado. La [referencia interna BN254 con Groth16](../src/zk-bn254-reference.js) tiene [pruebas de referencia](../test/k3d-zk-groth16.test.js), pero no es API pública, no está auditada y no es apta para producción. Las pruebas son maleables, una clave degenerada acepta falsificaciones y un timeout con Promise no interrumpe la verificación con CPU síncrona. Estas pruebas no demuestran integración con Casa Firme o Vela.
 
-D3 estampa `stellar:testnet` en todo ancla pendiente nueva, como muestra [receipt.js](../src/receipt.js), pero no afecta el digest ni demuestra un envío a la red; se parametriza en 0.1.5. D5 mantiene en claro el contenido sellado de Vela en la demostración, según el dueño; un despliegue real requiere cifrado en reposo y custodia de claves de un tercero.
+D3: `buildReceipt({ anchorNetwork })` acepta `stellar:testnet` por defecto o `stellar:pubnet`; otra red produce un error. Nombra la red del ancla pendiente, sin afectar el digest ni demostrar un envío a la red. D5 mantiene en claro el contenido sellado de Vela en la demostración, según el dueño; un despliegue real requiere cifrado en reposo y custodia de claves de un tercero.
 
 ## Evidencia histórica y acceso a los proyectos
 

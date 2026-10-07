@@ -23,6 +23,7 @@ import {
 import { createHash } from 'node:crypto';
 import { basicNodeSigner } from '@stellar/stellar-sdk/contract';
 import { createRequire } from 'node:module';
+import { verifySettlement } from './settlement.js';
 import { NETWORK, PRICE_ATOMIC, USDC_CONTRACT, createMarketingPlanPayment, createStellarPorts } from './ports.js';
 
 const require = createRequire(import.meta.url);
@@ -662,6 +663,18 @@ test('F4 a settlement whose envelope carries a different authorization digest is
     );
     assert.equal(settlement.verified, false);
   } finally { world.close(); }
+});
+
+test('F5e a resolved but malformed Horizon transaction stays inside the settlement vocabulary', async () => {
+  const horizon = { transactions: () => ({ transaction: () => ({ call: async () => null }) }) };
+  const result = await verifySettlement(
+    { txHash: TX_HASH, payer: 'G-PAYER', network: NETWORK, authDigest: 'a'.repeat(64) },
+    { horizon, payer: 'G-PAYER', payTo: 'G-RECIPIENT', issuer: ISSUER, assetContract: USDC_CONTRACT },
+  );
+
+  assert.equal(result.verified, false);
+  assert.equal(typeof result.reason, 'string');
+  assert.ok(!result.reason.includes('Cannot read properties'));
 });
 
 // =====================================================================================

@@ -1,10 +1,11 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { writeFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const command = 'node --test test/*.test.js';
+const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
 
 if (git.status !== 0) {
@@ -43,9 +44,10 @@ const counts = {
 const report = [
   'Vespi Kernel suite result',
   `Date (UTC): ${new Date().toISOString()}`,
+  `Package version: ${packageJson.version}`,
   `Node version: ${process.version}`,
-  `HEAD SHA: ${git.stdout.trim()}`,
-  'The HEAD SHA is the parent commit of the commit that stores this file.',
+  `Git baseline SHA: ${git.stdout.trim()}`,
+  'The tests run against the current working tree; the baseline SHA alone does not identify uncommitted candidate changes.',
   `Command: ${command}`,
   `Tests: ${counts.tests}`,
   `Passed: ${counts.passed}`,
@@ -55,5 +57,5 @@ const report = [
   '',
 ].join('\n');
 
-await writeFile(resolve(root, 'docs/SUITE_RESULT.txt'), report, 'utf8');
+await writeFile(resolve(root, `docs/SUITE_RESULT_${packageJson.version}.txt`), report, 'utf8');
 process.exitCode = exitCode ?? 1;
