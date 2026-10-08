@@ -1,6 +1,6 @@
 # v0.1.5-kernel
 
-> Candidate source snapshot; publication date pending. `v0.1.4-kernel` was published on 2026-10-05. Reading or running this source does not publish 0.1.5 or change Lore Plugin's pinned kernel.
+> Published on 2026-10-08 as `v0.1.5-kernel`. The tag records the released kernel; reading or running this source does not change an installed Lore Plugin copy.
 
 ## What changes for the person
 
@@ -23,7 +23,7 @@ There is no live payment evidence for the reference bridge, no mainnet evidence,
 
 # v0.1.5-kernel — español
 
-> Candidata de código fuente; fecha de publicación pendiente. `v0.1.4-kernel` se publicó el 2026-10-05. Leer o ejecutar este código no publica 0.1.5 ni cambia el kernel fijado por Lore Plugin.
+> Publicado el 2026-10-08 como `v0.1.5-kernel`. El tag registra el kernel publicado; leer o ejecutar este código no cambia una copia instalada de Lore Plugin.
 
 ## Qué cambia para la persona
 
