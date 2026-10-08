@@ -19,6 +19,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      - name: install x402 test dependencies
+        working-directory: demo/x402
+        run: npm ci
       - name: kernel suite (no network, no wallet)
         shell: bash
         run: node --test test/*.test.js
