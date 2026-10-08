@@ -25,5 +25,10 @@ test('judge package parses Node TAP counts and hashes bytes with SHA-256', async
   assert.ok(report.excludedPaths.includes('**/node_modules/**'));
   assert.ok(report.excludedPaths.includes('**/.job/**'));
   assert.equal(report.tests.passed, 1);
+  assert.equal(report.publicProjectRepositories.length, 11);
+  assert.ok(report.publicProjectRepositories.some((repository) => repository.name === 'Permamuseum'));
   assert.ok(report.publicProjectRepositories.some((repository) => repository.name === 'TEMIS'));
+  for (const repository of report.publicProjectRepositories) {
+    assert.match(repository.status, /does not verify current repository contents/);
+  }
 });

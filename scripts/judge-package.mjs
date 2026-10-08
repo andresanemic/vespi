@@ -22,17 +22,21 @@ const EXCLUDED_PATHS = [
   'test/**', 'scripts/**', 'docs/** except the three listed public release files',
 ];
 const PROJECT_REPOSITORIES = [
-  { name: 'Queen', url: 'https://github.com/andresanemic/queen', status: 'public project repository; code and tests listed in the kernel README' },
-  { name: 'Casa Firme', url: 'https://github.com/andresanemic/casa-firme', status: 'public project repository; code and tests listed in the kernel README' },
-  { name: 'Ficha Contigo', url: 'https://github.com/andresanemic/ficha-contigo', status: 'public project repository; code and tests listed in the kernel README' },
-  { name: 'Cátedra', url: 'https://github.com/andresanemic/catedra', status: 'public project repository; code and tests listed in the kernel README' },
-  { name: 'Escribano', url: 'https://github.com/andresanemic/escribano', status: 'public repository link in README; availability was not checked by this offline script' },
-  { name: 'Llavero', url: 'https://github.com/andresanemic/llavero', status: 'public project repository; code and tests listed in the kernel README' },
-  { name: 'Farolero', url: 'https://github.com/andresanemic/farolero', status: 'public project repository; code and tests listed in the kernel README' },
-  { name: 'Marea', url: 'https://github.com/andresanemic/marea', status: 'public project repository; code and tests listed in the kernel README' },
-  { name: 'Vela', url: 'https://github.com/andresanemic/vela', status: 'public project repository; code and tests listed in the kernel README' },
-  { name: 'TEMIS', url: 'https://github.com/andresanemic/temis', status: 'public project repository; code and tests listed in the kernel README' },
-];
+  { name: 'Queen', url: 'https://github.com/andresanemic/queen' },
+  { name: 'Permamuseum', url: 'https://github.com/andresanemic/permamuseum' },
+  { name: 'Casa Firme', url: 'https://github.com/andresanemic/casa-firme' },
+  { name: 'Ficha Contigo', url: 'https://github.com/andresanemic/ficha-contigo' },
+  { name: 'Cátedra', url: 'https://github.com/andresanemic/catedra' },
+  { name: 'Escribano', url: 'https://github.com/andresanemic/escribano' },
+  { name: 'Llavero', url: 'https://github.com/andresanemic/llavero' },
+  { name: 'Farolero', url: 'https://github.com/andresanemic/farolero' },
+  { name: 'Marea', url: 'https://github.com/andresanemic/marea' },
+  { name: 'Vela', url: 'https://github.com/andresanemic/vela' },
+  { name: 'TEMIS', url: 'https://github.com/andresanemic/temis' },
+].map((project) => ({
+  ...project,
+  status: 'URL listed in the kernel README; this offline manifest does not verify current repository contents or availability',
+}));
 
 export function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
