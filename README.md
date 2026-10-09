@@ -18,9 +18,10 @@ Materials supplied by the project. The website link does not extend the verified
 
 ### Start with an operation
 
-From a source checkout of this repository, with Node.js 24 available, run the [offline walkthrough](./docs/WALKTHROUGH.md), answer its terminal prompt with `Ada: approve`, and inspect the returned `status`, `coverage` and `notCovered`:
+From a source checkout of this repository, with Node.js 24 available, run the [offline walkthrough](./docs/WALKTHROUGH.md), answer its terminal prompt with your name followed by `: approve`, and inspect the returned `status`, `coverage` and `notCovered`:
 
 ```sh
+(cd demo/x402 && npm ci)   # the suite also covers the x402 bridge, which needs its dependencies
 node examples/walkthrough.js
 node --test "test/*.test.js"
 ```
@@ -155,9 +156,10 @@ Materiales proporcionados por Andrés. El enlace del sitio no amplía el alcance
 
 ### Empieza con una operación
 
-Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde al terminal con `Ada: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
+Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con tu nombre seguido de `: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
 ```sh
+(cd demo/x402 && npm ci)   # la suite también cubre el puente x402, que necesita sus dependencias
 node examples/walkthrough.js
 node --test "test/*.test.js"
 ```
@@ -277,3 +279,4 @@ No hay almacén durable de emergencia ni de pagos, runtime autónomo entre hosts
 ### Autor y licencia
 
 Andrés Peña Mellado, Digital Art Director & Creative Developer. [Telegram](https://t.me/andresanemic), [X](https://x.com/andresanemic), [LinkedIn](https://www.linkedin.com/in/andresanemic/). Licencia del kernel: [Apache-2.0](./LICENSE), con atribución en [NOTICE](./NOTICE).
+

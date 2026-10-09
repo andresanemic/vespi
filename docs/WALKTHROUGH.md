@@ -9,15 +9,15 @@ Run from the repository root:
 ```text
 > node examples/walkthrough.js
 gate: needs_human_decision (insufficient permission; no effect ran)
-human approval [Name: approve]: Ada: approve
-approval: approved by Ada
+human approval [Name: approve]: Operator: approve
+approval: approved by Operator
 effect: ledger note written
 observation: note present (separate verifier)
-receipt: {"status":"verified","digest":"c77177d686e1d745e39d5877aab742bf09b6c622ff5b206816d9ae1ab17af446","coverage":["effect_present","recipient_matches"],"notCovered":["network_anchor","external anchor"]}
+receipt: {"status":"verified","digest":"22a4163086d8d35861a6aa4ff0025ced02b92b4156135896020d25f6e8ca7027","coverage":["effect_present","recipient_matches"],"notCovered":["network_anchor","external anchor"]}
 second process: resumes next action publish_summary
 ```
 
-The output above is from a real run of the checked-in example. The digest is a snapshot; a later run gets a different digest because runtime fields are sealed into the receipt. `coverage` names the two checks that returned true. `network_anchor` failed and `external anchor` was outside this local example, so both remain in `notCovered`. The receipt proves its contents match its digest; it does not authenticate Ada or prove an external anchor.
+The output above is from a real run of the checked-in example. The digest is a snapshot; a later run gets a different digest because runtime fields are sealed into the receipt. `coverage` names the two checks that returned true. `network_anchor` failed and `external anchor` was outside this local example, so both remain in `notCovered`. The receipt proves its contents match its digest; it does not authenticate the operator or prove an external anchor.
 
 The second process receives the serialized receipt over standard input, verifies it through `resumeFromReceipts`, and selects `publish_summary` as the next action. The example injects a local verification callback to model the host's independent observation. It does not persist state between processes, publish a summary or claim that a local receipt alone authenticates an external effect.
 
@@ -40,17 +40,17 @@ Corre desde la raíz del repositorio:
 ```text
 > node examples/walkthrough.js
 gate: needs_human_decision (insufficient permission; no effect ran)
-human approval [Name: approve]: Ada: approve
-approval: approved by Ada
+human approval [Name: approve]: Operator: approve
+approval: approved by Operator
 effect: ledger note written
 observation: note present (separate verifier)
-receipt: {"status":"verified","digest":"c77177d686e1d745e39d5877aab742bf09b6c622ff5b206816d9ae1ab17af446","coverage":["effect_present","recipient_matches"],"notCovered":["network_anchor","external anchor"]}
+receipt: {"status":"verified","digest":"22a4163086d8d35861a6aa4ff0025ced02b92b4156135896020d25f6e8ca7027","coverage":["effect_present","recipient_matches"],"notCovered":["network_anchor","external anchor"]}
 second process: resumes next action publish_summary
 ```
 
 
 
-La salida anterior viene de una ejecución real del ejemplo incluido. `coverage` nombra los dos chequeos que devolvieron verdadero. `network_anchor` falló y `external anchor` queda fuera de este ejemplo local, por eso ambos siguen en `notCovered`. El recibo prueba que su contenido coincide con su digest; no autentica a Ada ni demuestra un anclaje externo.
+La salida anterior viene de una ejecución real del ejemplo incluido. `coverage` nombra los dos chequeos que devolvieron verdadero. `network_anchor` falló y `external anchor` queda fuera de este ejemplo local, por eso ambos siguen en `notCovered`. El recibo prueba que su contenido coincide con su digest; no autentica a quien aprobó ni demuestra un anclaje externo.
 
 El segundo proceso recibe el recibo serializado por la entrada estándar, lo verifica con `resumeFromReceipts` y selecciona `publish_summary` como siguiente acción. El ejemplo inyecta una función de verificación local para representar la observación independiente del host. No persiste estado entre procesos, no publica un resumen ni afirma que un recibo local por sí solo autentique un efecto externo.
 
@@ -59,3 +59,5 @@ La prueba automatizada recorre todo el camino de proceso padre e hijo:
 ```text
 > node --test test/walkthrough.test.js
 ```
+
+
