@@ -1,54 +1,80 @@
 # Vespi
 
-Vespi keeps authority, checked result and next agreed action together when work changes hands.
-Kernel 0.1.5 is a dependency-free JavaScript source library — run `node examples/walkthrough.js` and `node --test "test/*.test.js"`; it is an engine for Stellar apps across 11 functional explorations ([projects](#the-functional-projects), [capabilities](./docs/CAPABILITIES.md)).
-All chain evidence is Stellar testnet with fictional data, no real money — see [evidence](./docs/TESTNET_EVIDENCE.md) and [judge guide](./docs/FOR_JUDGES.md).
-Vespi conserva autoridad, resultado comprobado y siguiente acción acordada cuando el trabajo cambia de manos.
-El kernel 0.1.5 es una biblioteca fuente JavaScript sin dependencias — motor de apps Stellar en 11 exploraciones funcionales; toda evidencia es testnet con datos ficticios, sin dinero real.
+**The engine for building apps with AI on Stellar. You drive.**
 
-[![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
+You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.
 
-<p align="center">
-<strong>11 projects built in one week with kernel 0.1.5.</strong><br>
-<a href="https://github.com/andresanemic/queen">Queen</a> — a budget proposal is often unclear: who asked, who could answer, what the price covers.<br>
-<a href="https://github.com/andresanemic/permamuseum">Permamuseum</a> — in a museum, "verified" mixes claim, evidence and permission.<br>
-<a href="https://github.com/andresanemic/casa-firme">Casa Firme</a> — a family should not hand over its identity to prove what happened.<br>
-<a href="https://github.com/andresanemic/ficha-contigo">Ficha Contigo</a> — a patient cannot see who opened their clinical record.<br>
-<a href="https://github.com/andresanemic/catedra">Cátedra</a> — academic records are scattered and nobody sees who authorised what.<br>
-<a href="https://github.com/andresanemic/escribano">Escribano</a> — a public contract shows today's rule, not who changed it.<br>
-<a href="https://github.com/andresanemic/llavero">Llavero</a> — consent to use your data gets lost inside organisations.<br>
-<a href="https://github.com/andresanemic/farolero">Farolero</a> — give an AI agent a vague instruction and nobody knows what it was allowed.<br>
-<a href="https://github.com/andresanemic/marea">Marea</a> — two countries can report the same climate reduction twice.<br>
-<a href="https://github.com/andresanemic/vela">Vela</a> — a source hands over evidence and risks being exposed.<br>
-<a href="https://github.com/andresanemic/temis">TEMIS</a> — two people sign an agreement and later cannot tell who did what.<br>
-All with fictional data on Stellar testnet, no real money. <a href="./docs/FOR_JUDGES.md">Judge guide</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidence</a>
-</p>
+We want Vespi to be the official kernel for building apps on Stellar.
 
-<p align="center">
-<strong>11 proyectos construidos en una semana con el kernel 0.1.5.</strong><br>
-<a href="https://github.com/andresanemic/queen">Queen</a> — una propuesta de presupuesto suele ser confusa: quién pidió, quién podía responder.<br>
-<a href="https://github.com/andresanemic/permamuseum">Permamuseum</a> — en un museo, «verificado» mezcla afirmación, evidencia y permiso.<br>
-<a href="https://github.com/andresanemic/casa-firme">Casa Firme</a> — una familia no debería entregar su identidad para probar qué pasó.<br>
-<a href="https://github.com/andresanemic/ficha-contigo">Ficha Contigo</a> — una paciente no ve quién abrió su ficha clínica.<br>
-<a href="https://github.com/andresanemic/catedra">Cátedra</a> — los registros académicos están dispersos y nadie ve quién autorizó qué.<br>
-<a href="https://github.com/andresanemic/escribano">Escribano</a> — un contrato público muestra la regla de hoy, no quién la cambió.<br>
-<a href="https://github.com/andresanemic/llavero">Llavero</a> — el permiso para usar tus datos se pierde dentro de las organizaciones.<br>
-<a href="https://github.com/andresanemic/farolero">Farolero</a> — le das una instrucción vaga a un agente y nadie sabe qué podía hacer.<br>
-<a href="https://github.com/andresanemic/marea">Marea</a> — dos países pueden reportar dos veces la misma reducción climática.<br>
-<a href="https://github.com/andresanemic/vela">Vela</a> — una fuente entrega evidencia y corre el riesgo de quedar expuesta.<br>
-<a href="https://github.com/andresanemic/temis">TEMIS</a> — dos personas firman un acuerdo y después no saben quién cumplió qué.<br>
-Todos con datos ficticios en Stellar testnet, sin dinero real. <a href="./docs/FOR_JUDGES.md">Guía para jueces</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidencia</a>
-</p>
+---
 
-## English
+## What you can do today
 
-<a id="english"></a>
+- [Install Lore Plugin](https://github.com/andresanemic/lore-plugin) — the kit you work with
+- Run a kernel operation: `node examples/walkthrough.js`
 
-### Vespi Meridian Edition 1.0
+## What the kernel can do
 
-[Website — vespi.xyz](https://vespi.xyz) · [Tutorial in English](https://docs.google.com/document/d/1gwu3gBIJwgevCrGPyMv-J1UfjegggYDu/edit?usp=sharing&ouid=113358117411001923633&rtpof=true&sd=true) · [Deck in English](https://drive.google.com/file/d/1lG5DOOS6z4Kzz6PfZIPP2RXW_LXN_U1g/view?usp=drive_link)
+| Capability | Status |
+|---|---|
+| Permission before acting — the agent does only what you allowed and asks when permission is missing | Proven |
+| Spending with a ceiling: asset, amount, destination and expiry | Proven |
+| A second review: another checks the result. The agent does not grade itself | Proven |
+| Continuity: the next session picks up from what was already checked, and the uncertain returns to you | Proven |
+| x402 payments on Stellar, on the real Stellar SDK | Demo |
+| A 0.01 USDC payment and 50 transactions saved on Stellar testnet | Testnet |
+| Zero-knowledge proof verification | Reference |
+| Delegation, emergency permissions and skill provenance | Proven |
 
-Materials supplied by the project. The website link does not extend the verified kernel scope.
+## The projects
+
+Eleven projects explore what you can build this way, each with its problem, its evidence and its limits. The eleven projects are documented today; their code opens between 12 and 16 October 2026.
+
+- [Queen](https://github.com/andresanemic/queen) — a budget proposal is often unclear: who asked, who could answer, what the price covers
+- [Permamuseum](https://github.com/andresanemic/permamuseum) — in a museum, "verified" mixes claim, evidence and permission
+- [Casa Firme](https://github.com/andresanemic/casa-firme) — a family should not hand over its identity to prove what happened
+- [Ficha Contigo](https://github.com/andresanemic/ficha-contigo) — a patient cannot see who opened their clinical record
+- [Cátedra](https://github.com/andresanemic/catedra) — academic records are scattered and nobody sees who authorised what
+- [Escribano](https://github.com/andresanemic/escribano) — a public contract shows today's rule, not who changed it
+- [Llavero](https://github.com/andresanemic/llavero) — consent to use your data gets lost inside organisations
+- [Farolero](https://github.com/andresanemic/farolero) — give an AI agent a vague instruction and nobody knows what it was allowed
+- [Marea](https://github.com/andresanemic/marea) — two countries can report the same climate reduction twice
+- [Vela](https://github.com/andresanemic/vela) — a source hands over evidence and risks being exposed
+- [TEMIS](https://github.com/andresanemic/temis) — two people sign an agreement and later cannot tell who did what
+
+All with fictional data on Stellar testnet, no real money.
+
+---
+
+## How it works
+
+You arrive with an idea. You talk to the AI and it builds together. The AI does not approve everything on reflex: it tells you what it thinks works and what does not, and does not take away your important decisions. What you learn is written down for the next session, so you do not start from zero, and you do not hand over what the system can carry for you.
+
+**Lore Plugin, the kit**
+
+- Start your project with it: its agreement and its files, in your own folder.
+- Save what you learn: when you correct the AI, the reason becomes a criterion you review before anything is written.
+- It brings what matters: each task loads the criterion it needs, in Claude Code, Codex or OpenCode.
+- It keeps it alive: review, prune and retire what is no longer useful.
+- Carry Vespi inside, for the work that needs permissions and continuity.
+- It does not train the model. Everything stays as legible text you can take to another tool.
+
+**Vespi, the kernel**
+
+- Permission before acting: the agent does only what you allowed and asks when permission is missing.
+- Spending with a ceiling: limits per asset, amount, destination and expiry.
+- A second review: another checks the result. The agent does not grade itself.
+- Continuity: the next session picks up from what was already checked, and the uncertain returns to you.
+- Payments with x402 on Stellar: an agent can pay a service with the conditions you set. Demo running on the real Stellar SDK.
+- Also: zero-knowledge proof verification, anchors on Stellar, delegation, emergency permissions and skill provenance.
+
+---
+
+## What the kernel is
+
+Vespi keeps authority, checked result and next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation.
+
+Kernel 0.1.5 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. All chain evidence is Stellar testnet with fictional data, no real money.
 
 ### Start with an operation
 
@@ -62,61 +88,13 @@ node --test "test/*.test.js"
 
 The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The [saved suite result](./docs/SUITE_RESULT_0.1.5.txt) records the command, exact counts, Node version and Git baseline for the published cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
 
-### What this looks like for a person
-
-The point is to retain what you already decided when the session, tool or person doing the work changes. A summary can help someone understand the project, but it is not a grant and does not establish whether an external effect happened. The kernel makes those questions explicit. It can be used around work with AI or without it, and with a chain anchor or without one; the operation decides which capabilities it needs. This is a source library for a host to configure, not an installed service that takes over your work.
-
-**Fictional example.** Maya wants a booking app for her neighborhood hair salon, La Esquina. The person, business, schedule and prices are invented; this is an illustration of the coordinator's method with host tools, not a run of an app generator inside the kernel.
-
-```text
-[COORDINATOR]
-We will draft the agreement before building: what the app must do, who grants
-its authority, what spending is allowed and what counts as done. We will then
-write specifications and acceptance checks, build the local app, ask a reader
-who did not build it to try the flow, and verify the result separately.
-
-I need your decisions about authority, the money ceiling and publication.
-
-[MAYA]
-I grant authority for a local prototype, with no paid services. Do not publish
-until I approve the final preview.
-```
-
-That decision remains part of the agreement. A host with the necessary tools may build the booking flow, draft posts or generate images; those tools do the work. The kernel can check declared authority and record their results, while the coordinator's method organizes specifications, bounded tasks and verification. A booking prototype and its publicity are different effects: permission to build locally does not become permission to publish just because the app now works.
-
-```text
-[COORDINATOR]
-The booking flow and its checks are ready. Here are the preview and the proposed
-posts. Do you approve this exact publication?
-
-[MAYA]
-Not yet. Change Tuesday's hours, then show me the preview again.
-```
-
-Maya does not have to repeat the project's entire purpose to make that change. The next action changes, so the coordinator records it and returns with the revised result. If a tool reports an uncertain publication after a network timeout, the operation must not treat the lack of a response as proof that nothing went out. It returns the uncertainty for reconciliation, using the continuation behavior documented below. That is a decision preserved for the person, rather than a promise that every retry is harmless.
-
-```text
-[NEXT SESSION]
-The host loads the agreement and receipts. The coordinator checks what still
-holds, what was verified and what changed before choosing the next action.
-An uncertain exercised effect stays pending reconciliation.
-```
-
-What you can run today is the local walkthrough above and the kernel around an effect of your own. The combined coordinator workflow lives in Lore Plugin and the host's tools. Installing the kit and consuming this source cut are separate choices: its pinned kernel does not change merely because a new source snapshot exists. This illustration describes the intended experience; no novice-user trial, institutional pilot or autonomous transfer is established by it.
-
-### Why keep the operation separate from the app?
-
-An app's useful result and its permission to produce that result are different questions. You may want the booking screen built, while still reserving the choice to expose customer data or pay for a service. The kernel offers reusable authority, gate, receipt and continuation semantics so those questions have a place in the code and the record. [The catalog](./docs/CAPABILITIES.md) shows the actual API and the limits beside it; the host remains responsible for storage, identities and effects.
-
-The goal is to return time and agency rather than fill every recovered minute with more output. A capability belongs in an operation when it buys a material difference for that work.
-
 ### Authority, a human gate and receipts
 
 The kernel is JavaScript without runtime dependencies. A capability declares its requirements; the operation checks authority before `perform`, asks the human gate when required and obtains a separate verification result. [Authority tests](./test/k2.test.js) cover asset, ceiling, destination, expiry and distinct named approvals, but ordinary approval names are labels rather than authenticated signatures and money budgets are not accumulated across operations. The host controls its tools, identities, clock and storage.
 
-[Receipt tests](./test/k3.test.js) cover the SHA-256 digest, named successful checks and omissions, but the digest proves integrity rather than authenticity and can be recomputed by anyone who rewrites the receipt. An external anchor requires a separate confirmation of digest and network. D3: `buildReceipt({ anchorNetwork })` accepts `stellar:testnet` (the unchanged default) or `stellar:pubnet`; unsupported networks throw. The pending anchor still proves no network interaction, and its network stays outside the receipt digest. All chain evidence here is testnet, on fictional data and with no real money.
+[Receipt tests](./test/k3.test.js) cover the SHA-256 digest, named successful checks and omissions, but the digest proves integrity rather than authenticity and can be recomputed by anyone who rewrites the receipt. An external anchor requires a separate confirmation of digest and network. `buildReceipt({ anchorNetwork })` accepts `stellar:testnet` (the default) or `stellar:pubnet`; unsupported networks throw. All chain evidence here is testnet, on fictional data and with no real money.
 
-The [capability catalog](./docs/CAPABILITIES.md) explains the API and host responsibilities. [Respaldo](./capabilities/respaldo/LEEME.md), a capability outside the kernel, copies a working tree into a folder that a sync service can watch, as [its tests](./test/respaldo.test.js) demonstrate, but does not encrypt, upload through service APIs or keep backup versions.
+[The capability catalog](./docs/CAPABILITIES.md) explains the API and host responsibilities.
 
 ### What 0.1.5 changes
 
@@ -143,12 +121,6 @@ The [0.1.3 note](./docs/RELEASE_0.1.3_KERNEL.md) announced emergency access, zer
 TEMIS is a bilateral-agreement record used to pressure authority and receipts with fictional data on testnet. Its saved [execution account](./docs/evidence-records/temis-tramos/3/recibo.md) describes registration, signatures, anchors, milestones, corrections, challenges and a reconstruction by a model that did not build it. You can open the [comparison record](./docs/evidence-records/temis-tramos/3/cruce-con-tercero-exp-murckqaa.json) and see both the lifecycle labels it reports as matching and the differences it found when comparing the local copy. Those are declared run results; the transaction-field verifier does not reproduce the lifecycle logic or that third-party reconstruction.
 
 The distinction matters for review. A digest memo and a successful ledger record can support an anchor claim without proving that an agreement is legally valid, that a human signed it or that a disputed milestone was fulfilled. The public transaction is one piece of the evidence; the agreement, the local record and the observer's scope remain necessary. [The evidence guide](./docs/TESTNET_EVIDENCE.md) owns the transaction comparison and its omissions, so a reader can weigh this case without treating every label in a run report as a chain fact.
-
-### The functional projects
-
-The projects explore uses of bounded authority and receipts with fictional data. [Queen](https://github.com/andresanemic/queen) explores marketing budgets and paid services; [Permamuseum](https://github.com/andresanemic/permamuseum) cultural heritage and provenance; [Casa Firme](https://github.com/andresanemic/casa-firme) housing committees and donation records; [Ficha Contigo](https://github.com/andresanemic/ficha-contigo) patient-granted clinical access; [Cátedra](https://github.com/andresanemic/catedra) declared AI use and academic credentials; [Escribano](https://github.com/andresanemic/escribano) governance records; [Llavero](https://github.com/andresanemic/llavero) data permissions; [Farolero](https://github.com/andresanemic/farolero) delegated authority; [Marea](https://github.com/andresanemic/marea) climate commitments; and [Vela](https://github.com/andresanemic/vela) protected sources. [TEMIS](https://github.com/andresanemic/temis) supplies the bilateral-agreement run records used in the testnet evidence. These are evidence candidates for Vespi, not separate claims of institutional adoption, production readiness or integration with this new kernel.
-
-The repositories remain public and currently contain README files only, according to the owner's access schedule. Code is scheduled to enter the main branch by a push on 12 October 2026 at 20:29 Chile time and to be removed from that branch by another push on 16 October at 19:31. The margin is 30 minutes around deliberation, from 12 October at 20:59 to 16 October at 19:01. Removing code with a new commit does not erase it from Git history, and an obtained copy cannot be withdrawn. Project suites cannot be reproduced from README-only repositories today; this kernel suite does not replace them.
 
 ### Lore Plugin and the build method
 
@@ -182,11 +154,75 @@ Andrés Peña Mellado, Digital Art Director & Creative Developer. [Telegram](htt
 
 <a id="español"></a>
 
-### Vespi Meridian Edition 1.0
+**El motor para crear apps con IA en Stellar. Tú manejas.**
 
-[Sitio — vespi.xyz](https://vespi.xyz) · [Tutorial en español](https://docs.google.com/document/d/1wj3yfr0Iyi8e3szUawJ4Q-mNb7EmySM-/edit?usp=drive_link&ouid=113358117411001923633&rtpof=true&sd=true) · [Deck en español](https://drive.google.com/file/d/1LkcSXeVLxstZiNhiVpq8zU1_Kn-61qUl/view?usp=drive_link)
+Conversas con la IA, ella construye y tú decides lo importante. Lo que aprendes queda para la próxima vez.
 
-Materiales proporcionados por Andrés. El enlace del sitio no amplía el alcance verificado del kernel.
+Queremos que Vespi sea el kernel oficial para crear apps en Stellar.
+
+### Lo que puedes hacer hoy
+
+- [Instalar Lore Plugin](https://github.com/andresanemic/lore-plugin) — el kit con el que trabajas
+- Correr una operación del kernel: `node examples/walkthrough.js`
+
+### Lo que puede hacer el kernel
+
+| Capacidad | Estado |
+|---|---|
+| Permiso antes de actuar: el agente hace solo lo que permitiste y te pregunta cuando falta permiso | Probado |
+| Gasto con techo: límites por activo, monto, destino y vencimiento | Probado |
+| Una segunda revisión: otro comprueba el resultado. El agente no se califica a sí mismo | Probado |
+| Continuidad: la siguiente sesión sigue desde lo ya comprobado, y lo incierto vuelve a ti | Probado |
+| Pagos x402 en Stellar, sobre el SDK real de Stellar | Demo |
+| Un pago de 0,01 USDC y 50 transacciones guardadas en la testnet de Stellar | Testnet |
+| Verificación de pruebas de conocimiento cero | Referencia |
+| Delegación, permisos de emergencia y procedencia de skills | Probado |
+
+### Los proyectos
+
+Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Los once proyectos están documentados hoy; su código se abre entre el 12 y el 16 de octubre de 2026.
+
+- [Queen](https://github.com/andresanemic/queen) — una propuesta de presupuesto suele ser confusa: quién pidió, quién podía responder, qué cubre el precio
+- [Permamuseum](https://github.com/andresanemic/permamuseum) — en un museo, «verificado» mezcla afirmación, evidencia y permiso
+- [Casa Firme](https://github.com/andresanemic/casa-firme) — una familia no debería entregar su identidad para probar qué pasó
+- [Ficha Contigo](https://github.com/andresanemic/ficha-contigo) — una paciente no ve quién abrió su ficha clínica
+- [Cátedra](https://github.com/andresanemic/catedra) — los registros académicos están dispersos y nadie ve quién autorizó qué
+- [Escribano](https://github.com/andresanemic/escribano) — un contrato público muestra la regla de hoy, no quién la cambió
+- [Llavero](https://github.com/andresanemic/llavero) — el permiso para usar tus datos se pierde dentro de las organizaciones
+- [Farolero](https://github.com/andresanemic/farolero) — le das una instrucción vaga a un agente y nadie sabe qué podía hacer
+- [Marea](https://github.com/andresanemic/marea) — dos países pueden reportar dos veces la misma reducción climática
+- [Vela](https://github.com/andresanemic/vela) — una fuente entrega evidencia y corre el riesgo de quedar expuesta
+- [TEMIS](https://github.com/andresanemic/temis) — dos personas firman un acuerdo y después no saben quién cumplió qué
+
+Todos con datos ficticios en la testnet de Stellar, sin dinero real.
+
+### Cómo se trabaja
+
+Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueba todo de reflejo: te dice qué cree que funciona y qué no, y no te quita las decisiones importantes. Lo que aprendes queda escrito para la próxima sesión, así no empiezas de cero, y no entregas a mano lo que el sistema puede llevar por ti.
+
+**Lore Plugin, el kit**
+
+- Empieza tu proyecto con él: su acuerdo y sus archivos, en tu propia carpeta.
+- Guarda lo que aprendes: cuando corriges a la IA, la razón se vuelve un criterio que revisas antes de que se escriba.
+- Lo trae cuando importa: cada tarea carga el criterio que necesita, en Claude Code, Codex u OpenCode.
+- Lo mantiene vivo: revisa, poda y retira lo que ya no sirve.
+- Lleva Vespi adentro, para el trabajo que necesita permisos y continuidad.
+- No entrena el modelo. Todo queda como texto legible que puedes llevar a otra herramienta.
+
+**Vespi, el kernel**
+
+- Permiso antes de actuar: el agente hace solo lo que permitiste y te pregunta cuando falta permiso.
+- Gasto con techo: límites por activo, monto, destino y vencimiento.
+- Una segunda revisión: otro comprueba el resultado. El agente no se califica a sí mismo.
+- Continuidad: la siguiente sesión sigue desde lo ya comprobado, y lo incierto vuelve a ti.
+- Pagos con x402 en Stellar: un agente puede pagar un servicio con las condiciones que fijaste. Demo funcionando sobre el SDK real de Stellar.
+- Además: verificación de pruebas de conocimiento cero, anclajes en Stellar, delegación, permisos de emergencia y procedencia de skills.
+
+### Qué es el kernel
+
+Vespi conserva juntas la autoridad, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo.
+
+El kernel 0.1.5 es una biblioteca fuente JavaScript sin dependencias. Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real.
 
 ### Empieza con una operación
 
@@ -200,61 +236,13 @@ node --test "test/*.test.js"
 
 [La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.5.txt) registra el comando, los conteos exactos, la versión de Node y la base Git del corte publicado. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
 
-### Cómo se ve para una persona
-
-El propósito es conservar lo que ya decidiste cuando cambia la sesión, la herramienta o quien hace el trabajo. Un resumen ayuda a entender el proyecto, pero no es un permiso ni demuestra que un efecto externo haya ocurrido. El kernel vuelve explícitas esas preguntas. Puedes usarlo alrededor de trabajo con IA o sin ella, con ancla de cadena o sin ella; la operación decide qué capacidades necesita. Es una biblioteca que configura un host, no un servicio instalado que se hace cargo de tu trabajo.
-
-**Ejemplo ficticio.** Maya quiere una app de reservas para su peluquería de barrio, La Esquina. La persona, el negocio, los horarios y los precios son inventados; ilustra el método del coordinador con herramientas del host, no una corrida de un generador de apps dentro del kernel.
-
-```text
-[COORDINADOR]
-Antes de construir redactaremos el acuerdo: qué debe hacer la app, quién otorga
-la autoridad, qué gasto permite y qué significa terminar. Después escribiremos
-especificaciones y comprobaciones de aceptación, construiremos la app local,
-pediremos a un lector que no la hizo que pruebe el flujo y verificaremos aparte.
-
-Necesito tus decisiones sobre autoridad, techo de dinero y publicación.
-
-[MAYA]
-Otorgo autoridad para un prototipo local, sin servicios pagados. No publiques
-hasta que apruebe la vista previa final.
-```
-
-Esa decisión queda en el acuerdo. Un host con las herramientas necesarias puede construir las reservas, redactar publicaciones o generar imágenes; las herramientas realizan el trabajo. El kernel puede comprobar la autoridad declarada y registrar resultados, mientras el método del coordinador organiza especificaciones, tareas acotadas y verificación. El prototipo y su difusión son efectos distintos: el permiso para construir localmente no se vuelve permiso para difundir solo porque la app ya funcione.
-
-```text
-[COORDINADOR]
-El flujo de reservas y sus comprobaciones están listos. Aquí tienes la vista
-previa y las publicaciones propuestas. ¿Apruebas esta publicación exacta?
-
-[MAYA]
-Todavía no. Cambia el horario del martes y vuelve a mostrarme la vista previa.
-```
-
-Maya no necesita repetir todo el propósito del proyecto para cambiar ese horario. La siguiente acción cambia, el coordinador lo registra y vuelve con el resultado corregido. Si una herramienta informa una publicación incierta tras un timeout de red, la operación no puede tomar la falta de respuesta como prueba de que nada salió. Devuelve la incertidumbre para reconciliarla mediante la continuidad descrita abajo. Conserva una decisión para la persona, en vez de prometer que cualquier reintento es inofensivo.
-
-```text
-[SIGUIENTE SESIÓN]
-El host carga el acuerdo y los recibos. El coordinador comprueba qué sigue
-valiendo, qué se verificó y qué cambió antes de elegir la siguiente acción.
-Un efecto ejercido incierto sigue pendiente de reconciliación.
-```
-
-Hoy puedes correr el recorrido local de arriba y usar el kernel alrededor de un efecto propio. El flujo combinado del coordinador vive en Lore Plugin y las herramientas del host. Instalar el kit y consumir este corte de código son decisiones separadas: su kernel fijo no cambia porque exista un nuevo corte de fuente. El ejemplo describe la experiencia buscada; no establece prueba con personas sin experiencia, piloto institucional ni transporte autónomo.
-
-### ¿Por qué separar la operación de la app?
-
-El resultado útil de una app y su permiso para producirlo son preguntas distintas. Puedes querer construir la pantalla de reservas y reservarte la decisión de exponer datos de clientes o pagar por un servicio. También puedes querer que quien trabaje mañana sepa que cambió el horario del martes sin inventar un permiso nuevo. El kernel ofrece semántica reutilizable de autoridad, puerta, recibos y continuidad para que esas preguntas tengan lugar en el código y en el registro. [El catálogo](./docs/CAPABILITIES.md) muestra la API real con sus límites; el host sigue a cargo de almacenamiento, identidades y efectos.
-
-Por eso la meta es devolverte tiempo y agencia, en vez de llenar cada minuto recuperado con más producción. [GENESIS](./docs/GENESIS.md) la conserva como tesis de trabajo, no como resultado medido de productividad. Una capacidad entra si compra una diferencia material para la operación. Un flujo local maduro puede seguir siendo suficiente sin activar Vespi.
-
 ### Autoridad, puerta humana y recibos
 
 El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus requisitos; la operación comprueba autoridad antes de `perform`, consulta la puerta humana cuando corresponde y recibe una verificación separada. [Las pruebas de autoridad](./test/k2.test.js) cubren activo, techo, destino, vencimiento y aprobaciones con nombres distintos, pero los nombres de aprobación ordinaria son etiquetas y no firmas autenticadas, y los presupuestos de dinero no se acumulan entre operaciones. El host controla herramientas, identidades, reloj y almacenamiento.
 
-[Las pruebas de recibos](./test/k3.test.js) cubren el digest SHA-256, comprobaciones exitosas con nombre y omisiones, pero el digest demuestra integridad y no autenticidad, y cualquiera que reescriba el recibo puede recalcularlo. Un ancla externa exige confirmar por separado digest y red. D3: `buildReceipt({ anchorNetwork })` acepta `stellar:testnet` (el valor por defecto, sin cambio) o `stellar:pubnet`; una red no admitida produce un error. El ancla pendiente no prueba interacción con una red y su network no entra al digest del recibo. Toda evidencia de cadena aquí es testnet, con datos ficticios y sin dinero real.
+[Las pruebas de recibos](./test/k3.test.js) cubren el digest SHA-256, comprobaciones exitosas con nombre y omisiones, pero el digest demuestra integridad y no autenticidad, y cualquiera que reescriba el recibo puede recalcularlo. Un ancla externa exige confirmar por separado digest y red. `buildReceipt({ anchorNetwork })` acepta `stellar:testnet` (el valor por defecto, sin cambio) o `stellar:pubnet`; una red no admitida produce un error. El ancla pendiente no prueba interacción con una red y su network no entra al digest del recibo. Toda evidencia de cadena aquí es testnet, con datos ficticios y sin dinero real.
 
-[El catálogo de capacidades](./docs/CAPABILITIES.md) explica la API y las responsabilidades del host. [Respaldo](./capabilities/respaldo/LEEME.md), una capacidad fuera del kernel, copia el árbol de trabajo a una carpeta que puede observar un servicio de sincronización, como demuestran [sus pruebas](./test/respaldo.test.js), pero no cifra, no sube por API de servicios ni conserva versiones del respaldo.
+[El catálogo de capacidades](./docs/CAPABILITIES.md) explica la API y las responsabilidades del host.
 
 ### Qué cambia el 0.1.5
 
@@ -282,12 +270,6 @@ TEMIS es un registro de acuerdos bilaterales que presiona autoridad y recibos co
 
 La distinción importa al revisar. Un memo de digest y un registro exitoso de ledger pueden sostener un ancla sin probar que un acuerdo sea legalmente válido, que una persona lo firmó o que se cumplió un hito impugnado. La transacción pública es una parte de la evidencia; el acuerdo, el registro local y el alcance del observador siguen siendo necesarios. [La guía de evidencia](./docs/TESTNET_EVIDENCE.md) contiene la comparación y sus omisiones para que valores el caso sin tomar cada estatus del informe como un hecho de cadena.
 
-### Los proyectos funcionales
-
-Los proyectos exploran usos de autoridad acotada y recibos con datos ficticios. [Queen](https://github.com/andresanemic/queen) explora presupuestos de marketing y servicios pagados; [Permamuseum](https://github.com/andresanemic/permamuseum), patrimonio cultural y procedencia; [Casa Firme](https://github.com/andresanemic/casa-firme), comités de vivienda y registros de donaciones; [Ficha Contigo](https://github.com/andresanemic/ficha-contigo), acceso clínico otorgado por pacientes; [Cátedra](https://github.com/andresanemic/catedra), uso declarado de IA y credenciales académicas; [Escribano](https://github.com/andresanemic/escribano), registros de gobernanza; [Llavero](https://github.com/andresanemic/llavero), permisos de datos; [Farolero](https://github.com/andresanemic/farolero), autoridad delegada; [Marea](https://github.com/andresanemic/marea), compromisos climáticos; y [Vela](https://github.com/andresanemic/vela), fuentes protegidas. [TEMIS](https://github.com/andresanemic/temis) aporta los registros de acuerdos bilaterales usados en la evidencia de testnet. Son candidatas de evidencia para Vespi, no afirmaciones separadas de adopción institucional, preparación para producción ni integración con este kernel nuevo.
-
-Los repositorios son siempre públicos y hoy contienen solo README, según el calendario de acceso del dueño. El código entra por un push a la rama principal el 12 de octubre de 2026 a las 20:29, hora de Chile, y se retira de esa rama por otro push el 16 de octubre a las 19:31. El margen es de 30 minutos alrededor de la deliberación, del 12 de octubre a las 20:59 al 16 de octubre a las 19:01. Retirar el código con un commit nuevo no lo borra del historial de Git, y una copia que ya obtuviste no se puede retirar. Hoy no puedes reproducir las suites de los proyectos desde repositorios que solo contienen README; la suite de este kernel no las reemplaza.
-
 ### Lore Plugin y el método de construcción
 
 [Lore Plugin](https://github.com/andresanemic/lore-plugin) aporta el criterio y el flujo del coordinador; Vespi aporta la semántica de autoridad y recibos alrededor de una operación. [El método](./docs/METHOD.md) describe ciclos, pruebas primero, especificaciones, delegación acotada, lectura ciega y verificación separada; es un flujo de trabajo para herramientas del host, no un kernel que genere apps o imágenes por sí solo. Lore Plugin lleva una copia fija del kernel, por lo que este corte de código no actualiza automáticamente un kit instalado.
@@ -313,4 +295,3 @@ No hay almacén durable de emergencia ni de pagos, runtime autónomo entre hosts
 ### Autor y licencia
 
 Andrés Peña Mellado, Digital Art Director & Creative Developer. [Telegram](https://t.me/andresanemic), [X](https://x.com/andresanemic), [LinkedIn](https://www.linkedin.com/in/andresanemic/). Licencia del kernel: [Apache-2.0](./LICENSE), con atribución en [NOTICE](./NOTICE).
-
