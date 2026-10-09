@@ -96,22 +96,6 @@ The kernel is JavaScript without runtime dependencies. A capability declares its
 
 [The capability catalog](./docs/CAPABILITIES.md) explains the API and host responsibilities.
 
-### What 0.1.5 changes
-
-`buildReceipt({ anchorNetwork })` keeps `stellar:testnet` as its default and accepts `stellar:pubnet` when a pending anchor should name that network. Unsupported values throw. The network remains outside the body digest; selecting it does not submit an anchor.
-
-The reference x402 bridge is an opt-in example under [`demo/x402/`](./demo/x402/), available only through `--bridge=1`. It admits one payer authorization for its declared transfer and verifies settlement through the Stellar SDK against the declared network, recipient and amount. Its tests use real SDK objects and local fixtures; they do not make a live testnet payment. The bridge does not change the kernel API under `src/`.
-
-### What 0.1.4 added (historical)
-
-The [continuation tests](./test/v014.test.js) cover reconciliation before repeating an uncertain exercised action, a stable key passed to `perform`, attempt limits and an injected synchronous clock, but destination deduplication, trustworthy time and waking the process belong to the host. Delegation deadlines remain consultative.
-
-The [0.1.3 note](./docs/RELEASE_0.1.3_KERNEL.md) announced emergency access, zero knowledge, skill provenance and x402 inside the kernel. All enter 0.1.4 under the limits in the [bilingual release note](./docs/RELEASE_0.1.4_KERNEL.md). [Emergency tests](./test/k1-emergencia-r6-advisor.test.js) cover prior authority and reviews using host-issued opaque principals, but the kernel does not authenticate real people, persist the ledger, execute or verify the effect, or provide trusted time; D4 counts uses, with the money ceiling left to the project. [Provenance tests](./test/k2-procedencia-r5-advisor.test.js) cover a resolver's own evidence and hostile data, including polluted prototype data, but not built-in function replacement by same-process code; `provenanceSource` distinguishes verified from declared evidence and the skill name stays declared.
-
-[x402 tests](./test/k4-x402-r3-advisor.test.js) exercise the 0.1.4 paid-effect contract through injected ports, with mandatory synchronous `claims` and operation identity in the effect key. The memory store is not durable, reservations are not released and the validator's body digest is not recomputed by the kernel. Anyone can build on this contract by supplying their own ports. The reference bridge using the real Stellar SDK is not included in this cut because two independent reviews rejected it: the first found that 15 of 20 attacks were not blocked and the second found that 13 out of 26 were not blocked, including authorization replay, overwritten inspection windows and reads that continue after cancellation. Neither review demonstrated improper settlement or key disclosure. The bridge remains for 0.1.5.
-
-[ZK tests](./test/k3b-zk-port.test.js) cover a pinned key and agreed public inputs, but trust the injected backend. The internal [BN254 Groth16 reference](./src/zk-bn254-reference.js) has [fixture and arithmetic evidence](./test/fixtures/zk/independent-report.md), but proofs are malleable, a degenerate key accepts forgeries, synchronous verification cannot be interrupted by a Promise timeout, and there is no external audit or production readiness. These modules do not demonstrate integration with Casa Firme or Vela. D5: Vela's sealed content remains plaintext in the demonstration according to the owner's declaration; a real deployment requires encryption at rest and third-party key custody.
-
 ### Evidence you can open
 
 [The evidence file](./docs/testnet-evidence.json) records 50 successful testnet transactions read back from Horizon, with 5 cases semantically verified and 45 partially verified, and 0 discrepancies. Expectations come from local execution records rather than Horizon; partial checks do not fill in missing facts. [The evidence guide](./docs/TESTNET_EVIDENCE.md) owns the transaction links, field coverage and historical payment details, including the 0.1.3 adapter's saved x402 receipt. That history is historical evidence for the earlier adapter only. Check file shape offline with `node scripts/verify-testnet-evidence.mjs --offline`; the guide also provides a comparison against saved responses and an optional network refresh.
