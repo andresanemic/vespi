@@ -15,7 +15,6 @@
 
 <p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the official kernel for building apps on Stellar.</p>
 
-<p align="center"><b>We’re applying to the Find Your Way hackathon and plan to participate in Meridian.</b><br><a href="./docs/FOR_JUDGES.md">Judge’s guide</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
 
 ---
 
