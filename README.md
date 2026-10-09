@@ -15,14 +15,30 @@
 
 <p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the official kernel for building apps on Stellar.</p>
 
-<p align="center"><b>We’re applying to the Find Your Way hackathon and plan to participate in Meridian.</b><br><a href="#start-with-an-operation">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">Judge’s guide</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
+<p align="center"><b>We’re applying to the Find Your Way hackathon and plan to participate in Meridian.</b><br><a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">Judge’s guide</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
 
 ---
+
+## Clone and run
+
+The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package.
+
+```sh
+git clone https://github.com/andresanemic/vespi.git
+cd vespi
+node examples/walkthrough.js
+```
+
+At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage` and `notCovered` fields.
+
+<details>
+<summary><b>Read in English</b></summary>
+
+<a id="english"></a>
 
 ## What you can do today
 
 - [Install Lore Plugin](https://github.com/andresanemic/lore-plugin) — the kit you work with
-- Run a kernel operation: `node examples/walkthrough.js`
 
 ## What the kernel can do
 
@@ -89,13 +105,10 @@ Kernel 0.1.5 is a dependency-free JavaScript source library. It is an engine for
 
 ### Start with an operation
 
-From a source checkout of this repository, with Node.js 24 available, run the [offline walkthrough](./docs/WALKTHROUGH.md), answer its terminal prompt with your name followed by `: approve`, and inspect the returned `status`, `coverage` and `notCovered`:
+The [offline walkthrough](./docs/WALKTHROUGH.md) runs without installing dependencies for the kernel. To run the complete suite, install the x402 demo’s dependencies from its folder, then run the tests and offline evidence check:
 
 ```sh
-git clone https://github.com/andresanemic/vespi.git
-cd vespi
-(cd demo/x402 && npm ci)   # needed by the full suite
-node examples/walkthrough.js
+(cd demo/x402 && npm ci)   # required by the complete suite
 node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
@@ -128,9 +141,9 @@ Andrés Peña Mellado, Digital Art Director & Creative Developer.
 
 Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
+</details>
+
 ---
-
-
 
 <details>
 <summary><b>Leer en español</b></summary>
@@ -214,8 +227,13 @@ Desde una copia de código de este repositorio, con Node.js 24 disponible, corre
 ```sh
 git clone https://github.com/andresanemic/vespi.git
 cd vespi
-(cd demo/x402 && npm ci)   # necesaria para la suite completa
 node examples/walkthrough.js
+```
+
+El demo x402 tiene dependencias propias. Instálalas solo si vas a correr la suite completa:
+
+```sh
+(cd demo/x402 && npm ci)
 node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```

@@ -2,17 +2,27 @@
 
 Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. An uncertain exercised effect returns to you for reconciliation, as [continuation tests](../test/v014.test.js) verify, but the host must store receipts and run the next action. Kernel `0.1.5`: published 2026-10-08.
 
-## Run the local evidence
+## Clone the repo and run the local evidence
 
-From the repository root, with Node.js available, run:
+Use Node.js 24 or later. The kernel has no runtime dependencies, and this repository is a source checkout rather than a root-level npm package. Clone it and run the local walkthrough:
 
 ```sh
+git clone https://github.com/andresanemic/vespi.git
+cd vespi
 node examples/walkthrough.js
+```
+
+At the terminal prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage` and `notCovered` fields, then the next action selected by another process.
+
+The x402 demo has its own dependencies. Install them before running the complete suite:
+
+```sh
+(cd demo/x402 && npm ci)
 node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-Answer the walkthrough's terminal prompt with `Ada: approve`. Inspect the receipt's `status`, `coverage` and `notCovered`, then the next action selected by another process. [The walkthrough test](../test/walkthrough.test.js) checks a local observed effect, but the receipt is passed explicitly to that process; this does not establish automatic transfer, durable storage or authenticated human identity. [The bilingual walkthrough](./WALKTHROUGH.md) explains the source and transcript.
+[The walkthrough test](../test/walkthrough.test.js) checks a local observed effect, but the receipt is passed explicitly to that process; this does not establish automatic transfer, durable storage or authenticated human identity. [The bilingual walkthrough](./WALKTHROUGH.md) explains the source and transcript.
 
 The [saved suite result](./SUITE_RESULT_0.1.5.txt) records the command and exact counts for the published cut. The last command checks only shape and uniqueness of hashes, without comparing transaction facts or accessing a network. [The evidence guide](./TESTNET_EVIDENCE.md#recheck-the-saved-responses) gives the command for comparing saved responses with local expectations and an optional Horizon refresh. The saved comparison yields 50 readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies; the expected facts come from local execution records, not Horizon.
 
@@ -50,17 +60,27 @@ Spend-authority narrowing stays out because the base `grantSpend` constructor ha
 
 Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Un efecto ejercido incierto vuelve a ti para reconciliarlo, como verifican [las pruebas de continuidad](../test/v014.test.js), pero el host debe guardar los recibos y ejecutar la siguiente acción. Kernel `0.1.5`: publicado el 2026-10-08.
 
-## Corre la evidencia local
+## Clona el repo y corre la evidencia local
 
-Desde la raíz del repositorio, con Node.js disponible, ejecuta:
+Usa Node.js 24 o posterior. El kernel no tiene dependencias de runtime y este repositorio se distribuye como código fuente, no como paquete npm de la raíz. Clónalo y corre el recorrido local:
 
 ```sh
+git clone https://github.com/andresanemic/vespi.git
+cd vespi
 node examples/walkthrough.js
+```
+
+En la terminal, escribe `Ada: approve`. Revisa `status`, `coverage` y `notCovered` del recibo, y la siguiente acción que selecciona otro proceso.
+
+El demo x402 tiene sus propias dependencias. Instálalas antes de correr la suite completa:
+
+```sh
+(cd demo/x402 && npm ci)
 node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-Responde al terminal con `Ada: approve`. Revisa `status`, `coverage` y `notCovered` del recibo, y la siguiente acción seleccionada por otro proceso. [La prueba del recorrido](../test/walkthrough.test.js) comprueba un efecto local observado, pero el recibo se pasa explícitamente a ese proceso; no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El recorrido bilingüe](./WALKTHROUGH.md) explica el código y la transcripción.
+[La prueba del recorrido](../test/walkthrough.test.js) comprueba un efecto local observado, pero el recibo se pasa explícitamente a ese proceso; no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El recorrido bilingüe](./WALKTHROUGH.md) explica el código y la transcripción.
 
 El [resultado guardado de la suite](./SUITE_RESULT_0.1.5.txt) registra el comando y los conteos exactos del corte publicado. El último comando solo comprueba forma y unicidad de hashes, sin comparar hechos ni acceder a la red. [La guía de evidencia](./TESTNET_EVIDENCE.md#comparar-las-respuestas-guardadas) contiene el comando para comparar respuestas guardadas con expectativas locales y una consulta opcional a Horizon. La comparación guardada da 50 lecturas, 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias; los hechos esperados vienen de registros locales de ejecución, no de Horizon.
 
