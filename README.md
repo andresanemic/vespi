@@ -1,10 +1,44 @@
 # Vespi
 
-Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation. Kernel `0.1.5` was published on 2026-10-08. This is tested operation semantics, with host-managed storage and execution, not demonstrated autonomous work across hosts.
-
-Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo. El kernel `0.1.5` se publicó el 2026-10-08. Es semántica de operación probada, con almacenamiento y ejecución a cargo del host, no trabajo autónomo demostrado entre hosts.
+Vespi keeps authority, checked result and next agreed action together when work changes hands.
+Kernel 0.1.5 is a dependency-free JavaScript source library — run `node examples/walkthrough.js` and `node --test "test/*.test.js"`; it is an engine for Stellar apps across 11 functional explorations ([projects](#the-functional-projects), [capabilities](./docs/CAPABILITIES.md)).
+All chain evidence is Stellar testnet with fictional data, no real money — see [evidence](./docs/TESTNET_EVIDENCE.md) and [judge guide](./docs/FOR_JUDGES.md).
+Vespi conserva autoridad, resultado comprobado y siguiente acción acordada cuando el trabajo cambia de manos.
+El kernel 0.1.5 es una biblioteca fuente JavaScript sin dependencias — motor de apps Stellar en 11 exploraciones funcionales; toda evidencia es testnet con datos ficticios, sin dinero real.
 
 [![Vespiqueen genesis](./assets/vespiqueen-genesis.png)](./assets/vespiqueen-genesis.png)
+
+<p align="center">
+<strong>11 projects built in one week with kernel 0.1.5.</strong><br>
+<a href="https://github.com/andresanemic/queen">Queen</a> — a budget proposal is often unclear: who asked, who could answer, what the price covers.<br>
+<a href="https://github.com/andresanemic/permamuseum">Permamuseum</a> — in a museum, "verified" mixes claim, evidence and permission.<br>
+<a href="https://github.com/andresanemic/casa-firme">Casa Firme</a> — a family should not hand over its identity to prove what happened.<br>
+<a href="https://github.com/andresanemic/ficha-contigo">Ficha Contigo</a> — a patient cannot see who opened their clinical record.<br>
+<a href="https://github.com/andresanemic/catedra">Cátedra</a> — academic records are scattered and nobody sees who authorised what.<br>
+<a href="https://github.com/andresanemic/escribano">Escribano</a> — a public contract shows today's rule, not who changed it.<br>
+<a href="https://github.com/andresanemic/llavero">Llavero</a> — consent to use your data gets lost inside organisations.<br>
+<a href="https://github.com/andresanemic/farolero">Farolero</a> — give an AI agent a vague instruction and nobody knows what it was allowed.<br>
+<a href="https://github.com/andresanemic/marea">Marea</a> — two countries can report the same climate reduction twice.<br>
+<a href="https://github.com/andresanemic/vela">Vela</a> — a source hands over evidence and risks being exposed.<br>
+<a href="https://github.com/andresanemic/temis">TEMIS</a> — two people sign an agreement and later cannot tell who did what.<br>
+All with fictional data on Stellar testnet, no real money. <a href="./docs/FOR_JUDGES.md">Judge guide</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidence</a>
+</p>
+
+<p align="center">
+<strong>11 proyectos construidos en una semana con el kernel 0.1.5.</strong><br>
+<a href="https://github.com/andresanemic/queen">Queen</a> — una propuesta de presupuesto suele ser confusa: quién pidió, quién podía responder.<br>
+<a href="https://github.com/andresanemic/permamuseum">Permamuseum</a> — en un museo, «verificado» mezcla afirmación, evidencia y permiso.<br>
+<a href="https://github.com/andresanemic/casa-firme">Casa Firme</a> — una familia no debería entregar su identidad para probar qué pasó.<br>
+<a href="https://github.com/andresanemic/ficha-contigo">Ficha Contigo</a> — una paciente no ve quién abrió su ficha clínica.<br>
+<a href="https://github.com/andresanemic/catedra">Cátedra</a> — los registros académicos están dispersos y nadie ve quién autorizó qué.<br>
+<a href="https://github.com/andresanemic/escribano">Escribano</a> — un contrato público muestra la regla de hoy, no quién la cambió.<br>
+<a href="https://github.com/andresanemic/llavero">Llavero</a> — el permiso para usar tus datos se pierde dentro de las organizaciones.<br>
+<a href="https://github.com/andresanemic/farolero">Farolero</a> — le das una instrucción vaga a un agente y nadie sabe qué podía hacer.<br>
+<a href="https://github.com/andresanemic/marea">Marea</a> — dos países pueden reportar dos veces la misma reducción climática.<br>
+<a href="https://github.com/andresanemic/vela">Vela</a> — una fuente entrega evidencia y corre el riesgo de quedar expuesta.<br>
+<a href="https://github.com/andresanemic/temis">TEMIS</a> — dos personas firman un acuerdo y después no saben quién cumplió qué.<br>
+Todos con datos ficticios en Stellar testnet, sin dinero real. <a href="./docs/FOR_JUDGES.md">Guía para jueces</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidencia</a>
+</p>
 
 ## English
 
@@ -72,9 +106,9 @@ What you can run today is the local walkthrough above and the kernel around an e
 
 ### Why keep the operation separate from the app?
 
-An app's useful result and its permission to produce that result are different questions. You may want the booking screen built, while still reserving the choice to expose customer data or pay for a service. You may also want tomorrow's worker to know that Tuesday's hours changed without inventing a new permission. The kernel offers reusable authority, gate, receipt and continuation semantics so those questions have a place in the code and the record. [The catalog](./docs/CAPABILITIES.md) shows the actual API and the limits beside it; the host remains responsible for storage, identities and effects.
+An app's useful result and its permission to produce that result are different questions. You may want the booking screen built, while still reserving the choice to expose customer data or pay for a service. The kernel offers reusable authority, gate, receipt and continuation semantics so those questions have a place in the code and the record. [The catalog](./docs/CAPABILITIES.md) shows the actual API and the limits beside it; the host remains responsible for storage, identities and effects.
 
-This is why the goal is to return time and agency rather than fill every recovered minute with more output. That goal appears in [GENESIS](./docs/GENESIS.md) as a working thesis, not a measured productivity result. A capability belongs in an operation when it buys a material difference for that work. A mature local workflow can remain sufficient without activating Vespi.
+The goal is to return time and agency rather than fill every recovered minute with more output. A capability belongs in an operation when it buys a material difference for that work.
 
 ### Authority, a human gate and receipts
 
