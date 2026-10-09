@@ -4,7 +4,7 @@
 
 ### Scope and method
 
-The study compared Vespi's kernel against six neighboring areas: capability security, workflow scheduling, durable execution, coordination under process failure, supervision, and verifiable receipts. It asked which mechanisms address a real gap in this code, which promises should be narrowed, and which systems solve a different problem. The comparison is summarized from the full [study report](../../../../bots/proyectos/bot-lus-lore/notas/2026-10-03_arte-previo-kernel/informe.md), dated 2026-10-03. That report marks sources read directly as `[P]` and pages summarized by a web tool as `[W]`. The distinction matters: claims based on `[W]` are leads checked against the report's citations, not a claim that this note independently inspected every page.
+The study compared Vespi's kernel against six neighboring areas: capability security, workflow scheduling, durable execution, coordination under process failure, supervision, and verifiable receipts. It asked which mechanisms address a real gap in this code, which promises should be narrowed, and which systems solve a different problem. The comparison is summarized from the full internal study report (not included in this public repository), dated 2026-10-03. That report marks sources read directly as `[P]` and pages summarized by a web tool as `[W]`. The distinction matters: claims based on `[W]` are leads checked against the report's citations, not a claim that this note independently inspected every page.
 
 ### What was compared
 
@@ -34,7 +34,7 @@ This is a scoped prior-art review, not a formal survey or security certification
 
 ### Alcance y método
 
-El estudio comparó el kernel de Vespi con seis áreas cercanas: seguridad por capacidades, planificación, ejecución durable, coordinación ante caídas de procesos, supervisión y recibos verificables. Preguntó qué mecanismos resuelven un hueco real del código, qué promesas hay que precisar y qué sistemas resuelven otro problema. Este resumen parte del [informe completo](../../../../bots/proyectos/bot-lus-lore/notas/2026-10-03_arte-previo-kernel/informe.md), fechado el 2026-10-03. El informe marca como `[P]` las fuentes leídas directamente y como `[W]` las páginas resumidas con una herramienta web. La distinción importa: las afirmaciones `[W]` son pistas contrastadas con las citas del informe, no significan que esta nota haya inspeccionado cada página por separado.
+El estudio comparó el kernel de Vespi con seis áreas cercanas: seguridad por capacidades, planificación, ejecución durable, coordinación ante caídas de procesos, supervisión y recibos verificables. Preguntó qué mecanismos resuelven un hueco real del código, qué promesas hay que precisar y qué sistemas resuelven otro problema. Este resumen parte del informe interno completo (no incluido en este repositorio público), fechado el 2026-10-03. El informe marca como `[P]` las fuentes leídas directamente y como `[W]` las páginas resumidas con una herramienta web. La distinción importa: las afirmaciones `[W]` son pistas contrastadas con las citas del informe, no significan que esta nota haya inspeccionado cada página por separado.
 
 ### Qué se comparó
 
