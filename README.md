@@ -1,10 +1,21 @@
-# Vespi
+<p align="center">
+  <a href="./assets/vespiqueen-genesis.png"><img src="./assets/vespiqueen-genesis.png" alt="Vespiqueen genesis" width="100%"></a>
+</p>
 
-**The engine for building apps with AI on Stellar. You drive.**
+<h1 align="center">Vespi</h1>
 
-You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.
+<p align="center">
+  <a href="./docs/RELEASE_0.1.5_KERNEL.md"><img src="https://img.shields.io/badge/version-v0.1.5-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.5"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
+  <a href="./docs/SUITE_RESULT_0.1.5.txt"><img src="https://img.shields.io/badge/suite-1196_pass_%C2%B7_24_todo-E0C170?style=for-the-badge&labelColor=07111A" alt="Saved suite: 1,196 passed, 24 todo, 0 failed"></a>
+  <a href="#the-projects"><img src="https://img.shields.io/badge/projects-11_documented-D7B698?style=for-the-badge&labelColor=07111A" alt="11 documented project explorations"></a>
+  <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet-50_readbacks_%C2%B7_5_semantic-E0C170?style=for-the-badge&labelColor=07111A" alt="50 testnet readbacks; 5 cases semantically verified"></a>
+  <a href="./demo/x402/"><img src="https://img.shields.io/badge/demo-x402_%C2%B7_Stellar_SDK-E0C170?style=for-the-badge&labelColor=07111A" alt="Opt-in x402 demo using the Stellar SDK"></a>
+</p>
 
-We want Vespi to be the official kernel for building apps on Stellar.
+<p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the official kernel for building apps on Stellar.</p>
+
+<p align="center"><b>We’re applying to the Find Your Way hackathon and plan to participate in Meridian.</b><br><a href="#start-with-an-operation">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">Judge’s guide</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
 
 ---
 
@@ -81,9 +92,12 @@ Kernel 0.1.5 is a dependency-free JavaScript source library. It is an engine for
 From a source checkout of this repository, with Node.js 24 available, run the [offline walkthrough](./docs/WALKTHROUGH.md), answer its terminal prompt with your name followed by `: approve`, and inspect the returned `status`, `coverage` and `notCovered`:
 
 ```sh
-(cd demo/x402 && npm ci)   # the suite also covers the x402 bridge, which needs its dependencies
+git clone https://github.com/andresanemic/vespi.git
+cd vespi
+(cd demo/x402 && npm ci)   # needed by the full suite
 node examples/walkthrough.js
 node --test "test/*.test.js"
+node scripts/verify-testnet-evidence.mjs --offline
 ```
 
 The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The [saved suite result](./docs/SUITE_RESULT_0.1.5.txt) records the command, exact counts, Node version and Git baseline for the published cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
@@ -100,37 +114,34 @@ The kernel is JavaScript without runtime dependencies. A capability declares its
 
 [The evidence file](./docs/testnet-evidence.json) records 50 successful testnet transactions read back from Horizon, with 5 cases semantically verified and 45 partially verified, and 0 discrepancies. Expectations come from local execution records rather than Horizon; partial checks do not fill in missing facts. [The evidence guide](./docs/TESTNET_EVIDENCE.md) owns the transaction links, field coverage and historical payment details, including the 0.1.3 adapter's saved x402 receipt. That history is historical evidence for the earlier adapter only. Check file shape offline with `node scripts/verify-testnet-evidence.mjs --offline`; the guide also provides a comparison against saved responses and an optional network refresh.
 
-### The TEMIS record, read at its actual boundary
-
-TEMIS is a bilateral-agreement record used to pressure authority and receipts with fictional data on testnet. Its saved [execution account](./docs/evidence-records/temis-tramos/3/recibo.md) describes registration, signatures, anchors, milestones, corrections, challenges and a reconstruction by a model that did not build it. You can open the [comparison record](./docs/evidence-records/temis-tramos/3/cruce-con-tercero-exp-murckqaa.json) and see both the lifecycle labels it reports as matching and the differences it found when comparing the local copy. Those are declared run results; the transaction-field verifier does not reproduce the lifecycle logic or that third-party reconstruction.
-
-The distinction matters for review. A digest memo and a successful ledger record can support an anchor claim without proving that an agreement is legally valid, that a human signed it or that a disputed milestone was fulfilled. The public transaction is one piece of the evidence; the agreement, the local record and the observer's scope remain necessary. [The evidence guide](./docs/TESTNET_EVIDENCE.md) owns the transaction comparison and its omissions, so a reader can weigh this case without treating every label in a run report as a chain fact.
-
 ### Lore Plugin and the build method
 
 [Lore Plugin](https://github.com/andresanemic/lore-plugin) supplies criterion and the coordinator workflow; Vespi supplies the authority and receipt semantics around an operation. The [method](./docs/METHOD.md) describes loops, test-first work, specifications, bounded delegation, blind reading and separate verification; it is a workflow for host tools, not a kernel that generates apps or images itself. Lore Plugin carries a pinned kernel, so this source snapshot does not update an installed kit automatically.
 
 The agreement keeps its order. Its purpose is to preserve your agency and avoid repeated decisions; its method coordinates bounded authority, a human gate and receipts; each operation's concrete result must be checked. The [verification record](./docs/VERIFICATION.md), [judge findings from the earlier cut](./docs/JUDGES_FINDINGS_0.1.4.md), [prior-art notes](./docs/PRIOR_ART.md) and [experiments](./experiments/) retain construction history. Model reviews independent of the builders are not an external security audit. The method credits [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar and the Lore/LUS work belong to the construction narrative, not proof that the whole product operates autonomously.
 
-### What this is not
-
-No durable emergency or payment store, no autonomous cross-host runtime, no scheduler, no mainnet evidence, no external security audit, no regulatory certification, no production readiness. Operation semantics are `SUPPORTED`; autonomous operation is `UNTESTED`. [Full limits](./docs/RELEASE_0.1.4_KERNEL.md)
-
 ### Author and license
 
-Andrés Peña Mellado, Digital Art Director & Creative Developer. [Telegram](https://t.me/andresanemic), [X](https://x.com/andresanemic), [LinkedIn](https://www.linkedin.com/in/andresanemic/). Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
+Andrés Peña Mellado, Digital Art Director & Creative Developer.
+
+[<img src="./assets/icons/v2/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="./assets/icons/v2/x-dark.svg"><img src="./assets/icons/v2/x.svg" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/v2/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/)
+
+Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 ---
+
+
+
+<details>
+<summary><b>Leer en español</b></summary>
+
+<p align="center"><b>Postulamos a la hackatón Find Your Way y planeamos participar en Meridian.</b><br><a href="#empieza-con-una-operacion">Clona y ejecuta</a> · <a href="./docs/FOR_JUDGES.md">Guía para jueces</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidencia de testnet</a></p>
 
 ## Español
 
 <a id="español"></a>
 
-**El motor para crear apps con IA en Stellar. Tú manejas.**
-
-Conversas con la IA, ella construye y tú decides lo importante. Lo que aprendes queda para la próxima vez.
-
-Queremos que Vespi sea el kernel oficial para crear apps en Stellar.
+<p align="center"><b>El motor para crear apps con IA en Stellar. Tú manejas.</b><br>Conversas con la IA, ella construye y tú decides lo importante. Lo que aprendes queda para la próxima vez.<br>Queremos que Vespi sea el kernel oficial para crear apps en Stellar.</p>
 
 ### Lo que puedes hacer hoy
 
@@ -201,9 +212,12 @@ El kernel 0.1.5 es una biblioteca fuente JavaScript sin dependencias. Es un moto
 Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con tu nombre seguido de `: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
 ```sh
-(cd demo/x402 && npm ci)   # la suite también cubre el puente x402, que necesita sus dependencias
+git clone https://github.com/andresanemic/vespi.git
+cd vespi
+(cd demo/x402 && npm ci)   # necesaria para la suite completa
 node examples/walkthrough.js
 node --test "test/*.test.js"
+node scripts/verify-testnet-evidence.mjs --offline
 ```
 
 [La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.5.txt) registra el comando, los conteos exactos, la versión de Node y la base Git del corte publicado. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
@@ -216,31 +230,9 @@ El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus r
 
 [El catálogo de capacidades](./docs/CAPABILITIES.md) explica la API y las responsabilidades del host.
 
-### Qué cambia el 0.1.5
-
-`buildReceipt({ anchorNetwork })` mantiene `stellar:testnet` como valor por defecto y acepta `stellar:pubnet` cuando se quiere nombrar esa red en un ancla pendiente. Una red no admitida produce un error. La red sigue fuera del digest del cuerpo; elegirla no envía un ancla.
-
-El puente de referencia x402 es un ejemplo opt-in en [`demo/x402/`](./demo/x402/), disponible solo con `--bridge=1`. Admite una autorización de pagador para la transferencia declarada y verifica la liquidación con el SDK de Stellar contra la red, destinatario y monto declarados. Sus pruebas usan objetos reales del SDK y fixtures locales; no hacen un pago vivo en testnet. El puente no cambia la API del kernel en `src/`.
-
-### Qué aportó el 0.1.4 (histórico)
-
-[Las pruebas de continuidad](./test/v014.test.js) cubren reconciliación antes de repetir una acción ejercida incierta, una clave estable que recibe `perform`, topes de intentos y un reloj síncrono inyectado, pero la deduplicación en el destino, el tiempo confiable y despertar el proceso corresponden al host. Los plazos de delegación siguen siendo consultivos.
-
-[La nota del 0.1.3](./docs/RELEASE_0.1.3_KERNEL.md) anunció emergencia, conocimiento cero, procedencia de skills y x402 dentro del kernel. Todo entra al 0.1.4 con los límites de [la nota bilingüe](./docs/RELEASE_0.1.4_KERNEL.md). [Las pruebas de emergencia](./test/k1-emergencia-r6-advisor.test.js) cubren autoridad anticipada y revisión con principales opacos del host, pero el kernel no autentica personas reales, no persiste el registro, no ejecuta ni verifica el efecto y no aporta tiempo confiable; D4 cuenta usos y deja el techo en dinero al proyecto. [Las pruebas de procedencia](./test/k2-procedencia-r5-advisor.test.js) cubren evidencia propia del resolver y datos hostiles, incluidos datos en prototipos contaminados, pero no sustitución de funciones integradas por código del mismo proceso; `provenanceSource` distingue evidencia verificada de declarada y el nombre de la skill sigue declarado.
-
-[Las pruebas x402](./test/k4-x402-r3-advisor.test.js) ejercitan el contrato de efecto pagado del 0.1.4 por puertos inyectados, con `claims` obligatorio y síncrono e identidad de operación en la clave del efecto. El almacén en memoria no es durable, las reservas no se liberan y el kernel no recalcula el digest del cuerpo que declara el validador. Cualquiera puede construir sobre este contrato si aporta sus propios puertos. El puente de referencia con el SDK real de Stellar no se incluye en este corte porque dos revisiones independientes lo rechazaron: la primera revisión encontró que no se bloquearon 15 de 20 ataques y la segunda encontró que no se bloquearon 13 de 26, incluidos el reenvío de una autorización, la sobrescritura de su ventana de inspección y lecturas que continúan tras cancelar. Ninguna demostró liquidación indebida ni filtración de claves. El puente queda para 0.1.5.
-
-[Las pruebas ZK](./test/k3b-zk-port.test.js) cubren clave fijada y entradas públicas acordadas, pero confían en el backend inyectado. La [referencia interna BN254 con Groth16](./src/zk-bn254-reference.js) tiene [evidencia de fixtures y aritmética](./test/fixtures/zk/independent-report.md), pero las pruebas son maleables, una clave degenerada acepta falsificaciones, un timeout con Promise no puede interrumpir la verificación síncrona y no hay auditoría externa ni preparación para producción. Estos módulos no demuestran integración con Casa Firme o Vela. D5: el contenido sellado de Vela queda en claro en la demostración según la declaración del dueño; un despliegue real exige cifrado en reposo y custodia de claves de un tercero.
-
 ### Evidencia que puedes abrir
 
 [El archivo de evidencia](./docs/testnet-evidence.json) registra 50 transacciones exitosas en testnet leídas de Horizon, con 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias. Las expectativas vienen de registros locales de ejecución y no de Horizon; las comprobaciones parciales no completan hechos ausentes. [La guía de evidencia](./docs/TESTNET_EVIDENCE.md) contiene los enlaces de transacciones, la cobertura por campos y los detalles de pagos históricos, incluido el recibo x402 del adaptador de 0.1.3. Esa historia es evidencia histórica de aquel adaptador. Comprueba la forma del archivo sin red con `node scripts/verify-testnet-evidence.mjs --offline`; la guía también permite comparar respuestas guardadas y volver a consultar la red de forma opcional.
-
-### El registro de TEMIS y su frontera real
-
-TEMIS es un registro de acuerdos bilaterales que presiona autoridad y recibos con datos ficticios en testnet. [Su relato de ejecución guardado](./docs/evidence-records/temis-tramos/3/recibo.md) describe alta, firmas, anclas, hitos, correcciones, impugnaciones y una reconstrucción por un modelo que no lo construyó. Puedes abrir [el registro del cotejo](./docs/evidence-records/temis-tramos/3/cruce-con-tercero-exp-murckqaa.json) y ver tanto los estatus que declara coincidentes como las diferencias que encontró al comparar la copia local. Son resultados declarados de una corrida; el verificador de hechos de transacciones no reproduce las reglas del ciclo de vida ni la reconstrucción del tercero.
-
-La distinción importa al revisar. Un memo de digest y un registro exitoso de ledger pueden sostener un ancla sin probar que un acuerdo sea legalmente válido, que una persona lo firmó o que se cumplió un hito impugnado. La transacción pública es una parte de la evidencia; el acuerdo, el registro local y el alcance del observador siguen siendo necesarios. [La guía de evidencia](./docs/TESTNET_EVIDENCE.md) contiene la comparación y sus omisiones para que valores el caso sin tomar cada estatus del informe como un hecho de cadena.
 
 ### Lore Plugin y el método de construcción
 
@@ -248,10 +240,12 @@ La distinción importa al revisar. Un memo de digest y un registro exitoso de le
 
 El acuerdo conserva su orden. La finalidad es cuidar tu agencia y evitar decisiones repetidas; el método coordina autoridad acotada, puerta humana y recibos; el resultado concreto debe comprobarse en cada operación. [El registro de verificación](./docs/VERIFICATION.md), [los hallazgos de jueces del corte anterior](./docs/JUDGES_FINDINGS_0.1.4.md), [las notas de arte previo](./docs/PRIOR_ART.md) y [los experimentos](./experiments/) conservan la historia de construcción. Las revisiones por modelos independientes de sus constructores no son una auditoría de seguridad externa. El método acredita [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar y el trabajo de Lore/LUS pertenecen al relato de construcción, no prueban que el producto completo opere de forma autónoma.
 
-### Qué NO es
-
-No hay almacén durable de emergencia ni de pagos, no hay runtime autónomo entre hosts, no hay planificador, no hay evidencia de mainnet, no hay auditoría de seguridad externa, no hay certificación regulatoria ni preparación para producción. La semántica de operación es `SUPPORTED`; la operación autónoma es `UNTESTED`. [Límites completos](./docs/RELEASE_0.1.4_KERNEL.md)
-
 ### Autor y licencia
 
-Andrés Peña Mellado, Digital Art Director & Creative Developer. [Telegram](https://t.me/andresanemic), [X](https://x.com/andresanemic), [LinkedIn](https://www.linkedin.com/in/andresanemic/). Licencia del kernel: [Apache-2.0](./LICENSE), con atribución en [NOTICE](./NOTICE).
+Andrés Peña Mellado, Digital Art Director & Creative Developer.
+
+[<img src="./assets/icons/v2/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="./assets/icons/v2/x-dark.svg"><img src="./assets/icons/v2/x.svg" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/v2/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/)
+
+Licencia del kernel: [Apache-2.0](./LICENSE), con atribución en [NOTICE](./NOTICE).
+
+</details>
