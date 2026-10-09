@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "generatedBy": "node scripts/judge-package.mjs",
   "packageVersion": "0.1.5",
-  "gitCommit": "d5092e0c5dc97932ab42767e0a87cdfd96709cd2",
+  "gitCommit": "7b16db7716f09e459121508e2d365838e0fd850e",
   "sourceSnapshotNote": "gitCommit identifies the repository baseline; fileHashes bind the exact files read from this working tree, including local changes.",
   "fileHashes": {
     "CHANGELOG.md": "9bb1878c9e2e4e695f5d8c71973eebb59909e2fbdbae109c4b123199e027c4f5",
     "LICENSE": "dc1f5d2d43c5531dfe0acaf4e950ea5dbe3e61e1850cf0e983bda7efc10d6693",
     "NOTICE": "c75180035410d41f3cad511349a56d98d67863db0a34955920677d45edda69e5",
-    "README.md": "834badbdf30dd3bfd326f816d628bfe0c5a38b2ce69ce610e9cf9ef047591a86",
+    "README.md": "b64f903366de4c7a49ad9d8203f6b93fe9987aeec07242c2f6c682aa473b3aad",
     "bench/unidad-operacion.test.mjs": "2f7824faa72f2394d846ab891bc68ff5c1813afcd7d6b8301000276b198ca605",
     "demo/x402/README.md": "094f7e28c50de320c630b0aef83f96cf3c9c2cfcf7651c287ab8889faa944b8d",
     "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
@@ -24,7 +24,7 @@
     "demo/x402/fetch-timeout.test.mjs": "7cced9904b319fdcb731c9dce63bc64e0c90896617594e2fdb2ac8ee3890068b",
     "demo/x402/idempotency.js": "3f2509a04a18a4d504a9641d31d4c860d5d76d385c2d3e71368ed069966c955d",
     "demo/x402/idempotency.test.mjs": "a6fd7e35d38ef4c241b19d65dcd87908f6f9e84027fb8e1bd0450ca3eb92f49e",
-    "demo/x402/package-lock.json": "c827a189d46ca378a862e92b93bb2be77318a69ea121249b7a279da7e882e2b0",
+    "demo/x402/package-lock.json": "e2c355f38e9a7a26d696f77e16538037c5c4a14ac329642b45370f7defeefdba",
     "demo/x402/package.json": "513a7c510e5d8bff1094b674921c153018ce66c9a4bce9c64d79420db83fd223",
     "demo/x402/ports.js": "a2d1739e31b88fa54d059ce7335311f8ab2275f419ee91a4b6baecf4adbac392",
     "demo/x402/run.js": "42815bf9ced77bf3f968dad7d49ec2c6bd85580c88f653f6cad3e8c3a835d5c9",
@@ -48,7 +48,7 @@
     "src/x402.js": "d1312adb9b0cf0753fa1eee9216d97776e7b394a18e1ee0dce7a70bebcfe7498",
     "src/zk-bn254-reference.js": "5662ecfb9143afb4f8d79128a9c8c4df700d34c0fcef8e94acec5e3e6720e8e6",
     "src/zk.js": "ad7c27bd522eef25019da5a905cf439efc17c7dbd11d20f93611d817809303cd",
-    "docs/JUDGE_PACKAGE.json": "eeb5d7db22c8831ed9097ad2a004747cf77b3a86840c103a6b666f1cc9e25da9"
+    "docs/JUDGE_PACKAGE.json": "12e188e5e3cde0cc51ee492a1547d4d82a0ae36073a5ad5d96dd462cb30c131a"
   },
   "excludedPaths": [
     "**/node_modules/**",
@@ -128,5 +128,5 @@
     }
   ],
   "hashNote": "Hashes use SHA-256 over exact bytes and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, 0.1.5 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
-  "manifestSelfHash": "eeb5d7db22c8831ed9097ad2a004747cf77b3a86840c103a6b666f1cc9e25da9"
+  "manifestSelfHash": "12e188e5e3cde0cc51ee492a1547d4d82a0ae36073a5ad5d96dd462cb30c131a"
 }
