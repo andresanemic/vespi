@@ -38,6 +38,12 @@ const PROJECT_REPOSITORIES = [
   status: 'URL listed in the kernel README; this offline manifest does not verify current repository contents or availability',
 }));
 
+// Hashes bind the bytes the repository serves. A Windows checkout with core.autocrlf=true holds
+// CRLF on disk while the repository stores LF, so line endings are normalized before hashing.
+export function lineasLF(buffer) {
+  return Buffer.from(buffer.toString('latin1').replace(/\r\n/g, '\n'), 'latin1');
+}
+
 export function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
@@ -88,7 +94,7 @@ async function fileHashes() {
   const hashes = {};
   for (const relativePath of files) {
     if (relativePath === 'docs/JUDGE_PACKAGE.json') continue;
-    hashes[relativePath] = sha256(await readFile(path.join(ROOT, relativePath)));
+    hashes[relativePath] = sha256(lineasLF(await readFile(path.join(ROOT, relativePath))));
   }
   return hashes;
 }
@@ -128,7 +134,7 @@ export async function buildPackage({ counts, commit = currentCommit() } = {}) {
     excludedPaths: EXCLUDED_PATHS,
     tests: { command: 'node --test test/*.test.js', ...counts },
     publicProjectRepositories: PROJECT_REPOSITORIES,
-    hashNote: 'Hashes use SHA-256 over exact bytes and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, 0.1.5 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes["docs/JUDGE_PACKAGE.json"], to avoid a self-referential hash.',
+    hashNote: 'Hashes use SHA-256 over the repository bytes (CRLF normalized to LF, so they match a clone on any system) and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, 0.1.5 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes["docs/JUDGE_PACKAGE.json"], to avoid a self-referential hash.',
   };
   const manifestSelfHash = sha256(`${JSON.stringify(payload, null, 2)}\n`);
   payload.fileHashes['docs/JUDGE_PACKAGE.json'] = manifestSelfHash;
