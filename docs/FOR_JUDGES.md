@@ -50,7 +50,7 @@ Inspect [the saved x402 receipt](../demo/x402/receipts/live-testnet-2026-10-02.j
 
 The [functional-project repositories](../README.md#the-functional-projects) are public with their source code and documentation, in the main branch since 10 October 2026, under a review-only license that permits reading and cloning for evaluation. Each repository runs its suite with `npm test` on Node 24 and its CI is green. According to the owner's schedule, the code is planned to leave the main branch by a push on 16 October 2026 at 19:31 Chile time; removal by a new commit does not erase code from Git history, and an obtained copy cannot be withdrawn. That planned removal is an owner's commitment, not evidence that a future push happened.
 
-## Qué NO trae el 0.1.4 y pasa al 0.1.5
+## What 0.1.4 does NOT include and moves to 0.1.5
 
 Spend-authority narrowing stays out because the base `grantSpend` constructor has an inherited-setter defect. [The release note](./RELEASE_0.1.4_KERNEL.md#what-014-does-not-bring-and-moves-to-015) gives each reason for x402 HX-09, HX-11, HX-12, HX-13 and R2-05; the real-SDK reference bridge, rejected in two independent reviews and deferred to 0.1.5; provenance N07, N08, H12d and H13d; and emergency H21. Other `todo` cases declare contract boundaries without promising future fixes. No autonomous cross-host runtime, scheduler, mainnet evidence, second payment provider, external security audit, regulatory certification or production readiness is demonstrated.
 

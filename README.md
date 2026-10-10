@@ -15,6 +15,9 @@
 
 <p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the kernel for building apps on Stellar.</p>
 
+<p align="center"><b>We’re applying to the Find Your Way hackathon and plan to participate in Meridian.</b></p>
+<p align="center"><a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
+
 
 ---
 
@@ -147,20 +150,18 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 <details>
 <summary><b>Leer en español</b></summary>
 
-<p align="center"><b>Postulamos a la hackatón Find Your Way y planeamos participar en Meridian.</b><br><a href="#empieza-con-una-operacion">Clona y ejecuta</a> · <a href="./docs/FOR_JUDGES.md">Guía para jueces</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidencia de testnet</a></p>
-
-## Español
-
-<a id="español"></a>
+<a id="espanol"></a>
 
 <p align="center"><b>El motor para crear apps con IA en Stellar. Tú manejas.</b><br>Conversas con la IA, ella construye y tú decides lo importante. Lo que aprendes queda para la próxima vez.<br>Queremos que Vespi sea el kernel para crear apps en Stellar.</p>
 
-### Lo que puedes hacer hoy
+<p align="center"><b>Postulamos a la hackatón Find Your Way y planeamos participar en Meridian.</b><br><a href="#clone-and-run">Clona y ejecuta</a> · <a href="./docs/FOR_JUDGES.md">Guía para jueces</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidencia de testnet</a></p>
+
+## Lo que puedes hacer hoy
 
 - [Instalar Lore Plugin](https://github.com/andresanemic/lore-plugin) — el kit con el que trabajas
 - Correr una operación del kernel: `node examples/walkthrough.js`
 
-### Lo que puede hacer el kernel
+## Lo que puede hacer el kernel
 
 | Capacidad | Estado |
 |---|---|
@@ -173,7 +174,7 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 | Verificación de pruebas de conocimiento cero | Referencia |
 | Delegación, permisos de emergencia y procedencia de skills | Probado |
 
-### Los proyectos
+## Los proyectos
 
 Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Su código es público en cada repositorio desde el 10 de octubre de 2026, con licencia de solo revisión, para el periodo de revisión del 10 al 16 de octubre.
 
@@ -191,7 +192,7 @@ Once proyectos exploran qué puedes construir así, cada uno con su problema, su
 
 Todos con datos ficticios en la testnet de Stellar, sin dinero real.
 
-### Cómo se trabaja
+## Cómo se trabaja
 
 Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueba todo de reflejo: te dice qué cree que funciona y qué no, y no te quita las decisiones importantes. Lo que aprendes queda escrito para la próxima sesión, así no empiezas de cero, y no entregas a mano lo que el sistema puede llevar por ti.
 
@@ -213,13 +214,13 @@ Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueb
 - Pagos con x402 en Stellar: un agente puede pagar un servicio con las condiciones que fijaste. Demo funcionando sobre el SDK real de Stellar.
 - Además: verificación de pruebas de conocimiento cero, anclajes en Stellar, delegación, permisos de emergencia y procedencia de skills.
 
-### Qué es el kernel
+## Qué es el kernel
 
 Vespi conserva juntas la autoridad, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo.
 
 El kernel 0.1.5 es una biblioteca fuente JavaScript sin dependencias. Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real.
 
-### Empieza con una operación
+## Empieza con una operación
 
 Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con tu nombre seguido de `: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
@@ -239,7 +240,7 @@ node scripts/verify-testnet-evidence.mjs --offline
 
 [La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.5.txt) registra el comando, los conteos exactos, la versión de Node y la base Git del corte publicado. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
 
-### Autoridad, puerta humana y recibos
+## Autoridad, puerta humana y recibos
 
 El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus requisitos; la operación comprueba autoridad antes de `perform`, consulta la puerta humana cuando corresponde y recibe una verificación separada. [Las pruebas de autoridad](./test/k2.test.js) cubren activo, techo, destino, vencimiento y aprobaciones con nombres distintos, pero los nombres de aprobación ordinaria son etiquetas y no firmas autenticadas, y los presupuestos de dinero no se acumulan entre operaciones. El host controla herramientas, identidades, reloj y almacenamiento.
 
@@ -247,17 +248,17 @@ El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus r
 
 [El catálogo de capacidades](./docs/CAPABILITIES.md) explica la API y las responsabilidades del host.
 
-### Evidencia que puedes abrir
+## Evidencia que puedes abrir
 
 [El archivo de evidencia](./docs/testnet-evidence.json) registra 50 transacciones exitosas en testnet leídas de Horizon, con 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias. Las expectativas vienen de registros locales de ejecución y no de Horizon; las comprobaciones parciales no completan hechos ausentes. [La guía de evidencia](./docs/TESTNET_EVIDENCE.md) contiene los enlaces de transacciones, la cobertura por campos y los detalles de pagos históricos, incluido el recibo x402 del adaptador de 0.1.3. Esa historia es evidencia histórica de aquel adaptador. Comprueba la forma del archivo sin red con `node scripts/verify-testnet-evidence.mjs --offline`; la guía también permite comparar respuestas guardadas y volver a consultar la red de forma opcional.
 
-### Lore Plugin y el método de construcción
+## Lore Plugin y el método de construcción
 
 [Lore Plugin](https://github.com/andresanemic/lore-plugin) aporta el criterio y el flujo del coordinador; Vespi aporta la semántica de autoridad y recibos alrededor de una operación. [El método](./docs/METHOD.md) describe ciclos, pruebas primero, especificaciones, delegación acotada, lectura ciega y verificación separada; es un flujo de trabajo para herramientas del host, no un kernel que genere apps o imágenes por sí solo. Lore Plugin lleva una copia fija del kernel, por lo que este corte de código no actualiza automáticamente un kit instalado.
 
 El acuerdo conserva su orden. La finalidad es cuidar tu agencia y evitar decisiones repetidas; el método coordina autoridad acotada, puerta humana y recibos; el resultado concreto debe comprobarse en cada operación. [El registro de verificación](./docs/VERIFICATION.md), [los hallazgos de jueces del corte anterior](./docs/JUDGES_FINDINGS_0.1.4.md), [las notas de arte previo](./docs/PRIOR_ART.md) y [los experimentos](./experiments/) conservan la historia de construcción. Las revisiones por modelos independientes de sus constructores no son una auditoría de seguridad externa. El método acredita [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar y el trabajo de Lore/LUS pertenecen al relato de construcción, no prueban que el producto completo opere de forma autónoma.
 
-### Autor y licencia
+## Autor y licencia
 
 Andrés Peña Mellado, Digital Art Director & Creative Developer.
 
