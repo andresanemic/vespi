@@ -382,16 +382,18 @@ test('F416 byte diagnostics must not erase an explicit refutation through an arr
 // process, and a killed process proves the kernel blocked, not that it refused.
 function oversizedProcess(mode) {
   const module = require.resolve('../src/skill-provenance.js');
+  // Los datos viajan por el entorno y se leen con JSON.parse dentro del hijo: ninguna cadena se
+  // compone dentro del codigo que ejecuta el proceso.
   const code = [
-    `const kernel = require(${JSON.stringify(module)});`,
-    `const spec = ${JSON.stringify(SPEC)};`,
+    "const data = JSON.parse(process.env.K2_CASE);",
+    "const kernel = require(data.module);",
     '(async () => {',
     "  const list = new Proxy([], { get(target, key) { return key === 'length' ? Number.MAX_SAFE_INTEGER : 'read'; } });",
     "  console.log('ENTERING_KERNEL');",
-    `  if (${JSON.stringify(mode)} === 'grant') kernel.registerSkillProvenance({ ...spec, authority: list });`,
+    "  if (data.mode === 'grant') kernel.registerSkillProvenance({ ...data.spec, authority: list });",
     '  else {',
-    '    const registered = kernel.registerSkillProvenance(spec);',
-    `    const result = await kernel.verifySkillProvenance(registered, () => (${JSON.stringify(observed())}));`,
+    '    const registered = kernel.registerSkillProvenance(data.spec);',
+    '    const result = await kernel.verifySkillProvenance(registered, () => data.observed);',
     '    kernel.authorizeSkill(registered, result, list);',
     '  }',
     "  console.log('RETURNED');",
@@ -399,6 +401,7 @@ function oversizedProcess(mode) {
   ].join('\n');
   return spawnSync(process.execPath, ['--max-old-space-size=64', '-e', code], {
     encoding: 'utf8',
+    env: { ...process.env, K2_CASE: JSON.stringify({ module, mode, spec: SPEC, observed: observed() }) },
     timeout: 5000,
     windowsHide: true,
   });
