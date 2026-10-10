@@ -383,7 +383,8 @@ function grantedList(value, label) {
   for (let index = 0; index < capture.names.length; index += 1) {
     const name = capabilityName(capture.names[index]);
     if (name === null) throw new Error(`${label} must hold capability names without wildcards`);
-    if (!listedIn(names, name)) names[index] = name;
+    // push, not names[index]: a duplicate that precedes a unique name must not leave a hole.
+    if (!listedIn(names, name)) names.push(name);
   }
   return names;
 }

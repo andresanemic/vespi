@@ -181,7 +181,7 @@ test('H07 a resolver-reported repository is not echoed into the reason', async (
   const planted = 'https://attacker.test/private/token-in-the-path';
   const result = await verifySkillProvenance(claim, () => proof({ repository: planted }));
   assert.equal(result.status, 'discrepant');
-  assert.ok(!result.reason.includes(planted), result.reason);
+  assert.doesNotMatch(result.reason, /attacker\.test|token-in-the-path/, result.reason);
   assert.match(result.reason, /repository/);
 });
 
@@ -472,4 +472,14 @@ test('H24 the declared authority survives the whole round trip unchanged', async
     author: SPEC.author,
     contentDigest: sha256(SPEC.content),
   });
+});
+test('R2-01 a duplicate capability before a unique one leaves no hole in the registered authority', () => {
+  const claim = registerSkillProvenance({ ...SPEC, authority: ['read', 'read', 'write'] });
+  assert.equal(claim.authority.length, 2, 'two distinct names, two entries');
+  assert.deepEqual([...claim.authority], ['read', 'write']);
+  for (let index = 0; index < claim.authority.length; index += 1) {
+    assert.ok(index in claim.authority, `entry ${index} exists`);
+    assert.equal(typeof claim.authority[index], 'string');
+  }
+  assert.ok(!JSON.stringify(claim.authority).includes('null'), 'serialised without null');
 });
