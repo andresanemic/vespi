@@ -3,6 +3,11 @@ Copyright 2026 andresanemic (Andrés Peña Mellado)
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
+Open source commitment: the Vespi kernel is and will stay open source under the Apache License,
+Version 2.0. Future releases will not be moved to a source-available or otherwise restrictive
+license. Any commercial service offered around it is separate from the code, which remains open.
+Versions already released stay licensed under Apache 2.0 irrevocably.
+
 The commits in this repository are NOT signed. `git log --format='%G?'` returns `N` for every commit in this repository: there is no verifiable signature and none is claimed. A commit author's name is not a
 signature, and the SHA-256 fingerprint a receipt carries is a digest without a key — it proves the
 receipt was not edited after it was written, and it proves nothing about who wrote it.

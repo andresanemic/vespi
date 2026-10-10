@@ -138,7 +138,7 @@ Andrés Peña Mellado, Digital Art Director & Creative Developer.
 
 [<img src="./assets/icons/v2/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="./assets/icons/v2/x-dark.svg"><img src="./assets/icons/v2/x.svg" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/v2/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/)
 
-Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
+Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE). The kernel is and will stay open source under Apache 2.0; future releases will not move to a restrictive license.
 
 </details>
 
@@ -263,6 +263,6 @@ Andrés Peña Mellado, Digital Art Director & Creative Developer.
 
 [<img src="./assets/icons/v2/telegram.svg" width="28" alt="Telegram">](https://t.me/andresanemic) &nbsp;&nbsp; [<picture><source media="(prefers-color-scheme: dark)" srcset="./assets/icons/v2/x-dark.svg"><img src="./assets/icons/v2/x.svg" width="28" alt="X"></picture>](https://x.com/andresanemic) &nbsp;&nbsp; [<img src="./assets/icons/v2/linkedin.svg" width="28" alt="LinkedIn">](https://www.linkedin.com/in/andresanemic/)
 
-Licencia del kernel: [Apache-2.0](./LICENSE), con atribución en [NOTICE](./NOTICE).
+Licencia del kernel: [Apache-2.0](./LICENSE), con atribución en [NOTICE](./NOTICE). El kernel es y seguirá siendo de código abierto bajo Apache 2.0; las versiones futuras no pasarán a una licencia restrictiva.
 
 </details>
