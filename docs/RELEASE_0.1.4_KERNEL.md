@@ -118,7 +118,7 @@ Ese archivo nombra el commit sobre el que se corrió la suite: el padre del comm
 
 ## Acceso al código de los proyectos funcionales
 
-Los repositorios de los proyectos son siempre públicos y hoy contienen solo README, según el calendario de acceso del dueño. Su código entra por un push a la rama principal el 12 de octubre de 2026 a las 20:29, hora de Chile, y se retira de esa rama por otro push el 16 de octubre a las 19:31. El margen es de 30 minutos alrededor de la deliberación, del 12 de octubre a las 20:59 al 16 de octubre a las 19:01. Retirar el código con un commit nuevo no lo borra del historial de Git, y una copia que ya obtuviste no se puede retirar. Es la ventana de acceso declarada, no evidencia de un push futuro.
+Los repositorios de los proyectos son públicos, con su código fuente en la rama principal desde el 10 de octubre de 2026, bajo una licencia de solo revisión. Según el calendario de acceso del dueño, el código se retirará de esa rama por un push el 16 de octubre a las 19:31, hora de Chile. Retirar el código con un commit nuevo no lo borra del historial de Git, y una copia que ya obtuviste no se puede retirar. El retiro previsto es la ventana de acceso declarada, no evidencia de un push futuro.
 
 D5: el contenido sellado de Vela queda en claro en la demostración, según la decisión del dueño; un despliegue real exige cifrado en reposo y custodia de claves de un tercero. Las pruebas de este kernel no demuestran esa protección ni integración con consumidores.
 

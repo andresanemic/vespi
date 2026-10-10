@@ -175,7 +175,7 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 ### Los proyectos
 
-Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Los once proyectos están documentados hoy; su código se abre entre el 12 y el 16 de octubre de 2026.
+Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Su código es público en cada repositorio desde el 10 de octubre de 2026, con licencia de solo revisión, para el periodo de revisión del 10 al 16 de octubre.
 
 - [Queen](https://github.com/andresanemic/queen) — una propuesta de presupuesto suele ser confusa: quién pidió, quién podía responder, qué cubre el precio
 - [Permamuseum](https://github.com/andresanemic/permamuseum) — en un museo, «verificado» mezcla afirmación, evidencia y permiso
