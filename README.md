@@ -54,7 +54,7 @@ At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage
 
 ## The projects
 
-Eleven projects explore what you can build this way, each with its problem, its evidence and its limits. The eleven projects are documented today; their code opens between 12 and 16 October 2026.
+Eleven projects explore what you can build this way, each with its problem, its evidence and its limits. Their code is public in each repository since 10 October 2026, under a review-only license, for the review period of 10 to 16 October.
 
 - [Queen](https://github.com/andresanemic/queen) — a budget proposal is often unclear: who asked, who could answer, what the price covers
 - [Permamuseum](https://github.com/andresanemic/permamuseum) — in a museum, "verified" mixes claim, evidence and permission

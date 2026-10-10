@@ -48,7 +48,7 @@ That file names the commit the suite ran on: the parent of the commit that store
 
 ## Functional-project source access
 
-The project repositories remain public and currently contain README files only, according to the owner's access schedule. Their code is scheduled to enter the main branch by a push on 12 October 2026 at 20:29 Chile time and to be removed from that branch by another push on 16 October at 19:31. This gives a 30-minute margin around deliberation, from 12 October at 20:59 to 16 October at 19:01. Removing code with a new commit does not erase it from Git history, and a copy already obtained cannot be withdrawn. This is the stated access window, not proof of a future push.
+The project repositories are public with their source code in the main branch since 10 October 2026, under a review-only license. According to the owner's access schedule, the code is planned to be removed from that branch by a push on 16 October at 19:31 Chile time. Removing code with a new commit does not erase it from Git history, and a copy already obtained cannot be withdrawn. The planned removal is the stated access window, not proof of a future push.
 
 D5: Vela's sealed content remains plaintext in the demonstration, as declared by the owner; a real deployment requires encryption at rest and third-party key custody. Neither that protection nor consumer integration is demonstrated by this kernel's tests.
 
