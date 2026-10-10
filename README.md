@@ -13,7 +13,7 @@
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/demo-x402_%C2%B7_Stellar_SDK-E0C170?style=for-the-badge&labelColor=07111A" alt="Opt-in x402 demo using the Stellar SDK"></a>
 </p>
 
-<p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the official kernel for building apps on Stellar.</p>
+<p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the kernel for building apps on Stellar.</p>
 
 
 ---
@@ -153,7 +153,7 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 <a id="español"></a>
 
-<p align="center"><b>El motor para crear apps con IA en Stellar. Tú manejas.</b><br>Conversas con la IA, ella construye y tú decides lo importante. Lo que aprendes queda para la próxima vez.<br>Queremos que Vespi sea el kernel oficial para crear apps en Stellar.</p>
+<p align="center"><b>El motor para crear apps con IA en Stellar. Tú manejas.</b><br>Conversas con la IA, ella construye y tú decides lo importante. Lo que aprendes queda para la próxima vez.<br>Queremos que Vespi sea el kernel para crear apps en Stellar.</p>
 
 ### Lo que puedes hacer hoy
 
