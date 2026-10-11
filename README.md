@@ -18,6 +18,8 @@
 <p align="center"><b>We’re applying to the Find Your Way hackathon and plan to participate in Meridian.</b></p>
 <p align="center"><a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
 
+<p align="center"><b>Traction:</b> <a href="https://github.com/andresanemic/lore-plugin#reach">4,000+ recorded clones of Lore Plugin since launch</a> (the kit Vespi runs on; clones, not unique people) · this repo: 667 clones in the last 14 days (GitHub traffic).</p>
+
 
 ---
 
