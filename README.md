@@ -35,7 +35,7 @@ At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage
 
 > Run it before you believe it.
 
-What the kernel defends against, and what it does not: [threat model](./docs/THREAT_MODEL.md).
+What the kernel defends against, and what it does not: [threat model](./docs/THREAT_MODEL.md). Reviewed, not audited: the only reviews so far are our own superreviews with Claude Code (five findings, the normal one fixed in 0.1.6). There is no independent external security audit.
 ### A timer you can run
 
 How long from `git clone` to your first receipt? On this machine, three local filesystem clones and walkthroughs took **3.763 s, 2.520 s and 2.973 s**; the median was **2.973 s**. Measured 2026-10-10 on Windows 10 (Andres-AIO), from local source baseline `97f51a45ae98fcd41208dc5302ca7fc5ebcbb5ff`. This measures a local Git clone and the first receipt; it does not include a network fetch.
@@ -183,7 +183,7 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 > Córrelo antes de creerlo.
 
-Contra qué defiende el kernel y contra qué no: [modelo de amenazas](./docs/THREAT_MODEL.md#modelo-de-amenazas).
+Contra qué defiende el kernel y contra qué no: [modelo de amenazas](./docs/THREAT_MODEL.md#modelo-de-amenazas). Revisado, no auditado: las únicas revisiones hasta ahora son nuestras propias superreviews con Claude Code (cinco hallazgos, el normal corregido en 0.1.6). No hay auditoría de seguridad externa independiente.
 
 ## Lo que puede hacer el kernel
 
