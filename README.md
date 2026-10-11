@@ -23,14 +23,14 @@
 
 ---
 
-**Where this is going.** Today you run Vespi from a terminal, and that is the entry barrier. **Vespi Hive** is the app we are building on top of the kit and the kernel so it keeps coming down: a graphical interface where nobody needs the command line, the vocabulary or the files. It is not installable yet.
+**Where this is going.** Today you run Vespi from a terminal, and that is the entry barrier. **Vespi Hive** is the app we are building on top of the kit and the kernel so it keeps coming down: a graphical interface where nobody needs the command line, the vocabulary or the files. **And Vespi Hive will be built with Vespi.** It is not installable yet.
 
 ## Clone and run
 
 The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package.
 
 ```sh
-git clone https://github.com/andresanemic/vespi.git
+git clone --branch v0.1.6-kernel --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 node examples/walkthrough.js
 ```
@@ -230,7 +230,7 @@ El kernel 0.1.6 es una biblioteca fuente JavaScript sin dependencias. Es un moto
 Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con tu nombre seguido de `: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
 ```sh
-git clone https://github.com/andresanemic/vespi.git
+git clone --branch v0.1.6-kernel --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 node examples/walkthrough.js
 ```
