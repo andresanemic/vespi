@@ -1,6 +1,6 @@
 # What Vespi can do
 
-Vespi keeps an operation's authority, checked result and next agreed action together so you can continue what still holds. [Continuation tests](../test/v014.test.js) cover that choice and returning uncertain exercised effects to a person, but the host must store the receipts, observe the effect and wake the process. Kernel `0.1.5`: candidate cut, publication date pending.
+Vespi keeps an operation's authority, checked result and next agreed action together so you can continue what still holds. [Continuation tests](../test/v014.test.js) cover that choice and returning uncertain exercised effects to a person, but the host must store the receipts, observe the effect and wake the process. Kernel `0.1.6`: local cut; no GitHub release is claimed.
 
 ## Authority and the human gate
 
@@ -60,7 +60,7 @@ Spend-authority narrowing stays out because of the inherited-setter defect in ba
 
 # Qué puede hacer Vespi
 
-Vespi conserva juntas la autoridad de una operación, el resultado comprobado y la siguiente acción acordada para que retomes lo que sigue valiendo. [Las pruebas de continuidad](../test/v014.test.js) cubren esa selección y devolver a una persona los efectos ejercidos inciertos, pero el host debe guardar recibos, observar el efecto y despertar el proceso. Kernel `0.1.5`: corte candidato, fecha de publicación pendiente.
+Vespi conserva juntas la autoridad de una operación, el resultado comprobado y la siguiente acción acordada para que retomes lo que sigue valiendo. [Las pruebas de continuidad](../test/v014.test.js) cubren esa selección y devolver a una persona los efectos ejercidos inciertos, pero el host debe guardar recibos, observar el efecto y despertar el proceso. Kernel `0.1.6`: corte local; no se afirma una release de GitHub.
 
 ## Autoridad y puerta humana
 

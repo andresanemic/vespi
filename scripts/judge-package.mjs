@@ -12,8 +12,8 @@ const PUBLIC_DEMO_FILES = ['demo/x402'];
 const PUBLIC_DEMO_EXTENSIONS = new Set(['.js', '.mjs']);
 const PUBLIC_DOCS = [
   'docs/GENESIS.md',
-  'docs/RELEASE_0.1.5_KERNEL.md',
-  'docs/SUITE_RESULT_0.1.5.txt',
+  'docs/RELEASE_0.1.6_KERNEL.md',
+  'docs/SUITE_RESULT_0.1.6.txt',
 ];
 const PUBLIC_BENCH = ['bench/unidad-operacion.test.mjs'];
 const EXCLUDED_PATHS = [
@@ -134,7 +134,7 @@ export async function buildPackage({ counts, commit = currentCommit() } = {}) {
     excludedPaths: EXCLUDED_PATHS,
     tests: { command: 'node --test test/*.test.js', ...counts },
     publicProjectRepositories: PROJECT_REPOSITORIES,
-    hashNote: 'Hashes use SHA-256 over the repository bytes (CRLF normalized to LF, so they match a clone on any system) and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, 0.1.5 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes["docs/JUDGE_PACKAGE.json"], to avoid a self-referential hash.',
+    hashNote: 'Hashes use SHA-256 over the repository bytes (CRLF normalized to LF, so they match a clone on any system) and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, 0.1.6 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes["docs/JUDGE_PACKAGE.json"], to avoid a self-referential hash.',
   };
   const manifestSelfHash = sha256(`${JSON.stringify(payload, null, 2)}\n`);
   payload.fileHashes['docs/JUDGE_PACKAGE.json'] = manifestSelfHash;

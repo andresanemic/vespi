@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.1.6-kernel] — 2026-10-10 (local cut)
+
+
 ## [v0.1.5-kernel] — 2026-10-08
 
 This release lets callers name the network of a new pending receipt anchor with `buildReceipt({ anchorNetwork })`, retaining `stellar:testnet` as the default and accepting `stellar:pubnet`. It also carries an opt-in x402 reference bridge in `demo/x402/`, gated behind `--bridge=1`, with a single-authorization transfer shape and bounded, cancellable settlement reads. A Horizon response that resolves to a malformed shape (e.g. `null`) now returns a closed settlement failure instead of leaking a raw `TypeError` — regression F5e in `test/f5e-settlement-malformed.test.js` and `demo/x402/bridge.test.mjs`. The [bilingual release note](./docs/RELEASE_0.1.5_KERNEL.md) records its tests and limits; the bridge SPEC (`docs/x402-recorte/SPEC.md`) is now synchronized with the implemented closures. The bridge tests use the real Stellar SDK with local fixtures; there is no live payment in this cut.

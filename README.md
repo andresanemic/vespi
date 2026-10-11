@@ -5,10 +5,10 @@
 <h1 align="center">Vespi</h1>
 
 <p align="center">
-  <a href="./docs/RELEASE_0.1.5_KERNEL.md"><img src="https://img.shields.io/badge/version-v0.1.5-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.5"></a>
+  <a href="./docs/RELEASE_0.1.6_KERNEL.md"><img src="https://img.shields.io/badge/version-v0.1.6-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.6"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
-  <a href="./docs/SUITE_RESULT_0.1.5.txt"><img src="https://img.shields.io/badge/suite-1196_pass_%C2%B7_24_todo-E0C170?style=for-the-badge&labelColor=07111A" alt="Saved suite: 1,196 passed, 24 todo, 0 failed"></a>
-  <a href="#the-projects"><img src="https://img.shields.io/badge/projects-11_documented-D7B698?style=for-the-badge&labelColor=07111A" alt="11 documented project explorations"></a>
+  <a href="./docs/SUITE_RESULT_0.1.6.txt"><img src="https://img.shields.io/badge/suite-1199_pass_%C2%B7_24_todo-E0C170?style=for-the-badge&labelColor=07111A" alt="Saved suite: 1,199 passed, 24 todo, 0 failed"></a>
+  <a href="#the-projects"><img src="https://img.shields.io/badge/projects-11_public_repos-D7B698?style=for-the-badge&labelColor=07111A" alt="11 functional project repositories"></a>
   <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet-50_readbacks_%C2%B7_5_semantic-E0C170?style=for-the-badge&labelColor=07111A" alt="50 testnet readbacks; 5 cases semantically verified"></a>
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/demo-x402_%C2%B7_Stellar_SDK-E0C170?style=for-the-badge&labelColor=07111A" alt="Opt-in x402 demo using the Stellar SDK"></a>
 </p>
@@ -32,6 +32,24 @@ node examples/walkthrough.js
 ```
 
 At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage` and `notCovered` fields.
+
+> Run it before you believe it.
+### A timer you can run
+
+How long from `git clone` to your first receipt? On this machine, three local filesystem clones and walkthroughs took **3.763 s, 2.520 s and 2.973 s**; the median was **2.973 s**. Measured 2026-10-10 on Windows 10 (Andres-AIO), from local source baseline `97f51a45ae98fcd41208dc5302ca7fc5ebcbb5ff`. This measures a local Git clone and the first receipt; it does not include a network fetch.
+
+From a kernel checkout in PowerShell, run this three times with a fresh destination each time. The median is the middle value:
+
+```powershell
+Measure-Command {
+  git clone --local --no-hardlinks . vespi-bench
+  Push-Location vespi-bench
+  'Ada: approve' | node examples/walkthrough.js
+  Pop-Location
+}
+```
+
+Can you beat it?
 
 <details>
 <summary><b>Read in English</b></summary>
@@ -103,7 +121,7 @@ You arrive with an idea. You talk to the AI and it builds together. The AI does 
 
 Vespi keeps authority, checked result and next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation.
 
-Kernel 0.1.5 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. All chain evidence is Stellar testnet with fictional data, no real money.
+Kernel 0.1.6 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. All chain evidence is Stellar testnet with fictional data, no real money.
 
 ### Start with an operation
 
@@ -115,7 +133,7 @@ node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The [saved suite result](./docs/SUITE_RESULT_0.1.5.txt) records the command, exact counts, Node version and Git baseline for the published cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
+The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The [saved suite result](./docs/SUITE_RESULT_0.1.6.txt) records the command, exact counts, Node version and Git baseline for the local cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
 
 ### Authority, a human gate and receipts
 
@@ -160,6 +178,8 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 - [Instalar Lore Plugin](https://github.com/andresanemic/lore-plugin) — el kit con el que trabajas
 - Correr una operación del kernel: `node examples/walkthrough.js`
+
+> Córrelo antes de creerlo.
 
 ## Lo que puede hacer el kernel
 
@@ -218,7 +238,7 @@ Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueb
 
 Vespi conserva juntas la autoridad, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo.
 
-El kernel 0.1.5 es una biblioteca fuente JavaScript sin dependencias. Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real.
+El kernel 0.1.6 es una biblioteca fuente JavaScript sin dependencias. Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real.
 
 ## Empieza con una operación
 
@@ -238,7 +258,7 @@ node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.5.txt) registra el comando, los conteos exactos, la versión de Node y la base Git del corte publicado. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
+[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.6.txt) registra el comando, los conteos exactos, la versión de Node y la base Git del corte local. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
 
 ## Autoridad, puerta humana y recibos
 
