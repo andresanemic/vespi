@@ -8,7 +8,7 @@ The cut also adds `examples/refusal.js`, which shows an over-limit operation ref
 
 Review. This cut went through a superreview run with the multi-agent code review of Claude Code: five findings, one of them normal (the duplicated capability above), fixed in this cut. Those are our own reviews: there is no independent external security audit. See the [threat model](./THREAT_MODEL.md).
 
-The complete suite result is recorded in [SUITE_RESULT_0.1.6.txt](./SUITE_RESULT_0.1.6.txt).
+Find Your Way: the submission is complete except for its video, and this is the last tag before it. The complete suite result is recorded in [SUITE_RESULT_0.1.6.txt](./SUITE_RESULT_0.1.6.txt).
 
 ---
 
@@ -20,4 +20,4 @@ El corte agrega además `examples/refusal.js`, que muestra una operación fuera 
 
 Revisión. Este corte pasó por una superreview hecha con la revisión de código multiagente de Claude Code: cinco hallazgos, uno normal (la capacidad duplicada de arriba), corregido en este corte. Son revisiones propias: no hay auditoría de seguridad externa independiente. Ver el [modelo de amenazas](./THREAT_MODEL.md#modelo-de-amenazas).
 
-El resultado de la suite completa está en [SUITE_RESULT_0.1.6.txt](./SUITE_RESULT_0.1.6.txt).
+Find Your Way: la postulación está completa salvo su video, y este es el último tag antes de él. El resultado de la suite completa está en [SUITE_RESULT_0.1.6.txt](./SUITE_RESULT_0.1.6.txt).
