@@ -87,7 +87,7 @@ Eleven projects explore what you can build this way, each with its problem, its 
 - [Vela](https://github.com/andresanemic/vela) — a source hands over evidence and risks being exposed
 - [TEMIS](https://github.com/andresanemic/temis) — two people sign an agreement and later cannot tell who did what
 
-All with fictional data on Stellar testnet, no real money.
+All with fictional data and no real money: most run as local walkthroughs, and Stellar testnet evidence belongs only to the projects that declare it (TEMIS and Permamuseum), not to all eleven.
 
 ---
 
@@ -119,7 +119,7 @@ You arrive with an idea. You talk to the AI and it builds together. The AI does 
 
 Vespi keeps authority, checked result and next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation.
 
-Kernel 0.1.6 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. All chain evidence is Stellar testnet with fictional data, no real money.
+Kernel 0.1.6 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. All chain evidence is Stellar testnet with fictional data, no real money; the projects that declare no network (such as Queen and Vela) are local walkthroughs.
 
 ### Start with an operation
 
@@ -201,7 +201,7 @@ Once proyectos exploran qué puedes construir así, cada uno con su problema, su
 - [Vela](https://github.com/andresanemic/vela) — una fuente entrega evidencia y corre el riesgo de quedar expuesta
 - [TEMIS](https://github.com/andresanemic/temis) — dos personas firman un acuerdo y después no saben quién cumplió qué
 
-Todos con datos ficticios en la testnet de Stellar, sin dinero real.
+Todos con datos ficticios y sin dinero real: la mayoría corre como recorrido local, y la evidencia en la testnet de Stellar pertenece solo a los proyectos que la declaran (TEMIS y Permamuseum), no a los once.
 
 ## Cómo se trabaja
 
@@ -229,7 +229,7 @@ Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueb
 
 Vespi conserva juntas la autoridad, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo.
 
-El kernel 0.1.6 es una biblioteca fuente JavaScript sin dependencias. Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real.
+El kernel 0.1.6 es una biblioteca fuente JavaScript sin dependencias. Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real; los proyectos que no declaran red (como Queen y Vela) son recorridos locales.
 
 ## Empieza con una operación
 
