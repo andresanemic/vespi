@@ -20,8 +20,6 @@
 <p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=g2iw29M6WI0"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
 <p align="center">Pitch deck: <a href="https://drive.google.com/file/d/1iiEHJ35hFaYM_df4a6EtXdK8vmI4f5EG/view?usp=sharing">EN</a> · <a href="https://drive.google.com/file/d/1vj3HTJVWc7TaPyvq1iPovfLgis9KzbYg/view?usp=sharing">ES</a> &nbsp;|&nbsp; One pager: <a href="https://drive.google.com/file/d/1KvmeMdTnY7vk3HHq1ZC9ILwiRILh99h4/view?usp=drive_link">EN</a> · <a href="https://drive.google.com/file/d/16YOg0ps5uRaKhfMcS0D0imn5yN8K70Wm/view?usp=sharing">ES</a></p>
 
-<p align="center"><b>Traction:</b> <a href="https://github.com/andresanemic/lore-plugin#reach">4,000+ recorded clones of Lore Plugin since launch</a> (the kit Vespi runs on; clones, not unique people) · this repo: 667 clones in the last 14 days (GitHub traffic).</p>
-
 
 ---
 
@@ -42,10 +40,6 @@ At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage
 See what an agent is not allowed to do: `node examples/refusal.js` refuses an over-limit operation with no effect, then runs one inside the grant and leaves a receipt.
 
 > Run it before you believe it.
-
-What the kernel defends against, and what it does not: [threat model](./docs/THREAT_MODEL.md). Why the chain matters, and what it does not verify: [why Stellar](./docs/WHY_STELLAR.md). Reviewed, not audited: the only reviews so far are our own superreviews with Claude Code (five findings, the normal one fixed in 0.1.6). There is no independent external security audit.
-
-**Not sure whether to try it?** Share this repository's link with your AI agent, ask what Lore Plugin and Vespi are, and let it tell you whether it recommends installing them in one of your projects.
 
 **What "experimental" means here.** The kernel is a 0.1 source checkout, not an npm package, and everything runs in a local walkthrough or on Stellar testnet with fictional data, never on mainnet. It also has design limits we declare: approval names are labels, not signatures; budgets do not accumulate across operations; the host stores the receipts. [Judge it in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md).
 
