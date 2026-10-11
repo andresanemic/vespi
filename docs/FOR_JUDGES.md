@@ -4,6 +4,8 @@ Vespi keeps the authority you granted, the checked result and the next agreed ac
 
 ## Clone the repo and run the local evidence
 
+What the kernel defends against and what it does not is in the [threat model](./THREAT_MODEL.md).
+
 Use Node.js 24 or later. The kernel has no runtime dependencies, and this repository is a source checkout rather than a root-level npm package. Clone it and run the local walkthrough:
 
 ```sh
@@ -61,6 +63,8 @@ Spend-authority narrowing stays out because the base `grantSpend` constructor ha
 Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Un efecto ejercido incierto vuelve a ti para reconciliarlo, como verifican [las pruebas de continuidad](../test/v014.test.js), pero el host debe guardar los recibos y ejecutar la siguiente acción. Kernel `0.1.6`: corte local del 2026-10-10; no se afirma una release de GitHub.
 
 ## Clona el repo y corre la evidencia local
+
+Contra qué defiende el kernel y contra qué no está en el [modelo de amenazas](./THREAT_MODEL.md#modelo-de-amenazas).
 
 Usa Node.js 24 o posterior. El kernel no tiene dependencias de runtime y este repositorio se distribuye como código fuente, no como paquete npm de la raíz. Clónalo y corre el recorrido local:
 

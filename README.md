@@ -34,6 +34,8 @@ node examples/walkthrough.js
 At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage` and `notCovered` fields.
 
 > Run it before you believe it.
+
+What the kernel defends against, and what it does not: [threat model](./docs/THREAT_MODEL.md).
 ### A timer you can run
 
 How long from `git clone` to your first receipt? On this machine, three local filesystem clones and walkthroughs took **3.763 s, 2.520 s and 2.973 s**; the median was **2.973 s**. Measured 2026-10-10 on Windows 10 (Andres-AIO), from local source baseline `97f51a45ae98fcd41208dc5302ca7fc5ebcbb5ff`. This measures a local Git clone and the first receipt; it does not include a network fetch.
@@ -180,6 +182,8 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 - Correr una operación del kernel: `node examples/walkthrough.js`
 
 > Córrelo antes de creerlo.
+
+Contra qué defiende el kernel y contra qué no: [modelo de amenazas](./docs/THREAT_MODEL.md#modelo-de-amenazas).
 
 ## Lo que puede hacer el kernel
 
