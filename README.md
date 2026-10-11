@@ -18,6 +18,7 @@
 
 <p align="center"><b>We’re applying to the Find Your Way hackathon and plan to participate in Meridian.</b></p>
 <p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=uJMd11gs3KE"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
+<p align="center">Pitch deck: <a href="https://drive.google.com/file/d/1iiEHJ35hFaYM_df4a6EtXdK8vmI4f5EG/view?usp=sharing">EN</a> · <a href="https://drive.google.com/file/d/1vj3HTJVWc7TaPyvq1iPovfLgis9KzbYg/view?usp=sharing">ES</a> &nbsp;|&nbsp; One pager: <a href="https://drive.google.com/file/d/1KvmeMdTnY7vk3HHq1ZC9ILwiRILh99h4/view?usp=drive_link">EN</a> · <a href="https://drive.google.com/file/d/16YOg0ps5uRaKhfMcS0D0imn5yN8K70Wm/view?usp=sharing">ES</a></p>
 
 <p align="center"><b>Traction:</b> <a href="https://github.com/andresanemic/lore-plugin#reach">4,000+ recorded clones of Lore Plugin since launch</a> (the kit Vespi runs on; clones, not unique people) · this repo: 667 clones in the last 14 days (GitHub traffic).</p>
 
