@@ -1,0 +1,51 @@
+name: Save traffic stats
+
+# Guarda el histórico de clonaciones (la API de GitHub solo retiene 14 días).
+on:
+  schedule:
+    - cron: "0 6 * * 0"   # todos los domingos 06:00 UTC
+  workflow_dispatch:        # permite correrlo a mano
+
+permissions:
+  contents: write           # push del histórico + la API de traffic exige push access
+
+jobs:
+  save:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch and merge clone stats
+        env:
+          GH_TOKEN: ${{ secrets.TRAFFIC_PAT }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then echo "::notice::TRAFFIC_PAT is not set; nothing recorded."; exit 0; fi
+          mkdir -p data/traffic
+          file=data/traffic/clones.json
+          [ -f "$file" ] || echo '[]' > "$file"
+
+          curl -sf \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/traffic/clones" \
+            > api.json
+
+          # Union por día: el dato nuevo pisa al viejo; los días fuera de la
+          # ventana de 14 días se conservan del histórico.
+          jq -s '
+            (.[0] + .[1].clones)
+            | group_by(.timestamp)
+            | map(.[-1])
+            | sort_by(.timestamp)
+          ' "$file" api.json > merged.json
+          mv merged.json "$file"
+          rm -f api.json
+
+      - name: Commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/traffic/clones.json
+          git diff --cached --quiet || git commit -m "chore: update traffic clone stats"
+          git push
