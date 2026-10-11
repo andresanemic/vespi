@@ -47,22 +47,6 @@ What the kernel defends against, and what it does not: [threat model](./docs/THR
 **Not sure whether to try it?** Share this repository's link with your AI agent, ask what Lore Plugin and Vespi are, and let it tell you whether it recommends installing them in one of your projects.
 
 **What "experimental" means here.** The kernel is a 0.1 source checkout, not an npm package, and everything runs in a local walkthrough or on Stellar testnet with fictional data, never on mainnet. It also has design limits we declare: approval names are labels, not signatures; budgets do not accumulate across operations; the host stores the receipts. [Judge it in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md).
-### A timer you can run
-
-How long from `git clone` to your first receipt? On this machine, three local filesystem clones and walkthroughs took **3.763 s, 2.520 s and 2.973 s**; the median was **2.973 s**. Measured 2026-10-10 on Windows 10 (Andres-AIO), from local source baseline `97f51a45ae98fcd41208dc5302ca7fc5ebcbb5ff`. This measures a local Git clone and the first receipt; it does not include a network fetch.
-
-From a kernel checkout in PowerShell, run this three times with a fresh destination each time. The median is the middle value:
-
-```powershell
-Measure-Command {
-  git clone --local --no-hardlinks . vespi-bench
-  Push-Location vespi-bench
-  'Ada: approve' | node examples/walkthrough.js
-  Pop-Location
-}
-```
-
-Can you beat it?
 
 <details>
 <summary><b>Read in English</b></summary>
