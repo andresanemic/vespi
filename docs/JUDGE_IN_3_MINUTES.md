@@ -1,6 +1,6 @@
 # Judge Vespi in 3 minutes
 
-> Three commands, the output you should see, and what to look for. Needs Node.js 24 or later; no network and no money. Español: [Juzga Vespi en 3 minutos](#juzga-vespi-en-3-minutos).
+> Three commands, the third optional, the output you should see, and what to look for. Needs Node.js 24 or later; no network and no money. The first two take about 15 seconds and need no install. Español: [Juzga Vespi en 3 minutos](#juzga-vespi-en-3-minutos).
 
 ```sh
 git clone https://github.com/andresanemic/vespi.git
@@ -45,7 +45,7 @@ operation 2: spend 3 NOTE (granted ceiling: 5)
 
 The over-limit request leaves a receipt with `coverage: []`: nothing ran. The in-limit one runs and is checked.
 
-**3. The whole suite (1 to 2 minutes).**
+**3. Optional: the whole suite (1 to 2 minutes more).**
 
 ```sh
 (cd demo/x402 && npm ci)
@@ -60,7 +60,7 @@ At this cut: `tests 1224`, `pass 1200`, `fail 0`, `todo 24`. The 24 `todo` are b
 
 # Juzga Vespi en 3 minutos
 
-> Tres comandos, la salida que deberías ver y qué mirar. Necesita Node.js 24 o posterior; sin red y sin dinero.
+> Tres comandos, el tercero opcional, la salida que deberías ver y qué mirar. Necesita Node.js 24 o posterior; sin red y sin dinero. Los dos primeros toman unos 15 segundos y no instalan nada.
 
 ```sh
 git clone https://github.com/andresanemic/vespi.git
@@ -83,7 +83,7 @@ node examples/refusal.js
 
 La petición fuera del límite deja un recibo con `coverage: []`: no corrió nada. La que está dentro del límite corre y se comprueba (la salida es la de arriba).
 
-**3. La suite completa (1 a 2 minutos).**
+**3. Opcional: la suite completa (1 a 2 minutos más).**
 
 ```sh
 (cd demo/x402 && npm ci)
