@@ -183,15 +183,9 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 <a id="espanol"></a>
 
-<p align="center"><b>El motor para crear apps con IA en Stellar. Tú manejas.</b><br>Conversas con la IA, ella construye y tú decides lo importante. Lo que aprendes queda para la próxima vez.<br>Queremos que Vespi sea el kernel para crear apps en Stellar.</p>
+## Lo que puedes hacer hoy
 
-<p align="center"><b>Postulamos a la hackatón Find Your Way y planeamos participar en Meridian.</b><br><a href="./docs/JUDGE_IN_3_MINUTES.md#juzga-vespi-en-3-minutos"><b>Juzga en 3 minutos</b></a> · <a href="#clone-and-run">Clona y ejecuta</a> · <a href="./docs/FOR_JUDGES.md">Guía para jueces</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidencia de testnet</a></p>
-
-**Hacia dónde va.** Hoy corres Vespi desde una terminal, y esa es la barrera de entrada. **Vespi Hive** es la app que construimos sobre el kit y el kernel para que siga bajando: una interfaz gráfica donde nadie necesita la línea de comandos, el vocabulario ni los archivos. Aún no es instalable.
-
-**¿No sabes si probarlo?** Comparte el enlace de este repositorio con tu agente de IA, pregúntale de qué tratan Lore Plugin y Vespi y deja que te diga si te recomienda instalarlos en alguno de tus proyectos.
-
-**Qué significa "experimental" aquí.** El kernel es un checkout de código 0.1, no un paquete npm, y todo corre en un recorrido local o en la testnet de Stellar con datos ficticios, nunca en mainnet. Además tiene límites de diseño que declaramos: los nombres de aprobación son etiquetas y no firmas; los presupuestos no se acumulan entre operaciones; el host guarda los recibos. [Juzga Vespi en 3 minutos](./docs/JUDGE_IN_3_MINUTES.md#juzga-vespi-en-3-minutos).
+- [Instala Lore Plugin](https://github.com/andresanemic/lore-plugin) — el kit con el que trabajas
 
 ## Lo que puede hacer el kernel
 
