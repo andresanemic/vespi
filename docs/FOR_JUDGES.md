@@ -4,7 +4,7 @@ Vespi keeps the authority you granted, the checked result and the next agreed ac
 
 ## Clone the repo and run the local evidence
 
-What the kernel defends against and what it does not is in the [threat model](./THREAT_MODEL.md).
+What the kernel defends against and what it does not is in the [threat model](./THREAT_MODEL.md). Why Stellar, and what the chain does not verify, is in [why Stellar](./WHY_STELLAR.md).
 
 Use Node.js 24 or later. The kernel has no runtime dependencies, and this repository is a source checkout rather than a root-level npm package. Clone it and run the local walkthrough:
 
@@ -64,7 +64,7 @@ Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la s
 
 ## Clona el repo y corre la evidencia local
 
-Contra qué defiende el kernel y contra qué no está en el [modelo de amenazas](./THREAT_MODEL.md#modelo-de-amenazas).
+Contra qué defiende el kernel y contra qué no está en el [modelo de amenazas](./THREAT_MODEL.md#modelo-de-amenazas). Por qué Stellar, y qué no verifica la cadena, está en [por qué Stellar](./WHY_STELLAR.md#por-qué-stellar).
 
 Usa Node.js 24 o posterior. El kernel no tiene dependencias de runtime y este repositorio se distribuye como código fuente, no como paquete npm de la raíz. Clónalo y corre el recorrido local:
 

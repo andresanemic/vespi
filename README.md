@@ -33,9 +33,11 @@ node examples/walkthrough.js
 
 At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage` and `notCovered` fields.
 
+See what an agent is not allowed to do: `node examples/refusal.js` refuses an over-limit operation with no effect, then runs one inside the grant and leaves a receipt.
+
 > Run it before you believe it.
 
-What the kernel defends against, and what it does not: [threat model](./docs/THREAT_MODEL.md). Reviewed, not audited: the only reviews so far are our own superreviews with Claude Code (five findings, the normal one fixed in 0.1.6). There is no independent external security audit.
+What the kernel defends against, and what it does not: [threat model](./docs/THREAT_MODEL.md). Why the chain matters, and what it does not verify: [why Stellar](./docs/WHY_STELLAR.md). Reviewed, not audited: the only reviews so far are our own superreviews with Claude Code (five findings, the normal one fixed in 0.1.6). There is no independent external security audit.
 ### A timer you can run
 
 How long from `git clone` to your first receipt? On this machine, three local filesystem clones and walkthroughs took **3.763 s, 2.520 s and 2.973 s**; the median was **2.973 s**. Measured 2026-10-10 on Windows 10 (Andres-AIO), from local source baseline `97f51a45ae98fcd41208dc5302ca7fc5ebcbb5ff`. This measures a local Git clone and the first receipt; it does not include a network fetch.
@@ -70,7 +72,7 @@ Can you beat it?
 | Spending with a ceiling: asset, amount, destination and expiry | Proven |
 | A second review: another checks the result. The agent does not grade itself | Proven |
 | Continuity: the next session picks up from what was already checked, and the uncertain returns to you | Proven |
-| x402 payments on Stellar, on the real Stellar SDK | Demo |
+| x402 paid-effect contract, tested with synthetic ports; a demo adapter outside the kernel uses the Stellar SDK on testnet (the SDK bridge inside the kernel is deferred) | Demo |
 | A 0.01 USDC payment and 50 transactions saved on Stellar testnet | Testnet |
 | Zero-knowledge proof verification | Reference |
 | Delegation, emergency permissions and skill provenance | Proven |
@@ -114,7 +116,7 @@ You arrive with an idea. You talk to the AI and it builds together. The AI does 
 - Spending with a ceiling: limits per asset, amount, destination and expiry.
 - A second review: another checks the result. The agent does not grade itself.
 - Continuity: the next session picks up from what was already checked, and the uncertain returns to you.
-- Payments with x402 on Stellar: an agent can pay a service with the conditions you set. Demo running on the real Stellar SDK.
+- Payments with x402: a contract for an agent to pay a service under the conditions you set, tested with synthetic ports. A demo adapter outside the kernel runs it on Stellar testnet with the Stellar SDK; the SDK bridge inside the kernel is deferred.
 - Also: zero-knowledge proof verification, anchors on Stellar, delegation, emergency permissions and skill provenance.
 
 ---
@@ -183,7 +185,7 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 > Córrelo antes de creerlo.
 
-Contra qué defiende el kernel y contra qué no: [modelo de amenazas](./docs/THREAT_MODEL.md#modelo-de-amenazas). Revisado, no auditado: las únicas revisiones hasta ahora son nuestras propias superreviews con Claude Code (cinco hallazgos, el normal corregido en 0.1.6). No hay auditoría de seguridad externa independiente.
+Mira lo que un agente no puede hacer: `node examples/refusal.js` rechaza una operación fuera del límite sin ningún efecto y luego corre una dentro del permiso y deja un recibo. Contra qué defiende el kernel y contra qué no: [modelo de amenazas](./docs/THREAT_MODEL.md#modelo-de-amenazas). Por qué importa la cadena y qué no verifica: [por qué Stellar](./docs/WHY_STELLAR.md#por-qué-stellar). Revisado, no auditado: las únicas revisiones hasta ahora son nuestras propias superreviews con Claude Code (cinco hallazgos, el normal corregido en 0.1.6). No hay auditoría de seguridad externa independiente.
 
 ## Lo que puede hacer el kernel
 
@@ -193,7 +195,7 @@ Contra qué defiende el kernel y contra qué no: [modelo de amenazas](./docs/THR
 | Gasto con techo: límites por activo, monto, destino y vencimiento | Probado |
 | Una segunda revisión: otro comprueba el resultado. El agente no se califica a sí mismo | Probado |
 | Continuidad: la siguiente sesión sigue desde lo ya comprobado, y lo incierto vuelve a ti | Probado |
-| Pagos x402 en Stellar, sobre el SDK real de Stellar | Demo |
+| Contrato de pago x402 probado con puertos sintéticos; un adaptador de demo fuera del kernel usa el SDK de Stellar en testnet (el puente con el SDK dentro del kernel está diferido) | Demo |
 | Un pago de 0,01 USDC y 50 transacciones guardadas en la testnet de Stellar | Testnet |
 | Verificación de pruebas de conocimiento cero | Referencia |
 | Delegación, permisos de emergencia y procedencia de skills | Probado |
@@ -235,7 +237,7 @@ Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueb
 - Gasto con techo: límites por activo, monto, destino y vencimiento.
 - Una segunda revisión: otro comprueba el resultado. El agente no se califica a sí mismo.
 - Continuidad: la siguiente sesión sigue desde lo ya comprobado, y lo incierto vuelve a ti.
-- Pagos con x402 en Stellar: un agente puede pagar un servicio con las condiciones que fijaste. Demo funcionando sobre el SDK real de Stellar.
+- Pagos con x402: un contrato para que un agente pague un servicio con las condiciones que fijaste, probado con puertos sintéticos. Un adaptador de demo fuera del kernel lo corre en la testnet de Stellar con el SDK de Stellar; el puente con el SDK dentro del kernel está diferido.
 - Además: verificación de pruebas de conocimiento cero, anclajes en Stellar, delegación, permisos de emergencia y procedencia de skills.
 
 ## Qué es el kernel
