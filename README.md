@@ -11,6 +11,7 @@
   <a href="#the-projects"><img src="https://img.shields.io/badge/projects-11_public_repos-D7B698?style=for-the-badge&labelColor=07111A" alt="11 functional project repositories"></a>
   <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet-50_readbacks_%C2%B7_5_semantic-E0C170?style=for-the-badge&labelColor=07111A" alt="50 testnet readbacks; 5 cases semantically verified"></a>
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/demo-x402_%C2%B7_Stellar_SDK-E0C170?style=for-the-badge&labelColor=07111A" alt="Opt-in x402 demo using the Stellar SDK"></a>
+  <a href="https://github.com/andresanemic/lore-plugin"><img src="https://img.shields.io/badge/Lore_Plugin-4057%2B_recorded_clones-E0C170?style=for-the-badge&labelColor=07111A" alt="4,057+ recorded clones of Lore Plugin since launch (through 2026-10-10)"></a>
 </p>
 
 <p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the kernel for building apps on Stellar.</p>
