@@ -23,6 +23,8 @@
 
 ---
 
+**Where this is going.** Today you run Vespi from a terminal, and that is the entry barrier. **Vespi Hive** is the app we are building on top of the kit and the kernel so it keeps coming down: a graphical interface where nobody needs the command line, the vocabulary or the files. It is not installable yet.
+
 ## Clone and run
 
 The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package.
@@ -40,12 +42,6 @@ See what an agent is not allowed to do: `node examples/refusal.js` refuses an ov
 > Run it before you believe it.
 
 What the kernel defends against, and what it does not: [threat model](./docs/THREAT_MODEL.md). Why the chain matters, and what it does not verify: [why Stellar](./docs/WHY_STELLAR.md). Reviewed, not audited: the only reviews so far are our own superreviews with Claude Code (five findings, the normal one fixed in 0.1.6). There is no independent external security audit.
-
-### Where this is going: Vespi Hive
-
-Today you run Vespi from a terminal. That is the entry barrier, and **Vespi Hive** is how it goes away: an app that runs on top of the kit and the kernel, with a graphical interface, so nobody needs the command line, the vocabulary or the files. What you see below is a proof of concept with fictional data. It is not the installable app; it is what we build next.
-
-![Vespi Hive proof of concept: companions with a limit written on each one, and medals earned only by verified operations](./docs/images/hive-poc-en.jpg)
 
 **Not sure whether to try it?** Share this repository's link with your AI agent, ask what Lore Plugin and Vespi are, and let it tell you whether it recommends installing them in one of your projects.
 
@@ -190,20 +186,7 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 <p align="center"><b>Postulamos a la hackatón Find Your Way y planeamos participar en Meridian.</b><br><a href="./docs/JUDGE_IN_3_MINUTES.md#juzga-vespi-en-3-minutos"><b>Juzga en 3 minutos</b></a> · <a href="#clone-and-run">Clona y ejecuta</a> · <a href="./docs/FOR_JUDGES.md">Guía para jueces</a> · <a href="./docs/TESTNET_EVIDENCE.md">Evidencia de testnet</a></p>
 
-## Lo que puedes hacer hoy
-
-- [Instalar Lore Plugin](https://github.com/andresanemic/lore-plugin) — el kit con el que trabajas
-- Correr una operación del kernel: `node examples/walkthrough.js`
-
-> Córrelo antes de creerlo.
-
-Mira lo que un agente no puede hacer: `node examples/refusal.js` rechaza una operación fuera del límite sin ningún efecto y luego corre una dentro del permiso y deja un recibo. Contra qué defiende el kernel y contra qué no: [modelo de amenazas](./docs/THREAT_MODEL.md#modelo-de-amenazas). Por qué importa la cadena y qué no verifica: [por qué Stellar](./docs/WHY_STELLAR.md#por-qué-stellar). Revisado, no auditado: las únicas revisiones hasta ahora son nuestras propias superreviews con Claude Code (cinco hallazgos, el normal corregido en 0.1.6). No hay auditoría de seguridad externa independiente.
-
-### Hacia dónde va: Vespi Hive
-
-Hoy corres Vespi desde una terminal. Esa es la barrera de entrada, y **Vespi Hive** es cómo desaparece: una app que corre sobre el kit y el kernel, con interfaz gráfica, para que nadie necesite la línea de comandos, el vocabulario ni los archivos. Lo que ves abajo es una prueba de concepto con datos ficticios. No es la app instalable; es lo que construimos después.
-
-![Prueba de concepto de Vespi Hive: compañeras con un límite escrito en cada una y medallas que solo gana una operación verificada](./docs/images/hive-poc-es.jpg)
+**Hacia dónde va.** Hoy corres Vespi desde una terminal, y esa es la barrera de entrada. **Vespi Hive** es la app que construimos sobre el kit y el kernel para que siga bajando: una interfaz gráfica donde nadie necesita la línea de comandos, el vocabulario ni los archivos. Aún no es instalable.
 
 **¿No sabes si probarlo?** Comparte el enlace de este repositorio con tu agente de IA, pregúntale de qué tratan Lore Plugin y Vespi y deja que te diga si te recomienda instalarlos en alguno de tus proyectos.
 
