@@ -3,7 +3,7 @@
 > Three commands, the third optional, the output you should see, and what to look for. Needs Node.js 24 or later. Cloning requires internet; the walkthrough runs offline, with no real money. The first two take about 15 seconds and need no install. Español: [Juzga Vespi en 3 minutos](#juzga-vespi-en-3-minutos).
 
 ```sh
-git clone --branch v0.1.6-kernel --depth 1 https://github.com/andresanemic/vespi.git
+git clone --branch v0.1.7-kernel --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 ```
 
@@ -63,7 +63,7 @@ At this cut: `tests 1224`, `pass 1200`, `fail 0`, `todo 24`. The 24 `todo` are b
 > Tres comandos, el tercero opcional, la salida que deberías ver y qué mirar. Necesita Node.js 24 o posterior. La clonación requiere internet; el recorrido funciona sin red y sin dinero real. Los dos primeros toman unos 15 segundos y no instalan nada.
 
 ```sh
-git clone --branch v0.1.6-kernel --depth 1 https://github.com/andresanemic/vespi.git
+git clone --branch v0.1.7-kernel --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 ```
 

@@ -9,13 +9,13 @@ test('judge package parses Node TAP counts and hashes bytes with SHA-256', async
   });
   assert.equal(sha256('abc'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
   const report = await buildPackage({ counts: { tests: 1, passed: 1, failed: 0 }, commit: null });
-  assert.equal(report.packageVersion, '0.1.6');
+  assert.equal(report.packageVersion, '0.1.7');
   assert.equal(report.gitCommit, null);
   assert.match(report.sourceSnapshotNote, /fileHashes bind the exact files/);
   assert.match(report.fileHashes['src/operation.js'], /^[a-f0-9]{64}$/);
   assert.match(report.fileHashes['README.md'], /^[a-f0-9]{64}$/);
   assert.match(report.fileHashes['demo/x402/bridge.test.mjs'], /^[a-f0-9]{64}$/);
-  assert.match(report.fileHashes['docs/RELEASE_0.1.6_KERNEL.md'], /^[a-f0-9]{64}$/);
+  assert.match(report.fileHashes['docs/RELEASE_0.1.7_KERNEL.md'], /^[a-f0-9]{64}$/);
   for (const privatePath of Object.keys(report.fileHashes)) {
     assert.doesNotMatch(privatePath, /(^|\/)(\.job|node_modules|\.env[^/]*)(\/|$)|auth\.json|\.db(-shm|-wal)?$|snapshot\//);
   }

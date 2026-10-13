@@ -5,9 +5,9 @@
 <h1 align="center">Vespi</h1>
 
 <p align="center">
-  <a href="./docs/RELEASE_0.1.6_KERNEL.md"><img src="https://img.shields.io/badge/version-v0.1.6-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.6"></a>
+  <a href="./docs/RELEASE_0.1.7_KERNEL.md"><img src="https://img.shields.io/badge/version-v0.1.7-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.7"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
-  <a href="./docs/SUITE_RESULT_CURRENT.txt"><img src="https://img.shields.io/badge/suite-1218_pass_%C2%B7_0_todo-E0C170?style=for-the-badge&labelColor=07111A" alt="Current source suite: 1,218 passed, 0 todo, 0 failed"></a>
+  <a href="./docs/SUITE_RESULT_0.1.7.txt"><img src="https://img.shields.io/badge/suite-1218_pass_%C2%B7_0_todo-E0C170?style=for-the-badge&labelColor=07111A" alt="Current source suite: 1,218 passed, 0 todo, 0 failed"></a>
   <a href="#the-projects"><img src="https://img.shields.io/badge/projects-11_public_repos-D7B698?style=for-the-badge&labelColor=07111A" alt="11 functional project repositories"></a>
   <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet-50_readbacks_%C2%B7_5_semantic-E0C170?style=for-the-badge&labelColor=07111A" alt="50 testnet readbacks; 5 cases semantically verified"></a>
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/demo-x402_%C2%B7_Stellar_SDK-E0C170?style=for-the-badge&labelColor=07111A" alt="Opt-in x402 demo using the Stellar SDK"></a>
@@ -30,7 +30,7 @@
 The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package.
 
 ```sh
-git clone --branch v0.1.6-kernel --depth 1 https://github.com/andresanemic/vespi.git
+git clone --branch v0.1.7-kernel --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 node examples/walkthrough.js
 ```
@@ -113,7 +113,7 @@ You arrive with an idea. You talk to the AI and it builds together. The AI does 
 
 Vespi keeps authority, checked result and next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation.
 
-Kernel 0.1.6 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. All chain evidence is Stellar testnet with fictional data, no real money; the projects that declare no network (such as Queen and Vela) are local walkthroughs.
+Kernel 0.1.7 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. All chain evidence is Stellar testnet with fictional data, no real money; the projects that declare no network (such as Queen and Vela) are local walkthroughs.
 
 ### Start with an operation
 
@@ -125,7 +125,7 @@ node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The current source includes [maintenance after the pinned v0.1.6 judge release](./docs/TODO_RESOLUTION.md). The [saved suite result](./docs/SUITE_RESULT_CURRENT.txt) records the command, exact counts, Node version and Git baseline for the local cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
+The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The current source includes [the 0.1.7 maintenance release](./docs/TODO_RESOLUTION.md). The [saved suite result](./docs/SUITE_RESULT_0.1.7.txt) records the command, exact counts, Node version and Git baseline for the local cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
 
 ### Authority, a human gate and receipts
 
@@ -223,14 +223,14 @@ Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueb
 
 Vespi conserva juntas la autoridad, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo.
 
-El kernel 0.1.6 es una biblioteca fuente JavaScript sin dependencias. Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real; los proyectos que no declaran red (como Queen y Vela) son recorridos locales.
+El kernel 0.1.7 es una biblioteca fuente JavaScript sin dependencias. Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real; los proyectos que no declaran red (como Queen y Vela) son recorridos locales.
 
 ## Empieza con una operación
 
 Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con tu nombre seguido de `: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
 ```sh
-git clone --branch v0.1.6-kernel --depth 1 https://github.com/andresanemic/vespi.git
+git clone --branch v0.1.7-kernel --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 node examples/walkthrough.js
 ```
@@ -243,7 +243,7 @@ node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. El código actual incluye [mantenimiento posterior al corte v0.1.6 fijado para los jueces](./docs/TODO_RESOLUTION.md). [El resultado guardado de la suite](./docs/SUITE_RESULT_CURRENT.txt) registra el comando, los conteos exactos, la versión de Node y la base Git del corte local. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
+[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. El código actual incluye [el mantenimiento del corte 0.1.7](./docs/TODO_RESOLUTION.md). [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.7.txt) registra el comando, los conteos exactos, la versión de Node y la base Git del corte local. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
 
 ## Autoridad, puerta humana y recibos
 
