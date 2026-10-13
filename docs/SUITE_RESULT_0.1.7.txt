@@ -1,8 +1,8 @@
 Vespi Kernel suite result
-Date (UTC): 2026-10-13T06:21:49.185Z
+Date (UTC): 2026-10-13T06:32:17.342Z
 Package version: 0.1.7
 Node version: v24.15.0
-Git baseline SHA: b7ed1668c0ee0992097ecbcbfd8b6430f59ad549
+Git baseline SHA: a5dfd498350fb45e26ae6d36a2de6916cef478ce
 The tests run against the current working tree; the baseline SHA alone does not identify uncommitted candidate changes.
 Command: node --test test/*.test.js
 Tests: 1218

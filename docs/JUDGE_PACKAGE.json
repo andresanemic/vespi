@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "generatedBy": "node scripts/judge-package.mjs",
-  "packageVersion": "0.1.5",
-  "gitCommit": "613906fd74f1aa22d25f66d1e1f4eecdcbcabdaf",
+  "packageVersion": "0.1.7",
+  "gitCommit": "a5dfd498350fb45e26ae6d36a2de6916cef478ce",
   "sourceSnapshotNote": "gitCommit identifies the repository baseline; fileHashes bind the exact files read from this working tree, including local changes.",
   "fileHashes": {
-    "CHANGELOG.md": "d04b20a5922a82e92772ddb5ffaeceabf9960d6b78bc3c504b3b9597ab6aa764",
+    "CHANGELOG.md": "092bf1c64e2ec2035cdefd11b076c5e281d0137cc3838ec62b377f0cb199b2da",
     "LICENSE": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68",
     "NOTICE": "d99368a86475d17dd3a518b3153a8d3b63e20c805974874bfc6439e992aa910f",
-    "README.md": "097e31baffade160234bc03a0336e1312e94b646a461ff0892893bcec905ee9f",
+    "README.md": "d26287ca08e660f6e85658a727275fd625e065a745c57013459a5d94ac148b12",
     "bench/unidad-operacion.test.mjs": "2f7824faa72f2394d846ab891bc68ff5c1813afcd7d6b8301000276b198ca605",
     "demo/x402/README.md": "056237ad81b5a23deceee84cc260377742d01dfc0a8dda2853320e9f26714405",
     "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
@@ -34,21 +34,21 @@
     "demo/x402/settlement.js": "0fcce1effa946b66de6fae80c5ead6f15ba49a700f028611cdc7c31e2fabba09",
     "demo/x402/verify.test.mjs": "71bc83afcf2aa5ea2f34213a9dba4ff29a43cd2591fae5405d269fec3c223116",
     "docs/GENESIS.md": "d71ee645614d99d4ce7825a812950ae0ba728951ed891d9ad204efb1427ef685",
-    "docs/RELEASE_0.1.5_KERNEL.md": "18fee5b2bb5d0a84d7ffdf0563dd2d828b18b80ff670a1acd651745f3b5c4f19",
-    "docs/SUITE_RESULT_0.1.5.txt": "f31d1a3209ae4e6df2a81c57a95026018ba702463d5e3eed2865bdee53ee5796",
-    "package.json": "7606822056c83c1ad20602fb820eb35d7f0c433101825fa3e00afdcb68d640bb",
-    "src/authority.js": "fcf7952489d6f9c42616b52f54832524926d2f2ba6c0ea6514480a7bdc7a265e",
+    "docs/RELEASE_0.1.7_KERNEL.md": "d723cc17e527f43fea9f13274032503c908960b341dd4d6eea87f869b29a5844",
+    "docs/SUITE_RESULT_0.1.7.txt": "ade7f3f7bc1980c2640fd30ed1a8fc6ffbb8d3eef10bdc86db1621c33cc4352d",
+    "package.json": "d5186a76e02e2039a0c1b806b0a4a785031e29034e725412704d36d06ff98779",
+    "src/authority.js": "f0fd93b2a16832a7def262f50ff58da7f3a49e0a9964749b79496fdf46bc69c2",
     "src/continuity.js": "abbee9cab8c92b2c4680dba2d573bf8eb6a50ab63194e4a0b0b525af5f044e6c",
     "src/delegation.js": "357d8b9398ac2b2c3508565e6c2293cc6abff3801f09a60f985dc1c781e002a3",
     "src/emergency.js": "73bd7199b4d8fbf373331bc7b75d9940cdd9896383739461252c2888f08a408c",
-    "src/operation.js": "9a95815fc10435cb55415da1531e1545168eaf209518630b83f24b10f0e78d48",
-    "src/receipt.js": "d006eff3538b2c701366ba09d1e41a32d267b2bad44177f0095541ce9b2a644d",
-    "src/skill-provenance.js": "d416956c0fc8ad04d1d3cca21c20c05046c3705701cd22e03447ffe9f509872b",
+    "src/operation.js": "035357b61178d526d553aa3c53a0ca3e4000aa1a0e83f106f0f858881770cf21",
+    "src/receipt.js": "9023e5ccd5dda4a89f853f5885a3dde04d1e67dc32d18965baee516d420aa941",
+    "src/skill-provenance.js": "946b2e15a60882e96adf3510ffb157a49cfa7f356263118e89cd1004d15b3724",
     "src/time.js": "3ed3565a3843b62341e61a2de405eab77b8218a37ac4ef1b41d49f4a4718502d",
-    "src/x402.js": "63c6765b98c70758fad50859ae66df7833d300c93a961749df85b36aaf9282a2",
+    "src/x402.js": "e0220d1eb04ee1e0f0ce15feb4a6ed329f3d0c9e8c7f11c8943f279812eb8632",
     "src/zk-bn254-reference.js": "79c6e7306100817bf1e8837a973a83ee3d58f645a625b0c3885a57639ae7686d",
     "src/zk.js": "e7885a6ceafe8665212323456b17fd5fac61c1907e361d17da31b56a051b9820",
-    "docs/JUDGE_PACKAGE.json": "6ca86369df82150cc8981b9ec0da4913eefcc3fb0025b7f4369d0ce3f297b7fb"
+    "docs/JUDGE_PACKAGE.json": "3f9d05a91df54337c5e4c24e35ebf0b1a22892797ee614709b9c0cc141a97c4b"
   },
   "excludedPaths": [
     "**/node_modules/**",
@@ -66,9 +66,11 @@
   ],
   "tests": {
     "command": "node --test test/*.test.js",
-    "tests": 1220,
-    "passed": 1196,
-    "failed": 0
+    "tests": 1218,
+    "passed": 1218,
+    "failed": 0,
+    "todo": 0,
+    "skipped": 0
   },
   "publicProjectRepositories": [
     {
@@ -127,6 +129,6 @@
       "status": "URL listed in the kernel README; this offline manifest does not verify current repository contents or availability"
     }
   ],
-  "hashNote": "Hashes use SHA-256 over the repository bytes (CRLF normalized to LF, so they match a clone on any system) and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, 0.1.5 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
-  "manifestSelfHash": "6ca86369df82150cc8981b9ec0da4913eefcc3fb0025b7f4369d0ce3f297b7fb"
+  "hashNote": "Hashes use SHA-256 over the repository bytes (CRLF normalized to LF, so they match a clone on any system) and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, 0.1.7 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
+  "manifestSelfHash": "3f9d05a91df54337c5e4c24e35ebf0b1a22892797ee614709b9c0cc141a97c4b"
 }
