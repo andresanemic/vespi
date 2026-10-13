@@ -23,7 +23,7 @@
 
 ---
 
-**Where this is going.** Today you run Vespi from a terminal, and that is the entry barrier. **Vespi Hive** is the app we are building on top of the kit and the kernel so it keeps coming down: a graphical interface where nobody needs the command line, the vocabulary or the files. **And Vespi Hive will be built with Vespi.** It is not installable yet.
+**Where this is going.** Today you run Vespi from a terminal. **Vespi Desktop** is the planned workspace that will bring this kernel and Lore Plugin together, with **Hive as its creation studio**. For HackMeridian we will show that direction alongside what already runs and can be verified; Desktop is not installable yet. A Linux distribution remains a distant possibility.
 
 ## Clone and run
 
