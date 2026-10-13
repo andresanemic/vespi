@@ -145,6 +145,17 @@ The kernel is JavaScript without runtime dependencies. A capability declares its
 
 The agreement keeps its order. Its purpose is to preserve your agency and avoid repeated decisions; its method coordinates bounded authority, a human gate and receipts; each operation's concrete result must be checked. The [verification record](./docs/VERIFICATION.md), [judge findings from the earlier cut](./docs/JUDGES_FINDINGS_0.1.4.md), [prior-art notes](./docs/PRIOR_ART.md) and [experiments](./experiments/) retain construction history. Model reviews independent of the builders are not an external security audit. The method credits [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar and the Lore/LUS work belong to the construction narrative, not proof that the whole product operates autonomously.
 
+### Where the pieces fit
+
+| Project | Its focus | Lore Plugin + Vespi today |
+|---|---|---|
+| [TencentDB Agent Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) | Shared, governed agent memory, skills, wiki and code graphs | Human-approved project criteria plus bounded operations and receipts |
+| [Hermes Agent](https://github.com/NousResearch/hermes-agent) | An agent runtime with persistent memory and skills | Criteria carried across supported hosts; operation authority outside any one agent runtime |
+| [Obsidian](https://obsidian.md/help/data-storage) | Local Markdown notes and linked knowledge | A workflow for promoting experience into agent-readable criteria with approval |
+| [Graphify](https://github.com/Graphify-Labs/graphify) / [CodeGraph](https://github.com/colbymchenry/codegraph/blob/main/site/src/content/docs/getting-started/introduction.md) | Queryable code structure; Graphify also maps documents | Maintained project criteria and authority for concrete operations |
+
+This compares current scope, not head-to-head results. The Desktop end-to-end path remains to be demonstrated.
+
 ### Author and license
 
 Andrés Peña Mellado, Digital Art Director & Creative Developer.
@@ -262,6 +273,17 @@ El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus r
 [Lore Plugin](https://github.com/andresanemic/lore-plugin) aporta el criterio y el flujo del coordinador; Vespi aporta la semántica de autoridad y recibos alrededor de una operación. [El método](./docs/METHOD.md) describe ciclos, pruebas primero, especificaciones, delegación acotada, lectura ciega y verificación separada; es un flujo de trabajo para herramientas del host, no un kernel que genere apps o imágenes por sí solo. Lore Plugin lleva una copia fija del kernel, por lo que este corte de código no actualiza automáticamente un kit instalado.
 
 El acuerdo conserva su orden. La finalidad es cuidar tu agencia y evitar decisiones repetidas; el método coordina autoridad acotada, puerta humana y recibos; el resultado concreto debe comprobarse en cada operación. [El registro de verificación](./docs/VERIFICATION.md), [los hallazgos de jueces del corte anterior](./docs/JUDGES_FINDINGS_0.1.4.md), [las notas de arte previo](./docs/PRIOR_ART.md) y [los experimentos](./experiments/) conservan la historia de construcción. Las revisiones por modelos independientes de sus constructores no son una auditoría de seguridad externa. El método acredita [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar y el trabajo de Lore/LUS pertenecen al relato de construcción, no prueban que el producto completo opere de forma autónoma.
+
+### Cómo encajan las piezas
+
+| Proyecto | Su foco | Lore Plugin + Vespi hoy |
+|---|---|---|
+| [TencentDB Agent Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) | Memoria, skills, wiki y grafos de código compartidos y gobernados | Criterio de proyecto aprobado por la persona, más operaciones acotadas y recibos |
+| [Hermes Agent](https://github.com/NousResearch/hermes-agent) | Un agente con memoria persistente y skills | Criterio portable entre hosts compatibles; autoridad de operación fuera de un agente concreto |
+| [Obsidian](https://obsidian.md/help/data-storage) | Notas Markdown locales y conocimiento enlazado | Un flujo que convierte experiencia en criterio legible por agentes, con aprobación |
+| [Graphify](https://github.com/Graphify-Labs/graphify) / [CodeGraph](https://github.com/colbymchenry/codegraph/blob/main/site/src/content/docs/getting-started/introduction.md) | Estructura de código consultable; Graphify también mapea documentos | Criterio de proyecto mantenido y autoridad para operaciones concretas |
+
+La tabla compara alcances actuales, no resultados de una prueba cara a cara. Falta demostrar el recorrido completo en Desktop.
 
 ## Autor y licencia
 
