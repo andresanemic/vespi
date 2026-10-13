@@ -8,8 +8,7 @@ const path = require('node:path');
 test('suite record script exists and the saved result has its required fields', () => {
   const root = path.join(__dirname, '..');
   const script = path.join(root, 'scripts', 'record-suite.mjs');
-  const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const result = path.join(root, 'docs', `SUITE_RESULT_${packageJson.version}.txt`);
+  const result = path.join(root, 'docs', 'SUITE_RESULT_CURRENT.txt');
   assert.equal(fs.existsSync(script), true);
 
   const contents = fs.readFileSync(result, 'utf8');

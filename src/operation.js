@@ -261,6 +261,10 @@ function snapshotAuthority(authority) {
     const spend = rawSpend.map((grant) => {
       if (!grant || typeof grant !== 'object') return grant;
       const copy = { asset: grant.asset, maxAmount: grant.maxAmount, to: grant.to };
+      for (const key of ['network', 'resource']) {
+        const value = grant[key];
+        if (value !== undefined) copy[key] = value;
+      }
       if ((typeof grant.expiresAt === 'string' && grant.expiresAt.length > 0)
         || (typeof grant.expiresAt === 'number' && Number.isFinite(grant.expiresAt))) copy.expiresAt = grant.expiresAt;
       return copy;
@@ -292,7 +296,9 @@ function snapshotAuthority(authority) {
 function snapshotRequirements(requirements) {
   return requirements.map((requirement) => {
     if (!requirement || typeof requirement !== 'object') return requirement;
-    return { asset: requirement.asset, amount: requirement.amount, to: requirement.to };
+    return { asset: requirement.asset, amount: requirement.amount, to: requirement.to,
+      ...(requirement.network !== undefined ? { network: requirement.network } : {}),
+      ...(requirement.resource !== undefined ? { resource: requirement.resource } : {}) };
   });
 }
 
@@ -755,7 +761,9 @@ async function runOperationOnce(op, capability, io) {
       try {
         approvedGrants = requirements.map((requirement) => {
           if (!requirement || typeof requirement !== 'object') throw new Error('invalid spend requirement');
-          return { asset: requirement.asset, maxAmount: requirement.amount, to: requirement.to };
+          return { asset: requirement.asset, maxAmount: requirement.amount, to: requirement.to,
+            ...(requirement.network !== undefined ? { network: requirement.network } : {}),
+            ...(requirement.resource !== undefined ? { resource: requirement.resource } : {}) };
         });
       } catch (err) {
         op.state = STATES.FAILED;
@@ -898,7 +906,9 @@ async function runOperationOnce(op, capability, io) {
     try {
       approvedGrants = requirements.map((requirement) => {
         if (!requirement || typeof requirement !== 'object') throw new Error('invalid spend requirement');
-        return { asset: requirement.asset, maxAmount: requirement.amount, to: requirement.to };
+        return { asset: requirement.asset, maxAmount: requirement.amount, to: requirement.to,
+          ...(requirement.network !== undefined ? { network: requirement.network } : {}),
+          ...(requirement.resource !== undefined ? { resource: requirement.resource } : {}) };
       });
     } catch (err) {
       op.state = STATES.FAILED;

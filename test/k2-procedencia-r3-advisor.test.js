@@ -6,11 +6,8 @@
 // Four of these fourteen cases were red when the report was written (N01 to N04) and each one keeps
 // the reviewer's code in its title, so a failure here can be traced back to the numbered fix that
 // asked for it. N05 was the owner's decision and was taken on 2026-10-04: the resolver is no longer
-// handed the declared author or content digest, so the case is green here and lives in
-// `d1-procedencia-independencia.test.js` with the rest of that contract. Two cases stay red on
-// purpose and are marked `todo`: N07 is the optional symmetry fix the report left out of the list,
-// and N08 asks a promise out of base code this branch does not touch, so its answer is in a comment
-// instead of in a behavior change.
+// handed the declared author or content digest; `d1-procedencia-independencia.test.js` keeps that
+// contract. N07/N08 are active regressions.
 //
 // What the four red cases have in common is that something the party under audit controls used to
 // reach further than it was allowed: a digest string the resolver wrote landed in the reason a host
@@ -138,16 +135,20 @@ test('N05 the resolver is not handed the answers it is asked to produce (author,
 
 // --- Still red on purpose, with the reason written down ---
 
-test('N07 resolver bytes carrying unpaired surrogates are not verified bytes (H12 symmetry)', { todo: "diferido al 0.1.5 por decisión del coordinador" }, async () => {
+test('N07 resolver bytes carrying unpaired surrogates are not verified bytes (H12 symmetry)', async () => {
   const claim = registered({ content: '# r3 \ufffd' });
   const result = await verifySkillProvenance(claim, () => proof({ content: '# r3 \ud800' }));
   assert.notEqual(result.status, 'verified', 'text that is not the registered text was verified by its lossy encoding');
 });
 
-test('N08 a hostile nested receipt field is contained as the builder comment promises', { todo: "diferido al 0.1.5 por decisión del coordinador" }, async () => {
+test('N08 a hostile nested receipt field is contained as the builder comment promises', async () => {
   const [claim, result] = await registeredAndVerified();
   const operation = { get id() { throw new Error('PRIVATE_operation_getter'); } };
   assert.doesNotThrow(() => buildSkillReceipt({ ...RECEIPT_SPEC, operation }, authorizeSkill(claim, result, ['read'])));
+  const receipt = buildSkillReceipt({ ...RECEIPT_SPEC, operation }, authorizeSkill(claim, result, ['read']));
+  assert.equal(receipt.status, 'failed');
+  assert.equal(receipt.notCovered.includes('receipt context'), true);
+  assert.equal(JSON.stringify(receipt).includes('PRIVATE_operation_getter'), false);
 });
 
 // --- The seven defenses the review found already holding: they must stay that way ---

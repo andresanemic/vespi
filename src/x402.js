@@ -29,22 +29,23 @@
 // is no await between deciding and inserting, so two concurrent runs cannot both win. A durable store
 // therefore needs a synchronous primitive, and a durable adapter is work this version does not have.
 // `createMemoryPaymentClaims()` lives in the memory of one process: a restart empties it and a second
-// attempt at the same payment becomes possible. Releasing a reservation is not offered either, so a
-// run refused before the wire keeps its key until the store is gone. The delivery validator is awaited
+// attempt at the same payment becomes possible. The memory store releases our reservation only when
+// the run stops before send. Custom stores may offer synchronous `releaseEffect`; reservations must
+// not expire or be reassigned behind the run. Stores without release keep the conservative reservation.
+// Lease-based stores need owner-bound release and are outside this port contract. The delivery validator is awaited
 // like the other five ports, but it is the one port that is not handed the abort signal: a validator
 // that never settles is stopped by the run's own budget (`performTimeoutMs`), and the run then ends
 // with the effect on the wire and an unknown outcome, not as a failure with nothing exercised.
 // Every deadline a timer is armed for on this payment's behalf (`verifyTimeoutMs`,
 // `performTimeoutMs`, `askTimeoutMs`, `decideTimeoutMs`) is a deadline a timer cannot hold, since a
 // timer is 32-bit: a budget above 2^31-1 ms is refused when the run options are built, never clamped,
-// because a payment is not sent under a deadline the module shortened by itself. What a validator
-// hands back as `output` has to be a plain body or nothing: it is read by descriptors, not copied, so
-// a list, a class instance, an accessor and a proxy are a refused delivery rather than a body in the
-// host's hands. This is checked at the top level only: values nested inside the body are handed back
-// as the validator returned them.
+// because a payment is not sent under a deadline the module shortened by itself. Validator output
+// must be a plain JSON object or nothing. Nested getters, proxies, hidden fields and serialization
+// hooks are refused without invocation; returned bytes are hashed and handed back as a JSON snapshot.
 
 const { sufficient } = require('./authority.js');
 const { runOperation } = require('./operation.js');
+const { computeDigest } = require('./receipt.js');
 const { parseTime } = require('./time.js');
 const { createHash } = require('node:crypto');
 const { types: utilTypes } = require('node:util');
@@ -83,7 +84,7 @@ const SUPPORTED_PAYMENT_FLOWS = new Set(['authorization']);
 
 // Public codes. The catalog is fixed: every rejection a receipt can carry comes from here, so a
 // reader never has to interpret a free text written by a port.
-const CODES = {
+const CODES = Object.freeze({
   INVALID_SPEC: 'INVALID_SPEC',
   INVALID_PORT: 'INVALID_PORT',
   INVALID_CLOCK: 'INVALID_CLOCK',
@@ -101,7 +102,7 @@ const CODES = {
   SETTLEMENT_REJECTED: 'SETTLEMENT_REJECTED',
   DELIVERY_REJECTED: 'DELIVERY_REJECTED',
   VERIFIER_FAILED: 'VERIFIER_FAILED',
-};
+});
 
 const EXIT = 'return to the person: change the agreement or cancel';
 
@@ -248,6 +249,7 @@ function readPorts(raw) {
     const claims = {
       reserveEffect: claimsRaw.reserveEffect.bind(claimsRaw),
       claimTransaction: claimsRaw.claimTransaction.bind(claimsRaw),
+      releaseEffect: typeof claimsRaw.releaseEffect === 'function' ? claimsRaw.releaseEffect.bind(claimsRaw) : null,
     };
     const http = raw.http;
     const signer = raw.signer;
@@ -286,7 +288,7 @@ function expectedEffect(spec) {
 }
 
 function requirementOf(spec) {
-  return Object.freeze({ asset: spec.grantAsset, amount: spec.amount, to: spec.payTo });
+  return Object.freeze({ asset: spec.grantAsset, amount: spec.amount, to: spec.payTo, network: spec.network, resource: spec.url });
 }
 
 function sameEffect(effect, expected) {
@@ -441,6 +443,8 @@ function liveGrant(authority, spec, now) {
   for (const entry of grants) {
     if (!isPlainObject(entry)) continue;
     if (entry.asset !== requirement.asset || entry.to !== requirement.to) continue;
+    if (entry.network !== undefined && entry.network !== requirement.network) continue;
+    if (entry.resource !== undefined && entry.resource !== requirement.resource) continue;
     named = true;
     const live = entry.expiresAt === undefined || (parseTime(entry.expiresAt) !== null && parseTime(entry.expiresAt) > now);
     // A ceiling that no longer reaches the declared amount is not a grant for this payment, however
@@ -534,7 +538,8 @@ function selectX402Terms(required, rawSpec, authority, now) {
 // Two different networks, payers or resources that share one grant do not collide either way.
 // The version is a name and not a literal inside the hash, because a host that keeps these keys
 // outside the process (a register, a reconciliation table) has to compare them and can only do that
-// with the version in hand. Version 2 is the second form of the canonical content; a key of any
+// with the version in hand. Version 2 remains unchanged; network and resource were already in the key.
+// A key of any
 // other version is a different key, so an old stored key never collides with a new effect.
 const EFFECT_KEY_VERSION = 2;
 
@@ -579,8 +584,9 @@ function consumeThenable(value) {
 // Claims live wherever the host put them; this factory is one explicit choice of store, kept for tests
 // and demos, and it lives in the memory of one process. The reservation is synchronous and indivisible:
 // there is no await between deciding and inserting, so two concurrent runs cannot both win. There is
-// no release and no eviction: a reserved effect that never reached the wire stays reserved, and a
-// person reconciles it. A restart empties the store, so a second attempt at the same payment becomes
+// no eviction: a reservation is released only by the run that stopped before calling sendPaid.
+// Once sendPaid was called, uncertainty keeps the reservation for reconciliation.
+// A restart empties the store, so a second attempt at the same payment becomes
 // possible: that is a limit, not a guarantee, and a durable store is the answer this version does not
 // ship yet.
 function createMemoryPaymentClaims(options = {}) {
@@ -597,6 +603,9 @@ function createMemoryPaymentClaims(options = {}) {
       if (effects.size >= capacity) return 'capacity';
       effects.add(key);
       return 'claimed';
+    },
+    releaseEffect(key) {
+      return effects.delete(key);
     },
     claimTransaction(network, txHash) {
       if (typeof network !== 'string' || network.length === 0) return 'capacity';
@@ -788,7 +797,7 @@ function readRunNow(io) {
 // permission: it is a payment this agreement cannot make, so it comes back blocked with its exit.
 // An authority that says nothing about the asset is left to the human gate, which may still say yes.
 function requiredFor(spec, op) {
-  const declared = { spend: [{ asset: spec.grantAsset, amount: spec.amount, to: spec.payTo }] };
+  const declared = { spend: [{ ...requirementOf(spec) }] };
   let granted;
   try {
     granted = Array.isArray(op?.authority?.spend) ? op.authority.spend : [];
@@ -987,15 +996,35 @@ function exceedsBodyLimit(value) {
   return Buffer.byteLength(serialized, 'utf8') > MAX_BODY_BYTES;
 }
 
+function isJsonData(value, seen = new Set()) {
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (!isPlainContainer(value) || seen.has(value)) return false;
+  const keys = Object.keys(value);
+  if ('toJSON' in value || Object.getOwnPropertyNames(value).length !== keys.length + (Array.isArray(value) ? 1 : 0)) return false;
+  if (Array.isArray(value) && (keys.length !== value.length
+    || keys.some((key) => !/^(0|[1-9]\d*)$/.test(key) || Number(key) >= value.length))) return false;
+  seen.add(value);
+  try {
+    for (const key of keys) {
+      if (!isJsonData(value[key], seen)) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    seen.delete(value);
+  }
+}
+
 // Delivery is covered only when the validator says the body is acceptable AND hands back a SHA-256
 // digest of it. Without the digest there is nothing to put on the receipt and nothing for a later run
-// to compare against. The digest is the validator's word: this module checks its shape, records it,
-// and neither recomputes it nor compares it with `output`. The validator's answer is read once inside
+// to compare against. A returned output is serialized here and its hash must match the reported digest.
+// Without output, the digest remains the validator's report. The answer is read once inside
 // the guard: a getter cannot answer twice.
 //
 // The `output` it hands back has to be a plain body, the same rule every other port answers to, and
-// it is not copied with JSON. A copy would be a second reading of host-written data by this module
-// and would hand back something the port never said; instead an output that is not plain data — a
+// only a data-only tree is serialized and snapshotted; an output that is not plain data — a
 // list, a class instance, an accessor, a proxy — refuses the delivery like any other malformed
 // answer. A validator that reports no body at all is not malformed: nothing to hand back is an
 // answer, and the delivery stays covered.
@@ -1038,12 +1067,20 @@ async function readDelivery(response, ctx) {
     return { ok: false, output: null, digest: null };
   }
   if (!ok || digest === null) return { ok: false, output: null, digest: null };
-  // Plainness here is stricter than the container check the ports answer to: a body has to be a
-  // plain object, and its own top-level descriptors have to be plain as well; nested values are not
-  // inspected. A list is not a body, an accessor is refused without ever being called, and a proxy is
-  // refused without being asked anything. Both checks read descriptors and never values.
-  if (output !== null && (!isPlainObject(output) || !isPlainContainer(output))) {
+  // Unlike offers, delivery has no eight-level cutoff; every nested value must be JSON data.
+  if (output !== null && (!isPlainObject(output) || !isJsonData(output))) {
     return { ok: false, output: null, digest: null };
+  }
+  if (output !== null) {
+    try {
+      const serialized = JSON.stringify(output);
+      if (Buffer.byteLength(serialized, 'utf8') > MAX_BODY_BYTES || sha256(serialized) !== digest) {
+        return { ok: false, output: null, digest: null };
+      }
+      output = JSON.parse(serialized);
+    } catch {
+      return { ok: false, output: null, digest: null };
+    }
   }
   return { ok: true, output, digest };
 }
@@ -1091,6 +1128,10 @@ async function perform(ctx) {
     return await performStages(ctx, spec);
   } finally {
     stopWatching();
+    // Only our reservation, and only before send: an uncertain payment must never become retryable.
+    if (ctx.reserved && !ctx.sendStarted && ctx.claims.releaseEffect !== null) {
+      try { consumeThenable(ctx.claims.releaseEffect(ctx.effectKey)); } catch {}
+    }
   }
 }
 
@@ -1118,13 +1159,15 @@ async function performStages(ctx, spec) {
   // A store that cannot answer is a run that cannot deduplicate, so nothing goes out.
   let reserved;
   try {
-    reserved = ctx.claims.reserveEffect(effectKey(ctx, spec));
+    ctx.effectKey = effectKey(ctx, spec);
+    reserved = ctx.claims.reserveEffect(ctx.effectKey);
     consumeThenable(reserved);
   } catch {
     return failed(CODES.CLAIMS_CAPACITY);
   }
   if (reserved === 'duplicate') return blocked(CODES.DUPLICATE_EFFECT);
   if (reserved !== 'claimed') return blocked(CODES.CLAIMS_CAPACITY);
+  ctx.reserved = true;
 
   const prepared = await prepareAuthorization(ctx);
   if (!prepared.ok) return failed(prepared.code);
@@ -1150,6 +1193,7 @@ async function performStages(ctx, spec) {
   // exercised, nothing below may send a second time, and no message a port wrote may travel into
   // the receipt: every remaining step lives inside this one guard.
   try {
+    ctx.sendStarted = true;
     const response = await ctx.ports.sendPaid({
       url: spec.url,
       method: spec.method,
@@ -1158,7 +1202,7 @@ async function performStages(ctx, spec) {
       terms: ctx.terms,
       // A hint, not a claim: the provider may use it to recognise its own retry, and two different
       // operations with the same goal, action and requirements send the same hint. Nothing this module
-      // deduplicates rests on it; the effect key does, and the effect key never leaves the process.
+      // deduplicates rests on it; the effect key does, and only that hash travels into the receipt.
       idempotencyKey: ctx.operationKey,
       signal: ctx.signal,
     });
@@ -1307,9 +1351,15 @@ function createX402Payment(rawSpec, rawPorts) {
           return perform(ctx);
         },
       };
-      return runOperation(op, capability, buildRunIo(io, ctx));
+      const result = await runOperation(op, capability, buildRunIo(io, ctx));
+      if (ctx.effectKey !== undefined && result.receipt) {
+        result.receipt.effectKeyVersion = EFFECT_KEY_VERSION;
+        result.receipt.evidence = { ...(result.receipt.evidence || {}), effectKey: ctx.effectKey };
+        result.receipt.digest = computeDigest(result.receipt);
+      }
+      return result;
     },
   };
 }
 
-module.exports = { createX402Payment, selectX402Terms, createMemoryPaymentClaims, SETTLEMENT_CONTROL_NAMES, EFFECT_KEY_VERSION };
+module.exports = { createX402Payment, selectX402Terms, createMemoryPaymentClaims, SETTLEMENT_CONTROL_NAMES, EFFECT_KEY_VERSION, X402_CODES: CODES };

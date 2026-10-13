@@ -478,7 +478,7 @@ test('D2-16 the module exports the three names it exported before, and only the 
   // copy of the settlement vocabulary and the version of the effect key. Nothing else, and nothing
   // removed or renamed.
   assert.deepEqual(Object.keys(kernel()).sort(), [
-    'EFFECT_KEY_VERSION', 'SETTLEMENT_CONTROL_NAMES',
+    'EFFECT_KEY_VERSION', 'SETTLEMENT_CONTROL_NAMES', 'X402_CODES',
     'createMemoryPaymentClaims', 'createX402Payment', 'selectX402Terms',
   ]);
   assert.equal(utilTypes.isProxy(kernel()), false);

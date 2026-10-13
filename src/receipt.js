@@ -347,6 +347,10 @@ function sanitizeSpend(items) {
       to: safeScalar(item.to),
     };
     const expiresAt = safeScalar(item.expiresAt);
+    for (const key of ['network', 'resource']) {
+      const value = safeText(item[key]);
+      if (value !== null && value.length > 0) out[key] = value;
+    }
     if ((typeof expiresAt === 'string' && expiresAt.length > 0)
       || (typeof expiresAt === 'number' && parseTime(expiresAt) !== null)) out.expiresAt = expiresAt;
     return out;

@@ -345,13 +345,52 @@ test('H10 an unreadable io cannot leak its private message out of the contract',
   assert.equal(ports.calls.send, 0);
 });
 
-test('H11 the gate payload names the network and the resource it authorizes', {
-  todo: "deferred to 0.1.5 by the coordinator's decision: a spend grant has no network and no resource field, so the person who says yes cannot tell which chain and which url the payment reaches. Adding either one changes the public shape of authority.js, which this charge does not touch.",
-}, () => {
+test('H11 the gate payload names the network and the resource it authorizes', () => {
   const kernel = require('../src/x402.js');
   const required = kernel.createX402Payment(spec(), fakePorts()).required({ authority: authority() });
   assert.equal(required.spend[0].network, 'stellar:testnet');
   assert.equal(required.spend[0].resource, CANONICAL_URL);
+});
+
+test('delivery checks nested JSON without the eight-level offer limit and snapshots the delivered bytes', async () => {
+  const output = { title: 'Plan' };
+  let leaf = output;
+  for (let i = 0; i < 12; i += 1) leaf = leaf.child = {};
+  leaf.value = 'complete';
+  const digest = createHash('sha256').update(JSON.stringify(output), 'utf8').digest('hex');
+  const result = await runOnce(fakePorts({ validateOutput: () => ({ ok: true, output, digest }) }));
+  assert.equal(result.status, 'verified');
+  output.title = 'changed after verification';
+  assert.equal(result.output.title, 'Plan');
+  assert.equal(result.receipt.evidence.planDigest, digest);
+});
+
+test('delivery refuses nested values JSON cannot faithfully represent', async () => {
+  const sparse = new Array(2);
+  const withProperty = Object.assign([1], { hidden: 'not serialized' });
+  for (const value of [undefined, () => {}, Symbol('hidden'), 1n, NaN, Infinity, sparse, withProperty]) {
+    let digest = PLAN_DIGEST;
+    try { digest = createHash('sha256').update(JSON.stringify({ value }), 'utf8').digest('hex'); } catch {}
+    const result = await runOnce(fakePorts({ validateOutput: () => ({ ok: true, output: { value }, digest }) }));
+    assert.equal(result.output, null);
+    assert.equal(result.receipt.verification.checks.delivery, false);
+  }
+});
+
+test('delivery never calls a hidden serialization hook on validator output', async () => {
+  for (const accessor of [false, true]) {
+    let calls = 0;
+    const output = { title: 'original' };
+    const toJSON = () => { calls += 1; return { title: 'changed' }; };
+    Object.defineProperty(output, 'toJSON', accessor
+      ? { get() { calls += 1; return toJSON; } }
+      : { value: toJSON });
+    const digest = createHash('sha256').update('{"title":"changed"}', 'utf8').digest('hex');
+    const result = await runOnce(fakePorts({ validateOutput: () => ({ ok: true, output, digest }) }));
+    assert.equal(calls, 0);
+    assert.equal(result.output, null);
+    assert.equal(result.receipt.verification.checks.delivery, false);
+  }
 });
 
 test('H12 an output that is not a plain object is not a delivered output', async () => {

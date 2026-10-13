@@ -193,7 +193,7 @@ test('D1 fields the kernel does not read are not evidence and never substitute f
   const complete = await verifySkillProvenance(claim, () => ({ ...observed(), verdict: 'trusted', note: 'PRIVATE_resolver_note' }));
   assert.equal(complete.status, 'verified');
   assert.deepEqual(Object.keys(complete).sort(), [
-    'checks', 'contentRecomputed', 'coverage', 'notCovered', 'provenance', 'provenanceStatus', 'reason', 'status',
+    'checks', 'contentRecomputed', 'coverage', 'notCovered', 'provenance', 'provenanceStatus', 'reason', 'status', 'verifiedAt',
   ]);
   assert.equal(JSON.stringify(complete).includes('PRIVATE_resolver_note'), false);
   assert.equal(JSON.stringify(complete).includes('verdict'), false);

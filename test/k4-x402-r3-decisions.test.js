@@ -13,6 +13,7 @@ const { createOperation } = require('../src/operation.js');
 
 const AUTH_DIGEST = createHash('sha256').update('A', 'utf8').digest('hex');
 const PLAN = { t: 1 };
+const PLAN_DIGEST = createHash('sha256').update(JSON.stringify(PLAN), 'utf8').digest('hex');
 
 const spec = {
   id: 'p',
@@ -81,7 +82,7 @@ function ports(over = {}) {
       };
     },
     async verifySettlement() { return { verified: true, checks: { transfer: true }, reason: 'r' }; },
-    validateOutput: over.validateOutput || ((b) => ({ ok: true, output: b, digest: 'b'.repeat(64) })),
+    validateOutput: over.validateOutput || ((b) => ({ ok: true, output: b, digest: PLAN_DIGEST })),
   };
   if (over.claims !== false) {
     p.claims = over.claims || {
@@ -145,7 +146,7 @@ test('C4 a validator output that is not a plain object refuses the delivery', as
 
 // The delivery validator is the sixth port and it is awaited like the other five.
 test('F1 an async validator is awaited and a good delivery verifies', async () => {
-  const { p } = ports({ validateOutput: async (b) => ({ ok: true, output: b, digest: 'b'.repeat(64) }) });
+  const { p } = ports({ validateOutput: async (b) => ({ ok: true, output: b, digest: PLAN_DIGEST }) });
   const r = await kernel.createX402Payment(spec, p).run(op(), { now });
   assert.equal(r.status, 'verified', r.receipt?.verification?.reason);
 });

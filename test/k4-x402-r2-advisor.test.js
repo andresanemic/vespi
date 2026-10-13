@@ -8,10 +8,7 @@
 // refuses more than it should because one grant, one store or one answer ended a loop that a single
 // entry was allowed to close.
 //
-// The reference bridge cases (R2-11, R2-12) execute demo/x402/ports.js with the SDK stubbed. The
-// coordinator's decision on this round was to trim that surface: the demo runner went back to the
-// base version, nothing loads ports.js any more, and a pending reference that was never executed with
-// the real SDK cannot be a test. Those two cases stay here as `todo` so the claim is not lost.
+// The reference bridge placeholders R2-11/R2-12 are retired; real SDK bridge tests live in demo/x402.
 //
 // Synthetic data and synthetic ports, no network, no credentials, no real payment and no ledger.
 const { test } = require('node:test');
@@ -288,9 +285,7 @@ test('R2-10 the human-gate path still pays after the pre-send authority revalida
 // Group R2-E — the two the reviewer left as documented risks, kept as failing claims
 // =====================================================================================
 
-test('R2-05 a payment refused before the wire can be retried once the grant is renewed', {
-  todo: "risk, deferred to 0.1.5 by the coordinator's decision: the effect key is reserved before the preparation and nothing releases it, so a refusal before the send burns the key until the process restarts. Releasing a reservation is a design decision (a crash could have sent anyway), not a hardening fix, and this round does not take it.",
-}, async () => {
+test('R2-05 a payment refused before the wire can be retried once the grant is renewed', async () => {
   const claims = kernel.createMemoryPaymentClaims();
   let clock = CLOCK_MS;
   const expiring = new Date(CLOCK_MS + 1000).toISOString();
@@ -302,15 +297,28 @@ test('R2-05 a payment refused before the wire can be retried once the grant is r
     },
   });
   const before = await kernel.createX402Payment(spec(), first.ports).run(
-    newOp(authority({ spend: [grant({ expiresAt: expiring })] })),
+    { ...newOp(authority({ spend: [grant({ expiresAt: expiring })] })), id: 'retry-same-effect' },
     { now: () => clock },
   );
   assert.equal(first.calls.send, 0, 'the first run must not send');
   assert.equal(before.receipt.authority.exercised.length, 0, 'nothing exercised on the first run');
   const second = fakePorts({ claims });
   const renewed = authority({ spend: [grant({ expiresAt: new Date(CLOCK_MS + 86_400_000).toISOString() })] });
-  const after = await kernel.createX402Payment(spec(), second.ports).run(newOp(renewed), { now: () => clock });
+  const after = await kernel.createX402Payment(spec(), second.ports).run({ ...newOp(renewed), id: 'retry-same-effect' }, { now: () => clock });
   assert.equal(second.calls.send, 1, `retry after a refusal that never sent was blocked: ${after.receipt?.detail}`);
+});
+
+test('an uncertain send keeps its reservation and cannot be retried as a fresh payment', async () => {
+  const claims = kernel.createMemoryPaymentClaims();
+  const first = fakePorts({ claims, sendPaid: async () => { throw new Error('connection lost'); } });
+  const before = await kernel.createX402Payment(spec(), first.ports).run({ ...newOp(), id: 'uncertain-same-effect' }, { now: () => CLOCK_MS });
+  assert.equal(before.status, 'not_verified');
+  assert.equal(first.calls.send, 1);
+  const second = fakePorts({ claims });
+  const after = await kernel.createX402Payment(spec(), second.ports).run({ ...newOp(), id: 'uncertain-same-effect' }, { now: () => CLOCK_MS });
+  assert.equal(after.status, 'blocked');
+  assert.equal(second.calls.send, 0);
+  assert.match(after.receipt.reason, /DUPLICATE_EFFECT/);
 });
 
 test('R2-07 a verify budget above the timer ceiling is refused, and one at the ceiling is honoured', async () => {
@@ -351,21 +359,3 @@ test('R2-07 a verify budget above the timer ceiling is refused, and one at the c
 // =====================================================================================
 // Group R2-F — the reference bridge, pending and not executed
 // =====================================================================================
-
-test('R2-11 the reference bridge verifies one payment end to end with the SDK stubbed', {
-  todo: "withdrawn on the coordinator's decision for this round: demo/x402/ports.js went back to being a pending reference, nothing loads it, and the demo runner went to the base version. A bridge nobody runs cannot be asserted to verify a payment, and the shadow that made its verifier call itself is not worth repairing in a file no execution path reaches.",
-}, async () => {
-  // The original body needed the bridge evaluated with the SDK stubbed and counted the ledger
-  // readbacks. It is kept as the claim it is: unproven. See test/k4-x402-advisor.test.js for what is
-  // now asserted about that file, which is only its declared shape.
-  const { ports, calls } = fakePorts();
-  const res = await runOnce(ports);
-  assert.equal(res.status, 'verified');
-  assert.equal(calls.verifySettlement, 1);
-});
-
-test('R2-12 two concurrent runs over one bridge port set never report a send that did not happen', {
-  todo: "withdrawn with R2-11 for the same reason: the case needs the bridge executed twice over the same port set, and the bridge is no longer executed. Its one substantive claim, that there is no I/O between preparing and sending, is a property of the ports and not of the kernel, and it was never a kernel guarantee.",
-}, async () => {
-  assert.equal(CANONICAL_URL.includes('example.test'), true);
-});

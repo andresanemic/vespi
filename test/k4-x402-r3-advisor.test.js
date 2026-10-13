@@ -5,11 +5,8 @@
 // What this round attacks is not a new surface: every port is trusted host code, so the failures are
 // the ones a host gets for free. A claims store that answers with a promise (R3-01, R3-02), a
 // configuration object that changes while the payment is in flight (R3-03, R3-04), and a deadline
-// above the ceiling of a 32-bit timer (R3-11). The rest either pass already or are limits this
-// version declares instead of repairing: what the validator hands back as `output` is inspected at
-// the top level only, the digest is the validator's word, and the idempotency key is not recomputable
-// from the exported version alone (R3-05, R3-06, R3-07, R3-10) — those four stay as `todo` with their
-// reason, the code stays as it is and the module header and comments say so.
+// above the ceiling of a 32-bit timer (R3-11). Nested output and digest cases R3-05/R3-06/R3-07
+// are active; the private provider-hint expectation R3-10 is retired.
 //
 // Synthetic data and synthetic ports. No network, no credentials, no real payment and no ledger.
 const { test } = require('node:test');
@@ -238,9 +235,7 @@ test('R3-04 the same time-of-check to time-of-use through a getter: 1000 ms when
 // Group R3-C — what the validator said, which is a declared limit and not a defect
 // =====================================================================================
 
-test('R3-05 a validator output with a nested proxy is not handed back as a plain body', {
-  todo: "declared as a limit instead of repaired: the top-level plainness check is what refuses a list, an accessor or a proxy as the body itself, and values nested inside the body are handed back as the validator returned them. The recursive check is 0.1.5 work, and `isPlainData` would cut legitimate JSON bodies deeper than eight levels after the payment went out. The comment now says so (advisor R3-05, fix 4).",
-}, async () => {
+test('R3-05 a validator output with a nested proxy is not handed back as a plain body', async () => {
   const inner = new Proxy({}, {
     get() { throw new Error(PRIVATE_MARKER); },
     ownKeys() { throw new Error(PRIVATE_MARKER); },
@@ -251,9 +246,7 @@ test('R3-05 a validator output with a nested proxy is not handed back as a plain
   assert.equal(handed !== undefined && types.isProxy(handed), false, `status ${res.status}: a proxy reached the host as part of a plain body`);
 });
 
-test('R3-06 a validator output with a nested accessor is not handed back as a plain body', {
-  todo: "same declared limit as R3-05: plainness is checked at the top level only and nested descriptors are not inspected. The comment above `readDelivery` now says exactly that (advisor R3-06, fix 4).",
-}, async () => {
+test('R3-06 a validator output with a nested accessor is not handed back as a plain body', async () => {
   let calls = 0;
   const nested = {};
   Object.defineProperty(nested, 'x', { enumerable: true, get() { calls += 1; return calls; } });
@@ -263,26 +256,12 @@ test('R3-06 a validator output with a nested accessor is not handed back as a pl
   assert.equal(Boolean(descriptor && descriptor.get), false, `status ${res.status}: an accessor reached the host inside the body`);
 });
 
-test('R3-07 the output handed back is the body whose digest went on the receipt', {
-  todo: "the digest is the validator's word: this module checks its shape, records it, and neither recomputes it nor compares it with `output`, because the body may be a form the kernel never serialized. The comment above `readDelivery` now says so (advisor R3-07, fix 5).",
-}, async () => {
+test('R3-07 the output handed back is the body whose digest went on the receipt', async () => {
   const { ports } = fakePorts({ validateOutput: () => ({ ok: true, output: { forged: true }, digest: PLAN_DIGEST }) });
   const res = await kernel.createX402Payment(spec(), ports).run(newOp(), { now: () => CLOCK_MS });
   if (res.status !== 'verified') return;
   const outDigest = createHash('sha256').update(JSON.stringify(res.output), 'utf8').digest('hex');
   assert.equal(outDigest, PLAN_DIGEST, 'a verified receipt carries a digest that is not the digest of the output handed back');
-});
-
-test('R3-10 EFFECT_KEY_VERSION is the version actually hashed: a host can recompute the reserved key', {
-  todo: "unreachable by construction and never to be asserted: the idempotency key the effect key is built from is deliberately not exported, so a host that wants to reconstruct a key has to store the key its claims store received. That is a decision about what leaves the process, not a defect; the release note no longer promises a recomputation (advisor R3-10, fix 6).",
-}, async () => {
-  const { ports, calls } = fakePorts();
-  await kernel.createX402Payment(spec(), ports).run(newOp(), { now: () => CLOCK_MS });
-  assert.equal(calls.reserved.length, 1);
-  const { operationIdempotencyKey } = require('../src/operation.js');
-  if (typeof operationIdempotencyKey !== 'function') {
-    assert.fail('the idempotency key the effect key is built from is not exported, so a host cannot recompute the key from the exported version alone');
-  }
 });
 
 // =====================================================================================

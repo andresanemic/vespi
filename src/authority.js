@@ -41,6 +41,9 @@ function sufficient(requirements, authority, options) {
     if (!requirement || !text(requirement.asset) || !text(requirement.to) || atomic(requirement.amount) === null) {
       return { ok: false, reason: 'invalid spend requirement' };
     }
+    if (['network', 'resource'].some((key) => requirement[key] !== undefined && !text(requirement[key]))) {
+      return { ok: false, reason: 'invalid spend requirement' };
+    }
   }
   for (const grant of grants) {
     if (!grant || !text(grant.asset) || atomic(grant.maxAmount) === null || (grant.to !== undefined && !text(grant.to))) {
@@ -50,6 +53,9 @@ function sufficient(requirements, authority, options) {
       if (parseTime(grant.expiresAt) === null) {
         return { ok: false, reason: 'invalid spend grant' };
       }
+    }
+    if (['network', 'resource'].some((key) => grant[key] !== undefined && !text(grant[key]))) {
+      return { ok: false, reason: 'invalid spend grant' };
     }
   }
 
@@ -61,11 +67,12 @@ function sufficient(requirements, authority, options) {
 
   const consumption = new Map();
   for (const requirement of reqs) {
-    const liveSpecific = grants.findIndex((grant) => !isExpired(grant) && grant.asset === requirement.asset && grant.to === requirement.to);
-    const liveWildcard = liveSpecific >= 0 ? liveSpecific : grants.findIndex((grant) => !isExpired(grant) && grant.asset === requirement.asset && grant.to === undefined);
+    const scopeMatches = (grant) => ['network', 'resource'].every((key) => grant[key] === undefined || grant[key] === requirement[key]);
+    const liveSpecific = grants.findIndex((grant) => !isExpired(grant) && scopeMatches(grant) && grant.asset === requirement.asset && grant.to === requirement.to);
+    const liveWildcard = liveSpecific >= 0 ? liveSpecific : grants.findIndex((grant) => !isExpired(grant) && scopeMatches(grant) && grant.asset === requirement.asset && grant.to === undefined);
     const index = liveSpecific >= 0 ? liveSpecific : liveWildcard;
     if (index < 0) {
-      const expiredMatch = grants.find((grant) => isExpired(grant) && grant.asset === requirement.asset && (grant.to === undefined || grant.to === requirement.to));
+      const expiredMatch = grants.find((grant) => isExpired(grant) && scopeMatches(grant) && grant.asset === requirement.asset && (grant.to === undefined || grant.to === requirement.to));
       if (expiredMatch) {
         return { ok: false, reason: `grant for asset ${requirement.asset} expired at ${expiredMatch.expiresAt}` };
       }

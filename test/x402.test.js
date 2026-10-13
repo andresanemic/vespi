@@ -196,7 +196,7 @@ function runIo(over = {}) {
 test('K4-A1 the contract exports the three builders, plus the settlement vocabulary and the key version', () => {
   const kernel = loadKernel();
   assert.deepEqual(Object.keys(kernel).sort(), [
-    'EFFECT_KEY_VERSION', 'SETTLEMENT_CONTROL_NAMES',
+    'EFFECT_KEY_VERSION', 'SETTLEMENT_CONTROL_NAMES', 'X402_CODES',
     'createMemoryPaymentClaims', 'createX402Payment', 'selectX402Terms',
   ]);
 });
@@ -207,7 +207,7 @@ test('K4-A2 a payment keeps the declared effect, returns fresh spend copies and 
   assert.ok(payment.id.length > 0);
   const first = payment.required();
   const second = payment.required();
-  assert.deepEqual(first, { spend: [{ asset: 'USDC:TOKEN', amount: '100000', to: 'RECIPIENT' }] });
+  assert.deepEqual(first, { spend: [{ asset: 'USDC:TOKEN', amount: '100000', to: 'RECIPIENT', network: 'stellar:testnet', resource: CANONICAL_URL }] });
   assert.notEqual(first.spend[0], second.spend[0], 'required() must not hand out a shared object');
   first.spend[0].amount = '999999999';
   assert.equal(payment.required().spend[0].amount, '100000');
@@ -295,7 +295,7 @@ test('K4-A5 an http url on localhost is accepted and canonicalized once, and the
   const frozen = loadKernel().createX402Payment(declared, fakePorts());
   declared.amount = '999999999';
   declared.payTo = 'SOMEONE-ELSE';
-  assert.deepEqual(frozen.required(), { spend: [{ asset: 'USDC:TOKEN', amount: '100000', to: 'RECIPIENT' }] });
+  assert.deepEqual(frozen.required(), { spend: [{ asset: 'USDC:TOKEN', amount: '100000', to: 'RECIPIENT', network: 'stellar:testnet', resource: CANONICAL_URL }] });
 });
 
 test('K4-A6 a missing or malformed port is refused with a fixed code and never falls back to a default', () => {
@@ -906,7 +906,7 @@ test('K4-E1 the paid effect is verified, the output stays out of the receipt and
   assert.equal(res.receipt.anchor.status, 'pending');
   assert.ok(res.receipt.notCovered.includes('external anchor'));
   assert.equal(res.receipt.coverage.includes('external anchor'), false);
-  assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT' }]);
+  assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT', network: 'stellar:testnet', resource: CANONICAL_URL }]);
 });
 
 test('K4-E2 the ports are called in the declared order and the digest exists before the send', async () => {
@@ -978,7 +978,7 @@ test('K4-E5 a settlement without a usable hash is not verified and the engine is
     assert.equal(res.receipt.evidence.settlementUnknown, true, label);
     assert.equal(res.receipt.detail, 'SEND_UNKNOWN', label);
     assert.equal(res.receipt.verification.verified, false, label);
-    assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT' }], label);
+    assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT', network: 'stellar:testnet', resource: CANONICAL_URL }], label);
     assert.equal(ports.calls.send, 1, label);
   }
 });
@@ -1098,7 +1098,7 @@ test('K4-E10 the evidence carries only admitted keys and never the body, the aut
   for (const marker of ['SECRET-header-marker', 'SECRET-body-marker', 'SECRET-facilitator-marker', 'SECRET-validate-marker', AUTHORIZATION]) {
     assert.equal(json.includes(marker), false, marker);
   }
-  assert.deepEqual(Object.keys(res.receipt.evidence).sort(), ['amount', 'authDigest', 'network', 'payer', 'planDigest', 'txHash'].sort());
+  assert.deepEqual(Object.keys(res.receipt.evidence).sort(), ['amount', 'authDigest', 'effectKey', 'network', 'payer', 'planDigest', 'txHash'].sort());
 });
 // =====================================================================================
 // Group F — concurrent claims and deduplication (cases 14, 15 and 16)
@@ -1346,7 +1346,7 @@ test('K4-G2 no public export was removed or renamed by the new module', () => {
   // x402.js added two exports by the owner's decision (the settlement vocabulary and the effect key
   // version) and this is where nothing else may have been added, renamed or removed.
   assert.deepEqual(Object.keys(require('../src/x402.js')).sort(), [
-    'EFFECT_KEY_VERSION', 'SETTLEMENT_CONTROL_NAMES',
+    'EFFECT_KEY_VERSION', 'SETTLEMENT_CONTROL_NAMES', 'X402_CODES',
     'createMemoryPaymentClaims', 'createX402Payment', 'selectX402Terms',
   ]);
 });
@@ -1533,7 +1533,7 @@ test('K4-H2 the engine budget stops the run, the signal is cancelled and nothing
   assert.equal(sends, 1);
   assert.equal(res.status, 'not_verified');
   assert.equal(res.receipt.verification.verified, false);
-  assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT' }]);
+  assert.deepEqual(res.receipt.authority.exercised, [{ asset: 'USDC:TOKEN', maxAmount: '100000', to: 'RECIPIENT', network: 'stellar:testnet', resource: CANONICAL_URL }]);
   await delay(80);
   assert.equal(signal.aborted, true, 'the engine cancelled the signal it owns');
   assert.equal(sends, 1, 'a cancelled run is never retried by this module');

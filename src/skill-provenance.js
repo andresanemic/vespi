@@ -667,6 +667,7 @@ function settle(record, status, reason, checks, contentRecomputed) {
     notCovered: frozen(notCoveredOf(sealed)),
     provenance: provenanceOf(record),
     contentRecomputed: contentRecomputed === true,
+    verifiedAt: new Date().toISOString(),
   });
   // Bound to the record, so this result cannot be replayed against another skill later.
   VERIFIED_FOR.set(result, record);
@@ -895,6 +896,9 @@ async function verifySkillProvenance(claim, resolve, options = {}) {
   if (!hasContent && !hasDigest) {
     return stoppedAt(contentRefusal(content));
   }
+  if (hasContent && !wellFormedText(content)) {
+    return stoppedAt('the resolver content is not well-formed UTF-8 text');
+  }
   const resolvedDigest = hasContent ? sha256(content) : contentDigest;
   const contentRecomputed = hasContent;
   if (resolvedDigest !== record.contentDigest) {
@@ -977,6 +981,8 @@ function authorizeSkill(claim, result, requested) {
   // hashed the bytes or believed a digest string. It stays false until a result of this kernel's own
   // has been found, because nothing else can set it.
   let contentRecomputed = false;
+  let requestedNames = [];
+  let verifiedAt = null;
 
   // A refusal reports the coverage it really has: a request out of scope does not erase the three
   // provenance checks that passed, and a provenance that failed does not invent an `authority_scope`
@@ -1002,8 +1008,9 @@ function authorizeSkill(claim, result, requested) {
       provenance: base.provenance,
       name: base.name,
       granted: frozen(copyList(base.granted)),
-      requested: frozen([]),
+      requested: frozen(copyList(requestedNames)),
       contentRecomputed,
+      verifiedAt,
     });
     DECIDED_FROM.set(decision, record);
     return decision;
@@ -1020,6 +1027,7 @@ function authorizeSkill(claim, result, requested) {
   // are read as own properties: a check this kernel never compared is not one the grant may lean on.
   const incomingChecks = result.checks !== null && typeof result.checks === 'object' ? result.checks : nullObject(null);
   contentRecomputed = result.contentRecomputed === true;
+  verifiedAt = result.verifiedAt ?? null;
 
   // The scope of the request cannot decide the status on its own. A refuted provenance stays a
   // refutation whichever capability is asked for: otherwise the rule that runs first in this
@@ -1061,6 +1069,7 @@ function authorizeSkill(claim, result, requested) {
   if (malformed !== null) {
     return refuseDecision(scopeStatus, malformed, incomingChecks, ['authority_scope'], provenanceStatus);
   }
+  requestedNames = ask;
   // The out-of-scope names, found by walking the captured copy. This used to be
   // `ask.filter((item) => !listedIn(record.authority, item))`, which consults `Array.prototype.filter`
   // *after* the caller's getters have already run inside the capture: a getter that set `filter` to
@@ -1106,6 +1115,7 @@ function authorizeSkill(claim, result, requested) {
     granted: frozen(copyList(base.granted)),
     requested: frozen(copyList(ask)),
     contentRecomputed,
+    verifiedAt,
   });
   DECIDED_FROM.set(decision, record);
   return decision;
@@ -1172,6 +1182,7 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
     requested: decision.requested,
     loadedDigest,
     contentRecomputed: decision.contentRecomputed === true,
+    verifiedAt: decision.verifiedAt,
   });
   if (record !== null) DECIDED_FROM.set(loaded, record);
   return loaded;
@@ -1180,11 +1191,7 @@ function withLoad(decision, record, loadedDigest, matched, status, reason) {
 // One field of the receipt spec, read once, under its own guard. `undefined` for a field that is
 // absent, that is not an object, or that could not be read: `buildReceipt` already substitutes a safe
 // value for every one of the seven, so an unreadable top-level field produces an ordinary receipt
-// that says nothing. What lives inside a field is a step further down and is not contained:
-// `buildReceipt` reads `operation.id`, `authority.spend` and the rest without guards, so a hostile
-// getter nested in `operation` or `authority` still throws to the caller. That code is base and
-// unchanged here, so this comment names the boundary instead of promising a crash it cannot prevent
-// (review N08).
+// that says nothing. Unreadable nested context is contained by the builder's failed receipt (N08).
 function receiptField(spec, key) {
   try {
     return spec !== null && typeof spec === 'object' && hasOwn(spec, key) ? spec[key] : undefined;
@@ -1219,7 +1226,7 @@ function buildSkillReceipt(spec, decision) {
   const provenanceVerdict = hasOwn(RECEIPT_STATUS, decision.provenanceStatus) ? decision.provenanceStatus : 'not_verified';
   const rawOutcome = receiptField(spec, 'outcome');
   const outcome = rawOutcome !== null && typeof rawOutcome === 'object' ? rawOutcome : {};
-  const receipt = buildReceipt({
+  const receiptSpec = {
     operation: receiptField(spec, 'operation'),
     capabilityId: receiptField(spec, 'capabilityId'),
     authority: receiptField(spec, 'authority'),
@@ -1244,7 +1251,14 @@ function buildSkillReceipt(spec, decision) {
       checks: decision.checks,
       reason: decision.reason,
     },
-  });
+  };
+  let receipt;
+  try {
+    receipt = buildReceipt(receiptSpec);
+  } catch {
+    receipt = buildReceipt({ outcome: { status: 'failed', reason: 'receipt context could not be read' } });
+    receipt.notCovered.push('receipt context');
+  }
   receipt.skill = frozen({
     name: decision.name,
     // The name the skill was registered under, and the word that says nothing here checked it. Placed
@@ -1271,6 +1285,7 @@ function buildSkillReceipt(spec, decision) {
     reason: decision.reason,
     loadedDigest: decision.loadedDigest === undefined ? null : decision.loadedDigest,
     contentRecomputed: decision.contentRecomputed === true,
+    verifiedAt: decision.verifiedAt,
   });
   // `buildReceipt` sealed the body without the skill block; sealing again puts the block inside. The
   // anchor stays `pending` and is outside the digest, so this cannot move it.
@@ -1309,7 +1324,7 @@ function buildSkillReceipt(spec, decision) {
 //     payload is unchanged, as it was in the fourth round: `content_digest` uncovered, load refused.
 // And one thing this round took out of the contract rather than into it: replacing a built-in function
 // after this module was loaded is now a declared limit (the header says so, and the seven attacks that
-// show it are in the suite marked `todo` so the edge stays visible instead of being forgotten).
+// show it are retained in Git history and summarized in docs/TODO_RESOLUTION.md).
 module.exports = {
   registerSkillProvenance,
   verifySkillProvenance,

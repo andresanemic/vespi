@@ -57,5 +57,5 @@ const report = [
   '',
 ].join('\n');
 
-await writeFile(resolve(root, `docs/SUITE_RESULT_${packageJson.version}.txt`), report, 'utf8');
+await writeFile(resolve(root, 'docs/SUITE_RESULT_CURRENT.txt'), report, 'utf8');
 process.exitCode = exitCode ?? 1;

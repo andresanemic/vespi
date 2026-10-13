@@ -240,19 +240,18 @@ test('HP7 the label follows the load, and a swap between the check and the load 
   assert.equal(swapped.skill.checks, undefined, 'the checks live in the verification block and in the decision');
 });
 
-test('HP8 the result and the decision keep the shape they had, and the registry is unchanged', async () => {
+test('HP8 verification and decision expose the verification time, and the registry is unchanged', async () => {
   const before = listSkillProvenance().length;
   const claim = registered();
   const result = await verifySkillProvenance(claim, () => observedEvidence());
-  // Nothing was added to what a verification hands back: the fix lives in the receipt, which is the
-  // only place a claim can be read as evidence by someone who was not there.
+  // The kernel's verification time is carried to the decision; the registry remains declaration-only.
   assert.deepEqual(Object.keys(result).sort(), [
-    'checks', 'contentRecomputed', 'coverage', 'notCovered', 'provenance', 'provenanceStatus', 'reason', 'status',
+    'checks', 'contentRecomputed', 'coverage', 'notCovered', 'provenance', 'provenanceStatus', 'reason', 'status', 'verifiedAt',
   ]);
   const decision = authorizeSkill(claim, result, ['read:project']);
   assert.deepEqual(Object.keys(decision).sort(), [
     'authorized', 'checks', 'contentRecomputed', 'coverage', 'granted', 'name', 'notCovered',
-    'provenance', 'provenanceStatus', 'reason', 'requested', 'status',
+    'provenance', 'provenanceStatus', 'reason', 'requested', 'status', 'verifiedAt',
   ]);
   const after = listSkillProvenance();
   assert.equal(after.length, before + 1);

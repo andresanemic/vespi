@@ -22,5 +22,6 @@ El puente vive en `demo/x402/` (tiene `package.json` con el SDK; `src/` sigue si
 
 - No hay evidencia de pago vivo en testnet con este puente.
 - El `config.cancelToken` del adapter bounded no llega a fetch mientras el puerto no fije timeout (trampa latente documentada en R2-2.2); no es un fallo vivo hoy.
-- La validación de planitud del cuerpo de entrega verifica solo el nivel superior; valores nested no se inspeccionan (límite declarado R3-05/R3-06).
+- El candidato del 2026-10-13 verifica el árbol JSON completo de la entrega, recalcula el digest cuando hay output y devuelve una copia estable. R3-05/R3-06/R3-07 están activos.
+- El candidato permite `releaseEffect` síncrono antes de llamar a sendPaid; después de ese punto conserva la reserva incluso ante incertidumbre. Un almacén externo no puede expirar o reasignar reservas durante una ejecución; los almacenes con leases requieren liberación ligada al propietario y quedan fuera de este contrato.
 - El almacén de claims es en-memoria y se vacía con cada reinicio; no es durable entre procesos.

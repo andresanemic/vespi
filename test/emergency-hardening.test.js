@@ -8,10 +8,8 @@
 // `verified` without the independent check, `undefined` treated as success, a clock not consulted
 // again, `__proto__`, and a digest that does not cover a field.
 //
-// Three cases are red against the branch as it stands (H01, H02, H03) and each one carries the fix.
-// Three more are marked `todo`: closing them means changing a public contract or removing a
-// capability, which is the owner's decision and not this file's (H04, H05, H06). The rest are the
-// attacks that did not break anything, kept so a later change cannot reopen them silently.
+// The active adversarial regressions preserve the emergency contract. H21 is retired because
+// it contradicted the safe one-read renewal already protected by ADV18/ADV18R.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
@@ -609,24 +607,3 @@ test('H20 a body past the depth or the size budget is refused before the verifie
 // object carrying its own accessor was read anyway. Reading it once is already safe, but a shape this
 // module refuses everywhere else cannot be the exception that proves the rule, and a renewal is the
 // one call that grows a grant a person signed.
-test('H21 a renewal whose changes carry their own accessor is refused like any other caller object', {
-  todo: 'not applied: refusing it would contradict ADV18 and ADV18R, which hold this module to reading `expiresAt` exactly once and storing the value it validated. One read of one field cannot bind one value and validate another, so the shape is safe here; the test stays red and declared instead of being deleted',
-}, async () => {
-  const permission = await granted({ id: 'h21' });
-  const ledger = ledgerFor();
-  const changes = {};
-  let reads = 0;
-  Object.defineProperty(changes, 'expiresAt', {
-    enumerable: true,
-    get() { reads += 1; return '2026-10-06T00:00:00Z'; },
-  });
-  assert.throws(() => emergency.renewEmergencyPermission(permission, changes), /accessor|read|once|renew/i);
-  assert.equal(reads, 0, 'an accessor is never invoked, not even once');
-  // The original grant is exactly as usable as it was.
-  assert.equal(emergency.getEmergencyState(permission, { ledger, now: AT }).status, 'active');
-  assert.equal(run(permission, ledger).state, 'review_pending');
-  // A plain change still renews, so nothing was loosened on the way.
-  const other = await granted({ id: 'h21-ok' });
-  const renewed = emergency.renewEmergencyPermission(other, { expiresAt: '2026-10-06T00:00:00Z' });
-  assert.equal(renewed.expiresAt, '2026-10-06T00:00:00.000Z');
-});

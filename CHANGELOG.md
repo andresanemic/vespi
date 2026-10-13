@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased maintenance — 2026-10-13
+
+Current source preserves the scope of a payment approval, keeps uncertain sends reserved, and records provenance verification time and rejected requests. It also verifies the bytes of delivered JSON and exposes the sealed effect key and public x402 code catalog. Twelve pending tests are now active; twelve obsolete or out-of-contract expectations were retired with their reasons recorded. Six regressions were added. [Current suite](./docs/SUITE_RESULT_CURRENT.txt): 1,218 passed, 0 failed, 0 todo, 0 skipped; x402 demo: 86 passed. Old receipts remain verifiable; new provenance/x402 receipts contain additional sealed fields. The published v0.1.6 tag and pinned copies remain unchanged. [Resolution and limits](./docs/TODO_RESOLUTION.md).
+
 ## [v0.1.6-kernel] — 2026-10-10 (local cut)
 
 Servine. A local cut: it is not published. It closes a gap in skill provenance (a duplicated declared capability no longer leaves the registered authority incomplete), adds `examples/refusal.js` (an over-limit operation is refused with no effect, an in-limit one runs and verifies), a threat model and a note on why Stellar, and says exactly what the x402 demo adapter is: the SDK bridge inside the kernel stays deferred. Reviewed with our own Claude Code superreviews, not audited. Find Your Way: the submission is complete except for its video; this is its last tag. Suite: 1224 tests, 1200 pass, 0 fail, 24 todo.
