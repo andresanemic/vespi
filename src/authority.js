@@ -138,9 +138,10 @@ function attenuates(next, sealed) {
       if (grant.to !== undefined && !text(grant.to)) return false;
       if (['network', 'resource'].some((key) => grant[key] !== undefined && !text(grant[key]))) return false;
     }
-    const destinations = nextSpend.map((grant) => grant.to === undefined ? toValues(grant, 'to', false) : [grant.to]);
-    const networks = nextSpend.map((grant) => toValues(grant, 'network', true));
-    const resources = nextSpend.map((grant) => toValues(grant, 'resource', true));
+    // The identical case skips the sweep, so it also skips the per-grant candidate lists (quadratic in the number of grants).
+    const destinations = identicalSpend ? [] : nextSpend.map((grant) => grant.to === undefined ? toValues(grant, 'to', false) : [grant.to]);
+    const networks = identicalSpend ? [] : nextSpend.map((grant) => toValues(grant, 'network', true));
+    const resources = identicalSpend ? [] : nextSpend.map((grant) => toValues(grant, 'resource', true));
     for (const nowMs of identicalSpend ? [] : times) {
       const totals = new Map();
       for (let nextIndex = 0; nextIndex < nextSpend.length; nextIndex++) {

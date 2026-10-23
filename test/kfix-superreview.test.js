@@ -42,6 +42,15 @@ test('KF-4 accepts an identical oversized authority instantly: restoring the sam
   assert.ok(restored);
 });
 
+test('KF-4 decides a very long identical authority in linear time', () => {
+  const base = Date.parse('2030-01-01T00:00:00Z');
+  const spend = Array.from({ length: 5000 }, (_, index) => ({ asset: 'USDC', maxAmount: '100', to: 'T' + index, expiresAt: new Date(base + index * 1000).toISOString() }));
+  const same = { spend: spend.map((grant) => ({ ...grant })) };
+  const start = process.hrtime.bigint();
+  assert.equal(attenuates(same, { spend }), true);
+  assert.ok(Number(process.hrtime.bigint() - start) / 1e6 < 500);
+});
+
 test('KF-4 accepts a legitimate mixed authority with 16 grants quickly', () => {
   const legitimate = mixedAuthority(16);
   const legitimateStart = process.hrtime.bigint();
