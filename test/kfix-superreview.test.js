@@ -4,6 +4,38 @@ const assert = require('node:assert/strict');
 const { sufficient, attenuates } = require('../src/authority.js');
 const { createOperation, runOperation, checkpointOperation, restoreOperation } = require('../src/operation.js');
 
+function mixedAuthority(size) {
+  const base = Date.parse('2030-01-01T00:00:00Z');
+  return { spend: Array.from({ length: size }, (_, i) => {
+    const grant = { asset: 'USDC', maxAmount: '100' };
+    if (i % 4 === 0) grant.to = `T${i}`;
+    else if (i % 4 === 1) grant.network = `N${i}`;
+    else if (i % 4 === 2) grant.resource = `R${i}`;
+    grant.expiresAt = new Date(base + i * 1000).toISOString();
+    return grant;
+  }) };
+}
+
+test('KF-4 rejects oversized mixed authorities before expensive enumeration', () => {
+  const tooLarge = mixedAuthority(40);
+  const start = process.hrtime.bigint();
+  assert.equal(attenuates(tooLarge, tooLarge), false);
+  assert.ok(Number(process.hrtime.bigint() - start) / 1e6 < 500);
+
+  const operation = createOperation({ goal: 'g', authority: tooLarge, action: 'pay' });
+  const checkpoint = checkpointOperation(operation);
+  const restoreStart = process.hrtime.bigint();
+  assert.throws(() => restoreOperation(checkpoint, { expectedDigest: checkpoint.digest, authority: tooLarge }), /authority_widened/);
+  assert.ok(Number(process.hrtime.bigint() - restoreStart) / 1e6 < 500);
+});
+
+test('KF-4 accepts a legitimate mixed authority with 16 grants quickly', () => {
+  const legitimate = mixedAuthority(16);
+  const legitimateStart = process.hrtime.bigint();
+  assert.equal(attenuates(legitimate, legitimate), true);
+  assert.ok(Number(process.hrtime.bigint() - legitimateStart) / 1e6 < 100);
+});
+
 test('KF-1 rejects resolution and scope mismatches', () => {
   const cases = [
     [{ asset: 'USDC', maxAmount: '100' }, { asset: 'USDC', maxAmount: '10', to: 'GX' }, { asset: 'USDC', maxAmount: '100', to: 'GX' }],

@@ -2,7 +2,9 @@
 
 ## [v0.1.8-kernel] — 2026-10-23
 
-This version adds checkpoint/continuation handling and closes host-callback return validation before effects. Callback receivers vary by port; see [the callback contract and compatibility limits](./docs/HOST_CALLBACKS.md) and do not rely on a receiver. `runOperation` and x402 reject non-native thenables without subscribing; emergency `authorizeGrantor` and `authenticate` may read and subscribe to their `then` property. The source suite passes 1,310/1,310 with zero skipped or TODO tests. [Evidence and adoption limits](./docs/RELEASE_0.1.8_KERNEL.md).
+This version adds checkpoint/continuation handling and closes host-callback return validation before effects. Callback receivers vary by port; see [the callback contract and compatibility limits](./docs/HOST_CALLBACKS.md) and do not rely on a receiver. `runOperation` and x402 reject non-native thenables without subscribing; host-provided functions in emergency and delegation may return thenables, which the kernel subscribes to. `attenuates` rejects an authority with too many grants to verify within its fixed work budget; `MAX_ATTENUATION_WORK` is 10,000,000 units. The source suite passes 1,310/1,310 with zero skipped or TODO tests. [Evidence and adoption limits](./docs/RELEASE_0.1.8_KERNEL.md).
+
+Esta versión incorpora checkpoints y continuación, y cierra la validación de resultados de callbacks del host antes de los efectos. `runOperation` y x402 rechazan thenables no nativos sin suscribirse; las funciones que entrega el host en emergency y delegation pueden devolver thenables, a los que el kernel se suscribe. `attenuates` rechaza una autoridad con demasiadas concesiones para comprobarla dentro de un presupuesto fijo; `MAX_ATTENUATION_WORK` es de 10.000.000 unidades.
 
 ## [v0.1.7-kernel] — 2026-10-13
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const { parseTime } = require('./time.js');
+const MAX_ATTENUATION_WORK = 10_000_000;
 
 // Authority: pure data + one predicate. No I/O, no host, no capabilities.
 function grantSpend(asset, maxAmount, to, expiresAt) {
@@ -111,11 +112,22 @@ function attenuates(next, sealed) {
       values.push(other);
       return values;
     };
-    const expiries = [...new Set([...nextSpend, ...sealedSpend].map((grant) => grant && grant.expiresAt).filter((value) => value !== undefined).map(parseTime))];
+    const grants = [...nextSpend, ...sealedSpend];
+    const expiries = [...new Set(grants.map((grant) => grant && grant.expiresAt).filter((value) => value !== undefined).map(parseTime))];
     if (expiries.some((expiry) => expiry === null)) return false;
     const minTime = parseTime('0000-01-01T00:00:00Z');
     const maxTime = parseTime('9999-12-31T23:59:59.999Z');
     const times = [...new Set([minTime, maxTime, ...expiries.flatMap((expiry) => [expiry > minTime ? expiry - 1 : null, expiry]).filter((time) => time !== null)])];
+    const values = Object.fromEntries(['to', 'network', 'resource'].map((key) => [key, new Set(grants.map((grant) => grant && grant[key]).filter((value) => value !== undefined)).size]));
+    const scans = nextSpend.length + sealedSpend.length;
+    let points = 0;
+    for (const grant of nextSpend) {
+      const candidates = (grant && grant.to === undefined ? values.to + 1 : 1)
+        * (grant && grant.network === undefined ? values.network + 2 : 1)
+        * (grant && grant.resource === undefined ? values.resource + 2 : 1);
+      points += candidates;
+      if (!Number.isSafeInteger(points) || points * times.length * scans > MAX_ATTENUATION_WORK) return false;
+    }
     for (let nextIndex = 0; nextIndex < nextSpend.length; nextIndex++) {
       const grant = nextSpend[nextIndex];
       if (!grant || !text(grant.asset) || atomic(grant.maxAmount) === null) return false;
@@ -125,7 +137,10 @@ function attenuates(next, sealed) {
     const destinations = nextSpend.map((grant) => grant.to === undefined ? toValues(grant, 'to', false) : [grant.to]);
     const networks = nextSpend.map((grant) => toValues(grant, 'network', true));
     const resources = nextSpend.map((grant) => toValues(grant, 'resource', true));
-    for (const nowMs of times) {
+    const fields = ['asset', 'maxAmount', 'to', 'network', 'resource', 'expiresAt'];
+    const identicalSpend = nextSpend.length === sealedSpend.length
+      && nextSpend.every((grant, index) => fields.every((key) => grant[key] === sealedSpend[index][key]));
+    for (const nowMs of identicalSpend ? [] : times) {
       const totals = new Map();
       for (let nextIndex = 0; nextIndex < nextSpend.length; nextIndex++) {
         const grant = nextSpend[nextIndex];
