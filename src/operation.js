@@ -6,6 +6,12 @@
 //   { id, required(op) -> { spend: [{asset, amount, to}] }, perform(ctx) -> { ok, evidence?, error? } }
 // The kernel never imports a specific capability. x402, Stellar, USDC live outside.
 //
+// Host callbacks may return a synchronous value or a native Promise. A non-native object/function
+// that announces async work through `then` (including an accessor) is rejected closed without
+// reading the accessor or invoking `then`; hosts must use native Promises for async callbacks.
+// A proxy, or an object whose prototype chain holds one, is rejected before any trap runs, both as a
+// direct return and as the value a native promise resolves to. The injected clock never has `then`
+// read: any object it returns is an invalid time.
 // runOperation(op, capability, { verify(evidence)->{verified,checks,reason}, ask(requirements)->{approved} }):
 //   requirements -> authority sufficient? no -> NEEDS_HUMAN_DECISION (perform is not called; capability code is trusted in-process)
 //   yes -> perform once -> failure? FAILED -> verify evidence -> verified? SUCCEEDED : NOT_VERIFIED
@@ -14,12 +20,83 @@
 // because a grant that already covers the spend still needs its named identities to be counted.
 // A grant that covers the spend and declares no `signers` runs without asking.
 
-const { sufficient } = require('./authority.js');
-const { buildReceipt } = require('./receipt.js');
+const { snapshotContext, readContextProperty, dataFields } = require('./context.js');
+const { isPromise, isProxy } = require('node:util').types;
+const { sufficient, attenuates } = require('./authority.js');
+const { buildReceipt, computeDigest } = require('./receipt.js');
 const { readZkClaim, readCatalogChecks, reconcileZk, ZK_INCONSISTENT_REASON, ZK_FOREIGN_CHECK_REASON,
   ZK_ECHO_REASON } = require('./zk.js');
 const { createHash } = require('node:crypto');
 const { parseTime } = require('./time.js');
+const apply = Reflect.apply;
+const stringify = JSON.stringify;
+const NativePromise = Promise;
+const promiseResolve = NativePromise.resolve.bind(NativePromise);
+const promiseRace = NativePromise.race.bind(NativePromise);
+const promiseThen = NativePromise.prototype.then;
+const promiseFinally = NativePromise.prototype.finally;
+const defer = (fn) => apply(promiseThen, promiseResolve(), [fn]);
+// Un callback hostil en el mismo proceso puede alterar los intrínsecos de JavaScript; el aislamiento real requiere otro proceso.
+
+function asyncReturnError() {
+  const error = new Error('host callback returned a non-native thenable or an uninspectable value');
+  error.code = 'VESPI_ASYNC_RETURN';
+  return error;
+}
+
+// The value is kept only after it passed the guard: a refused return is never handed to a caller.
+// A native promise is awaited, and what it resolves to passes the proxy guard too, because reading a
+// proxy runs host code at every property the kernel touches.
+function startHostCall(fn, args) {
+  let value;
+  const ready = defer(() => {
+    const returned = apply(fn, undefined, args);
+    if (isPromise(returned)) {
+      return apply(promiseThen, returned, [(result) => {
+        if (uninspectable(result)) throw asyncReturnError();
+        value = result;
+      }]);
+    }
+    if (announcesAsync(returned)) throw asyncReturnError();
+    value = returned;
+    return undefined;
+  });
+  return { ready, get value() { return value; } };
+}
+
+// A proxy, or an object that inherits from one, cannot be inspected without running host code: every
+// descriptor, prototype or key query is a trap. `isProxy` answers from the engine without calling a
+// trap, and `Object.getPrototypeOf` of an object that is not a proxy runs no host code either, so the
+// walk below never executes code the host wrote. Every other object, exotic or not, answers
+// descriptor queries without host code.
+function uninspectable(value) {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return false;
+  try {
+    for (let current = value; current !== null; current = Object.getPrototypeOf(current)) {
+      if (isProxy(current)) return true;
+    }
+  } catch {
+    return true;
+  }
+  return false;
+}
+
+// True when the value announces asynchronous work (`then` callable or an accessor, own or inherited)
+// or cannot be inspected without host code (a proxy anywhere in its chain). Proxies are refused before
+// any trap is consulted; accessors are refused by their descriptor, never read.
+function announcesAsync(value) {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return false;
+  try {
+    for (let current = value; current !== null; current = Object.getPrototypeOf(current)) {
+      if (isProxy(current)) return true;
+      const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
+      if (descriptor) return !('value' in descriptor) || typeof descriptor.value === 'function';
+    }
+  } catch {
+    return true;
+  }
+  return false;
+}
 
 const STATES = {
   NEEDS_DECISION: 'needs_human_decision',
@@ -116,7 +193,7 @@ function withTimeout(value, timeoutMs, label, onTimeout) {
       reject(error);
     }, timeoutMs);
   });
-  return Promise.race([Promise.resolve(value), timeout]).finally(() => clearTimeout(timer));
+  return apply(promiseFinally, promiseRace([promiseResolve(value), timeout]), [() => clearTimeout(timer)]);
 }
 
 function readDecideThreshold(io) {
@@ -146,7 +223,9 @@ async function consultDecisionModel(io, question) {
     const threshold = readDecideThreshold(io);
     let result;
     try {
-      result = await withTimeout(Promise.resolve().then(() => decideFn.call(io, question)), readDecideTimeoutMs(io), 'decision model');
+      const call = startHostCall(decideFn, [question]);
+      await withTimeout(call.ready, readDecideTimeoutMs(io), 'decision model');
+      result = call.value;
     } catch {
       return null;
     }
@@ -368,7 +447,311 @@ function operationIdempotencyKey(op, requirements) {
       return { asset: requirement?.asset, amount: canonicalAmount, to: requirement?.to };
     }) : requirements,
   };
-  return createHash('sha256').update(JSON.stringify(canonicalize(content)), 'utf8').digest('hex');
+  return createHash('sha256').update(stringify(canonicalize(content)), 'utf8').digest('hex');
+}
+
+// A checkpoint is the operation as data. It is sealed with the same `computeDigest` the receipt
+// already uses, so nothing here is a second canonicalization. What the seal proves is integrity:
+// the bytes did not move after the host wrote them. It does not prove authorship, because the digest
+// has no key and whoever can rewrite the checkpoint can rewrite its digest and the `expectedDigest`
+// the host keeps. That store belongs to the host (see decision §4).
+const CHECKPOINT_KIND = 'vespi.operation.checkpoint';
+const CHECKPOINT_VERSION = 1;
+const CHECKPOINT_STATES = new Set(['created', ...Object.values(STATES)]);
+// A terminal checkpoint carries no receipt, so reopening one cannot prove the effect was not
+// exercised. It comes back blocked for reconciliation instead of running again.
+const CHECKPOINT_TERMINAL = new Set([STATES.SUCCEEDED, STATES.FAILED, STATES.NOT_VERIFIED, STATES.BLOCKED]);
+
+function checkpointRefusal(code) {
+  const error = new Error(code);
+  error.code = code;
+  return error;
+}
+
+function checkpointText(value) {
+  return typeof value === 'string' && value.length > 0;
+}
+
+function checkpointAmount(value) {
+  return typeof value === 'string' && /^\d+$/.test(value) ? value : null;
+}
+
+// The closed schema reads by data descriptor, reusing `dataFields` from context.js: an accessor or
+// a proxy is refused, not consulted. `required` must be present and nothing outside both lists is
+// allowed, so a key a later host invents does not travel into the sealed body.
+function checkpointRecord(value, required, optional = []) {
+  try {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError();
+    const own = Reflect.ownKeys(value);
+    if (own.some((key) => typeof key !== 'string')) throw new TypeError();
+    if (required.some((key) => !own.includes(key))) throw new TypeError();
+    if (own.some((key) => !required.includes(key) && !optional.includes(key))) throw new TypeError();
+    return dataFields(value, own);
+  } catch {
+    throw checkpointRefusal('checkpoint_invalid');
+  }
+}
+
+// `dataFields` refuses empty arrays because context.sources needs at least one approved source.
+// A checkpoint's spend and pausers are legitimately empty ("ask the person"), so the empty array is
+// read here with the same descriptor rules: own `length` of zero and nothing else.
+function checkpointEntries(array) {
+  try {
+    const length = Array.isArray(array) ? Object.getOwnPropertyDescriptor(array, 'length') : undefined;
+    if (length && Object.hasOwn(length, 'value') && length.value === 0) {
+      if (Object.getPrototypeOf(array) !== Array.prototype || Reflect.ownKeys(array).length !== 1) throw new TypeError();
+      return [];
+    }
+    const fields = dataFields(array, null, true);
+    const out = [];
+    for (let i = 0; i < fields.length; i += 1) out.push(fields[i]);
+    return out;
+  } catch {
+    throw checkpointRefusal('checkpoint_invalid');
+  }
+}
+
+function checkpointAuthority(authority) {
+  const fields = checkpointRecord(authority, ['spend'], ['pausers', 'signers']);
+  if (!Array.isArray(fields.spend)) throw checkpointRefusal('checkpoint_invalid');
+  const spend = checkpointEntries(fields.spend).map((grant) => {
+    const entry = checkpointRecord(grant, ['asset', 'maxAmount'], ['to', 'network', 'resource', 'expiresAt']);
+    if (!checkpointText(entry.asset) || checkpointAmount(entry.maxAmount) === null) throw checkpointRefusal('checkpoint_invalid');
+    const out = { asset: entry.asset, maxAmount: entry.maxAmount };
+    if (entry.to !== undefined) {
+      if (!checkpointText(entry.to)) throw checkpointRefusal('checkpoint_invalid');
+      out.to = entry.to;
+    }
+    for (const key of ['network', 'resource']) {
+      if (entry[key] === undefined) continue;
+      if (!checkpointText(entry[key])) throw checkpointRefusal('checkpoint_invalid');
+      out[key] = entry[key];
+    }
+    if (entry.expiresAt !== undefined) {
+      if (typeof entry.expiresAt !== 'string' && !(typeof entry.expiresAt === 'number' && Number.isFinite(entry.expiresAt))) {
+        throw checkpointRefusal('checkpoint_invalid');
+      }
+      if (parseTime(entry.expiresAt) === null) throw checkpointRefusal('checkpoint_invalid');
+      out.expiresAt = entry.expiresAt;
+    }
+    return out;
+  });
+  const out = { spend };
+  if (fields.pausers !== undefined) {
+    if (!Array.isArray(fields.pausers)) throw checkpointRefusal('checkpoint_invalid');
+    out.pausers = checkpointEntries(fields.pausers);
+    if (out.pausers.some((who) => !checkpointText(who))) throw checkpointRefusal('checkpoint_invalid');
+  }
+  if (fields.signers !== undefined) {
+    const signers = checkpointRecord(fields.signers, ['required', 'allowed']);
+    if (!Number.isInteger(signers.required) || signers.required < 1) throw checkpointRefusal('checkpoint_invalid');
+    if (!Array.isArray(signers.allowed)) throw checkpointRefusal('checkpoint_invalid');
+    const allowed = checkpointEntries(signers.allowed);
+    if (allowed.length === 0 || allowed.some((who) => !checkpointText(who))) throw checkpointRefusal('checkpoint_invalid');
+    out.signers = { required: signers.required, allowed };
+  }
+  return out;
+}
+
+// The sealed copy of what the operation holds, restricted to the fields a checkpoint declares.
+function sealAuthority(authority) {
+  const snapshot = snapshotAuthority(authority);
+  const spend = (Array.isArray(snapshot.spend) ? snapshot.spend : []).map((grant) => {
+    if (!grant || typeof grant !== 'object') return grant;
+    const copy = { asset: grant.asset, maxAmount: grant.maxAmount };
+    for (const key of ['to', 'network', 'resource', 'expiresAt']) {
+      if (grant[key] !== undefined) copy[key] = grant[key];
+    }
+    return copy;
+  });
+  const out = { spend };
+  if (Array.isArray(snapshot.pausers)) out.pausers = [...snapshot.pausers];
+  if (snapshot.signers) {
+    const signers = {};
+    if (snapshot.signers.required !== undefined) signers.required = snapshot.signers.required;
+    if (Array.isArray(snapshot.signers.allowed)) signers.allowed = [...snapshot.signers.allowed];
+    out.signers = signers;
+  }
+  return out;
+}
+
+function checkpointOperation(op, effect) {
+  let context;
+  try {
+    context = readContextProperty(op);
+  } catch {
+    throw checkpointRefusal('checkpoint_context_invalid');
+  }
+  const body = {
+    kind: CHECKPOINT_KIND,
+    version: CHECKPOINT_VERSION,
+    binding: context === undefined ? 'unbound' : 'bound',
+    operation: {
+      id: checkpointText(op?.id) ? op.id : '',
+      goal: typeof op?.goal === 'string' ? op.goal : '',
+      action: typeof op?.action === 'string' ? op.action : null,
+      agent: typeof op?.agent === 'string' ? op.agent : null,
+      exit: operationExit(op),
+      state: typeof op?.state === 'string' ? op.state : 'created',
+      generation: Number.isInteger(op?.generation) ? op.generation : 0,
+    },
+    authority: sealAuthority(op?.authority),
+  };
+  if (context !== undefined) body.context = context;
+  if (effect !== undefined) body.effect = { idempotencyKey: effect.idempotencyKey, phase: effect.phase };
+  body.digest = computeDigest(body);
+  return body;
+}
+
+function readCheckpoint(checkpoint) {
+  try {
+    const top = checkpointRecord(checkpoint, ['kind', 'version', 'binding', 'operation', 'authority', 'digest'], ['context', 'effect']);
+    if (top.kind !== CHECKPOINT_KIND || top.version !== CHECKPOINT_VERSION) throw checkpointRefusal('checkpoint_invalid');
+    const binding = top.binding;
+    if (binding !== 'bound' && binding !== 'unbound') throw checkpointRefusal('checkpoint_invalid');
+    const hasContext = Object.hasOwn(top, 'context');
+    if ((binding === 'bound') !== hasContext) throw checkpointRefusal('checkpoint_invalid');
+    const operation = checkpointRecord(top.operation, ['id', 'goal', 'action', 'agent', 'exit', 'state', 'generation']);
+    if (!checkpointText(operation.id) || typeof operation.goal !== 'string') throw checkpointRefusal('checkpoint_invalid');
+    if (operation.action !== null && !checkpointText(operation.action)) throw checkpointRefusal('checkpoint_invalid');
+    if (operation.agent !== null && !checkpointText(operation.agent)) throw checkpointRefusal('checkpoint_invalid');
+    if (!checkpointText(operation.exit) || !CHECKPOINT_STATES.has(operation.state)) throw checkpointRefusal('checkpoint_invalid');
+    if (!Number.isSafeInteger(operation.generation) || operation.generation < 0) throw checkpointRefusal('checkpoint_invalid');
+    const authority = checkpointAuthority(top.authority);
+    const context = hasContext ? snapshotContext(top.context) : undefined;
+    let effect;
+    if (Object.hasOwn(top, 'effect')) {
+      const declared = checkpointRecord(top.effect, ['idempotencyKey', 'phase']);
+      if (declared.phase !== 'intent' || typeof declared.idempotencyKey !== 'string' || !/^[0-9a-f]{64}$/.test(declared.idempotencyKey)) {
+        throw checkpointRefusal('checkpoint_invalid');
+      }
+      effect = { idempotencyKey: declared.idempotencyKey, phase: 'intent' };
+    }
+    if (typeof top.digest !== 'string' || !/^[0-9a-f]{64}$/.test(top.digest)) throw checkpointRefusal('checkpoint_invalid');
+    const fields = {
+      kind: CHECKPOINT_KIND,
+      version: CHECKPOINT_VERSION,
+      binding,
+      operation,
+      authority,
+      ...(hasContext ? { context } : {}),
+      ...(effect ? { effect } : {}),
+    };
+    return { fields, digest: top.digest };
+  } catch (error) {
+    if (error && typeof error.code === 'string' && error.code.startsWith('checkpoint_')) throw error;
+    throw checkpointRefusal('checkpoint_invalid');
+  }
+}
+
+// Reopening is the trust boundary: the host hands back the bytes it stored and the digest it stored
+// beside them. Both have to agree, the body is read with a closed schema, and the authority may only
+// narrow. A checkpoint taken mid-effect comes back terminal and uncertain, which is the path
+// `resumeFromReceipts` already answers with `reconciliation_required`.
+function restoreOperation(checkpoint, options) {
+  const settings = options && typeof options === 'object' ? options : {};
+  const { fields, digest } = readCheckpoint(checkpoint);
+  if (computeDigest(fields) !== digest) throw checkpointRefusal('checkpoint_digest_mismatch');
+  const expected = settings.expectedDigest;
+  if (typeof expected !== 'string' || expected !== digest) throw checkpointRefusal('checkpoint_expected_digest_mismatch');
+  // The kernel cannot know the last generation issued: the host must persist it durably, pass it as
+  // minGeneration, and consume each checkpoint atomically to prevent replay across reopenings.
+  const minGeneration = settings.minGeneration;
+  if (minGeneration !== undefined) {
+    if (!Number.isSafeInteger(minGeneration) || minGeneration < 0) throw checkpointRefusal('checkpoint_invalid');
+    if (fields.operation.generation < minGeneration) throw checkpointRefusal('checkpoint_generation_stale');
+  }
+
+  let authority = fields.authority;
+  if (Object.hasOwn(settings, 'authority')) {
+    const supplied = checkpointAuthority(settings.authority);
+    if (!attenuates(supplied, fields.authority)) throw checkpointRefusal('authority_widened');
+    authority = supplied;
+  }
+  if (Object.hasOwn(settings, 'context')) {
+    if (fields.binding === 'unbound') throw checkpointRefusal('checkpoint_context_unbound');
+    const supplied = snapshotContext(settings.context);
+    if (stringify(supplied) !== stringify(fields.context)) throw checkpointRefusal('checkpoint_context_mismatch');
+  }
+
+  const terminal = CHECKPOINT_TERMINAL.has(fields.operation.state);
+  const uncertain = fields.operation.state === STATES.RUNNING
+    || terminal
+    || (fields.effect !== undefined && fields.effect.phase === 'intent');
+  const op = {
+    id: fields.operation.id,
+    goal: fields.operation.goal,
+    action: fields.operation.action,
+    authority,
+    agent: fields.operation.agent,
+    exit: fields.operation.exit,
+    state: uncertain ? (terminal ? STATES.BLOCKED : STATES.NOT_VERIFIED) : fields.operation.state,
+    history: [],
+    receipt: null,
+    output: null,
+    inFlight: false,
+  };
+  if (fields.context !== undefined) {
+    Object.defineProperty(op, 'context', { value: fields.context, enumerable: true, writable: false, configurable: false });
+    op.generation = fields.operation.generation;
+  }
+  if (uncertain) {
+    op.receipt = buildReceipt({
+      operation: op,
+      capabilityId: 'unknown',
+      authority: { spend: authority.spend },
+      outcome: terminal
+        ? { status: 'blocked', exercised: [], detail: 'reconciliation_required' }
+        : { status: 'not_verified', exercised: [], detail: 'reconciliation_required' },
+      evidence: { exercisedUnknown: true },
+      verification: { verified: false, checks: {}, reason: 'operation may have exercised an effect' },
+      ...(fields.context !== undefined ? { context: fields.context } : {}),
+    });
+  }
+  return op;
+}
+
+// A receipt already written is the one that decides whether this operation may run again. `op.state`
+// is a field a host can set; the seal is not (R1: same object, different lifetime).
+function receiptIsUncertain(receipt) {
+  try {
+    if (!receipt) return false;
+    if (receipt.status === 'not_verified') return true;
+    const exercised = receipt.authority && receipt.authority.exercised;
+    if (Array.isArray(exercised) && exercised.length > 0) return true;
+    return Boolean(receipt.evidence && receipt.evidence.exercisedUnknown === true);
+  } catch {
+    return true;
+  }
+}
+
+function approvalRequestDigest(op, requirements, context, signers, exit) {
+  return computeDigest({
+    operationId: op.id,
+    action: op.action,
+    goal: op.goal,
+    requirements: snapshotRequirements(requirements),
+    context,
+    signers,
+    exit,
+    generation: op.generation,
+  });
+}
+
+function approvalRequestFor(op, requirements, context, signers, exit) {
+  if (context === undefined) return null;
+  const generation = Number.isSafeInteger(op.generation) && op.generation >= 0 ? op.generation + 1 : 1;
+  if (!Number.isSafeInteger(generation)) throw new Error('approval generation exhausted');
+  op.generation = generation;
+  return { generation, digest: approvalRequestDigest(op, requirements, context, signers, exit) };
+}
+
+// The echo proves the answer belongs to this attempt and this payload, not that a person gave it.
+function staleApproval(gate, expectedDigest) {
+  if (!expectedDigest || gate === null || gate === undefined) return false;
+  if ((typeof gate !== 'object' && typeof gate !== 'function') || !Object.hasOwn(gate, 'request')) return true;
+  const echoed = gate.request;
+  return echoed !== expectedDigest;
 }
 
 // An injected clock is a synchronous contract; asynchronous clocks cannot authorize an effect.
@@ -383,20 +766,21 @@ function readInjectedTime(io) {
 
   let value;
   try {
-    value = clock.call(io);
+    value = apply(clock, undefined, []);
   } catch {
     return { present: true, valid: false };
   }
+  // A clock answers a number or a string. Any object is refused without reading it: no `then` getter
+  // is read and no non-native thenable is subscribed to. Only a native promise is consumed, so its
+  // eventual rejection does not escape as an unhandled rejection.
   if (value !== null && (typeof value === 'object' || typeof value === 'function')) {
-    try {
-      if (typeof value.then === 'function') {
-        // Consume any eventual rejection while refusing to wait for an asynchronous clock.
-        Promise.resolve(value).catch(() => {});
-        return { present: true, valid: false };
+    if (isPromise(value)) {
+      try {
+        apply(promiseThen, value, [undefined, () => {}]);
+      } catch {
       }
-    } catch {
-      return { present: true, valid: false };
     }
+    return { present: true, valid: false };
   }
   const now = parseTime(value);
   return now === null ? { present: true, valid: false } : { present: true, valid: true, now };
@@ -413,7 +797,9 @@ function checkSufficient(requirements, authority, io) {
   return sufficient(requirements, authority, { now });
 }
 
-function createOperation({ goal, authority, agent, exit, action }) {
+function createOperation(options) {
+  const context = readContextProperty(options);
+  const { goal, authority, agent, exit, action } = options;
   let agentId = null;
   try {
     if (typeof agent === 'string' && agent.length > 0) agentId = agent;
@@ -425,7 +811,7 @@ function createOperation({ goal, authority, agent, exit, action }) {
     if (typeof exit === 'string' && exit.length > 0) exitText = exit;
   } catch {
   }
-  return {
+  const op = {
     id: `op-${Date.now().toString(36)}-${seq++}`,
     goal: snapshotGoal(goal),
     action: snapshotAction(action),
@@ -438,6 +824,12 @@ function createOperation({ goal, authority, agent, exit, action }) {
     output: null,
     inFlight: false,
   };
+  if (context !== undefined) {
+    Object.defineProperty(op, 'context', { value: context, enumerable: true });
+    // A generation only exists where an approval can outlive its payload.
+    op.generation = 0;
+  }
+  return op;
 }
 
 function readPausers(op) {
@@ -568,7 +960,19 @@ async function runOperation(op, capability, io) {
 }
 
 async function runOperationOnce(op, capability, io) {
+  let context;
+  let invalidContext = false;
+  try {
+    context = readContextProperty(op);
+    if (context !== undefined) {
+      const descriptor = Object.getOwnPropertyDescriptor(op, 'context');
+      if (descriptor.configurable) Object.defineProperty(op, 'context', { value: context, enumerable: true, writable: false, configurable: false });
+      else if (descriptor.writable) Object.defineProperty(op, 'context', { value: context, writable: false });
+    }
+  } catch { invalidContext = true; }
+
   const buildReceiptForRun = (spec) => {
+    if (context !== undefined) spec = { ...spec, context };
     // Preserve the legacy receipt body unless the host injects a clock.
     let at;
     let clockFailure = false;
@@ -594,10 +998,27 @@ async function runOperationOnce(op, capability, io) {
   if (op.state === STATES.PAUSED) return { status: STATES.PAUSED, receipt: op.receipt, output: op.output };
   if (op.state === STATES.RUNNING) throw new Error('operation is already running');
   if (op.receipt && op.state !== STATES.NEEDS_DECISION) return { status: op.state, receipt: op.receipt, output: op.output };
+  // An uncertain effect is not replayed because somebody moved `state` to needs_human_decision.
+  // The sealed receipt decides, not a field the host can rewrite after the pause.
+  if (op.receipt && receiptIsUncertain(op.receipt)) {
+    op.state = STATES.BLOCKED;
+    return finish(op, buildReceiptForRun({ operation: op, capabilityId, authority: op.authority,
+      outcome: { status: 'blocked', exercised: [], detail: 'reconciliation_required', exit: operationExit(op) },
+      // The mark travels with the blocking receipt; otherwise a second state write would launder it.
+      evidence: { exercisedUnknown: true }, verification: null }));
+  }
+
+  if (invalidContext) {
+    op.state = STATES.BLOCKED;
+    return finish(op, buildReceiptForRun({ operation: op, capabilityId, authority: op.authority,
+      outcome: { status: 'blocked', exercised: [], detail: 'context declaration is invalid' }, evidence: null, verification: null }));
+  }
 
   let requirements;
   try {
     const declared = capability.required(op);
+    // Inspected before any property is read: a proxy or a `then` accessor is refused without host code.
+    if (announcesAsync(declared)) throw new Error('capability required must return a spend array');
     const impossible = readImpossibleDeclaration(declared);
     if (impossible) {
       const exit = impossible.exit || operationExit(op);
@@ -612,7 +1033,7 @@ async function runOperationOnce(op, capability, io) {
       });
       return finish(op, receipt);
     }
-    if (!declared || typeof declared.then === 'function' || !Array.isArray(declared.spend)) {
+    if (!declared || announcesAsync(declared) || !Array.isArray(declared.spend)) {
       throw new Error('capability required must return a spend array');
     }
     requirements = snapshotRequirements(declared.spend);
@@ -684,6 +1105,13 @@ async function runOperationOnce(op, capability, io) {
     });
     return finish(op, receipt);
   }
+  if (context !== undefined && ((signersCfg && signersCfg.valid) || !check.ok)
+      && (!Number.isSafeInteger(op.generation) || op.generation < 0 || op.generation >= Number.MAX_SAFE_INTEGER)) {
+    op.state = STATES.BLOCKED;
+    return finish(op, buildReceiptForRun({ operation: op, capabilityId, authority: op.authority,
+      outcome: { status: 'blocked', exercised: [], detail: 'approval generation exhausted', exit: operationExit(op) },
+      evidence: null, verification: null }));
+  }
   if (signersCfg && signersCfg.valid) {
     const gateExit = operationExit(op);
     const agentId = readAgentId(op);
@@ -694,20 +1122,31 @@ async function runOperationOnce(op, capability, io) {
     let gateError = null;
     let gateRejected = false;
     if (registeredHave < signersCfg.required) {
+      let approvalRequest = null;
       try {
         const askFn = io && typeof io.ask === 'function' ? io.ask : null;
         const suggestion = await consultDecisionModel(io, { requirements: requirements.map((r) => ({ ...r })), goal: op.goal });
+      approvalRequest = approvalRequestFor(op, requirements, context, { required: signersCfg.required, allowed: [...signersCfg.allowed] }, gateExit);
+      const expectedApprovalDigest = approvalRequest?.digest;
       const askPayload = Object.assign(requirements.map((r) => ({ ...r })), {
           requirements: requirements.map((r) => ({ ...r })),
           cost: requirements.map((r) => ({ ...r })),
           publicByDefault: false,
+          ...(context !== undefined ? { context } : {}),
+          ...(approvalRequest ? { approvalRequest: Object.freeze({ ...approvalRequest }) } : {}),
           ...(suggestion ? { suggestion } : {}),
           exit: gateExit,
           signers: { required: signersCfg.required, allowed: [...signersCfg.allowed] },
         });
-        gate = askFn
-          ? await withTimeout(Promise.resolve().then(() => askFn.call(io, askPayload)), readTimeout(io, 'askTimeoutMs'), 'human gate')
-          : null;
+        if (askFn) {
+          const call = startHostCall(askFn, [askPayload]);
+          await withTimeout(call.ready, readTimeout(io, 'askTimeoutMs'), 'human gate');
+          gate = call.value;
+        } else gate = null;
+        if (staleApproval(gate, expectedApprovalDigest)) {
+          gateError = 'stale approval';
+          gate = null;
+        }
       } catch (err) {
         gateError = refused(err, 'human gate failed');
       }
@@ -810,20 +1249,29 @@ async function runOperationOnce(op, capability, io) {
     let gateBy = undefined;
     let selfApproval = false;
     let missingDecider = false;
+    let approvalRequest = null;
     try {
       const askFn = io && typeof io.ask === 'function' ? io.ask : null;
       // Legacy callers (demo/x402) receive an array; the four gate gestures ride on it as properties.
       const suggestion = await consultDecisionModel(io, { requirements: requirements.map((r) => ({ ...r })), goal: op.goal });
+      approvalRequest = approvalRequestFor(op, requirements, context, undefined, gateExit);
+      const expectedApprovalDigest = approvalRequest?.digest;
       const askPayload = Object.assign(requirements.map((r) => ({ ...r })), {
         requirements: requirements.map((r) => ({ ...r })),
         cost: requirements.map((r) => ({ ...r })),
         publicByDefault: false,
+        ...(context !== undefined ? { context } : {}),
+        ...(approvalRequest ? { approvalRequest: Object.freeze({ ...approvalRequest }) } : {}),
         ...(suggestion ? { suggestion } : {}),
         exit: gateExit,
       });
-      const gate = askFn
-        ? await withTimeout(Promise.resolve().then(() => askFn.call(io, askPayload)), readTimeout(io, 'askTimeoutMs'), 'human gate')
-        : null;
+      let gate = null;
+      if (askFn) {
+        const call = startHostCall(askFn, [askPayload]);
+        await withTimeout(call.ready, readTimeout(io, 'askTimeoutMs'), 'human gate');
+        gate = call.value;
+      }
+      if (staleApproval(gate, expectedApprovalDigest)) gateError = 'stale approval';
       if (gate !== null && gate !== undefined) {
         let approvedFlag = false;
         let rejectedFlag = false;
@@ -944,15 +1392,51 @@ async function runOperationOnce(op, capability, io) {
     }
   }
 
+  // The effect's identity is fixed before the checkpoint and reused by `perform`, so a host that
+  // reopens this intent still tells the destination the same key.
+  const idempotencyKey = operationIdempotencyKey(op, requirements);
+  const checkpointFn = io && typeof io.checkpoint === 'function' ? io.checkpoint : null;
+  if (checkpointFn) {
+    try {
+      const snapshot = checkpointOperation(op, { idempotencyKey, phase: 'intent' });
+      // Its own timeout: a checkpoint that never answers keeps the effect at zero.
+      const call = startHostCall(checkpointFn, [snapshot]);
+      await withTimeout(call.ready, readTimeout(io, 'checkpointTimeoutMs'), 'checkpoint');
+    } catch (error) {
+      op.state = STATES.BLOCKED;
+      return finish(op, buildReceiptForRun({ operation: op, capabilityId, authority: { ...op.authority, approval },
+        outcome: { status: 'blocked', exercised: [], detail: refused(error, 'operation checkpoint failed'), exit: operationExit(op) },
+        evidence: null, verification: null, ...(decidedBy ? { decidedBy } : {}) }));
+    }
+  }
+
+  if (context !== undefined) {
+    try {
+      const reader = io && io.readContext;
+      if (typeof reader !== 'function') throw new TypeError();
+      // A timed-out reader has no continuation that can reach perform.
+      const contextMatches = (value) => stringify(snapshotContext(value)) === stringify(context);
+      const call = startHostCall(reader, [context.scope]);
+      await withTimeout(call.ready, readTimeout(io, 'contextTimeoutMs'), 'context read');
+      const matches = contextMatches(call.value);
+      if (matches !== true) throw new TypeError();
+    } catch {
+      op.state = STATES.BLOCKED;
+      return finish(op, buildReceiptForRun({ operation: op, capabilityId, authority: { ...op.authority, approval },
+        outcome: { status: 'blocked', exercised: [], detail: 'context requires revalidation', exit: operationExit(op) },
+        evidence: null, verification: null, ...(decidedBy ? { decidedBy } : {}) }));
+    }
+  }
+
   op.state = STATES.RUNNING;
   let result;
   let finalCheck = null;
   const controller = new AbortController();
   try {
-    const performPromise = Promise.resolve().then(() => {
+    const performPromise = defer(() => {
       finalCheck = checkSufficient(requirements, op.authority, io);
       if (!finalCheck.ok) return undefined;
-      return capability.perform({ operation: op, authority: op.authority, signal: controller.signal, idempotencyKey: operationIdempotencyKey(op, requirements) });
+      return capability.perform({ operation: op, authority: op.authority, signal: controller.signal, idempotencyKey });
     });
     result = await withTimeout(performPromise, readTimeout(io, 'performTimeoutMs'), 'capability perform', () => controller.abort());
   } catch (err) {
@@ -980,6 +1464,8 @@ async function runOperationOnce(op, capability, io) {
       ...(decidedBy ? { decidedBy } : {}),
     });
     return finish(op, receipt);
+  } finally {
+    controller.abort();
   }
 
   if (finalCheck && !finalCheck.ok) {
@@ -1072,9 +1558,11 @@ async function runOperationOnce(op, capability, io) {
     // the function that gets checked is then not the function that gets called.
     const ioVerify = io ? io.verify : undefined;
     const verifyFn = typeof ioVerify === 'function' ? ioVerify : null;
-    verification = verifyFn
-      ? await withTimeout(Promise.resolve().then(() => verifyFn.call(io, capabilityResult.evidence)), readTimeout(io, 'verifyTimeoutMs'), 'verifier')
-      : { verified: false, checks: {}, reason: 'no verifier' };
+    if (verifyFn) {
+      const call = startHostCall(verifyFn, [capabilityResult.evidence]);
+      await withTimeout(call.ready, readTimeout(io, 'verifyTimeoutMs'), 'verifier');
+      verification = call.value;
+    } else verification = { verified: false, checks: {}, reason: 'no verifier' };
   } catch (err) {
     verification = { verified: false, checks: {}, reason: refused(err, 'verifier failed') };
   }
@@ -1145,4 +1633,5 @@ async function runOperationOnce(op, capability, io) {
   return finish(op, receipt, verified ? capabilityResult.output : undefined);
 }
 
-module.exports = { createOperation, runOperation, pauseOperation, resumeOperation, STATES, DEFAULT_EXIT };
+module.exports = { createOperation, runOperation, pauseOperation, resumeOperation, checkpointOperation,
+  restoreOperation, STATES, DEFAULT_EXIT };

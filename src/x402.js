@@ -24,6 +24,11 @@
 // Every port is trusted host code, not a sandbox. A port that ignores its signal can keep acting
 // after this module gave up, and a port that lies is believed only after an independent check
 // returned true; that limit belongs to whoever writes the ports.
+// Async ports must return native Promises. Non-native thenables, including objects whose `then` is
+// an accessor, are rejected without invoking host code; synchronous return values remain supported.
+// A proxy, or an object whose prototype chain holds one, is refused before any trap runs, whether it
+// is returned directly, resolved by a native promise or returned by a claims port. The run clock
+// never has `then` read: any object it returns is an invalid time.
 //
 // Known limits. The claims store has to be synchronous, because the reservation is indivisible: there
 // is no await between deciding and inserting, so two concurrent runs cannot both win. A durable store
@@ -49,6 +54,67 @@ const { computeDigest } = require('./receipt.js');
 const { parseTime } = require('./time.js');
 const { createHash } = require('node:crypto');
 const { types: utilTypes } = require('node:util');
+const apply = Reflect.apply;
+const stringify = JSON.stringify;
+const NativePromise = Promise;
+const promiseResolve = NativePromise.resolve.bind(NativePromise);
+const promiseRace = NativePromise.race.bind(NativePromise);
+const promiseThen = NativePromise.prototype.then;
+
+function asyncReturnError() {
+  const error = new Error('x402 port returned a non-native thenable or an uninspectable value');
+  error.code = 'VESPI_ASYNC_RETURN';
+  return error;
+}
+
+// The value is kept only after it passed the guard, and a native promise's resolved value passes the
+// proxy guard too: reading a proxy runs host code at every property this module touches.
+function startPortCall(fn, args) {
+  let value;
+  const ready = apply(promiseThen, promiseResolve(), [() => {
+    const returned = apply(fn, undefined, args);
+    if (utilTypes.isPromise(returned)) {
+      return apply(promiseThen, returned, [(result) => {
+        if (uninspectable(result)) throw asyncReturnError();
+        value = result;
+      }]);
+    }
+    if (announcesAsync(returned)) throw asyncReturnError();
+    value = returned;
+    return undefined;
+  }]);
+  return { ready, get value() { return value; } };
+}
+
+// A proxy, or an object inheriting from one, cannot be inspected without running host code.
+// `isProxy` answers without a trap and `Object.getPrototypeOf` of a non-proxy runs no host code.
+function uninspectable(value) {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return false;
+  try {
+    for (let current = value; current !== null; current = Object.getPrototypeOf(current)) {
+      if (utilTypes.isProxy(current)) return true;
+    }
+  } catch {
+    return true;
+  }
+  return false;
+}
+
+// True when the value announces asynchronous work (`then` callable or an accessor, own or inherited)
+// or holds a proxy in its chain; proxies are refused before any trap is consulted.
+function announcesAsync(value) {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return false;
+  try {
+    for (let current = value; current !== null; current = Object.getPrototypeOf(current)) {
+      if (utilTypes.isProxy(current)) return true;
+      const descriptor = Object.getOwnPropertyDescriptor(current, 'then');
+      if (descriptor) return !('value' in descriptor) || typeof descriptor.value === 'function';
+    }
+  } catch {
+    return true;
+  }
+  return false;
+}
 
 // A canonical positive decimal amount, at most 78 digits, no sign, no exponent, no leading zero.
 const ATOMIC = /^[1-9][0-9]{0,77}$/;
@@ -102,6 +168,7 @@ const CODES = Object.freeze({
   SETTLEMENT_REJECTED: 'SETTLEMENT_REJECTED',
   DELIVERY_REJECTED: 'DELIVERY_REJECTED',
   VERIFIER_FAILED: 'VERIFIER_FAILED',
+  ASYNC_RETURN: 'ASYNC_RETURN',
 });
 
 const EXIT = 'return to the person: change the agreement or cancel';
@@ -272,7 +339,7 @@ function readPorts(raw) {
     if (error instanceof Error && (error.code === 'VESPI_X402_INVALID_PORT' || error.code === 'VESPI_X402_CLAIMS_REQUIRED')) throw error;
     throw portError();
   }
-  return ports;
+  return Object.freeze(ports);
 }
 
 // The expected effect a settlement has to match, built from the declaration and never from what the
@@ -551,7 +618,7 @@ function effectKey(ctx, spec) {
     request: { url: spec.url, method: spec.method },
     expected: expectedEffect(spec),
   });
-  return sha256(JSON.stringify(content));
+  return sha256(stringify(content));
 }
 
 // The identity of the operation, read once and read here: a payment that cannot say which operation it
@@ -574,11 +641,15 @@ function readOperationIdentity(operation) {
 // and its rejection is consumed here so it cannot reach the host process as an unhandled rejection.
 // Consuming it is not believing it: the answer below still has to be the word the store uses.
 function consumeThenable(value) {
-  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return;
-  try {
-    if (typeof value.then === 'function') Promise.resolve(value).catch(() => {});
-  } catch {
+  if (utilTypes.isPromise(value)) {
+    apply(promiseThen, value, [undefined, () => {}]);
+    return false;
   }
+  return announcesAsync(value);
+}
+
+function portFailure(error, fallback) {
+  try { return error?.code === 'VESPI_ASYNC_RETURN' ? CODES.ASYNC_RETURN : fallback; } catch { return fallback; }
 }
 
 // Claims live wherever the host put them; this factory is one explicit choice of store, kept for tests
@@ -652,11 +723,11 @@ async function verifySettlementEffect(ctx, evidence) {
       && (evidence.network === undefined || evidence.network === expected.network)
       && (evidence.amount === undefined || evidence.amount === expected.amount);
     if (declared && typeof ctx.authDigest === 'string' && evidence.authDigest === ctx.authDigest) {
-      const verdict = readVerdict(await callSettlementPort(ctx, evidence));
+      const verdict = readVerdict((await callSettlementPort(ctx, evidence)).answer);
       for (const [key, value] of Object.entries(verdict.checks)) checks[`settlement_${key}`] = value;
       checks.settlement = verdict.ok;
       if (!verdict.ok) {
-        settlementReason = `the settlement port did not verify the declared effect (${CODES.VERIFIER_FAILED})`;
+        settlementReason = `the settlement port did not verify the declared effect (${ctx.verifierCode || CODES.VERIFIER_FAILED})`;
       }
     }
   }
@@ -668,7 +739,12 @@ async function verifySettlementEffect(ctx, evidence) {
   else if (!checks.prepared) reason = `the authorization was not independently inspected (${CODES.PREPARED_REJECTED})`;
   else if (!checks.settlement) reason = settlementReason;
   else if (!checks.transactionUnique) reason = `the settled transaction was not unique in this process (${ctx.claimCode || CODES.DUPLICATE_TRANSACTION})`;
-  else if (!checks.delivery) reason = `the paid response did not deliver a validated body (${CODES.DELIVERY_REJECTED})`;
+  // The delivery code stays DELIVERY_REJECTED, the catalog word readers already match on; when the
+  // refusal had a more specific cause (an async return), that code follows it instead of replacing it.
+  else if (!checks.delivery) {
+    const cause = ctx.deliveryCode && ctx.deliveryCode !== CODES.DELIVERY_REJECTED ? `; ${ctx.deliveryCode}` : '';
+    reason = `the paid response did not deliver a validated body (${CODES.DELIVERY_REJECTED}${cause})`;
+  }
 
   const verified = checks.terms === true
     && checks.prepared === true
@@ -725,13 +801,20 @@ async function callSettlementPort(ctx, evidence) {
     }, budget);
   });
   try {
-    const call = Promise.resolve().then(() => ctx.ports.verifySettlement(evidence, {
+    const call = startPortCall(ctx.ports.verifySettlement, [evidence, {
       expected: ctx.expected,
       authDigest: ctx.authDigest,
       signal: controller.signal,
-    }));
-    const settled = await Promise.race([call.catch(() => ({ verified: false, checks: {}, reason: 'the settlement port failed' })), timeout]);
-    return settled;
+    }]);
+    const settled = await promiseRace([apply(promiseThen, call.ready, [undefined, (error) => {
+      const failure = portFailure(error, CODES.VERIFIER_FAILED);
+      if (failure === CODES.ASYNC_RETURN) ctx.verifierCode = failure;
+      return { failure };
+    }]), timeout]);
+    // The answer travels boxed: an async function that returned the port's object directly would
+    // assimilate it, and a `then` the host attached after the inspection would run.
+    if (settled && settled.failure) return { answer: { verified: false, checks: {}, reason: `the settlement port failed (${settled.failure})` } };
+    return { answer: settled === null ? { verified: false, checks: {}, reason: 'the settlement port failed' } : call.value };
   } finally {
     clearTimeout(timer);
   }
@@ -750,8 +833,9 @@ function readVerifyTimeout(io) {
 // own verifier, so a host cannot hand the payment a verifier that trusts the signer.
 const ALLOWED_IO_KEYS = [
   'ask', 'decide', 'decideThreshold', 'decideTimeoutMs', 'now',
-  'askTimeoutMs', 'performTimeoutMs', 'verifyTimeoutMs',
+  'askTimeoutMs', 'performTimeoutMs', 'verifyTimeoutMs', 'readContext', 'contextTimeoutMs', 'checkpoint', 'checkpointTimeoutMs',
 ];
+// Optional: a failure after the last checkpoint and before perform can repeat an effect unless the destination deduplicates by `idempotencyKey`.
 // Node's timers are 32-bit and a delay of 2^31 ms or more is armed as 1 ms, so a budget a host meant
 // as a long wait aborts the settlement reader on the spot and seals a paid effect as not_verified.
 // The module does not clamp it: a clamp answers with a budget the host did not ask for, and the
@@ -760,7 +844,7 @@ const ALLOWED_IO_KEYS = [
 // be read. The engine arms timers for `performTimeoutMs`, `askTimeoutMs` and `decideTimeoutMs` on
 // this payment's behalf, so they are refused the same way.
 const MAX_TIMER_MS = 2 ** 31 - 1;
-const TIMER_DEADLINES = ['verifyTimeoutMs', 'performTimeoutMs', 'askTimeoutMs', 'decideTimeoutMs'];
+const TIMER_DEADLINES = ['verifyTimeoutMs', 'performTimeoutMs', 'askTimeoutMs', 'decideTimeoutMs', 'contextTimeoutMs', 'checkpointTimeoutMs'];
 const DEFAULT_VERIFY_TIMEOUT_MS = 15_000;
 
 // The run clock is a synchronous contract, the same one the engine uses. An injected clock that is
@@ -775,19 +859,20 @@ function readRunNow(io) {
   if (typeof clock !== 'function') return Date.now();
   let value;
   try {
-    value = clock.call(io);
+    value = apply(clock, undefined, []);
   } catch {
     return null;
   }
+  // Any object is an invalid time, refused without reading `then`; only a native promise is consumed
+  // so its rejection does not escape unhandled.
   if (value !== null && (typeof value === 'object' || typeof value === 'function')) {
-    try {
-      if (typeof value.then === 'function') {
-        Promise.resolve(value).catch(() => {});
-        return null;
+    if (utilTypes.isPromise(value)) {
+      try {
+        apply(promiseThen, value, [undefined, () => {}]);
+      } catch {
       }
-    } catch {
-      return null;
     }
+    return null;
   }
   const parsed = parseTime(value);
   return parsed === null ? null : parsed;
@@ -836,9 +921,11 @@ function abortedRead(signal) {
 async function discoverRequired(ctx, spec) {
   let discovered;
   try {
-    discovered = await ctx.ports.discover({ url: spec.url, method: spec.method, redirect: 'error', signal: ctx.signal });
-  } catch {
-    return { ok: false, code: CODES.DISCOVERY_FAILED };
+    const call = startPortCall(ctx.ports.discover, [{ url: spec.url, method: spec.method, redirect: 'error', signal: ctx.signal }]);
+    await call.ready;
+    discovered = call.value;
+  } catch (error) {
+    return { ok: false, code: portFailure(error, CODES.DISCOVERY_FAILED) };
   }
   if (aborted(ctx)) return { ok: false, code: CODES.ABORTED };
   // `status` and `paymentRequired` are read once, inside the guard, and the copy that was read is the
@@ -865,9 +952,11 @@ async function discoverRequired(ctx, spec) {
 async function prepareAuthorization(ctx) {
   let prepared;
   try {
-    prepared = await ctx.ports.prepare({ terms: ctx.terms, expected: ctx.expected, signal: ctx.signal });
-  } catch {
-    return { ok: false, code: CODES.PREPARE_FAILED };
+    const call = startPortCall(ctx.ports.prepare, [{ terms: ctx.terms, expected: ctx.expected, signal: ctx.signal }]);
+    await call.ready;
+    prepared = call.value;
+  } catch (error) {
+    return { ok: false, code: portFailure(error, CODES.PREPARE_FAILED) };
   }
   if (aborted(ctx)) return { ok: false, code: CODES.ABORTED };
   let authorization = null;
@@ -911,10 +1000,12 @@ function inspectionIsAcceptable(result, expected) {
 async function inspectAuthorization(ctx, authorization) {
   let result;
   try {
-    result = await ctx.ports.inspectPrepared(authorization, { expected: ctx.expected, signal: ctx.signal });
-  } catch {
+    const call = startPortCall(ctx.ports.inspectPrepared, [authorization, { expected: ctx.expected, signal: ctx.signal }]);
+    await call.ready;
+    result = call.value;
+  } catch (error) {
     // An inspector that cannot read the authorization is a failed run, not a refusal of terms.
-    return { ok: false, code: CODES.PREPARED_REJECTED, failure: true };
+    return { ok: false, code: portFailure(error, CODES.PREPARED_REJECTED), failure: true };
   }
   if (aborted(ctx)) return { ok: false, code: CODES.ABORTED, failure: true };
   let accepted = null;
@@ -979,7 +1070,7 @@ function readSettlement(settlement, expected) {
 // port, and nothing from the body travels into the receipt but its digest.
 function jsonCopy(value) {
   try {
-    return JSON.parse(JSON.stringify(value));
+    return JSON.parse(stringify(value));
   } catch {
     return null;
   }
@@ -988,7 +1079,7 @@ function jsonCopy(value) {
 function exceedsBodyLimit(value) {
   let serialized;
   try {
-    serialized = JSON.stringify(value);
+    serialized = stringify(value);
   } catch {
     return true;
   }
@@ -1040,18 +1131,25 @@ function isJsonData(value, seen = new Set()) {
 async function readDelivery(response, ctx) {
   let raw;
   try {
-    raw = typeof response.readBody === 'function' ? await response.readBody(ctx.signal) : null;
-  } catch {
-    return { ok: false, output: null, digest: null };
+    if (typeof response.readBody !== 'function') raw = null;
+    else {
+      const call = startPortCall(response.readBody, [ctx.signal]);
+      await call.ready;
+      raw = call.value;
+    }
+  } catch (error) {
+    return { ok: false, output: null, digest: null, code: portFailure(error, CODES.DELIVERY_REJECTED) };
   }
   const copy = jsonCopy(raw);
   if (copy === null || copy === undefined) return { ok: false, output: null, digest: null };
   if (exceedsBodyLimit(copy)) return { ok: false, output: null, digest: null };
   let validated;
   try {
-    validated = await ctx.ports.validateOutput(copy);
-  } catch {
-    return { ok: false, output: null, digest: null };
+    const call = startPortCall(ctx.ports.validateOutput, [copy]);
+    await call.ready;
+    validated = call.value;
+  } catch (error) {
+    return { ok: false, output: null, digest: null, code: portFailure(error, CODES.DELIVERY_REJECTED) };
   }
   let ok;
   let digest;
@@ -1073,7 +1171,7 @@ async function readDelivery(response, ctx) {
   }
   if (output !== null) {
     try {
-      const serialized = JSON.stringify(output);
+      const serialized = stringify(output);
       if (Buffer.byteLength(serialized, 'utf8') > MAX_BODY_BYTES || sha256(serialized) !== digest) {
         return { ok: false, output: null, digest: null };
       }
@@ -1147,7 +1245,7 @@ async function performStages(ctx, spec) {
   ctx.operationId = identity;
 
   const discovered = await discoverRequired(ctx, spec);
-  if (!discovered.ok) return failed(discovered.code);
+  if (!discovered.ok) return discovered.code === CODES.ASYNC_RETURN ? blocked(discovered.code) : failed(discovered.code);
 
   const chosen = selectX402Terms(discovered.paymentRequired, spec, ctx.authority, now);
   if (!chosen.ok) return blocked(chosen.code);
@@ -1161,7 +1259,7 @@ async function performStages(ctx, spec) {
   try {
     ctx.effectKey = effectKey(ctx, spec);
     reserved = ctx.claims.reserveEffect(ctx.effectKey);
-    consumeThenable(reserved);
+    if (consumeThenable(reserved)) return blocked(CODES.ASYNC_RETURN);
   } catch {
     return failed(CODES.CLAIMS_CAPACITY);
   }
@@ -1170,10 +1268,11 @@ async function performStages(ctx, spec) {
   ctx.reserved = true;
 
   const prepared = await prepareAuthorization(ctx);
-  if (!prepared.ok) return failed(prepared.code);
+  if (!prepared.ok) return prepared.code === CODES.ASYNC_RETURN ? blocked(prepared.code) : failed(prepared.code);
 
   const inspected = await inspectAuthorization(ctx, prepared.authorization);
   if (!inspected.ok) {
+    if (inspected.code === CODES.ASYNC_RETURN) return blocked(inspected.code);
     if (inspected.failure) return failed(inspected.code);
     return blocked(inspected.code);
   }
@@ -1194,7 +1293,7 @@ async function performStages(ctx, spec) {
   // the receipt: every remaining step lives inside this one guard.
   try {
     ctx.sendStarted = true;
-    const response = await ctx.ports.sendPaid({
+    const call = startPortCall(ctx.ports.sendPaid, [{
       url: spec.url,
       method: spec.method,
       redirect: 'error',
@@ -1205,7 +1304,9 @@ async function performStages(ctx, spec) {
       // deduplicates rests on it; the effect key does, and only that hash travels into the receipt.
       idempotencyKey: ctx.operationKey,
       signal: ctx.signal,
-    });
+    }]);
+    await call.ready;
+    const response = call.value;
     if (!isPlainObject(response)) return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
 
     const settlement = readSettlement(response.settlement, ctx.expected);
@@ -1217,9 +1318,10 @@ async function performStages(ctx, spec) {
     // The transaction is claimed as soon as there is a hash to claim, before anything is exposed: a
     // settlement the run then refuses is still a transaction this process has already seen.
     const claim = ctx.claims.claimTransaction(ctx.expected.network, settlement.txHash);
-    consumeThenable(claim);
-    ctx.transactionUnique = claim === 'claimed';
-    if (!ctx.transactionUnique) ctx.claimCode = claim === 'duplicate' ? CODES.DUPLICATE_TRANSACTION : CODES.CLAIMS_CAPACITY;
+    const asyncClaim = consumeThenable(claim);
+    ctx.transactionUnique = claim === 'claimed' && !asyncClaim;
+    if (!ctx.transactionUnique) ctx.claimCode = asyncClaim ? CODES.ASYNC_RETURN
+      : claim === 'duplicate' ? CODES.DUPLICATE_TRANSACTION : CODES.CLAIMS_CAPACITY;
 
     // A hash that contradicts the declaration keeps its evidence on the receipt: the person
     // reconciles it. It is not verified and no output is exposed.
@@ -1229,14 +1331,17 @@ async function performStages(ctx, spec) {
     // A delivery on a cancelled run is not a delivery: the answer arrived after the run was called
     // off, so the settlement may still be verified while the delivery stays uncovered.
     ctx.delivery = delivery.ok && response.status === 200 && !aborted(ctx);
-    if (!ctx.delivery) return { ok: true, evidence: ctx.evidence, output: null };
+    ctx.deliveryCode = delivery.code;
+    if (!ctx.delivery) {
+      return { ok: true, evidence: ctx.evidence, output: null };
+    }
     ctx.evidence = { ...ctx.evidence, planDigest: delivery.digest };
     return { ok: true, evidence: ctx.evidence, output: delivery.output };
-  } catch {
+  } catch (error) {
     // A property of the answer that throws, a claims store that throws, a body that cannot be
     // read: whatever it was, the effect may be on the wire. The run reports uncertainty, keeps the
     // evidence it already has and the permission it already spent, and a person reconciles.
-    return unknownAfterSend(ctx, CODES.SEND_UNKNOWN);
+    return unknownAfterSend(ctx, portFailure(error, CODES.SEND_UNKNOWN));
   }
 }
 
@@ -1290,14 +1395,21 @@ function buildRunIo(io, ctx) {
   // itself. Only a readable number is judged: anything else keeps the fallback below, as it always did.
   for (const key of TIMER_DEADLINES) {
     const budget = runIo[key];
+    if (key === 'checkpointTimeoutMs' && budget !== undefined
+      && (typeof budget !== 'number' || !Number.isFinite(budget) || budget <= 0 || budget > MAX_TIMER_MS)) throw ioError();
     if (typeof budget === 'number' && Number.isFinite(budget) && budget > MAX_TIMER_MS) throw ioError();
   }
   // The budget the ceiling was judged on is the one the timer is armed with. Holding the value on
   // the run's own context closes the gap between the copy that was checked and a host options object
   // that changed while the payment was in flight: reading the raw options again would arm a timer
   // nobody judged. This is the only verifier this module installs, so the value has one writer.
+  const callbackIo = Object.freeze({ ...runIo });
+  for (const key of ['ask', 'decide', 'now', 'readContext', 'checkpoint']) {
+    if (typeof callbackIo[key] === 'function') runIo[key] = (...args) => apply(callbackIo[key], undefined, args);
+  }
   ctx.verifyTimeoutMs = runIo.verifyTimeoutMs;
-  runIo.verify = (evidence) => verifySettlementEffect(ctx, evidence);
+  Object.defineProperty(runIo, 'verify', { value: (evidence) => verifySettlementEffect(ctx, evidence) });
+  Object.freeze(runIo);
   return runIo;
 }
 
@@ -1335,6 +1447,7 @@ function createX402Payment(rawSpec, rawPorts) {
         claimCode: null,
         aborted: false,
       };
+      const runIo = buildRunIo(io, ctx);
       const capability = {
         id: spec.id,
         required: (operation) => requiredFor(spec, operation),
@@ -1345,13 +1458,13 @@ function createX402Payment(rawSpec, rawPorts) {
           ctx.operation = performCtx?.operation ?? null;
           ctx.operationKey = performCtx?.idempotencyKey ?? null;
           ctx.signal = performCtx?.signal ?? null;
-          const now = readRunNow(io);
+          const now = readRunNow(runIo);
           if (now === null) return failed(CODES.INVALID_CLOCK);
           ctx.now = now;
           return perform(ctx);
         },
       };
-      const result = await runOperation(op, capability, buildRunIo(io, ctx));
+      const result = await runOperation(op, capability, runIo);
       if (ctx.effectKey !== undefined && result.receipt) {
         result.receipt.effectKeyVersion = EFFECT_KEY_VERSION;
         result.receipt.evidence = { ...(result.receipt.evidence || {}), effectKey: ctx.effectKey };

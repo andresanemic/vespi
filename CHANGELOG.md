@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.1.8-kernel] — 2026-10-23
+
+This version adds checkpoint/continuation handling and closes host-callback return validation before effects. Host callbacks are invoked without a receiver (undefined `thisArg`), unlike the `io` binding used by several 0.1.7 operation callbacks. Use arrows, closures or explicitly bound functions; see [the callback contract and compatibility limits](./docs/HOST_CALLBACKS.md). The source suite passes 1,310/1,310 with zero skipped or TODO tests. [Evidence and adoption limits](./docs/RELEASE_0.1.8_KERNEL.md).
+
 ## [v0.1.7-kernel] — 2026-10-13
 
 Current source preserves the scope of a payment approval, keeps uncertain sends reserved, and records provenance verification time and rejected requests. It also verifies the bytes of delivered JSON and exposes the sealed effect key and public x402 code catalog. Twelve pending tests are now active; twelve obsolete or out-of-contract expectations were retired with their reasons recorded. Six regressions were added. [Release suite](./docs/SUITE_RESULT_0.1.7.txt): 1,218 passed, 0 failed, 0 todo, 0 skipped; x402 demo: 86 passed. Old receipts remain verifiable; new provenance/x402 receipts contain additional sealed fields. The published v0.1.6 tag and pinned copies remain unchanged. [Resolution and limits](./docs/TODO_RESOLUTION.md).

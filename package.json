@@ -1,6 +1,6 @@
 {
   "name": "vespi-kernel",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "description": "Source checkout metadata for the Vespi kernel judge package",
   "files": [
@@ -15,7 +15,9 @@
     "LICENSE",
     "NOTICE",
     "docs/GENESIS.md",
-    "docs/RELEASE_0.1.7_KERNEL.md",
-    "docs/SUITE_RESULT_0.1.7.txt"
+    "docs/HOST_CALLBACKS.md",
+    "docs/JUDGE_PACKAGE.json",
+    "docs/RELEASE_0.1.8_KERNEL.md",
+    "docs/SUITE_RESULT_0.1.8.txt"
   ]
 }

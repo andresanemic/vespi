@@ -1,0 +1,13 @@
+Vespi Kernel suite result
+Date (UTC): 2026-10-23T14:26:55.312Z
+Package version: 0.1.8
+Node version: v24.15.0
+Git baseline SHA: 96222aab69b47f8f38f5dce29095966fa271b92e
+The tests ran against the current working tree; the baseline alone does not identify uncommitted changes.
+Command: node --test --test-reporter=tap --test-concurrency=4 --test-timeout=60000 test/*.test.js
+Tests: 1310
+Passed: 1310
+Failed: 0
+Todo: 0
+Skipped: 0
+Demo x402: 86 passed; 0 failed; local fixtures with installed SDK.

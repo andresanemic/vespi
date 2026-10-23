@@ -89,4 +89,61 @@ function sufficient(requirements, authority, options) {
   return { ok: true, reason: 'covered by grant' };
 }
 
-module.exports = { grantSpend, sufficient };
+// Reopening a sealed checkpoint may only narrow what the person granted. Every new grant has to be
+// covered by a sealed one, the way `sufficient` consumes a grant (T1-A2), and the people who can
+// pause or who have to sign can only shrink. A predicate, not a repair: it says no and the caller
+// refuses, because an authority the kernel rewrote would be an authority nobody granted.
+function attenuates(next, sealed) {
+  try {
+    const nextSpend = next && next.spend;
+    const sealedSpend = sealed && sealed.spend;
+    if (!Array.isArray(nextSpend) || !Array.isArray(sealedSpend)) return false;
+
+    const coverage = new Map();
+    for (const grant of nextSpend) {
+      if (!grant || !text(grant.asset) || atomic(grant.maxAmount) === null) return false;
+      if (grant.to !== undefined && !text(grant.to)) return false;
+      if (['network', 'resource'].some((key) => grant[key] !== undefined && !text(grant[key]))) return false;
+      const index = sealedSpend.findIndex((seal) => seal && seal.asset === grant.asset
+        && (seal.to === undefined || seal.to === grant.to)
+        && ['network', 'resource'].every((key) => seal[key] === undefined || seal[key] === grant[key]));
+      if (index < 0) return false;
+      const seal = sealedSpend[index];
+      if (atomic(seal.maxAmount) === null) return false;
+      if (seal.expiresAt !== undefined) {
+        if (grant.expiresAt === undefined) return false;
+        const nextExpiry = parseTime(grant.expiresAt);
+        const sealedExpiry = parseTime(seal.expiresAt);
+        if (nextExpiry === null || sealedExpiry === null || nextExpiry > sealedExpiry) return false;
+      } else if (grant.expiresAt !== undefined && parseTime(grant.expiresAt) === null) {
+        return false;
+      }
+      coverage.set(index, (coverage.get(index) || 0n) + atomic(grant.maxAmount));
+    }
+    for (const [index, total] of coverage) {
+      if (total > atomic(sealedSpend[index].maxAmount)) return false;
+    }
+
+    const nextPausers = next.pausers === undefined ? [] : next.pausers;
+    const sealedPausers = sealed.pausers === undefined ? [] : sealed.pausers;
+    if (!Array.isArray(nextPausers) || !Array.isArray(sealedPausers)) return false;
+    if (nextPausers.some((who) => typeof who !== 'string' || !sealedPausers.includes(who))) return false;
+
+    if (sealed.signers !== undefined) {
+      const grant = next.signers;
+      const seal = sealed.signers;
+      if (!grant || !seal || !Number.isInteger(grant.required) || grant.required < seal.required) return false;
+      if (!Array.isArray(grant.allowed) || !Array.isArray(seal.allowed)) return false;
+      if (grant.allowed.some((who) => !seal.allowed.includes(who))) return false;
+    } else if (next.signers !== undefined) {
+      const grant = next.signers;
+      if (!grant || !Number.isInteger(grant.required) || grant.required < 1) return false;
+      if (!Array.isArray(grant.allowed) || grant.allowed.length === 0) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { grantSpend, sufficient, attenuates };
