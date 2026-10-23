@@ -1,6 +1,6 @@
 # What Vespi can do
 
-Vespi keeps an operation's authority, checked result and next agreed action together so you can continue what still holds. [Continuation tests](../test/v014.test.js) cover that choice and returning uncertain exercised effects to a person, but the host must store the receipts, observe the effect and wake the process. Kernel `0.1.7`: [release notes](./RELEASE_0.1.7_KERNEL.md).
+Vespi keeps an operation's authority, checked result and next agreed action together so you can continue what still holds. [Continuation tests](../test/v014.test.js) cover that choice and returning uncertain exercised effects to a person, but the host must store the receipts, observe the effect and wake the process. Kernel `0.1.8`: [release notes](./RELEASE_0.1.8_KERNEL.md). Publication is pending Andrés’s explicit approval. Approved context is bound to the approval and receipt and rechecked before an effect. Host-managed checkpoints and continuation preserve bounded authority; the host supplies authentic storage and a minimum accepted generation. Callbacks receive no receiver: existing hosts using `this` must pass an arrow, closure or bound function. See the [callback migration contract](./HOST_CALLBACKS.md).
 
 ## Authority and the human gate
 
@@ -60,7 +60,9 @@ The [0.1.4 release note](./RELEASE_0.1.4_KERNEL.md#what-014-does-not-bring-and-m
 
 # Qué puede hacer Vespi
 
-Vespi conserva juntas la autoridad de una operación, el resultado comprobado y la siguiente acción acordada para que retomes lo que sigue valiendo. [Las pruebas de continuidad](../test/v014.test.js) cubren esa selección y devolver a una persona los efectos ejercidos inciertos, pero el host debe guardar recibos, observar el efecto y despertar el proceso. Kernel `0.1.7`: [nota de versión](./RELEASE_0.1.7_KERNEL.md).
+Kernel 0.1.8: [nota de versión](./RELEASE_0.1.8_KERNEL.md). La publicación espera aprobación explícita de Andrés. El contexto aprobado queda vinculado con la aprobación y el recibo y se comprueba antes de un efecto. Los checkpoints y las continuaciones conservan autoridad acotada; el host aporta almacenamiento auténtico y una generación mínima aceptada. Los callbacks no reciben receptor: un host que dependa de `this` debe pasar una flecha, clausura o función ligada. Consulta el [contrato de migración](./HOST_CALLBACKS.md).
+
+Vespi conserva juntas la autoridad de una operación, el resultado comprobado y la siguiente acción acordada para que retomes lo que sigue valiendo. [Las pruebas de continuidad](../test/v014.test.js) cubren esa selección y devolver a una persona los efectos ejercidos inciertos, pero el host debe guardar recibos, observar el efecto y despertar el proceso. Kernel `0.1.8`: [nota de versión](./RELEASE_0.1.8_KERNEL.md).
 
 ## Autoridad y puerta humana
 
