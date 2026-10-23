@@ -16,17 +16,30 @@ function mixedAuthority(size) {
   }) };
 }
 
-test('KF-4 rejects oversized mixed authorities before expensive enumeration', () => {
-  const tooLarge = mixedAuthority(40);
+test('KF-4 rejects oversized non-identical mixed authorities before expensive enumeration', () => {
+  const sealed = mixedAuthority(40);
+  const narrowed = { spend: sealed.spend.map((grant, index) => (index === 0 ? { ...grant, maxAmount: '50' } : { ...grant })) };
   const start = process.hrtime.bigint();
-  assert.equal(attenuates(tooLarge, tooLarge), false);
+  assert.equal(attenuates(narrowed, sealed), false);
   assert.ok(Number(process.hrtime.bigint() - start) / 1e6 < 500);
 
-  const operation = createOperation({ goal: 'g', authority: tooLarge, action: 'pay' });
+  const operation = createOperation({ goal: 'g', authority: sealed, action: 'pay' });
   const checkpoint = checkpointOperation(operation);
   const restoreStart = process.hrtime.bigint();
-  assert.throws(() => restoreOperation(checkpoint, { expectedDigest: checkpoint.digest, authority: tooLarge }), /authority_widened/);
+  assert.throws(() => restoreOperation(checkpoint, { expectedDigest: checkpoint.digest, authority: narrowed }), /authority_widened/);
   assert.ok(Number(process.hrtime.bigint() - restoreStart) / 1e6 < 500);
+});
+
+test('KF-4 accepts an identical oversized authority instantly: restoring the same grants never depends on the work budget', () => {
+  const sealed = mixedAuthority(40);
+  const same = { spend: sealed.spend.map((grant) => ({ ...grant })) };
+  const start = process.hrtime.bigint();
+  assert.equal(attenuates(same, sealed), true);
+  assert.ok(Number(process.hrtime.bigint() - start) / 1e6 < 100);
+  const operation = createOperation({ goal: 'g', authority: sealed, action: 'pay' });
+  const checkpoint = checkpointOperation(operation);
+  const restored = restoreOperation(checkpoint, { expectedDigest: checkpoint.digest, authority: same });
+  assert.ok(restored);
 });
 
 test('KF-4 accepts a legitimate mixed authority with 16 grants quickly', () => {

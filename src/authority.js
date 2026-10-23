@@ -1,7 +1,7 @@
 'use strict';
 
 const { parseTime } = require('./time.js');
-const MAX_ATTENUATION_WORK = 10_000_000;
+const MAX_ATTENUATION_WORK = 1_000_000;
 
 // Authority: pure data + one predicate. No I/O, no host, no capabilities.
 function grantSpend(asset, maxAmount, to, expiresAt) {
@@ -119,9 +119,13 @@ function attenuates(next, sealed) {
     const maxTime = parseTime('9999-12-31T23:59:59.999Z');
     const times = [...new Set([minTime, maxTime, ...expiries.flatMap((expiry) => [expiry > minTime ? expiry - 1 : null, expiry]).filter((time) => time !== null)])];
     const values = Object.fromEntries(['to', 'network', 'resource'].map((key) => [key, new Set(grants.map((grant) => grant && grant[key]).filter((value) => value !== undefined)).size]));
+    // An authority identical to the sealed one is contained by definition: restoring it never depends on the work budget.
+    const fields = ['asset', 'maxAmount', 'to', 'network', 'resource', 'expiresAt'];
+    const identicalSpend = nextSpend.length === sealedSpend.length
+      && nextSpend.every((grant, index) => grant && sealedSpend[index] && fields.every((key) => grant[key] === sealedSpend[index][key]));
     const scans = nextSpend.length + sealedSpend.length;
     let points = 0;
-    for (const grant of nextSpend) {
+    if (!identicalSpend) for (const grant of nextSpend) {
       const candidates = (grant && grant.to === undefined ? values.to + 1 : 1)
         * (grant && grant.network === undefined ? values.network + 2 : 1)
         * (grant && grant.resource === undefined ? values.resource + 2 : 1);
@@ -137,9 +141,6 @@ function attenuates(next, sealed) {
     const destinations = nextSpend.map((grant) => grant.to === undefined ? toValues(grant, 'to', false) : [grant.to]);
     const networks = nextSpend.map((grant) => toValues(grant, 'network', true));
     const resources = nextSpend.map((grant) => toValues(grant, 'resource', true));
-    const fields = ['asset', 'maxAmount', 'to', 'network', 'resource', 'expiresAt'];
-    const identicalSpend = nextSpend.length === sealedSpend.length
-      && nextSpend.every((grant, index) => fields.every((key) => grant[key] === sealedSpend[index][key]));
     for (const nowMs of identicalSpend ? [] : times) {
       const totals = new Map();
       for (let nextIndex = 0; nextIndex < nextSpend.length; nextIndex++) {
