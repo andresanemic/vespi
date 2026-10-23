@@ -27,6 +27,17 @@ function parseNow(now) {
   }
 }
 
+function resolveGrantIndex(requirement, grants, nowMs) {
+  const scopeMatches = (grant) => ['network', 'resource'].every((key) => grant[key] === undefined || grant[key] === requirement[key]);
+  const live = (grant) => !isExpired(grant, nowMs) && scopeMatches(grant);
+  const specific = grants.findIndex((grant) => live(grant) && grant.asset === requirement.asset && grant.to === requirement.to);
+  return specific >= 0 ? specific : grants.findIndex((grant) => live(grant) && grant.asset === requirement.asset && grant.to === undefined);
+}
+
+function isExpired(grant, nowMs) {
+  return grant.expiresAt !== undefined && parseTime(grant.expiresAt) <= nowMs;
+}
+
 function sufficient(requirements, authority, options) {
   const reqs = requirements;
   if (!Array.isArray(reqs)) return { ok: false, reason: 'requirements must be an array' };
@@ -59,20 +70,12 @@ function sufficient(requirements, authority, options) {
     }
   }
 
-  function isExpired(grant) {
-    if (grant.expiresAt === undefined) return false;
-    const expiry = parseTime(grant.expiresAt);
-    return nowMs !== null && expiry <= nowMs;
-  }
-
   const consumption = new Map();
   for (const requirement of reqs) {
     const scopeMatches = (grant) => ['network', 'resource'].every((key) => grant[key] === undefined || grant[key] === requirement[key]);
-    const liveSpecific = grants.findIndex((grant) => !isExpired(grant) && scopeMatches(grant) && grant.asset === requirement.asset && grant.to === requirement.to);
-    const liveWildcard = liveSpecific >= 0 ? liveSpecific : grants.findIndex((grant) => !isExpired(grant) && scopeMatches(grant) && grant.asset === requirement.asset && grant.to === undefined);
-    const index = liveSpecific >= 0 ? liveSpecific : liveWildcard;
+    const index = resolveGrantIndex(requirement, grants, nowMs);
     if (index < 0) {
-      const expiredMatch = grants.find((grant) => isExpired(grant) && scopeMatches(grant) && grant.asset === requirement.asset && (grant.to === undefined || grant.to === requirement.to));
+      const expiredMatch = grants.find((grant) => isExpired(grant, nowMs) && scopeMatches(grant) && grant.asset === requirement.asset && (grant.to === undefined || grant.to === requirement.to));
       if (expiredMatch) {
         return { ok: false, reason: `grant for asset ${requirement.asset} expired at ${expiredMatch.expiresAt}` };
       }
@@ -99,29 +102,52 @@ function attenuates(next, sealed) {
     const sealedSpend = sealed && sealed.spend;
     if (!Array.isArray(nextSpend) || !Array.isArray(sealedSpend)) return false;
 
-    const coverage = new Map();
-    for (const grant of nextSpend) {
+    const toValues = (grant, key, includeOmitted) => {
+      if (grant[key] !== undefined) return [grant[key]];
+      const values = [...new Set([...sealedSpend, ...nextSpend].map((seal) => seal && seal[key]).filter((value) => value !== undefined))];
+      if (includeOmitted) values.push(undefined);
+      let other = '__attenuation_other__';
+      while (values.includes(other)) other += '_';
+      values.push(other);
+      return values;
+    };
+    const expiries = [...new Set([...nextSpend, ...sealedSpend].map((grant) => grant && grant.expiresAt).filter((value) => value !== undefined).map(parseTime))];
+    if (expiries.some((expiry) => expiry === null)) return false;
+    const minTime = parseTime('0000-01-01T00:00:00Z');
+    const maxTime = parseTime('9999-12-31T23:59:59.999Z');
+    const times = [...new Set([minTime, maxTime, ...expiries.flatMap((expiry) => [expiry > minTime ? expiry - 1 : null, expiry]).filter((time) => time !== null)])];
+    for (let nextIndex = 0; nextIndex < nextSpend.length; nextIndex++) {
+      const grant = nextSpend[nextIndex];
       if (!grant || !text(grant.asset) || atomic(grant.maxAmount) === null) return false;
       if (grant.to !== undefined && !text(grant.to)) return false;
       if (['network', 'resource'].some((key) => grant[key] !== undefined && !text(grant[key]))) return false;
-      const index = sealedSpend.findIndex((seal) => seal && seal.asset === grant.asset
-        && (seal.to === undefined || seal.to === grant.to)
-        && ['network', 'resource'].every((key) => seal[key] === undefined || seal[key] === grant[key]));
-      if (index < 0) return false;
-      const seal = sealedSpend[index];
-      if (atomic(seal.maxAmount) === null) return false;
-      if (seal.expiresAt !== undefined) {
-        if (grant.expiresAt === undefined) return false;
-        const nextExpiry = parseTime(grant.expiresAt);
-        const sealedExpiry = parseTime(seal.expiresAt);
-        if (nextExpiry === null || sealedExpiry === null || nextExpiry > sealedExpiry) return false;
-      } else if (grant.expiresAt !== undefined && parseTime(grant.expiresAt) === null) {
-        return false;
-      }
-      coverage.set(index, (coverage.get(index) || 0n) + atomic(grant.maxAmount));
     }
-    for (const [index, total] of coverage) {
-      if (total > atomic(sealedSpend[index].maxAmount)) return false;
+    const destinations = nextSpend.map((grant) => grant.to === undefined ? toValues(grant, 'to', false) : [grant.to]);
+    const networks = nextSpend.map((grant) => toValues(grant, 'network', true));
+    const resources = nextSpend.map((grant) => toValues(grant, 'resource', true));
+    for (const nowMs of times) {
+      const totals = new Map();
+      for (let nextIndex = 0; nextIndex < nextSpend.length; nextIndex++) {
+        const grant = nextSpend[nextIndex];
+        if (isExpired(grant, nowMs)) continue;
+        for (const to of destinations[nextIndex]) for (const network of networks[nextIndex]) for (const resource of resources[nextIndex]) {
+          const point = { asset: grant.asset, to, network, resource };
+          if (resolveGrantIndex(point, nextSpend, nowMs) !== nextIndex) continue;
+          const index = resolveGrantIndex(point, sealedSpend, nowMs);
+          if (index < 0) return false;
+          const seal = sealedSpend[index];
+          if (!seal || atomic(seal.maxAmount) === null) return false;
+          const nextExpiry = grant.expiresAt === undefined ? null : parseTime(grant.expiresAt);
+          const sealedExpiry = seal.expiresAt === undefined ? null : parseTime(seal.expiresAt);
+          if ((nextExpiry === null && seal.expiresAt !== undefined) || (sealedExpiry !== null && nextExpiry !== null && nextExpiry > sealedExpiry)) return false;
+          if (!totals.has(index)) totals.set(index, new Set());
+          totals.get(index).add(nextIndex);
+        }
+      }
+      for (const [index, indices] of totals) {
+        const total = [...indices].reduce((sum, i) => sum + atomic(nextSpend[i].maxAmount), 0n);
+        if (total > atomic(sealedSpend[index].maxAmount)) return false;
+      }
     }
 
     const nextPausers = next.pausers === undefined ? [] : next.pausers;

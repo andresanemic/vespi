@@ -1271,7 +1271,7 @@ async function runOperationOnce(op, capability, io) {
         await withTimeout(call.ready, readTimeout(io, 'askTimeoutMs'), 'human gate');
         gate = call.value;
       }
-      if (staleApproval(gate, expectedApprovalDigest)) gateError = 'stale approval';
+      if (staleApproval(gate, expectedApprovalDigest)) { gateError = 'stale approval'; gate = null; }
       if (gate !== null && gate !== undefined) {
         let approvedFlag = false;
         let rejectedFlag = false;
@@ -1394,7 +1394,15 @@ async function runOperationOnce(op, capability, io) {
 
   // The effect's identity is fixed before the checkpoint and reused by `perform`, so a host that
   // reopens this intent still tells the destination the same key.
-  const idempotencyKey = operationIdempotencyKey(op, requirements);
+  let idempotencyKey;
+  try {
+    idempotencyKey = operationIdempotencyKey(op, requirements);
+  } catch (error) {
+    op.state = STATES.FAILED;
+    return finish(op, buildReceiptForRun({ operation: op, capabilityId, authority: { ...op.authority, approval },
+      outcome: { status: 'failed', exercised: [], detail: refused(error, 'could not create operation idempotency key'), exit: operationExit(op) },
+      evidence: null, verification: null, ...(decidedBy ? { decidedBy } : {}) }));
+  }
   const checkpointFn = io && typeof io.checkpoint === 'function' ? io.checkpoint : null;
   if (checkpointFn) {
     try {
