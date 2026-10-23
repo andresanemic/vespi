@@ -2,7 +2,7 @@
 
 ## [v0.1.8-kernel] — 2026-10-23
 
-This version adds checkpoint/continuation handling and closes host-callback return validation before effects. Host callbacks are invoked without a receiver (undefined `thisArg`), unlike the `io` binding used by several 0.1.7 operation callbacks. Use arrows, closures or explicitly bound functions; see [the callback contract and compatibility limits](./docs/HOST_CALLBACKS.md). The source suite passes 1,310/1,310 with zero skipped or TODO tests. [Evidence and adoption limits](./docs/RELEASE_0.1.8_KERNEL.md).
+This version adds checkpoint/continuation handling and closes host-callback return validation before effects. Callback receivers vary by port; see [the callback contract and compatibility limits](./docs/HOST_CALLBACKS.md) and do not rely on a receiver. `runOperation` and x402 reject non-native thenables without subscribing; emergency `authorizeGrantor` and `authenticate` may read and subscribe to their `then` property. The source suite passes 1,310/1,310 with zero skipped or TODO tests. [Evidence and adoption limits](./docs/RELEASE_0.1.8_KERNEL.md).
 
 ## [v0.1.7-kernel] — 2026-10-13
 
