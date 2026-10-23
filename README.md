@@ -47,6 +47,17 @@ See what an agent is not allowed to do: `node examples/refusal.js` refuses an ov
 
 <a id="english"></a>
 
+## What you can do fast with Vespi
+
+Start with one operation and keep the proof. Every line says how far it has been checked today.
+
+- **Leave a verifiable record of what an agent did.** The receipt carries a SHA-256 digest, the authority that was granted and used, what was checked and what was not. *Proven.*
+- **Timestamp that record on Stellar.** Put the receipt's digest in a transaction memo so the ledger shows when it existed. *Testnet:* the saved evidence compares the declared digest, ledger and source account with Horizon, using fictional data. Mainnet is planned for the Meridian demonstrations and is not claimed until those transactions exist.
+- **Pay for a service within a ceiling and with a person's approval (x402).** *Demo* on testnet, outside the kernel.
+- **Check a zero-knowledge proof inside an operation** and keep its receipt. *Reference* verification; apps built on zero-knowledge proofs are a direction, not something this release ships.
+- **Register a batch of things in one transaction,** for example the 100 diskettes of the Meridian fanzine. *Planned:* described as a plan until the transaction exists.
+- **Use the kit for any project you build with AI** — an app, a website, writing, research. [Lore Plugin](https://github.com/andresanemic/lore-plugin) keeps your criteria, workflows and preferences as files on your computer, so what you start with one agent can continue in the next session and in another host.
+
 ## What you can do today
 
 - [Install Lore Plugin](https://github.com/andresanemic/lore-plugin) — the kit you work with
@@ -173,6 +184,17 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 <summary><b>Leer en español</b></summary>
 
 <a id="espanol"></a>
+
+## Lo que puedes hacer rápido con Vespi
+
+Empieza con una operación y guarda la prueba. Cada línea dice hasta dónde está comprobado hoy.
+
+- **Deja un registro verificable de lo que hizo un agente.** El recibo lleva una huella SHA-256, la autoridad que se concedió y se usó, lo que se comprobó y lo que no. *Probado.*
+- **Ponle fecha a ese registro en Stellar.** Pon la huella del recibo en el memo de una transacción para que el libro muestre cuándo existía. *Testnet:* la evidencia guardada compara la huella declarada, el ledger y la cuenta de origen con Horizon, con datos ficticios. Mainnet está planeado para las demostraciones de Meridian y no se afirma hasta que existan esas transacciones.
+- **Paga un servicio dentro de un techo y con la aprobación de una persona (x402).** *Demo* en testnet, fuera del kernel.
+- **Comprueba una prueba de conocimiento cero dentro de una operación** y guarda su recibo. Verificación de *Referencia*; las apps construidas sobre pruebas de conocimiento cero son una dirección, no algo que esta versión entregue.
+- **Registra un conjunto de cosas en una sola transacción,** por ejemplo los 100 diskettes del fanzine de Meridian. *Planeado:* se describe como un plan hasta que exista la transacción.
+- **Usa el kit para cualquier proyecto que construyas con IA:** una app, un sitio, escritura, investigación. [Lore Plugin](https://github.com/andresanemic/lore-plugin) guarda tu criterio, tus workflows y tus preferencias como archivos en tu computador, así que lo que empiezas con un agente puede continuar en la siguiente sesión y en otro host.
 
 ## Lo que puedes hacer hoy
 
