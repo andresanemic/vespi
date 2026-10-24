@@ -56,7 +56,7 @@ Start with one operation and keep the proof. Every line says how far it has been
 - **Pay for a service within a ceiling and with a person's approval (x402).** *Demo* on testnet, outside the kernel.
 - **Check a zero-knowledge proof inside an operation** and keep its receipt. *Reference* verification; apps built on zero-knowledge proofs are a direction, not something this release ships.
 - **Register a batch of things in one transaction,** for example the 100 diskettes of the Meridian fanzine. *Planned:* described as a plan until the transaction exists.
-- **Use the kit for any project you build with AI** — an app, a website, writing, research. [Lore Plugin](https://github.com/andresanemic/lore-plugin) keeps your criteria, workflows and preferences as files on your computer, so what you start with one agent can continue in the next session and in another host.
+- **Use the kit for a project of your own with AI** — for example an app, a website, writing or research. [Lore Plugin](https://github.com/andresanemic/lore-plugin) keeps your criteria, workflows and preferences as files on your computer, so what you start with one agent can continue in the next session.
 
 ## What you can do today
 
@@ -194,7 +194,7 @@ Empieza con una operación y guarda la prueba. Cada línea dice hasta dónde est
 - **Paga un servicio dentro de un techo y con la aprobación de una persona (x402).** *Demo* en testnet, fuera del kernel.
 - **Comprueba una prueba de conocimiento cero dentro de una operación** y guarda su recibo. Verificación de *Referencia*; las apps construidas sobre pruebas de conocimiento cero son una dirección, no algo que esta versión entregue.
 - **Registra un conjunto de cosas en una sola transacción,** por ejemplo los 100 diskettes del fanzine de Meridian. *Planeado:* se describe como un plan hasta que exista la transacción.
-- **Usa el kit para cualquier proyecto que construyas con IA:** una app, un sitio, escritura, investigación. [Lore Plugin](https://github.com/andresanemic/lore-plugin) guarda tu criterio, tus workflows y tus preferencias como archivos en tu computador, así que lo que empiezas con un agente puede continuar en la siguiente sesión y en otro host.
+- **Usa el kit para un proyecto propio con IA:** por ejemplo una app, un sitio, escritura o investigación. [Lore Plugin](https://github.com/andresanemic/lore-plugin) guarda tu criterio, tus workflows y tus preferencias como archivos en tu computador, así que lo que empiezas con un agente puede continuar en la siguiente sesión.
 
 ## Lo que puedes hacer hoy
 
