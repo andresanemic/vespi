@@ -77,7 +77,7 @@ Start with one operation and keep the proof. Every line says how far it has been
 
 ## The projects
 
-Eleven projects explore what you can build this way, each with its problem, its evidence and its limits. Their code is public in each repository since 10 October 2026, under a review-only license, for the review period of 10 to 16 October.
+Eleven projects explore what you can build this way, each with its problem, its evidence and its limits. Their code is public in each repository since 10 October 2026, under a review-only license.
 
 - [Queen](https://github.com/andresanemic/queen) — a budget proposal is often unclear: who asked, who could answer, what the price covers
 - [Permamuseum](https://github.com/andresanemic/permamuseum) — in a museum, "verified" mixes claim, evidence and permission
@@ -215,7 +215,7 @@ Empieza con una operación y guarda la prueba. Cada línea dice hasta dónde est
 
 ## Los proyectos
 
-Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Su código es público en cada repositorio desde el 10 de octubre de 2026, con licencia de solo revisión, para el periodo de revisión del 10 al 16 de octubre.
+Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Su código es público en cada repositorio desde el 10 de octubre de 2026, con licencia de solo revisión.
 
 - [Queen](https://github.com/andresanemic/queen) — una propuesta de presupuesto suele ser confusa: quién pidió, quién podía responder, qué cubre el precio
 - [Permamuseum](https://github.com/andresanemic/permamuseum) — en un museo, «verificado» mezcla afirmación, evidencia y permiso
