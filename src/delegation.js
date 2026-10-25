@@ -191,7 +191,7 @@ function within(cwd, touched, forbidden) {
 // The other half of the question, which the forbidden list cannot answer on its own: is the file
 // inside the medium the orchestrator agreed at all? `violationsFor` used to ask only whether the file
 // was on the deny list, so an empty `forbidden` bounded nothing and a delegate could touch
-// `C:/Users/andre/.ssh/id_rsa` with a clean report. The agreed medium is the allowed side: a file
+// `<home>/.ssh/id_rsa` with a clean report. The agreed medium is the allowed side: a file
 // has to live in the area the delegation was given (`cwd`), and only then does the deny list get to
 // take it away (T1-X7).
 // A delegation created with no medium declares no area, so there is nothing it was allowed to

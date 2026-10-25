@@ -1,6 +1,6 @@
 # Judge Vespi
 
-Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. An uncertain exercised effect returns to you for reconciliation, as [continuation tests](../test/v014.test.js) verify, but the host must store receipts and run the next action. Kernel `0.1.7`: [published release](https://github.com/andresanemic/vespi/releases/tag/v0.1.7-kernel), 2026-10-13. The commands below pin that release; this guide may receive documentation corrections afterward.
+Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. An uncertain exercised effect returns to you for reconciliation, as [continuation tests](../test/v014.test.js) verify, but the host must store receipts and run the next action. Kernel `0.1.8` local cut, publication pending: [release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel), 2026-10-23. The commands below pin that release; this guide may receive documentation corrections afterward.
 
 ## Clone the repo and run the local evidence
 
@@ -9,7 +9,7 @@ What the kernel defends against and what it does not is in the [threat model](./
 Use Node.js 24 or later. The kernel has no runtime dependencies, and this repository is a source checkout rather than a root-level npm package. Clone it and run the local walkthrough:
 
 ```sh
-git clone --branch v0.1.7-kernel --depth 1 https://github.com/andresanemic/vespi.git
+git clone --branch v0.1.8-kernel --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 node examples/walkthrough.js
 ```
@@ -26,7 +26,7 @@ node scripts/verify-testnet-evidence.mjs --offline
 
 [The walkthrough test](../test/walkthrough.test.js) checks a local observed effect, but the receipt is passed explicitly to that process; this does not establish automatic transfer, durable storage or authenticated human identity. [The bilingual walkthrough](./WALKTHROUGH.md) explains the source and transcript.
 
-The [saved suite result](./SUITE_RESULT_0.1.7.txt) records the command and exact counts for this release. The last command checks only shape and uniqueness of hashes, without comparing transaction facts or accessing a network. [The evidence guide](./TESTNET_EVIDENCE.md#recheck-the-saved-responses) gives the command for comparing saved responses with local expectations and an optional Horizon refresh. The saved comparison yields 50 readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies; the expected facts come from local execution records, not Horizon.
+The [saved suite result](./SUITE_RESULT_0.1.8.txt) records the command and exact counts for this release. The last command checks only shape and uniqueness of hashes, without comparing transaction facts or accessing a network. [The evidence guide](./TESTNET_EVIDENCE.md#recheck-the-saved-responses) gives the command for comparing saved responses with local expectations and an optional Horizon refresh. The saved comparison yields 50 readbacks, 5 semantically verified cases, 45 partially verified cases and 0 discrepancies; the expected facts come from local execution records, not Horizon.
 
 To create a manifest for the exact checkout you are judging, run:
 
@@ -40,7 +40,7 @@ This runs the kernel suite and hashes root README, CHANGELOG, package metadata, 
 
 The [0.1.3 note](./RELEASE_0.1.3_KERNEL.md) announced emergency access, zero knowledge, skill provenance and x402 in the kernel. [The bilingual 0.1.4 note](./RELEASE_0.1.4_KERNEL.md) records what entered and each independent review condition. [Emergency regressions](../test/k1-emergencia-r6-advisor.test.js) cover prior authority exercised by the grantee's opaque host-issued principal and reviews refused to the executor, but real identity, trusted time, storage, execution and effect verification remain the host's; D4 counts uses, not money. [Provenance regressions](../test/k2-procedencia-r5-advisor.test.js) cover the resolver's own evidence, without sending declared `author` or `contentDigest`, and hostile prototype data, but not same-process code replacing built-in functions after loading; `provenanceSource` distinguishes `verified` from `declared`, while the name stays declared.
 
-[x402 regressions](../test/k4-x402-r3-advisor.test.js) cover the injected-port paid-effect contract with mandatory synchronous `claims` and stable operation identity. In 0.1.7 the memory store releases a reservation only before send; an uncertain send stays reserved. Custom synchronous stores may support the same release contract, without leases or reassignment. Returned JSON is inspected recursively, snapshotted and SHA-256 checked against the validator digest. There is no durable store or refund mechanism. The Stellar SDK bridge remains an opt-in demo outside the kernel; all saved chain evidence is historical testnet evidence, not a new live payment. [Changes and compatibility](./RELEASE_0.1.7_KERNEL.md).
+[x402 regressions](../test/k4-x402-r3-advisor.test.js) cover the injected-port paid-effect contract with mandatory synchronous `claims` and stable operation identity. In 0.1.8 the memory store releases a reservation only before send; an uncertain send stays reserved. Custom synchronous stores may support the same release contract, without leases or reassignment. Returned JSON is inspected recursively, snapshotted and SHA-256 checked against the validator digest. There is no durable store or refund mechanism. The Stellar SDK bridge remains an opt-in demo outside the kernel; all saved chain evidence is historical testnet evidence, not a new live payment. [Changes and compatibility](./RELEASE_0.1.8_KERNEL.md).
 
 [ZK port tests](../test/k3b-zk-port.test.js) cover a pinned key and agreed public inputs, but trust an injected cryptographic backend. The internal [BN254 Groth16 reference](../src/zk-bn254-reference.js) has [reference tests](../test/k3d-zk-groth16.test.js), but is not a public API, is unaudited and is not production ready. Proofs are malleable, a degenerate key accepts forgeries and a Promise timeout cannot interrupt synchronous CPU verification. These tests do not demonstrate integration with Casa Firme or Vela.
 
@@ -52,7 +52,7 @@ Inspect [the saved x402 receipt](../demo/x402/receipts/live-testnet-2026-10-02.j
 
 The [functional-project repositories](../README.md#the-functional-projects) are public with their source code and documentation, in the main branch since 10 October 2026, under a review-only license that permits reading and cloning for evaluation. Each repository runs its suite with `npm test` on Node 24 and its CI is green. According to the owner's schedule, the code is planned to leave the main branch by a push on 16 October 2026 at 19:31 Chile time; removal by a new commit does not erase code from Git history, and an obtained copy cannot be withdrawn. That planned removal is an owner's commitment, not evidence that a future push happened.
 
-## Historical 0.1.4 exclusions — not a 0.1.7 delivery promise
+## Historical 0.1.4 exclusions — not a 0.1.8 delivery promise
 
 Spend-authority narrowing stays out because the base `grantSpend` constructor has an inherited-setter defect. [The release note](./RELEASE_0.1.4_KERNEL.md#what-014-does-not-bring-and-moves-to-015) gives each reason for x402 HX-09, HX-11, HX-12, HX-13 and R2-05; the real-SDK reference bridge, rejected in two independent reviews and deferred to 0.1.5; provenance N07, N08, H12d and H13d; and emergency H21. Other `todo` cases declare contract boundaries without promising future fixes. No autonomous cross-host runtime, scheduler, mainnet evidence, second payment provider, external security audit, regulatory certification or production readiness is demonstrated.
 
@@ -60,7 +60,7 @@ Spend-authority narrowing stays out because the base `grantSpend` constructor ha
 
 # Revisar Vespi
 
-Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Un efecto ejercido incierto vuelve a ti para reconciliarlo, como verifican [las pruebas de continuidad](../test/v014.test.js), pero el host debe guardar los recibos y ejecutar la siguiente acción. Kernel `0.1.7`: [release publicada](https://github.com/andresanemic/vespi/releases/tag/v0.1.7-kernel), 2026-10-13. Los comandos siguientes fijan esa versión; esta guía puede recibir correcciones de documentación posteriores.
+Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Un efecto ejercido incierto vuelve a ti para reconciliarlo, como verifican [las pruebas de continuidad](../test/v014.test.js), pero el host debe guardar los recibos y ejecutar la siguiente acción. Kernel `0.1.8`, corte local pendiente de publicación: [release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel), 2026-10-23. Los comandos siguientes fijan esa versión; esta guía puede recibir correcciones de documentación posteriores.
 
 ## Clona el repo y corre la evidencia local
 
@@ -69,7 +69,7 @@ Contra qué defiende el kernel y contra qué no está en el [modelo de amenazas]
 Usa Node.js 24 o posterior. El kernel no tiene dependencias de runtime y este repositorio se distribuye como código fuente, no como paquete npm de la raíz. Clónalo y corre el recorrido local:
 
 ```sh
-git clone --branch v0.1.7-kernel --depth 1 https://github.com/andresanemic/vespi.git
+git clone --branch v0.1.8-kernel --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 node examples/walkthrough.js
 ```
@@ -86,7 +86,7 @@ node scripts/verify-testnet-evidence.mjs --offline
 
 [La prueba del recorrido](../test/walkthrough.test.js) comprueba un efecto local observado, pero el recibo se pasa explícitamente a ese proceso; no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. [El recorrido bilingüe](./WALKTHROUGH.md) explica el código y la transcripción.
 
-El [resultado guardado de la suite](./SUITE_RESULT_0.1.7.txt) registra el comando y los conteos exactos de esta release. El último comando solo comprueba forma y unicidad de hashes, sin comparar hechos ni acceder a la red. [La guía de evidencia](./TESTNET_EVIDENCE.md#comparar-las-respuestas-guardadas) contiene el comando para comparar respuestas guardadas con expectativas locales y una consulta opcional a Horizon. La comparación guardada da 50 lecturas, 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias; los hechos esperados vienen de registros locales de ejecución, no de Horizon.
+El [resultado guardado de la suite](./SUITE_RESULT_0.1.8.txt) registra el comando y los conteos exactos de esta release. El último comando solo comprueba forma y unicidad de hashes, sin comparar hechos ni acceder a la red. [La guía de evidencia](./TESTNET_EVIDENCE.md#comparar-las-respuestas-guardadas) contiene el comando para comparar respuestas guardadas con expectativas locales y una consulta opcional a Horizon. La comparación guardada da 50 lecturas, 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias; los hechos esperados vienen de registros locales de ejecución, no de Horizon.
 
 Para crear un manifiesto de la copia exacta que revisas, ejecuta:
 
@@ -100,7 +100,7 @@ Esto corre la suite del kernel y calcula huellas del README, CHANGELOG, metadato
 
 [La nota del 0.1.3](./RELEASE_0.1.3_KERNEL.md) anunció emergencia, conocimiento cero, procedencia de skills y x402 dentro del kernel. [La nota bilingüe del 0.1.4](./RELEASE_0.1.4_KERNEL.md) registra qué entró y cada condición de revisión independiente. [Las regresiones de emergencia](../test/k1-emergencia-r6-advisor.test.js) cubren autoridad anticipada ejercida por el principal opaco del grantee y revisión rechazada al ejecutor, pero identidad real, tiempo confiable, almacenamiento, ejecución y verificación del efecto corresponden al host; D4 cuenta usos, no dinero. [Las regresiones de procedencia](../test/k2-procedencia-r5-advisor.test.js) cubren evidencia propia del resolver, sin enviarle `author` ni `contentDigest` declarados, y datos hostiles en prototipos, pero no código del mismo proceso que reemplace funciones integradas después de cargar; `provenanceSource` distingue `verified` de `declared`, y el nombre sigue declarado.
 
-[Las regresiones x402](../test/k4-x402-r3-advisor.test.js) cubren el contrato de efecto pagado por puertos inyectados con `claims` obligatorio y síncrono e identidad estable de operación. En 0.1.7 el almacén en memoria libera una reserva solo antes del envío; un envío incierto conserva su reserva. Los almacenes externos síncronos pueden ofrecer el mismo contrato, sin leases ni reasignación. El JSON devuelto se inspecciona recursivamente, se copia y se comprueba su SHA-256 contra el digest del validador. No hay almacén durable ni mecanismo de reembolso. El puente SDK de Stellar sigue como demo opcional fuera del kernel; toda evidencia de cadena guardada es testnet histórica, no un pago vivo nuevo. [Cambios y compatibilidad](./RELEASE_0.1.7_KERNEL.md).
+[Las regresiones x402](../test/k4-x402-r3-advisor.test.js) cubren el contrato de efecto pagado por puertos inyectados con `claims` obligatorio y síncrono e identidad estable de operación. En 0.1.8 el almacén en memoria libera una reserva solo antes del envío; un envío incierto conserva su reserva. Los almacenes externos síncronos pueden ofrecer el mismo contrato, sin leases ni reasignación. El JSON devuelto se inspecciona recursivamente, se copia y se comprueba su SHA-256 contra el digest del validador. No hay almacén durable ni mecanismo de reembolso. El puente SDK de Stellar sigue como demo opcional fuera del kernel; toda evidencia de cadena guardada es testnet histórica, no un pago vivo nuevo. [Cambios y compatibilidad](./RELEASE_0.1.8_KERNEL.md).
 
 [Las pruebas del puerto ZK](../test/k3b-zk-port.test.js) cubren clave fijada y entradas públicas acordadas, pero confían en el backend criptográfico inyectado. La [referencia interna BN254 con Groth16](../src/zk-bn254-reference.js) tiene [pruebas de referencia](../test/k3d-zk-groth16.test.js), pero no es API pública, no está auditada y no es apta para producción. Las pruebas son maleables, una clave degenerada acepta falsificaciones y un timeout con Promise no interrumpe la verificación con CPU síncrona. Estas pruebas no demuestran integración con Casa Firme o Vela.
 
@@ -112,6 +112,6 @@ Revisa [el recibo x402 guardado](../demo/x402/receipts/live-testnet-2026-10-02.j
 
 [Los repositorios de proyectos funcionales](../README.md#los-proyectos-funcionales) son públicos, con su código fuente y su documentación en la rama principal desde el 10 de octubre de 2026, bajo una licencia de solo revisión que permite leer y clonar para evaluar. Cada repositorio ejecuta su suite con `npm test` en Node 24 y su CI está en verde. Según el calendario del dueño, el código se retirará de esa rama por un push el 16 de octubre de 2026 a las 19:31, hora de Chile; retirarlo con un commit nuevo no lo borra del historial de Git, y una copia que ya obtuviste no se puede retirar. Ese retiro previsto es un compromiso del dueño, no evidencia de que el push futuro haya ocurrido.
 
-## Exclusiones históricas del 0.1.4 — no son una promesa de entrega del 0.1.7
+## Exclusiones históricas del 0.1.4 — no son una promesa de entrega del 0.1.8
 
 La reducción de autoridad de gasto queda fuera por el defecto de setters heredados en el constructor base `grantSpend`. [La nota de versión](./RELEASE_0.1.4_KERNEL.md#qué-no-trae-el-014-y-pasa-al-015) da la razón de x402 HX-09, HX-11, HX-12, HX-13 y R2-05; la integración de referencia con el SDK real de Stellar, rechazada en dos revisiones independientes y diferida al 0.1.5; procedencia N07, N08, H12d y H13d; y emergencia H21. Otros `todo` declaran fronteras del contrato sin prometer arreglos futuros. No se demuestran runtime autónomo entre hosts, planificador, evidencia mainnet, segundo proveedor de pagos, auditoría externa de seguridad, certificación regulatoria ni preparación para producción.

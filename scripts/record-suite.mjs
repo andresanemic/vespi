@@ -4,7 +4,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const command = 'node --test test/*.test.js';
+const flags = ['--test-reporter=tap', '--test-concurrency=4', '--test-timeout=60000'];
+const command = `node --test ${flags.join(' ')} test/*.test.js`;
 const packageJson = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
 const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
 
@@ -13,7 +14,7 @@ if (git.status !== 0) {
   process.exit(git.status || 1);
 }
 
-const child = spawn(process.execPath, ['--test', 'test/*.test.js'], { cwd: root });
+const child = spawn(process.execPath, ['--test', ...flags, 'test/*.test.js'], { cwd: root });
 let stdout = '';
 let stderr = '';
 child.stdout.setEncoding('utf8').on('data', (chunk) => { stdout += chunk; });
@@ -47,7 +48,7 @@ const report = [
   `Package version: ${packageJson.version}`,
   `Node version: ${process.version}`,
   `Git baseline SHA: ${git.stdout.trim()}`,
-  'The tests run against the current working tree; the baseline SHA alone does not identify uncommitted candidate changes.',
+  'The tests ran against the current working tree; the baseline alone does not identify uncommitted changes.',
   `Command: ${command}`,
   `Tests: ${counts.tests}`,
   `Passed: ${counts.passed}`,

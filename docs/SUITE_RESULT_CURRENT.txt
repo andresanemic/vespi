@@ -1,12 +1,13 @@
 Vespi Kernel suite result
-Date (UTC): 2026-10-13T06:32:17.342Z
-Package version: 0.1.7
+Date (UTC): 2026-10-24T00:00:11.277Z
+Package version: 0.1.8
 Node version: v24.15.0
-Git baseline SHA: a5dfd498350fb45e26ae6d36a2de6916cef478ce
-The tests run against the current working tree; the baseline SHA alone does not identify uncommitted candidate changes.
-Command: node --test test/*.test.js
-Tests: 1218
-Passed: 1218
+Git baseline SHA: 77bceb0582aa021320c4632bee590a76ef7a6646
+The tests ran against the current working tree; the baseline alone does not identify uncommitted changes.
+Command: node --test --test-reporter=tap --test-concurrency=4 --test-timeout=60000 test/*.test.js
+Tests: 1319
+Passed: 1319
 Failed: 0
 Todo: 0
 Skipped: 0
+Demo x402: 86 passed; 0 failed; local fixtures with installed SDK.

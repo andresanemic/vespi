@@ -92,14 +92,14 @@ function fakePorts(over = {}) {
     calls,
     seenRequests: seen,
     http: {
-      async discover(request) {
+      discover(request) {
         calls.discover += 1;
         trace.push('discover');
         seen.push(request);
         if (over.discover) return over.discover(request);
         return { status: 402, paymentRequired: paymentRequired({ resource: { url: request.url } }) };
       },
-      async sendPaid(request) {
+      sendPaid(request) {
         calls.send += 1;
         trace.push('send');
         seen.push(request);
@@ -117,7 +117,7 @@ function fakePorts(over = {}) {
       },
     },
     signer: {
-      async prepare(request) {
+      prepare(request) {
         calls.prepare += 1;
         trace.push('prepare');
         seen.push(request);
@@ -125,7 +125,7 @@ function fakePorts(over = {}) {
         return { authorization: AUTHORIZATION };
       },
     },
-    async inspectPrepared(authorization, request) {
+    inspectPrepared(authorization, request) {
       calls.inspect += 1;
       trace.push('inspect');
       seen.push({ authorization, ...request });
@@ -138,7 +138,7 @@ function fakePorts(over = {}) {
         reason: 'prepared transaction matches declared effect',
       };
     },
-    async verifySettlement(evidence, request) {
+    verifySettlement(evidence, request) {
       calls.verifySettlement += 1;
       trace.push('verifySettlement');
       seen.push({ evidence, ...request });
@@ -592,6 +592,9 @@ test('K4-C4b a grant for another asset opens the gate instead of blocking, with 
 
 test('K4-C5 a grant naming this recipient reaches discovery exactly once', async () => {
   const ports = fakePorts();
+  let abortedAtDiscovery;
+  const discover = ports.http.discover.bind(ports.http);
+  ports.http.discover = async (request) => { abortedAtDiscovery = request.signal.aborted; return discover(request); };
   const payment = loadKernel().createX402Payment(spec(), ports);
   const res = await payment.run(opWith(authority()), { now: () => CLOCK_MS });
   assert.equal(ports.calls.discover, 1);
@@ -599,7 +602,72 @@ test('K4-C5 a grant naming this recipient reaches discovery exactly once', async
   assert.deepEqual(ports.seenRequests[0], {
     url: CANONICAL_URL, method: 'GET', redirect: 'error', signal: ports.seenRequests[0].signal,
   });
-  assert.equal(ports.seenRequests[0].signal.aborted, false);
+  assert.equal(abortedAtDiscovery, false);
+});
+
+test('K2-37 x402 forwards an optional host checkpoint before the paid effect', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const context = { manifestDigest: 'a'.repeat(64), scope: 'pay', sources: [{ ref: 'lore', owner: 'owner', revision: 'r1', state: 'approved' }] };
+  let checkpoints = 0;
+  const discover = ports.http.discover.bind(ports.http);
+  ports.http.discover = async (request) => {
+    assert.ok(checkpoints > 0, 'the host checkpoint must run before the payment ports');
+    return discover(request);
+  };
+  const io = { now: () => CLOCK_MS, readContext: async () => context, checkpoint: async () => { checkpoints += 1; } };
+  const result = await payment.run(opWith(authority(), { context }), io);
+  assert.equal(result.status, 'verified');
+  assert.ok(checkpoints > 0);
+
+  const optional = await loadKernel().createX402Payment(spec(), fakePorts()).run(opWith(authority()), { now: () => CLOCK_MS });
+  assert.equal(optional.status, 'verified');
+});
+
+test('R11 checkpoint cannot replace verifier or other run capabilities through its receiver', async () => {
+  for (const key of ['verify', 'perform', 'now', 'readContext', 'ask', 'decide', 'authority']) {
+    const ports = fakePorts({ verifySettlement: async () => ({ verified: false, checks: { transfer: false }, reason: 'rejected' }) });
+    const payment = loadKernel().createX402Payment(spec(), ports);
+    const io = { checkpoint: function () { this[key] = async () => ({ verified: true, checks: { transfer: true }, reason: 'forged' }); } };
+    const result = await payment.run(opWith(authority()), io);
+    assert.equal(result.status, 'blocked', key);
+    assert.equal(ports.calls.send, 0, key);
+    assert.equal(ports.calls.verifySettlement, 0, key);
+    assert.equal(verifyReceipt(result.receipt).ok, true, key);
+  }
+  const ports = fakePorts({ verifySettlement: async () => ({ verified: false, checks: { transfer: false }, reason: 'rejected' }) });
+  let checkpoints = 0;
+  const result = await runOnce(ports, {
+    checkpoint() { checkpoints += 1; return { approved: true, verified: true, ports: { sendPaid() {} } }; },
+  });
+  assert.equal(result.status, 'not_verified');
+  assert.equal(checkpoints, 1);
+  assert.equal(ports.calls.send, 1);
+  assert.equal(ports.calls.verifySettlement, 1);
+  assert.equal(verifyReceipt(result.receipt).ok, true);
+});
+
+test('R12 x402 checkpoint uses its configured timeout', async () => {
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const started = performance.now();
+  const result = await payment.run(opWith(authority()), {
+    now: () => CLOCK_MS,
+    checkpointTimeoutMs: 10,
+    checkpoint: () => new Promise(() => {}),
+  });
+  assert.equal(result.status, 'blocked');
+  assert.ok(performance.now() - started < 1000);
+  assert.equal(ports.calls.discover, 0);
+  assert.equal(ports.calls.send, 0);
+  for (const checkpointTimeoutMs of [0, -1, NaN, Infinity, 2 ** 31 - 1 + 1]) {
+    const invalidPorts = fakePorts();
+    await assert.rejects(loadKernel().createX402Payment(spec(), invalidPorts).run(opWith(authority()), {
+      checkpointTimeoutMs,
+    }));
+    assert.equal(invalidPorts.calls.discover, 0);
+    assert.equal(invalidPorts.calls.send, 0);
+  }
 });
 
 test('K4-C6 an invalid or asynchronous injected clock sends nothing and leaves the state honest', async () => {
@@ -1333,13 +1401,13 @@ test('K4-G2 no public export was removed or renamed by the new module', () => {
   const continuity = require('../src/continuity.js');
   const time = require('../src/time.js');
   const delegation = require('../src/delegation.js');
-  assert.deepEqual(Object.keys(operation).sort(), ['DEFAULT_EXIT', 'STATES', 'createOperation', 'pauseOperation', 'resumeOperation', 'runOperation']);
-  assert.deepEqual(Object.keys(authority).sort(), ['grantSpend', 'sufficient']);
+  assert.deepEqual(Object.keys(operation).sort(), ['DEFAULT_EXIT', 'STATES', 'checkpointOperation', 'createOperation', 'pauseOperation', 'restoreOperation', 'resumeOperation', 'runOperation']);
+  assert.deepEqual(Object.keys(authority).sort(), ['attenuates', 'grantSpend', 'sufficient']);
   // The four original names must stay; `computeDigest` was added later (skill provenance and emergency access seal extra
   // fields with the same digest). An addition is compatible, a removal or rename is not.
   const receiptNames = Object.keys(receipt).sort();
   for (const name of ['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt']) assert.ok(receiptNames.includes(name), `receipt export ${name} must stay`);
-  assert.deepEqual(receiptNames.filter((n) => !['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt'].includes(n)), ['computeDigest']);
+  assert.deepEqual(receiptNames.filter((n) => !['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt'].includes(n)), ['computeDigest', 'contextBinding']);
   assert.deepEqual(Object.keys(continuity), ['resumeFromReceipts']);
   assert.deepEqual(Object.keys(time), ['parseTime']);
   assert.ok(Object.keys(delegation).length > 0);
@@ -1653,8 +1721,276 @@ test('K4-I3 the kernel package gains no dependency and no export surface', () =>
   assert.equal(manifest.private, true);
   assert.equal(manifest.dependencies, undefined);
   assert.equal(manifest.exports, undefined);
-  assert.equal(manifest.version, '0.1.7');
+  assert.equal(manifest.version, '0.1.8');
   const lockfile = path.join(DEMO, 'package-lock.json');
   assert.equal(fs.existsSync(lockfile), true, 'the demo lockfile is in place');
   assert.match(fs.readFileSync(lockfile, 'utf8'), /@stellar\/stellar-sdk/);
+});
+
+
+test('K1 reapproval with B retains the claimed payment identity under A', async () => {
+  const A = { manifestDigest: 'a'.repeat(64), scope: 'pay', sources: [{ ref: 'lore', owner: 'owner', revision: 'r1', state: 'approved' }] };
+  const B = { ...A, manifestDigest: 'b'.repeat(64), sources: [{ ...A.sources[0], revision: 'r2' }] };
+  for (const uncertain of [false, true]) {
+  const store = loadKernel().createMemoryPaymentClaims();
+  const ports = fakePorts({ claims: store, ...(uncertain ? { sendPaid: async () => { throw new Error('unknown send'); } } : {}) });
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  const first = createOperation({ goal: 'pay', action: 'pay', authority: authority(), context: A });
+  const paid = await payment.run(first, { ...runIo(), readContext: () => A });
+  assert.equal(paid.status, uncertain ? 'not_verified' : 'verified');
+  const renewed = createOperation({ goal: 'pay', action: 'pay', authority: authority(), context: B });
+  renewed.id = first.id;
+  const retry = await payment.run(renewed, { ...runIo(), readContext: () => B });
+  assert.equal(retry.status, 'blocked');
+  assert.equal(retry.receipt.reason, 'DUPLICATE_EFFECT');
+  assert.equal(ports.calls.send, 1);
+  assert.equal(ports.calls.prepare, 1);
+  }
+});
+
+test('K2-38 x402 ports cannot receive or alter the private ports receiver', async () => {
+  for (const port of ['inspectPrepared', 'validateOutput', 'verifySettlement']) {
+    const ports = fakePorts({ verifySettlement: async () => ({ verified: false, checks: { transfer: false }, reason: 'rejected' }) });
+    const original = ports[port];
+    let receiver = 'not-called';
+    ports[port] = function (...args) {
+      receiver = this;
+      if (this) this.verifySettlement = async () => ({ verified: true, checks: { transfer: true }, reason: 'forged' });
+      return Reflect.apply(original, undefined, args);
+    };
+    const payment = loadKernel().createX402Payment(spec(), ports);
+    const result = await payment.run(opWith(authority()), { now: () => CLOCK_MS });
+    assert.equal(receiver, undefined, port);
+    assert.equal(ports.calls.send, 1, port);
+    assert.equal(ports.calls.verifySettlement, 1, port);
+    assert.notEqual(result.status, 'verified', port);
+    assert.equal(verifyReceipt(result.receipt).ok, true, port);
+  }
+});
+
+test('K2-39 x402 keeps its captured Reflect.apply when checkpoint poisons the global', async () => {
+  const original = Reflect.apply;
+  const ports = fakePorts();
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  let result;
+  try {
+    result = await payment.run(opWith(authority()), {
+      now: () => CLOCK_MS,
+      checkpoint() { Reflect.apply = () => { throw new Error('late apply'); }; },
+    });
+  } finally { Reflect.apply = original; }
+  assert.equal(result.status, 'verified');
+  assert.equal(ports.calls.send, 1);
+  assert.equal(ports.calls.verifySettlement, 1);
+  assert.equal(verifyReceipt(result.receipt).ok, true);
+});
+
+test('K2-40 x402 rejects a stale context after checkpoint poisons captured intrinsics', async () => {
+  const originalStringify = JSON.stringify;
+  const originalResolve = Promise.resolve;
+  const originalRace = Promise.race;
+  const originalThen = Promise.prototype.then;
+  const originalFinally = Promise.prototype.finally;
+  const A = { manifestDigest: 'a'.repeat(64), scope: 'pay', sources: [{ ref: 'lore', owner: 'owner', revision: 'r1', state: 'approved' }] };
+  const B = { ...A, manifestDigest: 'b'.repeat(64) };
+  const results = [];
+  for (const poison of ['stringify', 'then', 'resolve', 'race', 'finally']) {
+    const ports = fakePorts();
+    const payment = loadKernel().createX402Payment(spec(), ports);
+    try {
+      const result = await payment.run(opWith(authority(), { context: A }), {
+        now: () => CLOCK_MS,
+        readContext: () => B,
+        checkpoint() {
+          if (poison === 'stringify') JSON.stringify = value => value && value.manifestDigest === B.manifestDigest ? originalStringify(A) : originalStringify(value);
+          else if (poison === 'then') Promise.prototype.then = () => { throw new Error('poisoned then'); };
+          else if (poison === 'resolve') Promise.resolve = () => { throw new Error('poisoned resolve'); };
+          else if (poison === 'race') Promise.race = () => { throw new Error('poisoned race'); };
+          else Promise.prototype.finally = () => { throw new Error('poisoned finally'); };
+        },
+      });
+      results.push([poison, result.status, ports.calls.send, ports.calls.verifySettlement, verifyReceipt(result.receipt).ok]);
+    } finally { JSON.stringify = originalStringify; Promise.prototype.then = originalThen; Promise.resolve = originalResolve; Promise.race = originalRace; Promise.prototype.finally = originalFinally; }
+  }
+  assert.deepEqual(results, ['stringify', 'then', 'resolve', 'race', 'finally'].map(poison => [poison, 'blocked', 0, 0, true]));
+});
+
+test('K2-43 x402 rejects non-native thenables from ports before effects', async () => {
+  for (const port of ['discover', 'prepare', 'inspectPrepared']) {
+    const returned = port === 'inspectPrepared' ? Object.assign(function () {}, { then() {} }) : { then() {} };
+    const override = { [port]: () => returned };
+    const ports = fakePorts(override);
+    const result = await loadKernel().createX402Payment(spec(), ports).run(opWith(authority()), runIo());
+    assert.equal(result.status, 'blocked', port);
+    assert.equal(ports.calls.send, 0, port);
+    assert.match(result.receipt.detail, /ASYNC_RETURN/);
+  }
+});
+
+test('K2-44 x402 rejects a then getter without executing it and preserves synchronous ports', async () => {
+  let reads = 0;
+  const ports = fakePorts({ discover: () => Object.defineProperty({}, 'then', { get() { reads++; throw Error('secret'); } }) });
+  const result = await loadKernel().createX402Payment(spec(), ports).run(opWith(authority()), runIo());
+  assert.equal(reads, 0);
+  assert.equal(ports.calls.send, 0);
+  assert.equal(result.status, 'blocked');
+
+  const sync = fakePorts({ discover: () => ({ status: 402, paymentRequired: paymentRequired() }) });
+  const paid = await loadKernel().createX402Payment(spec(), sync).run(opWith(authority()), runIo());
+  assert.equal(paid.status, 'verified');
+  assert.equal(sync.calls.send, 1);
+});
+
+test('K2-45 x402 treats a pending native port promise as timeout or unknown send', async () => {
+  const preSend = fakePorts({ discover: () => new Promise(() => {}) });
+  const blocked = await loadKernel().createX402Payment(spec(), preSend).run(opWith(authority()), runIo({ performTimeoutMs: 10 }));
+  assert.notEqual(blocked.status, 'verified');
+  assert.equal(preSend.calls.send, 0);
+
+  const afterSend = fakePorts({ sendPaid: () => new Promise(() => {}) });
+  const uncertain = await loadKernel().createX402Payment(spec(), afterSend).run(opWith(authority()), runIo({ performTimeoutMs: 10 }));
+  assert.notEqual(uncertain.status, 'verified');
+  assert.equal(afterSend.calls.send, 1);
+});
+
+test('K2-46 x402 reports the explicit rejection code for async returns after send', async () => {
+  for (const port of ['validateOutput', 'sendPaid', 'verifySettlement']) {
+    const ports = fakePorts({ [port]: () => ({ then() {} }) });
+    const result = await loadKernel().createX402Payment(spec(), ports).run(opWith(authority()), runIo());
+    assert.equal(ports.calls.send, 1, port);
+    assert.equal(result.status, 'not_verified', port);
+    assert.match(JSON.stringify(result.receipt), /ASYNC_RETURN/, port);
+  }
+});
+
+test('K2-48 x402 uses its captured stringify while validating output', async () => {
+  const original = JSON.stringify;
+  const ports = fakePorts({
+    validateOutput(body) {
+      const digest = createHash('sha256').update(original(body), 'utf8').digest('hex');
+      JSON.stringify = () => { throw Error('poisoned'); };
+      return { ok: true, output: body, digest };
+    },
+    verifySettlement() {
+      JSON.stringify = original;
+      return { verified: true, checks: { invocation: true, transfer: true, payer: true, source: true, exactAmount: true }, reason: 'ok' };
+    },
+  });
+  const payment = loadKernel().createX402Payment(spec(), ports);
+  let result;
+  try {
+    result = await payment.run(opWith(authority()), runIo());
+  } finally { JSON.stringify = original; }
+  assert.equal(result.status, 'verified');
+  assert.equal(ports.calls.send, 1);
+  assert.equal(ports.calls.verifySettlement, 1);
+  assert.equal(verifyReceipt(result.receipt).ok, true);
+});
+
+test('K2-49 x402 claims ports reject thenables without reading getters', async () => {
+  let reads = 0;
+  const reserve = fakePorts({ reserveEffect: () => Object.defineProperty({}, 'then', { get() { reads++; throw Error('secret'); } }) });
+  const blocked = await loadKernel().createX402Payment(spec(), reserve).run(opWith(authority()), runIo());
+  assert.equal(blocked.status, 'blocked');
+  assert.equal(reserve.calls.send, 0);
+  assert.equal(reads, 0);
+
+  const claim = fakePorts({ claims: {
+    reserveEffect: () => 'claimed',
+    claimTransaction: () => ({ then() {} }),
+  } });
+  const uncertain = await loadKernel().createX402Payment(spec(), claim).run(opWith(authority()), runIo());
+  assert.notEqual(uncertain.status, 'verified');
+  assert.equal(claim.calls.send, 1);
+  assert.match(JSON.stringify(uncertain.receipt), /ASYNC_RETURN/);
+});
+
+// R19/R20/R21 (ronda 9): proxies, the run clock and the delivery code.
+function hostileX(kind, counters, data = {}) {
+  const then = () => { counters.then += 1; };
+  const traps = {
+    getOwnPropertyDescriptor(target, key) { counters.trap += 1; return key === 'then' ? undefined : Reflect.getOwnPropertyDescriptor(target, key); },
+    getPrototypeOf(target) { counters.trap += 1; return Reflect.getPrototypeOf(target); },
+    get(target, key, receiver) { counters.trap += 1; return Reflect.get(target, key, receiver); },
+    has(target, key) { counters.trap += 1; return Reflect.has(target, key); },
+    ownKeys(target) { counters.trap += 1; return Reflect.ownKeys(target); },
+  };
+  if (kind === 'proxy-hidden') return new Proxy({ ...data, then }, traps);
+  if (kind === 'proxy-throw') return new Proxy({}, { getOwnPropertyDescriptor() { counters.trap += 1; throw Error('PRIVATE_TRAP'); } });
+  if (kind === 'proxy-proto') return Object.assign(Object.create(new Proxy({ then }, traps)), data);
+  if (kind === 'getter') return Object.defineProperty({ ...data }, 'then', { get() { counters.get += 1; throw Error('PRIVATE_GETTER'); } });
+  if (kind === 'plain') return { ...data, then };
+  throw Error(`unknown kind ${kind}`);
+}
+const X_CONTEXT = { manifestDigest: 'a'.repeat(64), scope: 'pay', sources: [{ ref: 'lore', owner: 'owner', revision: 'r1', state: 'approved' }] };
+
+// A port override whose return value reaches the kernel as is: readBody is replaced on the paid
+// response itself, so no async wrapper of the fake assimilates the value before the kernel sees it.
+function portsReturning(port, value) {
+  if (port !== 'readBody') return fakePorts({ [port]: value });
+  const ports = fakePorts();
+  const original = ports.http.sendPaid;
+  ports.http.sendPaid = (request) => ({ ...original(request), readBody: value });
+  return ports;
+}
+
+test('K2-50 x402 checkpoint proxies are refused before any trap runs, with zero sends', async () => {
+  for (const kind of ['proxy-hidden', 'proxy-throw', 'proxy-proto']) {
+    const c = { then: 0, get: 0, trap: 0 };
+    const ports = fakePorts();
+    const result = await loadKernel().createX402Payment(spec(), ports).run(opWith(authority(), { context: X_CONTEXT }), runIo({
+      readContext: () => X_CONTEXT, checkpointTimeoutMs: 10, checkpoint: () => hostileX(kind, c),
+    }));
+    assert.deepEqual({ kind, status: result.status, sends: ports.calls.send, ...c }, { kind, status: 'blocked', sends: 0, then: 0, get: 0, trap: 0 });
+  }
+});
+
+test('K2-51 x402 ports and claims refuse proxies without running a trap', async () => {
+  const names = ['discover', 'prepare', 'inspectPrepared', 'sendPaid', 'readBody', 'validateOutput', 'verifySettlement', 'reserveEffect', 'claimTransaction'];
+  for (const port of names) for (const kind of ['proxy-hidden', 'proxy-throw', 'proxy-proto']) {
+    const c = { then: 0, get: 0, trap: 0 };
+    const ports = portsReturning(port, () => hostileX(kind, c));
+    const result = await loadKernel().createX402Payment(spec(), ports).run(opWith(authority()), runIo({ performTimeoutMs: 50, verifyTimeoutMs: 50 }));
+    const label = `${port}/${kind}`;
+    assert.deepEqual({ label, ...c }, { label, then: 0, get: 0, trap: 0 });
+    assert.notEqual(result.status, 'verified', label);
+    if (['discover', 'prepare', 'inspectPrepared', 'reserveEffect'].includes(port)) assert.equal(ports.calls.send, 0, label);
+  }
+});
+
+test('K2-52 x402 run clock never reads a then getter nor subscribes to a non-native thenable', async () => {
+  for (const kind of ['getter', 'plain', 'proxy-hidden']) {
+    const c = { then: 0, get: 0, trap: 0 };
+    const ports = fakePorts();
+    let reads = 0;
+    // The third read is x402's own perform clock, after the two engine authority checks.
+    const now = () => { reads += 1; return reads === 3 ? hostileX(kind, c) : CLOCK_MS; };
+    const result = await loadKernel().createX402Payment(spec(), ports).run(opWith(authority()), runIo({ now }));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual({ kind, reads: reads >= 3, sends: ports.calls.send, ...c }, { kind, reads: true, sends: 0, then: 0, get: 0, trap: 0 });
+    assert.notEqual(result.status, 'verified', kind);
+  }
+});
+
+test('K2-53 an async delivery return keeps the DELIVERY_REJECTED code and names ASYNC_RETURN', async () => {
+  for (const port of ['readBody', 'validateOutput']) {
+    const ports = portsReturning(port, () => ({ then() {} }));
+    const result = await loadKernel().createX402Payment(spec(), ports).run(opWith(authority()), runIo());
+    assert.equal(ports.calls.send, 1, port);
+    assert.equal(result.receipt.verification.checks.delivery, false, port);
+    assert.match(result.receipt.verification.reason, /DELIVERY_REJECTED/, port);
+    assert.match(result.receipt.verification.reason, /ASYNC_RETURN/, port);
+  }
+});
+
+test('K2-54 a settlement answer that gains a then after inspection is not assimilated', async () => {
+  let thens = 0;
+  const ports = fakePorts({ verifySettlement: () => {
+    const answer = { verified: true, checks: { invocation: true, transfer: true, payer: true, source: true, exactAmount: true }, reason: 'ok' };
+    queueMicrotask(() => { answer.then = () => { thens += 1; }; });
+    return answer;
+  } });
+  await loadKernel().createX402Payment(spec(), ports).run(opWith(authority()), runIo({ verifyTimeoutMs: 50 }));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(thens, 0);
 });

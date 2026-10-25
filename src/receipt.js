@@ -1,6 +1,7 @@
 'use strict';
 
 const { createHash } = require('node:crypto');
+const { snapshotContext } = require('./context.js');
 const { parseTime } = require('./time.js');
 // The zk vocabulary lives in one place (src/zk.js) so the port that writes the evidence and the
 // receipt that reads it cannot drift apart on what a valid claim is.
@@ -372,7 +373,7 @@ function validExercisedEntry(item) {
   }
 }
 
-function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification, decidedBy, at,
+function buildReceipt({ operation, capabilityId, authority, outcome, evidence, verification, decidedBy, at, context,
   anchorNetwork = DEFAULT_NETWORK }) {
   if (!ANCHOR_NETWORKS.has(anchorNetwork)) {
     throw new TypeError('anchorNetwork must be stellar:testnet or stellar:pubnet');
@@ -441,12 +442,31 @@ function buildReceipt({ operation, capabilityId, authority, outcome, evidence, v
     // An injected operation clock may supply the receipt time; direct callers retain wall time.
     at: at === undefined ? new Date().toISOString() : at,
   };
+  if (context !== undefined) receipt.context = snapshotContext(context);
   receipt.digest = computeDigest(receipt);
   return receipt;
+}
+
+// What a receipt says about the context it was run under, and nothing more. `unbound` is a receipt
+// from before K1 or from an operation that declared no context; `sealed` means its digest still
+// holds and the context inside is the inert approved manifest; `invalid` is anything else. It never
+// answers «protected»: an unkeyed digest says the bytes did not move, not who wrote them.
+function contextBinding(receipt) {
+  try {
+    if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) return 'invalid';
+    const descriptor = Object.getOwnPropertyDescriptor(receipt, 'context');
+    if (!descriptor) return 'unbound';
+    if (!Object.hasOwn(descriptor, 'value')) return 'invalid';
+    if (verifyReceipt(receipt).ok !== true) return 'invalid';
+    snapshotContext(descriptor.value);
+    return 'sealed';
+  } catch {
+    return 'invalid';
+  }
 }
 
 // Exported so a module that seals extra fields onto a receipt (skill provenance) writes the same
 // digest this file writes, instead of keeping a second copy of the canonicalization that can drift.
 // Nothing here changed: `computeDigest` is the same function `buildReceipt` and `verifyReceipt` have
 // always called.
-module.exports = { buildReceipt, verifyReceipt, anchorReceipt, anchorReceiptAsync, computeDigest };
+module.exports = { buildReceipt, verifyReceipt, anchorReceipt, anchorReceiptAsync, computeDigest, contextBinding };
