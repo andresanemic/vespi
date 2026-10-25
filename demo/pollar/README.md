@@ -10,6 +10,13 @@ Evidence from 25 October 2026, on Stellar mainnet: tx `52759df5db949d6bd9b506de0
 2. `capability.cjs` waits for the payment. **Pollar executes it in the browser** (its SDK runs there), from the button on https://vespi.xyz/pollar, and the browser reports the transaction hash to this local process.
 3. `verify.cjs` does not trust that report. It reads the transaction and its operations on Horizon and checks six things: found, successful, a payment operation exists, the destination matches, the amount matches, the asset is native. Only then does the kernel issue a `verified` receipt. The receipt declares what it did not cover: an external anchor.
 
+## Reading the receipt
+
+- **`at` is when the receipt was issued**, after the ledger was read, not when the person approved. The kernel never calls the payment capability before the gate is approved (`flow.test.cjs`: «gate declined -> payment never awaited»), so approval comes first by construction. The receipt carries `approval: human_gate_approved` and `decidedBy`.
+- **Amounts in the authority are in stroops**: 1 XLM = 10,000,000 stroops, so the grant `XLM, max 1000` is 0.0001 XLM, the amount that was paid.
+- **`anchor: pending, network: stellar:testnet`** is the kernel's default label for an external anchor that has not been made. This receipt was not anchored; the receipt anchored on mainnet is a different one (digest `71f58fc2…`, tx `2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7`).
+- The receipt does not carry the ledger number or the kernel version; they are in the evidence above (ledger 65134379, kernel 0.1.8).
+
 ## Limits
 
 - The approval is a prompt. It is not cryptographically bound to the transaction, and the kernel does not control the browser that pays: it **detects** a mismatch afterwards, it does not prevent it.

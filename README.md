@@ -14,7 +14,7 @@
   <a href="./data/traffic/clones.json"><img src="https://img.shields.io/badge/Vespi-1287_clones_in_28_days-E0C170?style=for-the-badge&labelColor=07111A" alt="1,287 clones of this repository, Sep 27 to Oct 24, 2026 (UTC) (GitHub traffic, recorded daily; clones, not unique people)"></a>
 </p>
 
-<p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the kernel for building apps on Stellar.</p>
+<p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>And it lets you verify what AI agents do on Stellar: a payment approved by a person before it happens and checked against the public ledger after, proven on mainnet with a real Pollar payment ([evidence](./demo/pollar)).<br>We want Vespi to be the kernel for building apps on Stellar.</p>
 
 <p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=g2iw29M6WI0"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a> · <a href="https://vespi.xyz/pollar"><b>Pollar evidence</b></a></p>
 <p align="center">Pitch deck: <a href="https://drive.google.com/file/d/1iiEHJ35hFaYM_df4a6EtXdK8vmI4f5EG/view?usp=sharing">EN</a> · <a href="https://drive.google.com/file/d/1vj3HTJVWc7TaPyvq1iPovfLgis9KzbYg/view?usp=sharing">ES</a> &nbsp;|&nbsp; One pager: <a href="https://drive.google.com/file/d/1KvmeMdTnY7vk3HHq1ZC9ILwiRILh99h4/view?usp=drive_link">EN</a> · <a href="https://drive.google.com/file/d/16YOg0ps5uRaKhfMcS0D0imn5yN8K70Wm/view?usp=sharing">ES</a> &nbsp;|&nbsp; <a href="https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing">Letters of intent</a></p>
@@ -91,7 +91,7 @@ Eleven projects explore what you can build this way, each with its problem, its 
 - [Vela](https://github.com/andresanemic/vela) — a source hands over evidence and risks being exposed
 - [TEMIS](https://github.com/andresanemic/temis) — two people sign an agreement and later cannot tell who did what
 
-All with fictional data and no real money: most run as local walkthroughs, and Stellar testnet evidence belongs only to the projects that declare it (TEMIS and Permamuseum), not to all eleven.
+All with fictional data and no real money: most run as local walkthroughs, and Stellar testnet evidence belongs only to the projects that declare it (TEMIS and Permamuseum), not to all eleven. Rerun from fresh clones on 25 October 2026: 399 tests pass across the eleven repositories ([record](./docs/PROJECT_SUITES_2026-10-25.md)).
 
 ---
 

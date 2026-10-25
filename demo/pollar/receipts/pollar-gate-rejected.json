@@ -1,0 +1,33 @@
+{
+  "status": "needs_human_decision",
+  "output": null,
+  "receipt": {
+    "status": "needs_human_decision",
+    "operation": {
+      "id": "op-mvoav9ye-0",
+      "goal": "pay 1000 stroops of XLM to GDS6AO6UEHXO6SFG7R4HQS5KN7RMFUPMAQLHJA7CD7ZFNELWACINCO36 with Pollar (mainnet)"
+    },
+    "action": "pay-with-pollar",
+    "capability": "pollar-payment-xlm",
+    "authority": {
+      "grants": [],
+      "exercised": [],
+      "approval": "human_gate_rejected"
+    },
+    "outcome": "needs_human_decision",
+    "evidence": null,
+    "verification": null,
+    "coverage": [],
+    "notCovered": [
+      "external anchor"
+    ],
+    "anchor": {
+      "status": "pending",
+      "network": "stellar:testnet"
+    },
+    "detail": "no grant for asset XLM to GDS6AO6UEHXO6SFG7R4HQS5KN7RMFUPMAQLHJA7CD7ZFNELWACINCO36",
+    "exit": "return to the person: change the agreement or cancel",
+    "at": "2026-10-25T20:48:29.199Z",
+    "digest": "db4c10d5e0f79f0d9a807e0e3f1d934ace2dbcb4ae52b805da4ccef74b070a15"
+  }
+}
