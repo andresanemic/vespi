@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "generatedBy": "node scripts/judge-package.mjs",
   "packageVersion": "0.1.8",
-  "gitCommit": "d0e43478a535634f4f073e22b7a2d957898f87e3",
+  "gitCommit": "9ef023fb57e52087df7d4da38c30911b7f1fe331",
   "sourceSnapshotNote": "gitCommit identifies the repository baseline; fileHashes bind the exact files read from this working tree, including local changes.",
   "fileHashes": {
     "CHANGELOG.md": "c2fa4c0865c1e6e81906b93f07614aad9531a6d0a19c756b7cf05d8aa399d10b",
     "LICENSE": "73ba74dfaa520b49a401b5d21459a8523a146f3b7518a833eea5efa85130bf68",
     "NOTICE": "d99368a86475d17dd3a518b3153a8d3b63e20c805974874bfc6439e992aa910f",
-    "README.md": "953085ab1484280974d9b78bbd7967fcc0b0d73b6d427bf882634819f6de9715",
+    "README.md": "ee0348d9d0c5011cdf9195765c35df6487cf1cfb8a40c967026962ba1b274c61",
     "bench/unidad-operacion.test.mjs": "2f7824faa72f2394d846ab891bc68ff5c1813afcd7d6b8301000276b198ca605",
     "demo/x402/README.md": "056237ad81b5a23deceee84cc260377742d01dfc0a8dda2853320e9f26714405",
     "demo/x402/amount.js": "e21303ea6eb3adafdbf2bfebe4626cffc577969ba99582d5b7002f8549637b9e",
@@ -50,7 +50,7 @@
     "src/x402.js": "1084ab26beebc71fb25cf704a3b90ed17020789bc12bcc10b467967ffea0138f",
     "src/zk-bn254-reference.js": "79c6e7306100817bf1e8837a973a83ee3d58f645a625b0c3885a57639ae7686d",
     "src/zk.js": "e7885a6ceafe8665212323456b17fd5fac61c1907e361d17da31b56a051b9820",
-    "docs/JUDGE_PACKAGE.json": "e0afba80b0749a2a9f5498e204efb45350cd34dcf716fce51fcb5f9512ed5bba"
+    "docs/JUDGE_PACKAGE.json": "49256b36612052086d3333ebfd46011aae56cf2ac4ede496500aaed2079a5e5e"
   },
   "excludedPaths": [
     "**/node_modules/**",
@@ -130,5 +130,5 @@
     }
   ],
   "hashNote": "Hashes use SHA-256 over the repository bytes (CRLF normalized to LF, so they match a clone on any system) and cover only the npm candidate whitelist: root README, CHANGELOG, package metadata, LICENSE, NOTICE, src/, the top-level public x402 demo source/tests and package metadata, bench/unidad-operacion.test.mjs, and the current GENESIS, callback contract, 0.1.8 release note and suite result. Local state, credentials, databases, snapshots, dependencies, tests outside the package and other internal docs are excluded. The docs/JUDGE_PACKAGE.json hash and manifestSelfHash use SHA-256 over this JSON after removing both manifestSelfHash and fileHashes[\"docs/JUDGE_PACKAGE.json\"], to avoid a self-referential hash.",
-  "manifestSelfHash": "e0afba80b0749a2a9f5498e204efb45350cd34dcf716fce51fcb5f9512ed5bba"
+  "manifestSelfHash": "49256b36612052086d3333ebfd46011aae56cf2ac4ede496500aaed2079a5e5e"
 }

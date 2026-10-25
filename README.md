@@ -229,7 +229,7 @@ Once proyectos exploran qué puedes construir así, cada uno con su problema, su
 - [Vela](https://github.com/andresanemic/vela) — una fuente entrega evidencia y corre el riesgo de quedar expuesta
 - [TEMIS](https://github.com/andresanemic/temis) — dos personas firman un acuerdo y después no saben quién cumplió qué
 
-Todos con datos ficticios y sin dinero real: la mayoría corre como recorrido local, y la evidencia en la testnet de Stellar pertenece solo a los proyectos que la declaran (TEMIS y Permamuseum), no a los once.
+Todos con datos ficticios y sin dinero real: la mayoría corre como recorrido local, y la evidencia en la testnet de Stellar pertenece solo a los proyectos que la declaran (TEMIS y Permamuseum), no a los once. Reejecutadas desde clones frescos el 25 de octubre de 2026: 399 pruebas pasan en los once repositorios ([registro](./docs/PROJECT_SUITES_2026-10-25.md)).
 
 ## Cómo se trabaja
 
