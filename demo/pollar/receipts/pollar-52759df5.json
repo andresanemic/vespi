@@ -1,0 +1,68 @@
+{
+  "status": "verified",
+  "output": {
+    "txHash": "52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2"
+  },
+  "receipt": {
+    "status": "verified",
+    "operation": {
+      "id": "op-mvo8lbd0-0",
+      "goal": "pay 1000 stroops of XLM to GDS6AO6UEHXO6SFG7R4HQS5KN7RMFUPMAQLHJA7CD7ZFNELWACINCO36 with Pollar (mainnet)"
+    },
+    "action": "pay-with-pollar",
+    "capability": "pollar-payment-xlm",
+    "authority": {
+      "grants": [
+        {
+          "asset": "XLM",
+          "maxAmount": "1000",
+          "to": "GDS6AO6UEHXO6SFG7R4HQS5KN7RMFUPMAQLHJA7CD7ZFNELWACINCO36"
+        }
+      ],
+      "exercised": [
+        {
+          "asset": "XLM",
+          "maxAmount": "1000",
+          "to": "GDS6AO6UEHXO6SFG7R4HQS5KN7RMFUPMAQLHJA7CD7ZFNELWACINCO36"
+        }
+      ],
+      "approval": "human_gate_approved"
+    },
+    "outcome": "verified",
+    "evidence": {
+      "type": "pollar",
+      "network": "stellar:pubnet"
+    },
+    "verification": {
+      "verified": true,
+      "checks": {
+        "txFound": true,
+        "txSuccessful": true,
+        "paymentOpFound": true,
+        "toMatches": true,
+        "amountMatches": true,
+        "assetNative": true
+      },
+      "reason": "ledger shows a successful native payment of the authorized amount to the authorized destination"
+    },
+    "coverage": [
+      "txFound",
+      "txSuccessful",
+      "paymentOpFound",
+      "toMatches",
+      "amountMatches",
+      "assetNative"
+    ],
+    "notCovered": [
+      "external anchor"
+    ],
+    "anchor": {
+      "status": "pending",
+      "network": "stellar:testnet"
+    },
+    "detail": null,
+    "decidedBy": "andres",
+    "at": "2026-10-25T19:48:02.508Z",
+    "digest": "0f532ec62d4e7cd81e55e4389eec3427ad64260f8d5d863ca096740c11de8c87"
+  }
+}
