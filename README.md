@@ -40,7 +40,7 @@ See what an agent is not allowed to do: `node examples/refusal.js` refuses an ov
 
 > Run it before you believe it.
 
-**What "experimental" means here.** The kernel is a 0.1 source checkout, not an npm package, and everything runs in a local walkthrough or on Stellar testnet with fictional data, never on mainnet. It also has design limits we declare: approval names are labels, not signatures; budgets do not accumulate across operations; the host stores the receipts. [Judge it in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md).
+**What "experimental" means here.** The kernel is a 0.1 source checkout, not an npm package, and everything runs in a local walkthrough or on Stellar testnet with fictional data. The only mainnet evidence is two real transactions made on 25 October 2026: the anchor of a receipt and a payment with Pollar under the kernel's human gate (see [Pollar evidence](https://vespi.xyz/pollar)). It also has design limits we declare: approval names are labels, not signatures; budgets do not accumulate across operations; the host stores the receipts. [Judge it in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md).
 
 <details>
 <summary><b>Read in English</b></summary>
@@ -52,7 +52,7 @@ See what an agent is not allowed to do: `node examples/refusal.js` refuses an ov
 Start with one operation and keep the proof. Every line says how far it has been checked today.
 
 - **Leave a verifiable record of what an agent did.** The receipt carries a SHA-256 digest, the authority that was granted and used, what was checked and what was not. *Proven.*
-- **Timestamp that record on Stellar.** Put the receipt's digest in a transaction memo so the ledger shows when it existed. *Testnet:* the saved evidence compares the declared digest, ledger and source account with Horizon, using fictional data. Mainnet is planned for the Meridian demonstrations and is not claimed until those transactions exist.
+- **Timestamp that record on Stellar.** Put the receipt's digest in a transaction memo so the ledger shows when it existed. *Testnet:* the saved evidence compares the declared digest, ledger and source account with Horizon, using fictional data. *Mainnet:* on 25 October 2026 one receipt digest (`71f58fc2…`) was anchored in a real transaction, as both a hash memo and a `manage_data` entry: tx `2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7`, ledger 65133489.
 - **Pay for a service within a ceiling and with a person's approval (x402).** *Demo* on testnet, outside the kernel.
 - **Check a zero-knowledge proof inside an operation** and keep its receipt. *Reference* verification; apps built on zero-knowledge proofs are a direction, not something this release ships.
 - **Register a batch of things in one transaction,** for example the 100 diskettes of the Meridian fanzine. *Planned:* described as a plan until the transaction exists.
@@ -123,7 +123,7 @@ You arrive with an idea. You talk to the AI and it builds together. The AI does 
 
 Vespi keeps authority, checked result and next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation.
 
-Kernel 0.1.8 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. All chain evidence is Stellar testnet with fictional data, no real money; the projects that declare no network (such as Queen and Vela) are local walkthroughs.
+Kernel 0.1.8 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. Chain evidence in those projects is Stellar testnet with fictional data, no real money; the projects that declare no network (such as Queen and Vela) are local walkthroughs. The kernel itself has two real mainnet transactions from 25 October 2026: a payment of 0.0001 XLM with Pollar under the human gate, verified on the ledger with a receipt (tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379), and the receipt anchor above. The Pollar code is not part of the kernel library yet.
 
 ### Start with an operation
 
@@ -190,7 +190,7 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 Empieza con una operación y guarda la prueba. Cada línea dice hasta dónde está comprobado hoy.
 
 - **Deja un registro verificable de lo que hizo un agente.** El recibo lleva una huella SHA-256, la autoridad que se concedió y se usó, lo que se comprobó y lo que no. *Probado.*
-- **Ponle fecha a ese registro en Stellar.** Pon la huella del recibo en el memo de una transacción para que el libro muestre cuándo existía. *Testnet:* la evidencia guardada compara la huella declarada, el ledger y la cuenta de origen con Horizon, con datos ficticios. Mainnet está planeado para las demostraciones de Meridian y no se afirma hasta que existan esas transacciones.
+- **Ponle fecha a ese registro en Stellar.** Pon la huella del recibo en el memo de una transacción para que el libro muestre cuándo existía. *Testnet:* la evidencia guardada compara la huella declarada, el ledger y la cuenta de origen con Horizon, con datos ficticios. *Mainnet:* el 25 de octubre de 2026 se ancló la huella de un recibo (`71f58fc2…`) en una transacción real, como memo hash y como entrada `manage_data`: tx `2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7`, ledger 65133489.
 - **Paga un servicio dentro de un techo y con la aprobación de una persona (x402).** *Demo* en testnet, fuera del kernel.
 - **Comprueba una prueba de conocimiento cero dentro de una operación** y guarda su recibo. Verificación de *Referencia*; las apps construidas sobre pruebas de conocimiento cero son una dirección, no algo que esta versión entregue.
 - **Registra un conjunto de cosas en una sola transacción,** por ejemplo los 100 diskettes del fanzine de Meridian. *Planeado:* se describe como un plan hasta que exista la transacción.
@@ -257,7 +257,7 @@ Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueb
 
 Vespi conserva juntas la autoridad, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo.
 
-El kernel 0.1.8 es una biblioteca fuente JavaScript sin dependencias. La aprobación conserva su contexto en la operación y el recibo, y el kernel lo comprueba antes de un efecto. Un checkpoint conserva autoridad acotada al retomar; el host aporta almacenamiento auténtico y una generación mínima aceptada. Los callbacks se invocan sin receptor: si un host depende de `this`, debe pasar una flecha, clausura o función ligada. Consulta el [contrato de migración](./docs/HOST_CALLBACKS.md) y la [evidencia de 0.1.8](./docs/RELEASE_0.1.8_KERNEL.md). Es un motor de apps Stellar en 11 exploraciones funcionales. Toda evidencia de cadena es testnet con datos ficticios, sin dinero real; los proyectos que no declaran red (como Queen y Vela) son recorridos locales.
+El kernel 0.1.8 es una biblioteca fuente JavaScript sin dependencias. La aprobación conserva su contexto en la operación y el recibo, y el kernel lo comprueba antes de un efecto. Un checkpoint conserva autoridad acotada al retomar; el host aporta almacenamiento auténtico y una generación mínima aceptada. Los callbacks se invocan sin receptor: si un host depende de `this`, debe pasar una flecha, clausura o función ligada. Consulta el [contrato de migración](./docs/HOST_CALLBACKS.md) y la [evidencia de 0.1.8](./docs/RELEASE_0.1.8_KERNEL.md). Es un motor de apps Stellar en 11 exploraciones funcionales. La evidencia de cadena de esos proyectos es testnet con datos ficticios, sin dinero real; los proyectos que no declaran red (como Queen y Vela) son recorridos locales. El kernel tiene dos transacciones reales en mainnet del 25 de octubre de 2026: un pago de 0,0001 XLM con Pollar bajo la puerta humana, verificado en el ledger y con recibo (tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379), y el ancla del recibo de arriba. El código de Pollar aún no forma parte de la biblioteca del kernel.
 
 ## Empieza con una operación
 
