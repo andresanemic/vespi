@@ -54,7 +54,7 @@ The over-limit request leaves a receipt with `coverage: []`: nothing ran. The in
 node --test test/*.test.js
 ```
 
-At this cut: `tests 1224`, `pass 1200`, `fail 0`, `todo 24`. The 24 `todo` are boundaries we declare and do not claim. Without the first line, four tests that need the x402 demo's dependencies fail; that is expected, and it is why that line is there.
+At this cut: `tests 1224`, `pass 1200`, `fail 0`, `todo 24`. The 24 `todo` are boundaries we declare and do not claim. Without the first line, four tests that need the x402 demo's dependencies fail; that is expected, and it is why that line is there. The full frozen release suite (SUITE_RESULT_0.1.8.txt) reports `tests 1319`, `pass 1319`, `todo 0`: it includes the x402 demo's dependencies and other files outside this minimal run. Both counts are correct for their scope; 1,319 is the published figure used in the Meridian submission.
 
 **What we trimmed, in one place.** This cut does not include: the installable app (Vespi Hive, shown only as a proof of concept with fictional data), an external anchor for kernel receipts, an independent security audit, real money on mainnet, or the bridge that uses the real Stellar SDK inside the kernel. It has been reviewed with our own Claude Code superreviews, not audited. Vespi Hive will be built with Vespi; this is a development plan, not part of the released kernel. See the [threat model](./THREAT_MODEL.md) and [why Stellar](./WHY_STELLAR.md).
 
@@ -94,6 +94,6 @@ La petición fuera del límite deja un recibo con `coverage: []`: no corrió nad
 node --test test/*.test.js
 ```
 
-En este corte: `tests 1224`, `pass 1200`, `fail 0`, `todo 24`. Los 24 `todo` son límites que declaramos y no afirmamos. Sin la primera línea, cuatro pruebas que necesitan las dependencias del demo x402 fallan; es lo esperado y por eso está esa línea.
+En este corte: `tests 1224`, `pass 1200`, `fail 0`, `todo 24`. Los 24 `todo` son límites que declaramos y no afirmamos. Sin la primera línea, cuatro pruebas que necesitan las dependencias del demo x402 fallan; es lo esperado y por eso está esa línea. La suite completa congelada (SUITE_RESULT_0.1.8.txt) reporta `tests 1319`, `pass 1319`, `todo 0`: incluye las dependencias del demo x402 y otros archivos fuera de esta corrida mínima. Ambos conteos son correctos para su alcance; 1.319 es la cifra publicada que usa la presentación de Meridian.
 
 **Lo que recortamos, en un solo lugar.** Este corte no incluye: la app instalable (Vespi Hive, mostrada solo como prueba de concepto con datos ficticios), un ancla externa para los recibos del kernel, una auditoría de seguridad independiente, dinero real en mainnet ni el puente que usa el SDK real de Stellar dentro del kernel. Fue revisado con nuestras propias superreviews de Claude Code, no auditado. Vespi Hive será construida con Vespi; es un plan de desarrollo, no parte del kernel publicado. Ver el [modelo de amenazas](./THREAT_MODEL.md#modelo-de-amenazas) y [por qué Stellar](./WHY_STELLAR.md#por-qué-stellar).
