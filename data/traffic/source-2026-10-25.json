@@ -1,0 +1,81 @@
+{
+  "consultedOn": "2026-10-25",
+  "requestedCut": "2026-10-24",
+  "source": "GitHub REST API /repos/andresanemic/vespi/traffic/clones",
+  "response": {
+    "count": 620,
+    "uniques": 227,
+    "clones": [
+      {
+        "timestamp": "2026-10-11T00:00:00Z",
+        "count": 331,
+        "uniques": 126
+      },
+      {
+        "timestamp": "2026-10-12T00:00:00Z",
+        "count": 30,
+        "uniques": 19
+      },
+      {
+        "timestamp": "2026-10-13T00:00:00Z",
+        "count": 155,
+        "uniques": 42
+      },
+      {
+        "timestamp": "2026-10-14T00:00:00Z",
+        "count": 43,
+        "uniques": 19
+      },
+      {
+        "timestamp": "2026-10-15T00:00:00Z",
+        "count": 23,
+        "uniques": 15
+      },
+      {
+        "timestamp": "2026-10-16T00:00:00Z",
+        "count": 1,
+        "uniques": 1
+      },
+      {
+        "timestamp": "2026-10-17T00:00:00Z",
+        "count": 2,
+        "uniques": 2
+      },
+      {
+        "timestamp": "2026-10-18T00:00:00Z",
+        "count": 10,
+        "uniques": 6
+      },
+      {
+        "timestamp": "2026-10-19T00:00:00Z",
+        "count": 3,
+        "uniques": 3
+      },
+      {
+        "timestamp": "2026-10-20T00:00:00Z",
+        "count": 15,
+        "uniques": 10
+      },
+      {
+        "timestamp": "2026-10-21T00:00:00Z",
+        "count": 0,
+        "uniques": 0
+      },
+      {
+        "timestamp": "2026-10-22T00:00:00Z",
+        "count": 3,
+        "uniques": 2
+      },
+      {
+        "timestamp": "2026-10-23T00:00:00Z",
+        "count": 1,
+        "uniques": 1
+      },
+      {
+        "timestamp": "2026-10-24T00:00:00Z",
+        "count": 3,
+        "uniques": 3
+      }
+    ]
+  }
+}
