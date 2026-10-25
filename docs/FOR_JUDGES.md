@@ -1,6 +1,6 @@
 # Judge Vespi
 
-Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. An uncertain exercised effect returns to you for reconciliation, as [continuation tests](../test/v014.test.js) verify, but the host must store receipts and run the next action. Kernel `0.1.8` local cut, publication pending: [release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel), 2026-10-23. The commands below pin that release; this guide may receive documentation corrections afterward.
+Vespi keeps the authority you granted, the checked result and the next agreed action together when work changes hands. An uncertain exercised effect returns to you for reconciliation, as [continuation tests](../test/v014.test.js) verify, but the host must store receipts and run the next action. Kernel `0.1.8`, published on 2026-10-25: [release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel). The commands below pin that release; this guide may receive documentation corrections afterward.
 
 ## Clone the repo and run the local evidence
 
@@ -60,7 +60,7 @@ Spend-authority narrowing stays out because the base `grantSpend` constructor ha
 
 # Revisar Vespi
 
-Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Un efecto ejercido incierto vuelve a ti para reconciliarlo, como verifican [las pruebas de continuidad](../test/v014.test.js), pero el host debe guardar los recibos y ejecutar la siguiente acción. Kernel `0.1.8`, corte local pendiente de publicación: [release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel), 2026-10-23. Los comandos siguientes fijan esa versión; esta guía puede recibir correcciones de documentación posteriores.
+Vespi conserva juntas la autoridad que otorgaste, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Un efecto ejercido incierto vuelve a ti para reconciliarlo, como verifican [las pruebas de continuidad](../test/v014.test.js), pero el host debe guardar los recibos y ejecutar la siguiente acción. Kernel `0.1.8`, publicado el 2026-10-25: [release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel). Los comandos siguientes fijan esa versión; esta guía puede recibir correcciones de documentación posteriores.
 
 ## Clona el repo y corre la evidencia local
 

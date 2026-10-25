@@ -1,6 +1,6 @@
 # Judge Vespi in 3 minutes
 
-Kernel 0.1.8 local cut: publication requires Andrés’s explicit approval. The clone command below requires the published `v0.1.8-kernel` tag; until then, run the walkthrough from the reviewed local checkout. Read the [callback migration contract](./HOST_CALLBACKS.md) when adapting a host that uses `this`.
+Kernel 0.1.8, published on 2026-10-25 ([release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel)). The clone command below pins that tag. Read the [callback migration contract](./HOST_CALLBACKS.md) when adapting a host that uses `this`.
 
 > Three commands, the third optional, the output you should see, and what to look for. Needs Node.js 24 or later. Cloning requires internet; the walkthrough runs offline, with no real money. The first two take about 15 seconds and need no install. Español: [Juzga Vespi en 3 minutos](#juzga-vespi-en-3-minutos).
 
@@ -62,7 +62,7 @@ At this cut: `tests 1224`, `pass 1200`, `fail 0`, `todo 24`. The 24 `todo` are b
 
 # Juzga Vespi en 3 minutos
 
-Corte local del kernel 0.1.8: publicar requiere aprobación explícita de Andrés. El comando de clonación requiere el tag `v0.1.8-kernel` publicado; mientras tanto, el recorrido se ejecuta desde el checkout local revisado. Consulta el [contrato de migración de callbacks](./HOST_CALLBACKS.md) si adaptas un host que dependa de `this`.
+Kernel 0.1.8, publicado el 2026-10-25 ([release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel)). El comando de clonación fija ese tag. Consulta el [contrato de migración de callbacks](./HOST_CALLBACKS.md) si adaptas un host que dependa de `this`.
 
 > Tres comandos, el tercero opcional, la salida que deberías ver y qué mirar. Necesita Node.js 24 o posterior. La clonación requiere internet; el recorrido funciona sin red y sin dinero real. Los dos primeros toman unos 15 segundos y no instalan nada.
 

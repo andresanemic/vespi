@@ -22,11 +22,11 @@
 
 ---
 
-**Where this is going.** Today you run Vespi from a terminal. **Vespi Desktop** is the planned workspace that will bring this kernel and Lore Plugin together, with **Hive as its creation studio**. For HackMeridian we will show that direction alongside what already runs and can be verified; Desktop is not installable yet. A Linux distribution remains a distant possibility.
+**Where this is going.** Today you run Vespi from a terminal. **Hive**, a creation studio for building apps with agents, is planned; it is not installable yet. An interactive proof of concept, with fictional data, is on [vespi.xyz](https://vespi.xyz). A Linux distribution remains a distant possibility.
 
 ## Clone and run
 
-The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package. The 0.1.8 tag commands below become available after publication; this local cut is awaiting approval.
+The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package. The commands below pin the published `v0.1.8-kernel` tag.
 
 ```sh
 git clone --branch v0.1.8-kernel --depth 1 https://github.com/andresanemic/vespi.git
@@ -135,7 +135,7 @@ node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The current source includes [the 0.1.7 maintenance release](./docs/TODO_RESOLUTION.md). The [saved suite result](./docs/SUITE_RESULT_0.1.8.txt) records the command, exact counts, Node version and Git baseline for the local cut. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
+The walkthrough's [test](./test/walkthrough.test.js) checks an observed local effect and a next action selected in another process, but the receipt is passed to that process explicitly: this does not demonstrate automatic transfer, durable storage or authenticated human identity. The current source includes [the 0.1.7 maintenance release](./docs/TODO_RESOLUTION.md). The [saved suite result](./docs/SUITE_RESULT_0.1.8.txt) records the command, exact counts, Node version and Git baseline for this release. The [judge guide](./docs/FOR_JUDGES.md) explains how to reproduce the evidence and its limits.
 
 ### Authority, a human gate and receipts
 
@@ -166,7 +166,7 @@ The agreement keeps its order. Its purpose is to preserve your agency and avoid 
 | [Obsidian](https://obsidian.md/help/data-storage) | Local Markdown notes and linked knowledge | A workflow for promoting experience into agent-readable criteria with approval |
 | [Graphify](https://github.com/Graphify-Labs/graphify) / [CodeGraph](https://github.com/colbymchenry/codegraph/blob/main/site/src/content/docs/getting-started/introduction.md) | Queryable code structure; Graphify also maps documents | Maintained project criteria and authority for concrete operations |
 
-This compares current scope, not head-to-head results. The Desktop end-to-end path remains to be demonstrated.
+This compares current scope, not head-to-head results. The complete end-to-end path remains to be demonstrated.
 
 ### Author and license
 
@@ -261,7 +261,7 @@ El kernel 0.1.8 es una biblioteca fuente JavaScript sin dependencias. La aprobac
 
 ## Empieza con una operación
 
-El tag 0.1.8 estará disponible tras la publicación; este corte local espera aprobación.
+Los comandos siguientes fijan el tag publicado `v0.1.8-kernel`.
 
 Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con tu nombre seguido de `: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
@@ -279,7 +279,7 @@ node --test "test/*.test.js"
 node scripts/verify-testnet-evidence.mjs --offline
 ```
 
-[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. El código actual incluye [el mantenimiento del corte 0.1.7](./docs/TODO_RESOLUTION.md). [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.8.txt) registra el comando, los conteos exactos, la versión de Node y la base Git del corte local. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
+[La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. El código actual incluye [el mantenimiento del corte 0.1.7](./docs/TODO_RESOLUTION.md). [El resultado guardado de la suite](./docs/SUITE_RESULT_0.1.8.txt) registra el comando, los conteos exactos, la versión de Node y la base Git de esta versión. [La guía para jueces](./docs/FOR_JUDGES.md) explica cómo reproducir la evidencia y sus límites.
 
 ## Autoridad, puerta humana y recibos
 
@@ -308,7 +308,7 @@ El acuerdo conserva su orden. La finalidad es cuidar tu agencia y evitar decisio
 | [Obsidian](https://obsidian.md/help/data-storage) | Notas Markdown locales y conocimiento enlazado | Un flujo que convierte experiencia en criterio legible por agentes, con aprobación |
 | [Graphify](https://github.com/Graphify-Labs/graphify) / [CodeGraph](https://github.com/colbymchenry/codegraph/blob/main/site/src/content/docs/getting-started/introduction.md) | Estructura de código consultable; Graphify también mapea documentos | Criterio de proyecto mantenido y autoridad para operaciones concretas |
 
-La tabla compara alcances actuales, no resultados de una prueba cara a cara. Falta demostrar el recorrido completo en Desktop.
+La tabla compara alcances actuales, no resultados de una prueba cara a cara. Falta demostrar el recorrido completo de punta a punta.
 
 ## Autor y licencia
 
