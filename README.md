@@ -16,7 +16,7 @@
 
 <p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>We want Vespi to be the kernel for building apps on Stellar.</p>
 
-<p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=g2iw29M6WI0"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a></p>
+<p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=g2iw29M6WI0"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a> · <a href="https://vespi.xyz/pollar"><b>Pollar evidence</b></a></p>
 <p align="center">Pitch deck: <a href="https://drive.google.com/file/d/1iiEHJ35hFaYM_df4a6EtXdK8vmI4f5EG/view?usp=sharing">EN</a> · <a href="https://drive.google.com/file/d/1vj3HTJVWc7TaPyvq1iPovfLgis9KzbYg/view?usp=sharing">ES</a> &nbsp;|&nbsp; One pager: <a href="https://drive.google.com/file/d/1KvmeMdTnY7vk3HHq1ZC9ILwiRILh99h4/view?usp=drive_link">EN</a> · <a href="https://drive.google.com/file/d/16YOg0ps5uRaKhfMcS0D0imn5yN8K70Wm/view?usp=sharing">ES</a> &nbsp;|&nbsp; <a href="https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing">Letters of intent</a></p>
 
 
