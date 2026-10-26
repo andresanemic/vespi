@@ -1,6 +1,7 @@
 'use strict';
 
-// Pago en Stellar testnet bajo el kernel de Vespi, que cualquiera puede correr sin cuenta.
+// Pago en Stellar bajo el kernel de Vespi: testnet, que cualquiera puede correr sin cuenta, o mainnet
+// con una cuenta propia y un monto acotado.
 // La transacción se arma antes de preguntar: su hash es el contexto de la operación, así que la
 // persona aprueba esa transacción y no otra. El kernel vuelve a leer el contexto justo antes del
 // efecto; si el hash cambió, bloquea. La firma solo ocurre dentro de `perform`, después del sí:
@@ -11,32 +12,37 @@ const { createOperation, runOperation } = require('../../src/operation.js');
 const { verifyPollarPayment, stroops } = require('../pollar/verify.cjs');
 
 const HORIZON_TESTNET = 'https://horizon-testnet.stellar.org';
+const HORIZON_MAINNET = 'https://horizon.stellar.org';
+const NETWORKS = { testnet: { id: 'stellar:testnet', horizon: HORIZON_TESTNET }, mainnet: { id: 'stellar:pubnet', horizon: HORIZON_MAINNET } };
 const HEX64 = /^[0-9a-f]{64}$/;
 
-function contextFor({ hash, from, to, amount }) {
+function contextFor({ hash, from, to, amount, network = 'testnet' }) {
+  const id = NETWORKS[network].id;
   return {
     manifestDigest: hash,
-    scope: `stellar:testnet pay ${amount} XLM from ${from} to ${to}`,
-    sources: [{ ref: `stellar:testnet:tx:${hash}`, owner: 'the person at the human gate', revision: hash, state: 'approved' }],
+    scope: `${id} pay ${amount} XLM from ${from} to ${to}`,
+    sources: [{ ref: `${id}:tx:${hash}`, owner: 'the person at the human gate', revision: hash, state: 'approved' }],
   };
 }
 
 // `prepared`: { hash, from, to, amount, currentHash(), signAndSubmit() -> { hash } }.
-async function runTestnetPayment({ prepared, ask, fetchImpl = fetch, horizon = HORIZON_TESTNET }) {
+async function runTestnetPayment({ prepared, ask, fetchImpl = fetch, network = 'testnet', horizon }) {
+  if (!NETWORKS[network]) throw new TypeError('network must be testnet or mainnet');
+  horizon = horizon || NETWORKS[network].horizon;
   if (!HEX64.test(prepared.hash)) throw new TypeError('prepared transaction hash must be 64 hex characters');
   const amountStroops = stroops(prepared.amount);
   if (!amountStroops) throw new TypeError('amount must be a positive XLM amount with up to 7 decimals');
-  const context = contextFor(prepared);
+  const context = contextFor({ ...prepared, network });
   const op = createOperation({
-    goal: `pay ${prepared.amount} XLM on Stellar testnet to ${prepared.to}`,
+    goal: `pay ${prepared.amount} XLM on Stellar ${network} to ${prepared.to}`,
     authority: { spend: [] },
     agent: 'vespi-testnet-demo',
-    action: 'pay-xlm-testnet',
+    action: `pay-xlm-${network}`,
     context,
   });
   let submitted = false;
   const capability = {
-    id: 'stellar-testnet-payment-xlm',
+    id: `stellar-${network}-payment-xlm`,
     required: () => ({ spend: [{ asset: 'XLM', amount: amountStroops, to: prepared.to }] }),
     perform: async () => {
       if (prepared.currentHash() !== context.manifestDigest) {
@@ -51,7 +57,7 @@ async function runTestnetPayment({ prepared, ask, fetchImpl = fetch, horizon = H
       submitted = true;
       const hash = reported && typeof reported.hash === 'string' ? reported.hash : '';
       if (!HEX64.test(hash)) return { ok: false, error: 'NO_TX_HASH', reason: 'Horizon returned no transaction hash' };
-      return { ok: true, output: { txHash: hash }, evidence: { type: 'stellar-payment', network: 'stellar:testnet', hash } };
+      return { ok: true, output: { txHash: hash }, evidence: { type: 'stellar-payment', network: NETWORKS[network].id, hash } };
     },
   };
   // El kernel da 15 s por defecto a cada paso; una persona y una red necesitan más.
@@ -60,7 +66,7 @@ async function runTestnetPayment({ prepared, ask, fetchImpl = fetch, horizon = H
     performTimeoutMs: 2 * 60 * 1000,
     verifyTimeoutMs: 60 * 1000,
     ask: (payload) => ask(payload, context),
-    readContext: () => contextFor({ ...prepared, hash: prepared.currentHash() }),
+    readContext: () => contextFor({ ...prepared, network, hash: prepared.currentHash() }),
     verify: async (evidence) => {
       const ledger = await verifyPollarPayment(evidence, { destination: prepared.to, amountStroops, fetchImpl, horizon });
       const approvedTxOnLedger = !!evidence && evidence.hash === context.manifestDigest && ledger.checks.txFound === true;
@@ -78,4 +84,4 @@ async function runTestnetPayment({ prepared, ask, fetchImpl = fetch, horizon = H
   return { ...result, context, submitted };
 }
 
-module.exports = { runTestnetPayment, contextFor, HORIZON_TESTNET };
+module.exports = { runTestnetPayment, runStellarPayment: runTestnetPayment, contextFor, HORIZON_TESTNET, HORIZON_MAINNET, NETWORKS };

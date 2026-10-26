@@ -97,3 +97,15 @@ test('mainnet re-verification reads the recorded Pollar payment and anchor', asy
   const wrong = async (url) => ({ ok: true, status: 200, json: async () => (url.endsWith('/operations') ? { _embedded: { records: [] } } : { hash: RECEIPT_ANCHOR.hash, successful: true, memo_type: 'text', memo: 'x' }) });
   assert.equal((await verifyReceiptAnchor({ fetchImpl: wrong })).verified, false);
 });
+
+test('mainnet mode binds the approval to a pubnet context and reads the mainnet ledger', async () => {
+  const p = prepared();
+  const seen = [];
+  const fetchImpl = async (url) => { seen.push(url); return ledger()(url); };
+  let ctx = null;
+  const res = await runTestnetPayment({ prepared: p.value, network: 'mainnet', fetchImpl, ask: async (payload, context) => { ctx = context; return approve(payload); } });
+  assert.equal(res.receipt.status, 'verified');
+  assert.match(ctx.scope, /^stellar:pubnet /);
+  assert.ok(seen.every((u) => u.startsWith('https://horizon.stellar.org/')));
+  assert.equal(res.receipt.evidence.network, 'stellar:pubnet');
+});
