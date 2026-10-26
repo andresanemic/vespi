@@ -31,8 +31,8 @@ function printChecks(checks) {
 }
 
 async function verifyMainnet() {
-  const { verifyPollarMainnet, verifyReceiptAnchor, POLLAR_PAYMENT, RECEIPT_ANCHOR } = require('./mainnet.cjs');
-  say('Re-verifying the two real Stellar mainnet transactions of 25 Oct 2026 against Horizon (read-only).');
+  const { verifyPollarMainnet, verifyKernelSignedMainnet, verifyReceiptAnchor, POLLAR_PAYMENT, KERNEL_SIGNED_PAYMENT, RECEIPT_ANCHOR } = require('./mainnet.cjs');
+  say('Re-verifying the three real Stellar mainnet transactions of 25–26 Oct 2026 against Horizon (read-only).');
   say();
   const pay = await verifyPollarMainnet();
   say(`Pollar payment under the kernel's human gate  ${pay.verified ? 'VERIFIED' : 'NOT VERIFIED'}`);
@@ -40,6 +40,12 @@ async function verifyMainnet() {
   printChecks(pay.checks);
   say(`  ${pay.reason}`);
   say(`  https://stellar.expert/explorer/public/tx/${POLLAR_PAYMENT.hash}`);
+  say();
+  const signed = await verifyKernelSignedMainnet();
+  say(`Payment signed by the kernel after a person's yes (26 Oct 2026)  ${signed.verified ? 'VERIFIED' : 'NOT VERIFIED'}`);
+  say(`  tx ${KERNEL_SIGNED_PAYMENT.hash}`);
+  printChecks(signed.checks);
+  say(`  https://stellar.expert/explorer/public/tx/${KERNEL_SIGNED_PAYMENT.hash}`);
   say();
   const anchor = await verifyReceiptAnchor();
   say(`Vespi receipt anchor  ${anchor.verified ? 'VERIFIED' : 'NOT VERIFIED'}`);
@@ -50,7 +56,7 @@ async function verifyMainnet() {
   say(`  https://stellar.expert/explorer/public/tx/${RECEIPT_ANCHOR.hash}`);
   say();
   say('This re-reads the ledger. It does not replay the approval or the payment.');
-  return pay.verified && anchor.verified;
+  return pay.verified && signed.verified && anchor.verified;
 }
 
 async function fund(publicKey) {

@@ -44,7 +44,7 @@ See what an agent is not allowed to do: `node examples/refusal.js` refuses an ov
 cd demo/testnet && npm ci && node pay.cjs
 ```
 
-The kernel shows you the hash of the one transaction it may sign; without your yes nothing is signed. After the yes it reads the ledger and checks that the transaction on chain is the one you approved. To re-verify the real mainnet payment and receipt anchor of 25 October, read-only and with no install: `node demo/testnet/pay.cjs --verify-mainnet`. Details in [demo/testnet](./demo/testnet/).
+The kernel shows you the hash of the one transaction it may sign; without your yes nothing is signed. After the yes it reads the ledger and checks that the transaction on chain is the one you approved. The same flow ran on Stellar mainnet on 26 October 2026: the kernel signed a 0.0001 XLM payment only after a person answered yes, and the ledger shows the approved transaction (tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f)). To re-verify the three real mainnet transactions, read-only and with no install: `node demo/testnet/pay.cjs --verify-mainnet`. Details in [demo/testnet](./demo/testnet/).
 
 > Run it before you believe it.
 

@@ -1,0 +1,83 @@
+{
+  "network": "stellar:pubnet",
+  "transaction": "b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f",
+  "payer": "GDS6AO6UEHXO6SFG7R4HQS5KN7RMFUPMAQLHJA7CD7ZFNELWACINCO36",
+  "payee": "GALQPWE7LAMFKRWKX4SICCHUPPW4NPSOWWICLMI2KLHJDBYZIYEAO7OA",
+  "amount": "0.0001",
+  "receipt": {
+    "status": "verified",
+    "operation": {
+      "id": "op-mvomsaqd-0",
+      "goal": "pay 0.0001 XLM on Stellar mainnet to GALQPWE7LAMFKRWKX4SICCHUPPW4NPSOWWICLMI2KLHJDBYZIYEAO7OA"
+    },
+    "action": "pay-xlm-mainnet",
+    "capability": "stellar-mainnet-payment-xlm",
+    "authority": {
+      "grants": [
+        {
+          "asset": "XLM",
+          "maxAmount": "1000",
+          "to": "GALQPWE7LAMFKRWKX4SICCHUPPW4NPSOWWICLMI2KLHJDBYZIYEAO7OA"
+        }
+      ],
+      "exercised": [
+        {
+          "asset": "XLM",
+          "maxAmount": "1000",
+          "to": "GALQPWE7LAMFKRWKX4SICCHUPPW4NPSOWWICLMI2KLHJDBYZIYEAO7OA"
+        }
+      ],
+      "approval": "human_gate_approved"
+    },
+    "outcome": "verified",
+    "evidence": {
+      "type": "stellar-payment",
+      "network": "stellar:pubnet"
+    },
+    "verification": {
+      "verified": true,
+      "checks": {
+        "txFound": true,
+        "txSuccessful": true,
+        "paymentOpFound": true,
+        "toMatches": true,
+        "amountMatches": true,
+        "assetNative": true,
+        "approvedTxOnLedger": true
+      },
+      "reason": "the ledger shows the exact transaction the person approved, paying the approved amount to the approved destination"
+    },
+    "coverage": [
+      "txFound",
+      "txSuccessful",
+      "paymentOpFound",
+      "toMatches",
+      "amountMatches",
+      "assetNative",
+      "approvedTxOnLedger"
+    ],
+    "notCovered": [
+      "external anchor"
+    ],
+    "anchor": {
+      "status": "pending",
+      "network": "stellar:testnet"
+    },
+    "detail": null,
+    "decidedBy": "person-at-terminal",
+    "at": "2026-10-26T02:22:11.551Z",
+    "context": {
+      "manifestDigest": "b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f",
+      "scope": "stellar:pubnet pay 0.0001 XLM from GDS6AO6UEHXO6SFG7R4HQS5KN7RMFUPMAQLHJA7CD7ZFNELWACINCO36 to GALQPWE7LAMFKRWKX4SICCHUPPW4NPSOWWICLMI2KLHJDBYZIYEAO7OA",
+      "sources": [
+        {
+          "ref": "stellar:pubnet:tx:b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f",
+          "owner": "the person at the human gate",
+          "revision": "b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f",
+          "state": "approved"
+        }
+      ]
+    },
+    "digest": "dc13bce91957475bb53e6a54021d03b702f7cd9d932df7af146d1cdb3f804c67"
+  }
+}

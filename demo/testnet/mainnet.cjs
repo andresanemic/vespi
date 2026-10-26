@@ -11,6 +11,11 @@ const POLLAR_PAYMENT = {
   destination: 'GDS6AO6UEHXO6SFG7R4HQS5KN7RMFUPMAQLHJA7CD7ZFNELWACINCO36',
   amountStroops: '1000',
 };
+const KERNEL_SIGNED_PAYMENT = {
+  hash: 'b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f',
+  destination: 'GALQPWE7LAMFKRWKX4SICCHUPPW4NPSOWWICLMI2KLHJDBYZIYEAO7OA',
+  amountStroops: '1000',
+};
 const RECEIPT_ANCHOR = {
   hash: '2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7',
   digest: '71f58fc2379c72d177f9ab4b655106d0474a67924c59c966153a7995776b7d9f',
@@ -18,6 +23,11 @@ const RECEIPT_ANCHOR = {
 
 async function verifyPollarMainnet({ fetchImpl = fetch, horizon = HORIZON } = {}) {
   return verifyPollarPayment({ hash: POLLAR_PAYMENT.hash }, { ...POLLAR_PAYMENT, fetchImpl, horizon });
+}
+
+// Pago del 26 oct 2026 firmado por el kernel tras el sí (prevención): misma lectura del ledger.
+async function verifyKernelSignedMainnet({ fetchImpl = fetch, horizon = HORIZON } = {}) {
+  return verifyPollarPayment({ hash: KERNEL_SIGNED_PAYMENT.hash }, { ...KERNEL_SIGNED_PAYMENT, fetchImpl, horizon });
 }
 
 async function verifyReceiptAnchor({ fetchImpl = fetch, horizon = HORIZON } = {}) {
@@ -42,4 +52,4 @@ async function verifyReceiptAnchor({ fetchImpl = fetch, horizon = HORIZON } = {}
   }
 }
 
-module.exports = { verifyPollarMainnet, verifyReceiptAnchor, POLLAR_PAYMENT, RECEIPT_ANCHOR };
+module.exports = { verifyPollarMainnet, verifyKernelSignedMainnet, verifyReceiptAnchor, POLLAR_PAYMENT, KERNEL_SIGNED_PAYMENT, RECEIPT_ANCHOR };
