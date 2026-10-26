@@ -45,7 +45,7 @@ npm --prefix demo/testnet ci
 node demo/testnet/pay.cjs
 ```
 
-The kernel shows you the hash of the one transaction it may sign; without your yes nothing is signed. After the yes it reads the ledger and checks that the transaction on chain is the one you approved. The same flow ran on Stellar mainnet on 26 October 2026: the kernel signed a 0.0001 XLM payment only after a person answered yes, and the ledger shows the approved transaction (tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f)). To re-verify the three real mainnet transactions, read-only and with no install: `node demo/testnet/pay.cjs --verify-mainnet`. Details in [demo/testnet](./demo/testnet/).
+The demo shows you the hash of the one transaction its signing capability may sign after the kernel gate receives your yes. The kernel then reads the ledger and checks that the transaction on chain is the one you approved. The same flow ran on Stellar mainnet on 26 October 2026: the demo signing capability signed a 0.0001 XLM payment only after the kernel gate received a person’s approval for its hash, and the ledger shows that approved transaction (tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f)). To re-verify the three real mainnet transactions, read-only and with no install: `node demo/testnet/pay.cjs --verify-mainnet`. Details in [demo/testnet](./demo/testnet/).
 
 > Run it before you believe it.
 

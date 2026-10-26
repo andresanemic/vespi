@@ -20,7 +20,7 @@ Non-interactive: `node pay.cjs --yes` or `node pay.cjs --no`. Another amount: `n
 
 ## The same flow on Stellar mainnet
 
-`node pay.cjs --network=mainnet` runs the same flow with your own account: the secret key comes from `STELLAR_SECRET` or a hidden prompt and is never printed or saved; the amount defaults to 0.0001 XLM and is capped at 0.01 XLM; `--yes` is refused, so the gate is always answered by hand; the account must hold the amount above its reserve. On 26 October 2026 a person ran it with the team's LOBSTR account and answered yes: tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f) (`b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f`), ledger 65139109, 0.0001 XLM to the Pollar wallet, receipt `verified` with `approvedTxOnLedger` (`receipts/mainnet-receipt-b402c62307e0c50f.json`). Here the kernel signed after the yes: prevention on mainnet, not only detection.
+`node pay.cjs --network=mainnet` runs the same flow with your own account: the secret key comes from `STELLAR_SECRET` or a hidden prompt and is never printed or saved; the amount defaults to 0.0001 XLM and is capped at 0.01 XLM; `--yes` is refused, so the gate is always answered by hand; the account must hold the amount above its reserve. On 26 October 2026 a person ran it with the team's LOBSTR account and answered yes: tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f) (`b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f`), ledger 65139109, 0.0001 XLM to the Pollar wallet, receipt `verified` with `approvedTxOnLedger` (`receipts/mainnet-receipt-b402c62307e0c50f.json`). Here the demo signing capability signed only after the kernel gate received a person's yes for the transaction hash: prevention on mainnet, not only detection.
 
 ## Re-verify the real mainnet transactions (read-only, no install)
 
@@ -30,7 +30,7 @@ From the repository root:
 node demo/testnet/pay.cjs --verify-mainnet
 ```
 
-It reads Stellar mainnet through Horizon and checks the three real transactions of 25–26 October 2026: the kernel-signed payment above, the 0.0001 XLM payment made with Pollar under the kernel's human gate (tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, six checks) and the anchor of a Vespi receipt (tx `2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7`: the receipt digest as a hash memo and as a `manage_data` entry). It re-reads the ledger; it does not replay the approval or the payment.
+It reads Stellar mainnet through Horizon and checks the three real transactions of 25–26 October 2026: the payment signed by the demo capability after kernel-gated approval above, the 0.0001 XLM payment made with Pollar under the kernel's human gate (tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, six checks) and the anchor of a Vespi receipt (tx `2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7`: the receipt digest as a hash memo and as a `manage_data` entry). It re-reads the ledger; it does not replay the approval or the payment.
 
 ## Evidence and tests
 

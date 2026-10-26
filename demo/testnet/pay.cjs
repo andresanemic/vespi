@@ -42,7 +42,7 @@ async function verifyMainnet() {
   say(`  https://stellar.expert/explorer/public/tx/${POLLAR_PAYMENT.hash}`);
   say();
   const signed = await verifyKernelSignedMainnet();
-  say(`Payment signed by the kernel after a person's yes (26 Oct 2026)  ${signed.verified ? 'VERIFIED' : 'NOT VERIFIED'}`);
+  say(`Demo capability signed after kernel-gated approval of the transaction hash (26 Oct 2026)  ${signed.verified ? 'VERIFIED' : 'NOT VERIFIED'}`);
   say(`  tx ${KERNEL_SIGNED_PAYMENT.hash}`);
   printChecks(signed.checks);
   say(`  https://stellar.expert/explorer/public/tx/${KERNEL_SIGNED_PAYMENT.hash}`);

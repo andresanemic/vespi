@@ -25,7 +25,7 @@ async function verifyPollarMainnet({ fetchImpl = fetch, horizon = HORIZON } = {}
   return verifyPollarPayment({ hash: POLLAR_PAYMENT.hash }, { ...POLLAR_PAYMENT, fetchImpl, horizon });
 }
 
-// Pago del 26 oct 2026 firmado por el kernel tras el sí (prevención): misma lectura del ledger.
+// Pago del 26 oct 2026 firmado por la capacidad de demo tras aprobar en la puerta el hash de la transacción (prevención): misma lectura del ledger.
 async function verifyKernelSignedMainnet({ fetchImpl = fetch, horizon = HORIZON } = {}) {
   return verifyPollarPayment({ hash: KERNEL_SIGNED_PAYMENT.hash }, { ...KERNEL_SIGNED_PAYMENT, fetchImpl, horizon });
 }

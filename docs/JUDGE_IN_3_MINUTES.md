@@ -62,7 +62,7 @@ The demo funds two fresh testnet accounts with Friendbot (no account, no real mo
 node demo/testnet/pay.cjs --verify-mainnet
 ```
 
-It reads Stellar mainnet and checks three real transactions: the 0.0001 XLM payment the kernel itself signed on 26 October 2026 after a person answered yes in this same demo (tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f): prevention on mainnet), the Pollar payment of 25 October (six checks) and the receipt anchor (digest as hash memo and `manage_data`). Read-only: it does not replay the approval or the payment.
+It reads Stellar mainnet and checks three real transactions: the 0.0001 XLM payment the demo signing capability signed on 26 October 2026 after the kernel gate received a person’s approval for its hash in this demo (tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f): prevention on mainnet), the Pollar payment of 25 October (six checks) and the receipt anchor (digest as hash memo and `manage_data`). Read-only: it does not replay the approval or the payment.
 
 **5. Optional: the whole suite (1 to 2 minutes more).**
 
@@ -119,7 +119,7 @@ La demo fondea dos cuentas nuevas de testnet con Friendbot (sin cuenta, sin dine
 node demo/testnet/pay.cjs --verify-mainnet
 ```
 
-Lee Stellar mainnet y comprueba tres transacciones reales: el pago de 0,0001 XLM que el propio kernel firmó el 26 de octubre de 2026 después del sí de una persona en esta misma demo (tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f): prevención en mainnet), el pago Pollar del 25 de octubre (seis comprobaciones) y el ancla del recibo (digest como memo hash y `manage_data`). Solo lectura: no repite la aprobación ni el pago.
+Lee Stellar mainnet y comprueba tres transacciones reales: el pago de 0,0001 XLM que la capacidad de firma de la demo firmó el 26 de octubre de 2026 después de que la puerta del kernel recibiera la aprobación de una persona para su hash (tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f): prevención en mainnet), el pago Pollar del 25 de octubre (seis comprobaciones) y el ancla del recibo (digest como memo hash y `manage_data`). Solo lectura: no repite la aprobación ni el pago.
 
 **5. Opcional: la suite completa (1 a 2 minutos más).**
 
