@@ -75,6 +75,15 @@ Start with one operation and keep the proof. Every line says how far it has been
 | Zero-knowledge proof verification | Reference |
 | Delegation, emergency permissions and skill provenance | Proven |
 
+## Stellar architecture at a glance
+
+- **Networks.** Stellar mainnet for the two 25 October 2026 operations; testnet for the earlier evidence ([50 readbacks from Horizon](./docs/TESTNET_EVIDENCE.md)) and the [x402 demo](./demo/x402/).
+- **Asset.** Native XLM. **Contracts:** none; the kernel deploys no Soroban contract.
+- **Wallets.** A Pollar-managed wallet (`GALQPWE7…`) paid 0.0001 XLM to a LOBSTR wallet (`GDS6AO6U…CO36`); the fee was sponsored. Tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379.
+- **Integrations and APIs.** The Pollar SDK (`@pollar/core` 0.12.0, in the browser) executes the payment after the kernel's human gate opens; the kernel then reads the transaction from the Horizon API and compares destination, amount and asset ([demo/pollar](./demo/pollar)). x402 runs on testnet.
+- **Anchor.** A receipt digest (`71f58fc2…`) written as a hash memo and a `manage_data` entry: tx `2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7`, ledger 65133489.
+- **Environment variables.** None for `examples/walkthrough.js`; the Pollar flow needs a Pollar account and a local kernel process.
+
 ## The projects
 
 Eleven projects explore what you can build this way, each with its problem, its evidence and its limits. Their code is public in each repository since 10 October 2026, under a review-only license.
@@ -212,6 +221,15 @@ Empieza con una operación y guarda la prueba. Cada línea dice hasta dónde est
 | Un pago de 0,01 USDC y 50 transacciones guardadas en la testnet de Stellar | Testnet |
 | Verificación de pruebas de conocimiento cero | Referencia |
 | Delegación, permisos de emergencia y procedencia de skills | Probado |
+
+## Arquitectura Stellar de un vistazo
+
+- **Redes.** Stellar mainnet para las dos operaciones del 25 de octubre de 2026; testnet para la evidencia anterior ([50 relecturas desde Horizon](./docs/TESTNET_EVIDENCE.md)) y la [demo x402](./demo/x402/).
+- **Activo.** XLM nativo. **Contratos:** ninguno; el kernel no despliega contratos Soroban.
+- **Wallets.** Una wallet gestionada por Pollar (`GALQPWE7…`) pagó 0,0001 XLM a una wallet LOBSTR (`GDS6AO6U…CO36`), con comisión patrocinada. Tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379.
+- **Integraciones y APIs.** El SDK de Pollar (`@pollar/core` 0.12.0, en el navegador) ejecuta el pago cuando se abre la puerta humana del kernel; después el kernel lee la transacción desde la API de Horizon y compara destino, monto y activo ([demo/pollar](./demo/pollar)). x402 corre en testnet.
+- **Ancla.** El digest de un recibo (`71f58fc2…`) escrito como memo hash y como entrada `manage_data`: tx `2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7`, ledger 65133489.
+- **Variables de entorno.** Ninguna para `examples/walkthrough.js`; el flujo con Pollar necesita una cuenta de Pollar y un proceso local del kernel.
 
 ## Los proyectos
 
