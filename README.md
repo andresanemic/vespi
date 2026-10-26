@@ -17,7 +17,7 @@
 <p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>And it lets you verify what AI agents do on Stellar: a payment approved by a person before it happens and checked against the public ledger after, proven on mainnet with a real Pollar payment ([evidence](./demo/pollar)).<br>We want Vespi to be the kernel for building apps on Stellar.</p>
 
 <p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=g2iw29M6WI0"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a> · <a href="https://vespi.xyz/pollar"><b>Pollar evidence</b></a> · <a href="./demo/testnet/"><b>Pay on testnet yourself</b></a></p>
-<p align="center">Pitch deck: <a href="https://drive.google.com/file/d/1iiEHJ35hFaYM_df4a6EtXdK8vmI4f5EG/view?usp=sharing">EN</a> · <a href="https://drive.google.com/file/d/1vj3HTJVWc7TaPyvq1iPovfLgis9KzbYg/view?usp=sharing">ES</a> &nbsp;|&nbsp; One pager: <a href="https://drive.google.com/file/d/1KvmeMdTnY7vk3HHq1ZC9ILwiRILh99h4/view?usp=drive_link">EN</a> · <a href="https://drive.google.com/file/d/16YOg0ps5uRaKhfMcS0D0imn5yN8K70Wm/view?usp=sharing">ES</a> &nbsp;|&nbsp; <a href="https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing">Letters of intent</a></p>
+<p align="center">Pitch deck: <a href="https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing">EN</a> · <a href="https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing">ES</a> &nbsp;|&nbsp; One pager: <a href="https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link">EN</a> · <a href="https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing">ES</a> &nbsp;|&nbsp; <a href="https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing">Letters of intent</a></p>
 
 
 ---
@@ -26,10 +26,10 @@
 
 ## Clone and run
 
-The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package. The commands below pin the published `v0.1.8-kernel` tag.
+The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package. The commands below pin `meridian-2026-10-26`, including the event payment demo. The original library release remains at `v0.1.8-kernel`.
 
 ```sh
-git clone --branch v0.1.8-kernel --depth 1 https://github.com/andresanemic/vespi.git
+git clone --branch meridian-2026-10-26 --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 node examples/walkthrough.js
 ```
@@ -38,17 +38,18 @@ At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage
 
 See what an agent is not allowed to do: `node examples/refusal.js` refuses an over-limit operation with no effect, then runs one inside the grant and leaves a receipt.
 
-**Make a real Stellar payment yourself, behind the human gate.** No account, no configuration, testnet only. Added during HackMeridian (26 October 2026), after the 0.1.8 tag, so clone `master` for this step:
+**Make a real Stellar payment yourself, behind the human gate.** The default flow creates fresh testnet accounts. Added during HackMeridian (26 October 2026), it is included in the checkout above. From the repository root:
 
 ```sh
-cd demo/testnet && npm ci && node pay.cjs
+npm --prefix demo/testnet ci
+node demo/testnet/pay.cjs
 ```
 
 The kernel shows you the hash of the one transaction it may sign; without your yes nothing is signed. After the yes it reads the ledger and checks that the transaction on chain is the one you approved. The same flow ran on Stellar mainnet on 26 October 2026: the kernel signed a 0.0001 XLM payment only after a person answered yes, and the ledger shows the approved transaction (tx [`b402c623…d98f`](https://stellar.expert/explorer/public/tx/b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f)). To re-verify the three real mainnet transactions, read-only and with no install: `node demo/testnet/pay.cjs --verify-mainnet`. Details in [demo/testnet](./demo/testnet/).
 
 > Run it before you believe it.
 
-**What "experimental" means here.** The kernel is a 0.1 source checkout, not an npm package, and everything runs in a local walkthrough or on Stellar testnet with fictional data. The only mainnet evidence is two real transactions made on 25 October 2026: the anchor of a receipt and a payment with Pollar under the kernel's human gate (see [Pollar evidence](https://vespi.xyz/pollar)). It also has design limits we declare: approval names are labels, not signatures; budgets do not accumulate across operations; the host stores the receipts. [Judge it in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md).
+**What "experimental" means here.** The kernel is a 0.1 source library. The walkthrough runs offline; the payment demos use Stellar testnet and mainnet. Three real mainnet transactions from 25–26 October 2026 show a Pollar payment, the anchor of a separate receipt, and a payment signed by the demo only after a person approved its transaction hash. [Read the payment evidence](./demo/testnet/). The host supplies trusted ports and stores receipts; approval names are labels rather than identity signatures, and budgets apply per operation. [Judge it in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md).
 
 <details>
 <summary><b>Read in English</b></summary>
@@ -85,7 +86,7 @@ Start with one operation and keep the proof. Every line says how far it has been
 
 ## Stellar architecture at a glance
 
-- **Networks.** Stellar mainnet for the two 25 October 2026 operations; testnet for the earlier evidence ([50 readbacks from Horizon](./docs/TESTNET_EVIDENCE.md)) and the [x402 demo](./demo/x402/).
+- **Networks.** Stellar mainnet for three operations on 25–26 October 2026; testnet for the earlier evidence ([50 readbacks from Horizon](./docs/TESTNET_EVIDENCE.md)) and the [x402 demo](./demo/x402/).
 - **Asset.** Native XLM. **Contracts:** none; the kernel deploys no Soroban contract.
 - **Wallets.** A Pollar-managed wallet (`GALQPWE7…`) paid 0.0001 XLM to a LOBSTR wallet (`GDS6AO6U…CO36`); the fee was sponsored. Tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379.
 - **Integrations and APIs.** The Pollar SDK (`@pollar/core` 0.12.0, in the browser) executes the payment after the kernel's human gate opens; the kernel then reads the transaction from the Horizon API and compares destination, amount and asset ([demo/pollar](./demo/pollar)). x402 runs on testnet.
@@ -140,7 +141,7 @@ You arrive with an idea. You talk to the AI and it builds together. The AI does 
 
 Vespi keeps authority, checked result and next agreed action together when work changes hands. You resume what still holds; an uncertain exercised effect returns to you for reconciliation.
 
-Kernel 0.1.8 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. Chain evidence in those projects is Stellar testnet with fictional data, no real money; the projects that declare no network (such as Queen and Vela) are local walkthroughs. The kernel itself has two real mainnet transactions from 25 October 2026: a payment of 0.0001 XLM with Pollar under the human gate, verified on the ledger with a receipt (tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379), and the receipt anchor above. The Pollar flow is a demo in [`demo/pollar`](./demo/pollar), outside the kernel library, with its tests and the receipt.
+Kernel 0.1.8 is a dependency-free JavaScript source library. It is an engine for Stellar apps across 11 functional explorations. Chain evidence in those projects is Stellar testnet with fictional data, no real money; the projects that declare no network (such as Queen and Vela) are local walkthroughs. The integrated demos have three real mainnet transactions from 25–26 October 2026: a payment of 0.0001 XLM with Pollar under the human gate, verified on the ledger with a receipt (tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379), the receipt anchor above, and the payment signed after approval of its hash on 26 October (tx `b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f`, ledger 65139109). The Pollar flow is a demo in [`demo/pollar`](./demo/pollar), outside the kernel library, with its tests and the receipt.
 
 ### Start with an operation
 
@@ -158,7 +159,7 @@ The walkthrough's [test](./test/walkthrough.test.js) checks an observed local ef
 
 The kernel is JavaScript without runtime dependencies. A capability declares its requirements; the operation checks authority before `perform`, asks the human gate when required and obtains a separate verification result. [Authority tests](./test/k2.test.js) cover asset, ceiling, destination, expiry and distinct named approvals, but ordinary approval names are labels rather than authenticated signatures and money budgets are not accumulated across operations. The host controls its tools, identities, clock and storage.
 
-[Receipt tests](./test/k3.test.js) cover the SHA-256 digest, named successful checks and omissions, but the digest proves integrity rather than authenticity and can be recomputed by anyone who rewrites the receipt. An external anchor requires a separate confirmation of digest and network. `buildReceipt({ anchorNetwork })` accepts `stellar:testnet` (the default) or `stellar:pubnet`; unsupported networks throw. The chain evidence saved in this repository is testnet, on fictional data and with no real money; the two mainnet transactions of 25 October 2026 are described above and are not part of the saved fixtures.
+[Receipt tests](./test/k3.test.js) cover the SHA-256 digest, named successful checks and omissions, but the digest proves integrity rather than authenticity and can be recomputed by anyone who rewrites the receipt. An external anchor requires a separate confirmation of digest and network. `buildReceipt({ anchorNetwork })` accepts `stellar:testnet` (the default) or `stellar:pubnet`; unsupported networks throw. The test fixtures use fictional data and testnet. The three real mainnet transactions of 25–26 October can be re-verified using the [payment demos](./demo/testnet/).
 
 [The capability catalog](./docs/CAPABILITIES.md) explains the API and host responsibilities.
 
@@ -232,7 +233,7 @@ Empieza con una operación y guarda la prueba. Cada línea dice hasta dónde est
 
 ## Arquitectura Stellar de un vistazo
 
-- **Redes.** Stellar mainnet para las dos operaciones del 25 de octubre de 2026; testnet para la evidencia anterior ([50 relecturas desde Horizon](./docs/TESTNET_EVIDENCE.md)) y la [demo x402](./demo/x402/).
+- **Redes.** Stellar mainnet para tres operaciones del 25–26 de octubre de 2026; testnet para la evidencia anterior ([50 relecturas desde Horizon](./docs/TESTNET_EVIDENCE.md)) y la [demo x402](./demo/x402/).
 - **Activo.** XLM nativo. **Contratos:** ninguno; el kernel no despliega contratos Soroban.
 - **Wallets.** Una wallet gestionada por Pollar (`GALQPWE7…`) pagó 0,0001 XLM a una wallet LOBSTR (`GDS6AO6U…CO36`), con comisión patrocinada. Tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379.
 - **Integraciones y APIs.** El SDK de Pollar (`@pollar/core` 0.12.0, en el navegador) ejecuta el pago cuando se abre la puerta humana del kernel; después el kernel lee la transacción desde la API de Horizon y compara destino, monto y activo ([demo/pollar](./demo/pollar)). x402 corre en testnet.
@@ -283,16 +284,16 @@ Llegas con una idea. Conversas con la IA y la construyen juntos. La IA no aprueb
 
 Vespi conserva juntas la autoridad, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Retomas lo que sigue valiendo; un efecto ejercido incierto vuelve a ti para reconciliarlo.
 
-El kernel 0.1.8 es una biblioteca fuente JavaScript sin dependencias. La aprobación conserva su contexto en la operación y el recibo, y el kernel lo comprueba antes de un efecto. Un checkpoint conserva autoridad acotada al retomar; el host aporta almacenamiento auténtico y una generación mínima aceptada. Los callbacks se invocan sin receptor: si un host depende de `this`, debe pasar una flecha, clausura o función ligada. Consulta el [contrato de migración](./docs/HOST_CALLBACKS.md) y la [evidencia de 0.1.8](./docs/RELEASE_0.1.8_KERNEL.md). Es un motor de apps Stellar en 11 exploraciones funcionales. La evidencia de cadena de esos proyectos es testnet con datos ficticios, sin dinero real; los proyectos que no declaran red (como Queen y Vela) son recorridos locales. El kernel tiene dos transacciones reales en mainnet del 25 de octubre de 2026: un pago de 0,0001 XLM con Pollar bajo la puerta humana, verificado en el ledger y con recibo (tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379), y el ancla del recibo de arriba. El flujo de Pollar es una demo en [`demo/pollar`](./demo/pollar), fuera de la biblioteca del kernel, con sus pruebas y el recibo.
+El kernel 0.1.8 es una biblioteca fuente JavaScript sin dependencias. La aprobación conserva su contexto en la operación y el recibo, y el kernel lo comprueba antes de un efecto. Un checkpoint conserva autoridad acotada al retomar; el host aporta almacenamiento auténtico y una generación mínima aceptada. Los callbacks se invocan sin receptor: si un host depende de `this`, debe pasar una flecha, clausura o función ligada. Consulta el [contrato de migración](./docs/HOST_CALLBACKS.md) y la [evidencia de 0.1.8](./docs/RELEASE_0.1.8_KERNEL.md). Es un motor de apps Stellar en 11 exploraciones funcionales. La evidencia de cadena de esos proyectos es testnet con datos ficticios, sin dinero real; los proyectos que no declaran red (como Queen y Vela) son recorridos locales. Las demos integradas tienen tres transacciones reales en mainnet del 25–26 de octubre de 2026: un pago de 0,0001 XLM con Pollar bajo la puerta humana, verificado en el ledger y con recibo (tx `52759df5db949d6bd9b506de0081f7bddb5254bb374de8f682b5a1e507e37bb2`, ledger 65134379), el ancla del recibo de arriba y el pago firmado tras aprobar su hash el 26 de octubre (tx `b402c62307e0c50fb859969a21a8e1277ed1c29899b19f79ee6f557f9a93d98f`, ledger 65139109). El flujo de Pollar es una demo en [`demo/pollar`](./demo/pollar), fuera de la biblioteca del kernel, con sus pruebas y el recibo.
 
 ## Empieza con una operación
 
-Los comandos siguientes fijan el tag publicado `v0.1.8-kernel`.
+Los comandos siguientes fijan `meridian-2026-10-26`, con la demo de pago del evento. El release original de la biblioteca conserva `v0.1.8-kernel`.
 
 Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con tu nombre seguido de `: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
 ```sh
-git clone --branch v0.1.8-kernel --depth 1 https://github.com/andresanemic/vespi.git
+git clone --branch meridian-2026-10-26 --depth 1 https://github.com/andresanemic/vespi.git
 cd vespi
 node examples/walkthrough.js
 ```
@@ -311,7 +312,7 @@ node scripts/verify-testnet-evidence.mjs --offline
 
 El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus requisitos; la operación comprueba autoridad antes de `perform`, consulta la puerta humana cuando corresponde y recibe una verificación separada. [Las pruebas de autoridad](./test/k2.test.js) cubren activo, techo, destino, vencimiento y aprobaciones con nombres distintos, pero los nombres de aprobación ordinaria son etiquetas y no firmas autenticadas, y los presupuestos de dinero no se acumulan entre operaciones. El host controla herramientas, identidades, reloj y almacenamiento.
 
-[Las pruebas de recibos](./test/k3.test.js) cubren el digest SHA-256, comprobaciones exitosas con nombre y omisiones, pero el digest demuestra integridad y no autenticidad, y cualquiera que reescriba el recibo puede recalcularlo. Un ancla externa exige confirmar por separado digest y red. `buildReceipt({ anchorNetwork })` acepta `stellar:testnet` (el valor por defecto, sin cambio) o `stellar:pubnet`; una red no admitida produce un error. El ancla pendiente no prueba interacción con una red y su network no entra al digest del recibo. Toda evidencia de cadena guardada en este repositorio es testnet, con datos ficticios y sin dinero real; las dos transacciones de mainnet del 25 de octubre de 2026 constan arriba y no forman parte de los fixtures guardados.
+[Las pruebas de recibos](./test/k3.test.js) cubren el digest SHA-256, comprobaciones exitosas con nombre y omisiones, pero el digest demuestra integridad y no autenticidad, y cualquiera que reescriba el recibo puede recalcularlo. Un ancla externa exige confirmar por separado digest y red. `buildReceipt({ anchorNetwork })` acepta `stellar:testnet` (el valor por defecto, sin cambio) o `stellar:pubnet`; una red no admitida produce un error. El ancla pendiente no prueba interacción con una red y su network no entra al digest del recibo. Los fixtures usan datos ficticios y testnet. Las tres transacciones reales mainnet del 25–26 de octubre pueden releerse con las [demos de pago](./demo/testnet/).
 
 [El catálogo de capacidades](./docs/CAPABILITIES.md) explica la API y las responsabilidades del host.
 

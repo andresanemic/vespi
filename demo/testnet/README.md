@@ -35,8 +35,8 @@ It reads Stellar mainnet through Horizon and checks the three real transactions 
 ## Evidence and tests
 
 - `receipts/testnet-receipt-0e7be64d438bae71.json` — a real run of this demo on 26 October 2026: tx [`0e7be64d…88b7`](https://stellar.expert/explorer/testnet/tx/0e7be64d438bae713528de7d3e18ca628de8a522d50846f54fccc752462d88b7), receipt `verified` with seven checks.
-- `npm test` (or `node --test demo/testnet/testnet.test.cjs` from the root, no install needed) runs seven offline tests: an approved exact transaction is verified and signed once; a decline signs nothing; an approval that does not echo the approval request signs nothing; a transaction changed after the yes is blocked before signing; a ledger showing another transaction or another amount is not verified; and the mainnet re-verification reads the recorded payment and anchor.
+- `npm test` (or `node --test demo/testnet/testnet.test.cjs` from the root, no install needed) runs eight offline tests: an approved exact transaction is verified and signed once; a decline signs nothing; an approval that does not echo the approval request signs nothing; a transaction changed after the yes is blocked before signing; a ledger showing another transaction or another amount is not verified; and the mainnet re-verification reads the recorded payment and anchor.
 
 ## Limits
 
-This is a demo outside the kernel library: the Stellar SDK and the signing key live here, not in `src/`. Testnet only; it never touches mainnet funds. The approval is a terminal answer bound to the transaction hash through the kernel's approval-request digest; it is not a hardware signature by the person.
+This is a demo outside the kernel library: the Stellar SDK and the signing key live here, not in `src/`. The default flow uses testnet; the explicit `--network=mainnet` mode spends real XLM from the account provided by the operator, with an interactive approval and a 0.01 XLM cap. The approval is a terminal answer bound to the transaction hash through the kernel's approval-request digest; it is not a hardware signature by the person.
