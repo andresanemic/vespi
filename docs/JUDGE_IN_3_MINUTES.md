@@ -2,7 +2,7 @@
 
 Kernel 0.1.8, published on 2026-10-25 ([release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel)). The clone command below pins that tag. Read the [callback migration contract](./HOST_CALLBACKS.md) when adapting a host that uses `this`.
 
-> Three commands, the third optional, the output you should see, and what to look for. Needs Node.js 24 or later. Cloning requires internet; the walkthrough runs offline, with no real money. The first two take about 15 seconds and need no install. Español: [Juzga Vespi en 3 minutos](#juzga-vespi-en-3-minutos).
+> Five steps, the last optional, the output you should see, and what to look for. Needs Node.js 24 or later. Cloning requires internet; the walkthrough runs offline, with no real money. The first two take about 15 seconds and need no install. Español: [Juzga Vespi en 3 minutos](#juzga-vespi-en-3-minutos).
 
 ```sh
 git clone --branch v0.1.8-kernel --depth 1 https://github.com/andresanemic/vespi.git
@@ -47,7 +47,23 @@ operation 2: spend 3 NOTE (granted ceiling: 5)
 
 The over-limit request leaves a receipt with `coverage: []`: nothing ran. The in-limit one runs and is checked.
 
-**3. Optional: the whole suite (1 to 2 minutes more).**
+**3. Make a real Stellar payment yourself, behind the human gate (about 1 minute, testnet).** Added during HackMeridian on 26 October 2026, after the 0.1.8 tag, so it lives on `master`: clone without `--branch` for this step.
+
+```sh
+cd demo/testnet && npm ci && node pay.cjs
+```
+
+The demo funds two fresh testnet accounts with Friendbot (no account, no real money), builds one 1 XLM payment and stops at the gate, showing you that transaction's hash. Answer `n`: the receipt says `needs_human_decision`, nothing was signed. Run it again and answer `y`: only that transaction is signed and sent, the kernel reads it back from Horizon, checks it is the exact transaction you approved (`approvedTxOnLedger`), and prints the stellar.expert link. See [demo/testnet](../demo/testnet/).
+
+**4. Re-verify the real mainnet payment (about 5 seconds, no install).**
+
+```sh
+node demo/testnet/pay.cjs --verify-mainnet
+```
+
+It reads Stellar mainnet and checks the 0.0001 XLM Pollar payment of 25 October 2026 (six checks) and the receipt anchor (digest as hash memo and `manage_data`). Read-only: it does not replay the approval or the payment.
+
+**5. Optional: the whole suite (1 to 2 minutes more).**
 
 ```sh
 (cd demo/x402 && npm ci)
@@ -64,7 +80,7 @@ At this cut: `tests 1224`, `pass 1200`, `fail 0`, `todo 24`. The 24 `todo` are b
 
 Kernel 0.1.8, publicado el 2026-10-25 ([release](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel)). El comando de clonación fija ese tag. Consulta el [contrato de migración de callbacks](./HOST_CALLBACKS.md) si adaptas un host que dependa de `this`.
 
-> Tres comandos, el tercero opcional, la salida que deberías ver y qué mirar. Necesita Node.js 24 o posterior. La clonación requiere internet; el recorrido funciona sin red y sin dinero real. Los dos primeros toman unos 15 segundos y no instalan nada.
+> Cinco pasos, el último opcional, la salida que deberías ver y qué mirar. Necesita Node.js 24 o posterior. La clonación requiere internet; el recorrido funciona sin red y sin dinero real. Los dos primeros toman unos 15 segundos y no instalan nada.
 
 ```sh
 git clone --branch v0.1.8-kernel --depth 1 https://github.com/andresanemic/vespi.git
@@ -87,7 +103,23 @@ node examples/refusal.js
 
 La petición fuera del límite deja un recibo con `coverage: []`: no corrió nada. La que está dentro del límite corre y se comprueba (la salida es la de arriba).
 
-**3. Opcional: la suite completa (1 a 2 minutos más).**
+**3. Haz tú un pago real en Stellar, detrás de la puerta humana (alrededor de 1 minuto, testnet).** Agregado durante HackMeridian el 26 de octubre de 2026, después del tag 0.1.8, así que vive en `master`: clona sin `--branch` para este paso.
+
+```sh
+cd demo/testnet && npm ci && node pay.cjs
+```
+
+La demo fondea dos cuentas nuevas de testnet con Friendbot (sin cuenta, sin dinero real), arma un pago de 1 XLM y se detiene en la puerta mostrándote el hash de esa transacción. Responde `n`: el recibo dice `needs_human_decision` y no se firmó nada. Vuelve a correrla y responde `y`: solo esa transacción se firma y se envía, el kernel la relee desde Horizon, comprueba que es exactamente la que aprobaste (`approvedTxOnLedger`) e imprime el enlace de stellar.expert. Ver [demo/testnet](../demo/testnet/).
+
+**4. Re-verifica el pago real en mainnet (unos 5 segundos, sin instalar).**
+
+```sh
+node demo/testnet/pay.cjs --verify-mainnet
+```
+
+Lee Stellar mainnet y comprueba el pago Pollar de 0,0001 XLM del 25 de octubre de 2026 (seis comprobaciones) y el ancla del recibo (digest como memo hash y `manage_data`). Solo lectura: no repite la aprobación ni el pago.
+
+**5. Opcional: la suite completa (1 a 2 minutos más).**
 
 ```sh
 (cd demo/x402 && npm ci)

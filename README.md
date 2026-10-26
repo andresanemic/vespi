@@ -16,7 +16,7 @@
 
 <p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>And it lets you verify what AI agents do on Stellar: a payment approved by a person before it happens and checked against the public ledger after, proven on mainnet with a real Pollar payment ([evidence](./demo/pollar)).<br>We want Vespi to be the kernel for building apps on Stellar.</p>
 
-<p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=g2iw29M6WI0"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a> · <a href="https://vespi.xyz/pollar"><b>Pollar evidence</b></a></p>
+<p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=g2iw29M6WI0"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a> · <a href="https://vespi.xyz/pollar"><b>Pollar evidence</b></a> · <a href="./demo/testnet/"><b>Pay on testnet yourself</b></a></p>
 <p align="center">Pitch deck: <a href="https://drive.google.com/file/d/1iiEHJ35hFaYM_df4a6EtXdK8vmI4f5EG/view?usp=sharing">EN</a> · <a href="https://drive.google.com/file/d/1vj3HTJVWc7TaPyvq1iPovfLgis9KzbYg/view?usp=sharing">ES</a> &nbsp;|&nbsp; One pager: <a href="https://drive.google.com/file/d/1KvmeMdTnY7vk3HHq1ZC9ILwiRILh99h4/view?usp=drive_link">EN</a> · <a href="https://drive.google.com/file/d/16YOg0ps5uRaKhfMcS0D0imn5yN8K70Wm/view?usp=sharing">ES</a> &nbsp;|&nbsp; <a href="https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing">Letters of intent</a></p>
 
 
@@ -37,6 +37,14 @@ node examples/walkthrough.js
 At the prompt, enter `Ada: approve`. Inspect the receipt’s `status`, `coverage` and `notCovered` fields.
 
 See what an agent is not allowed to do: `node examples/refusal.js` refuses an over-limit operation with no effect, then runs one inside the grant and leaves a receipt.
+
+**Make a real Stellar payment yourself, behind the human gate.** No account, no configuration, testnet only. Added during HackMeridian (26 October 2026), after the 0.1.8 tag, so clone `master` for this step:
+
+```sh
+cd demo/testnet && npm ci && node pay.cjs
+```
+
+The kernel shows you the hash of the one transaction it may sign; without your yes nothing is signed. After the yes it reads the ledger and checks that the transaction on chain is the one you approved. To re-verify the real mainnet payment and receipt anchor of 25 October, read-only and with no install: `node demo/testnet/pay.cjs --verify-mainnet`. Details in [demo/testnet](./demo/testnet/).
 
 > Run it before you believe it.
 

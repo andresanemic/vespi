@@ -25,6 +25,8 @@ jobs:
       - name: install x402 test dependencies
         working-directory: demo/x402
         run: npm ci
+      - name: testnet demo tests (offline, no install)
+        run: node --test demo/testnet/testnet.test.cjs
       - name: kernel suite (no network, no wallet)
         shell: bash
         run: node --test test/*.test.js

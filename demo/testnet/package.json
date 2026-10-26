@@ -1,0 +1,18 @@
+{
+  "name": "vespi-demo-testnet",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Demo: a Stellar testnet payment behind the Vespi kernel's human gate, runnable by anyone with no account. Not product.",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test testnet.test.cjs",
+    "pay": "node pay.cjs",
+    "verify-mainnet": "node pay.cjs --verify-mainnet"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "16.3.0"
+  }
+}
