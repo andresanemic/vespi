@@ -11,7 +11,7 @@
   <a href="#the-projects"><img src="https://img.shields.io/badge/projects-11_public_repos-D7B698?style=for-the-badge&labelColor=07111A" alt="11 functional project repositories"></a>
   <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet-50_readbacks_%C2%B7_5_semantic-E0C170?style=for-the-badge&labelColor=07111A" alt="50 testnet readbacks; 5 cases semantically verified"></a>
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/demo-x402_%C2%B7_Stellar_SDK-E0C170?style=for-the-badge&labelColor=07111A" alt="Opt-in x402 demo using the Stellar SDK"></a>
-  <a href="./data/traffic/clones.json"><img src="https://img.shields.io/badge/Vespi-1287_clones_in_28_days-E0C170?style=for-the-badge&labelColor=07111A" alt="1,287 clones of this repository, Sep 27 to Oct 24, 2026 (UTC) (GitHub traffic, recorded daily; clones, not unique people)"></a>
+  <a href="./data/traffic/clones.json"><img src="https://img.shields.io/badge/Vespi-1478_clones_in_29_days-E0C170?style=for-the-badge&labelColor=07111A" alt="1,478 clones of this repository, Sep 27 to Oct 25, 2026 (UTC) (GitHub traffic, recorded daily; clones, not unique people)"></a>
 </p>
 
 <p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>And it lets you verify what AI agents do on Stellar: a payment approved by a person before it happens and checked against the public ledger after, proven on mainnet with a real Pollar payment ([evidence](./demo/pollar)).<br>We want Vespi to be the kernel for building apps on Stellar.</p>
