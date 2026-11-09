@@ -1,0 +1,303 @@
+{
+  "schema": "vespi-sandbox-run/1",
+  "network": "stellar:testnet",
+  "horizon": "https://horizon-testnet.stellar.org",
+  "simulated": true,
+  "startedAt": "2026-11-09T19:53:50.554Z",
+  "finishedAt": "2026-11-09T19:54:23.717Z",
+  "role": {
+    "name": "contributor-payments-sim",
+    "simulated": true,
+    "notice": "SIMULATED ROLE. No real organisation, person or money is involved. Testnet only.",
+    "objective": "Pay approved contributions of a Permamuseum-style archive to the contributors who made them, and nothing else.",
+    "limits": {
+      "network": "stellar:testnet",
+      "assets": [
+        "XLM"
+      ],
+      "maxBudgetXLM": "5",
+      "mustNot": [
+        "pay a destination the person did not list",
+        "spend above the budget the person granted",
+        "act after the concession expires",
+        "hold or print any secret key"
+      ]
+    }
+  },
+  "concession": {
+    "grantedBy": "person-simulated-curator",
+    "budgetStroops": "30000000",
+    "expiresAt": "2026-11-09T20:53:50.554Z",
+    "spend": [
+      {
+        "asset": "XLM",
+        "maxAmount": "30000000",
+        "to": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "network": "stellar:testnet",
+        "expiresAt": "2026-11-09T20:53:50.554Z"
+      },
+      {
+        "asset": "XLM",
+        "maxAmount": "30000000",
+        "to": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+        "network": "stellar:testnet",
+        "expiresAt": "2026-11-09T20:53:50.554Z"
+      }
+    ]
+  },
+  "staleConcessionExpiresAt": "2026-11-01T00:00:00Z",
+  "accounts": {
+    "treasury": "GCEN56HHTIPR34AN4FK7QO4NN7UMEETIEGPVOOKMPKH5TEN32GYO4H3H",
+    "contributor-ana": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+    "contributor-bruno": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+    "outsider": "GDUA6IB5OKRL6G3MSYYW455E7U7HCDB5PERKBUNIG45EDGSAHTERCDYP",
+    "unlisted-random": "GAAWYKB5S4G4BHORVWVQROYTSEVGQVC5XHGA2YYSCUCXWTSC4U5WN2PC"
+  },
+  "payer": "GCEN56HHTIPR34AN4FK7QO4NN7UMEETIEGPVOOKMPKH5TEN32GYO4H3H",
+  "steps": [
+    {
+      "id": "p1",
+      "kind": "pay",
+      "requested": {
+        "to": "contributor-ana",
+        "toAddress": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "asset": "XLM",
+        "amountXLM": "0.5"
+      },
+      "kernelStatus": "verified",
+      "detail": null,
+      "txHash": "bf7a3496fb319cdf1f09917a814931a308d45a00b0ac0ff9d0c14523e088fc92",
+      "outcome": "paid",
+      "receiptFile": "receipts/01-p1-paid.json",
+      "receiptDigest": "0722211fa560da20d517a520d70fd75da5da31bdf2115614b7a03253e1ce4648",
+      "receiptStatus": "verified"
+    },
+    {
+      "id": "p2",
+      "kind": "pay",
+      "requested": {
+        "to": "contributor-bruno",
+        "toAddress": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+        "asset": "XLM",
+        "amountXLM": "0.5"
+      },
+      "kernelStatus": "verified",
+      "detail": null,
+      "txHash": "d7acab46b26f590a08a911f3e6aa5eb34cd367ef96274429c3653317fcdfd504",
+      "outcome": "paid",
+      "receiptFile": "receipts/02-p2-paid.json",
+      "receiptDigest": "dc64006b8b6ffc598c621a566e5812b0a18a6cb01d39c5ccbe2730cd81751866",
+      "receiptStatus": "verified"
+    },
+    {
+      "id": "p3",
+      "kind": "pay",
+      "requested": {
+        "to": "contributor-ana",
+        "toAddress": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "asset": "XLM",
+        "amountXLM": "0.4"
+      },
+      "kernelStatus": "verified",
+      "detail": null,
+      "txHash": "87d534b63d6d32a0e8a94689c2337e547e444f244ac8e626660a8d295bb94ed0",
+      "outcome": "paid",
+      "receiptFile": "receipts/03-p3-paid.json",
+      "receiptDigest": "47bada76ea4707a530d7409d137f4ae86fcc951d70be052d5a21b30eb115339b",
+      "receiptStatus": "verified"
+    },
+    {
+      "id": "p4",
+      "kind": "pay",
+      "requested": {
+        "to": "contributor-bruno",
+        "toAddress": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+        "asset": "XLM",
+        "amountXLM": "0.4"
+      },
+      "kernelStatus": "verified",
+      "detail": null,
+      "txHash": "ef1c8b8d73e6017f18943d6b9e5574749ef9e9196217b17d36762148364cc575",
+      "outcome": "paid",
+      "receiptFile": "receipts/04-p4-paid.json",
+      "receiptDigest": "05463fbb49507b54d195d655842b03666afed0c59689c1aba14bfbab215d7d83",
+      "receiptStatus": "verified"
+    },
+    {
+      "id": "p5",
+      "kind": "pay",
+      "requested": {
+        "to": "contributor-ana",
+        "toAddress": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "asset": "XLM",
+        "amountXLM": "0.3"
+      },
+      "kernelStatus": "verified",
+      "detail": null,
+      "txHash": "3f4d9f00c1c7f84336f1075f6d30abe721fd8b24659be7f193190ba48e63c14d",
+      "outcome": "paid",
+      "receiptFile": "receipts/05-p5-paid.json",
+      "receiptDigest": "6a42be1cce5ba762d99479bc9adeac8d23f6ffd5571eefd3c88937a3e6ab4943",
+      "receiptStatus": "verified"
+    },
+    {
+      "id": "p6",
+      "kind": "pay",
+      "requested": {
+        "to": "contributor-bruno",
+        "toAddress": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+        "asset": "XLM",
+        "amountXLM": "0.3"
+      },
+      "kernelStatus": "verified",
+      "detail": null,
+      "txHash": "03e0aa5648a9d96a084ee27e6872303845ee3e75a1d43c752372a6d01730ad17",
+      "outcome": "paid",
+      "receiptFile": "receipts/06-p6-paid.json",
+      "receiptDigest": "c56f13af197aa18ced9c8cc439d18b738c6ffd9003e4d2e1e138abc32bdb6dd7",
+      "receiptStatus": "verified"
+    },
+    {
+      "id": "x1",
+      "kind": "attempt",
+      "requested": {
+        "to": "contributor-ana",
+        "toAddress": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "asset": "XLM",
+        "amountXLM": "0.7"
+      },
+      "kernelStatus": "needs_human_decision",
+      "detail": "requirements consume 7000000 against grant max 6000000 (XLM to GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q)",
+      "attemptReason": "over_budget_cumulative",
+      "outcome": "blocked",
+      "receiptFile": "receipts/07-x1-blocked.json",
+      "receiptDigest": "b70dd700504bfb23aedc684981bd0b83c369cccef40c9503c6bee8eff0ef85da",
+      "receiptStatus": "needs_human_decision"
+    },
+    {
+      "id": "x2",
+      "kind": "attempt",
+      "requested": {
+        "to": "contributor-bruno",
+        "toAddress": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+        "asset": "XLM",
+        "amountXLM": "25"
+      },
+      "kernelStatus": "needs_human_decision",
+      "detail": "requirements consume 250000000 against grant max 6000000 (XLM to GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR)",
+      "attemptReason": "over_budget_single",
+      "outcome": "blocked",
+      "receiptFile": "receipts/08-x2-blocked.json",
+      "receiptDigest": "ab7038143c9885937f077a2cca25cb770ac846ba1402243903e084eb74039dec",
+      "receiptStatus": "needs_human_decision"
+    },
+    {
+      "id": "x3",
+      "kind": "attempt",
+      "requested": {
+        "to": "outsider",
+        "toAddress": "GDUA6IB5OKRL6G3MSYYW455E7U7HCDB5PERKBUNIG45EDGSAHTERCDYP",
+        "asset": "XLM",
+        "amountXLM": "0.1"
+      },
+      "kernelStatus": "needs_human_decision",
+      "detail": "no grant for asset XLM to GDUA6IB5OKRL6G3MSYYW455E7U7HCDB5PERKBUNIG45EDGSAHTERCDYP",
+      "attemptReason": "destination_not_allowed",
+      "outcome": "blocked",
+      "receiptFile": "receipts/09-x3-blocked.json",
+      "receiptDigest": "fed875a5831c8bc2983f26a6941e9f1cae73d713616cfcab83570be37d1d3eb9",
+      "receiptStatus": "needs_human_decision"
+    },
+    {
+      "id": "x4",
+      "kind": "attempt",
+      "requested": {
+        "to": "unlisted-random",
+        "toAddress": "GAAWYKB5S4G4BHORVWVQROYTSEVGQVC5XHGA2YYSCUCXWTSC4U5WN2PC",
+        "asset": "XLM",
+        "amountXLM": "0.1"
+      },
+      "kernelStatus": "needs_human_decision",
+      "detail": "no grant for asset XLM to GAAWYKB5S4G4BHORVWVQROYTSEVGQVC5XHGA2YYSCUCXWTSC4U5WN2PC",
+      "attemptReason": "destination_not_allowed",
+      "outcome": "blocked",
+      "receiptFile": "receipts/10-x4-blocked.json",
+      "receiptDigest": "2b655fc8a7cd1ef209f094b9587bb9b89c69d2763b8616b711f82b0630330300",
+      "receiptStatus": "needs_human_decision"
+    },
+    {
+      "id": "x5",
+      "kind": "attempt",
+      "requested": {
+        "to": "contributor-ana",
+        "toAddress": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "asset": "XLM",
+        "amountXLM": "0.1"
+      },
+      "kernelStatus": "needs_human_decision",
+      "detail": "grant for asset XLM expired at 2026-11-01T00:00:00Z",
+      "attemptReason": "authority_expired",
+      "outcome": "blocked",
+      "receiptFile": "receipts/11-x5-blocked.json",
+      "receiptDigest": "384aa83cd46381d0c417f5770e9cffe501456564977beb63f6b8a5749ce361d5",
+      "receiptStatus": "needs_human_decision"
+    },
+    {
+      "id": "x6",
+      "kind": "attempt",
+      "requested": {
+        "to": "contributor-bruno",
+        "toAddress": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+        "asset": "XLM",
+        "amountXLM": "0.2"
+      },
+      "kernelStatus": "needs_human_decision",
+      "detail": "grant for asset XLM expired at 2026-11-01T00:00:00Z",
+      "attemptReason": "authority_expired",
+      "outcome": "blocked",
+      "receiptFile": "receipts/12-x6-blocked.json",
+      "receiptDigest": "a43be33da22ce2029ae4c6dfdd1343a0e47dee59f5a58adb282a56d72e47e825",
+      "receiptStatus": "needs_human_decision"
+    },
+    {
+      "id": "x7",
+      "kind": "attempt",
+      "requested": {
+        "to": "contributor-ana",
+        "toAddress": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "asset": "USDC",
+        "amountXLM": "0.1"
+      },
+      "kernelStatus": "needs_human_decision",
+      "detail": "no grant for asset USDC to GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+      "attemptReason": "asset_not_granted",
+      "outcome": "blocked",
+      "receiptFile": "receipts/13-x7-blocked.json",
+      "receiptDigest": "14494ccbf4da8deb9fc9792cd22de3fee1ad0bdaa4490a6da16c258d1ed64490",
+      "receiptStatus": "needs_human_decision"
+    },
+    {
+      "id": "p7",
+      "kind": "pay",
+      "requested": {
+        "to": "contributor-ana",
+        "toAddress": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "asset": "XLM",
+        "amountXLM": "0.5"
+      },
+      "kernelStatus": "verified",
+      "detail": null,
+      "txHash": "c534f4a7e87378b96d747ed16c20ce5c5d164617e0a1a995caca3efc3eec9c26",
+      "outcome": "paid",
+      "receiptFile": "receipts/14-p7-paid.json",
+      "receiptDigest": "619375a3421c9567f136941182e6163f2801a48e5bee1d0ca656f998435aba8f",
+      "receiptStatus": "verified"
+    }
+  ],
+  "summary": {
+    "paid": 7,
+    "blocked": 7,
+    "other": 0,
+    "spentStroops": "29000000"
+  }
+}

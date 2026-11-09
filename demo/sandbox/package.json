@@ -1,0 +1,14 @@
+{
+  "name": "vespi-demo-sandbox",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Proof of concept: one SIMULATED role operates a contribution-payments scenario on Stellar TESTNET under a person's one-time concession. Not product.",
+  "type": "commonjs",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "test": "node --test",
+    "run-scenario": "node run.cjs",
+    "verify": "node verify.cjs"
+  },
+  "dependencies": { "@stellar/stellar-sdk": "16.3.0" }
+}

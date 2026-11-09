@@ -1,0 +1,81 @@
+{
+  "status": "verified",
+  "operation": {
+    "id": "op-mw9oj8jv-4",
+    "goal": "[SIMULATED ROLE contributor-payments-sim] pay 0.3 XLM to contributor-ana for: Metadata review, 120 records"
+  },
+  "action": "sim-pay-contribution",
+  "capability": "sandbox-contribution-payment",
+  "authority": {
+    "grants": [
+      {
+        "asset": "XLM",
+        "maxAmount": "12000000",
+        "to": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "network": "stellar:testnet",
+        "expiresAt": "2026-11-09T20:53:50.554Z"
+      },
+      {
+        "asset": "XLM",
+        "maxAmount": "12000000",
+        "to": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+        "network": "stellar:testnet",
+        "expiresAt": "2026-11-09T20:53:50.554Z"
+      }
+    ],
+    "exercised": [
+      {
+        "asset": "XLM",
+        "maxAmount": "3000000",
+        "to": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "network": "stellar:testnet"
+      }
+    ],
+    "approval": "preauthorized"
+  },
+  "outcome": "verified",
+  "evidence": {
+    "type": "stellar-payment-authorization",
+    "network": "stellar:testnet",
+    "amount": "0.3"
+  },
+  "verification": {
+    "verified": true,
+    "checks": {
+      "within_grant": true,
+      "destination_listed": true,
+      "amount_within_remaining_budget": true,
+      "ledger_settlement": false
+    },
+    "reason": "the kernel authorized the payment under the concession; settlement is checked against the ledger by the verifier"
+  },
+  "coverage": [
+    "within_grant",
+    "destination_listed",
+    "amount_within_remaining_budget"
+  ],
+  "notCovered": [
+    "ledger_settlement"
+  ],
+  "anchor": {
+    "status": "anchored",
+    "network": "stellar:testnet",
+    "txHash": "3f4d9f00c1c7f84336f1075f6d30abe721fd8b24659be7f193190ba48e63c14d",
+    "digest": "6a42be1cce5ba762d99479bc9adeac8d23f6ffd5571eefd3c88937a3e6ab4943"
+  },
+  "detail": null,
+  "at": "2026-11-09T19:54:08.780Z",
+  "context": {
+    "manifestDigest": "aadda05d4d7ddb48659f61ab8ea541c4dfa882d7ebbdfc74fd27a131c9fe35fd",
+    "scope": "SIMULATED ROLE contributor-payments-sim; one concession by person-simulated-curator; budget 3.0000000 XLM; expires 2026-11-09T20:53:50.554Z; stellar:testnet",
+    "sources": [
+      {
+        "ref": "role:contributor-payments-sim",
+        "owner": "person-simulated-curator",
+        "revision": "0d3fb49947fe7843a67252dd7a0c5852d6bed5d9ac6b16cfa1a5e61feed6c6e6",
+        "state": "approved"
+      }
+    ]
+  },
+  "digest": "6a42be1cce5ba762d99479bc9adeac8d23f6ffd5571eefd3c88937a3e6ab4943"
+}

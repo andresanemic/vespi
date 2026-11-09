@@ -1,0 +1,31 @@
+{
+  "note": "The person grants authority ONCE, here. Destinations are labels; the runner creates and funds the testnet accounts at run time.",
+  "network": "stellar:testnet",
+  "concession": {
+    "grantedBy": "person-simulated-curator",
+    "asset": "XLM",
+    "budgetXLM": "3",
+    "allowedDestinations": ["contributor-ana", "contributor-bruno"],
+    "validForMinutes": 60
+  },
+  "staleConcession": {
+    "note": "A concession the same person granted earlier and that already expired. Used to show that an expired authority is refused with the real clock.",
+    "expiresAt": "2026-11-01T00:00:00Z"
+  },
+  "steps": [
+    { "id": "p1", "type": "pay", "to": "contributor-ana",   "amountXLM": "0.5", "contribution": "Scan and transcription of the 1962 letters, batch 1" },
+    { "id": "p2", "type": "pay", "to": "contributor-bruno", "amountXLM": "0.5", "contribution": "Photographs of the textile collection, set A" },
+    { "id": "p3", "type": "pay", "to": "contributor-ana",   "amountXLM": "0.4", "contribution": "Scan and transcription of the 1962 letters, batch 2" },
+    { "id": "p4", "type": "pay", "to": "contributor-bruno", "amountXLM": "0.4", "contribution": "Photographs of the textile collection, set B" },
+    { "id": "p5", "type": "pay", "to": "contributor-ana",   "amountXLM": "0.3", "contribution": "Metadata review, 120 records" },
+    { "id": "p6", "type": "pay", "to": "contributor-bruno", "amountXLM": "0.3", "contribution": "Oral-history audio cleanup, 3 files" },
+    { "id": "x1", "type": "attempt", "reason": "over_budget_cumulative", "to": "contributor-ana",   "amountXLM": "0.7", "contribution": "Request above what remains of the budget" },
+    { "id": "x2", "type": "attempt", "reason": "over_budget_single",     "to": "contributor-bruno", "amountXLM": "25",  "contribution": "Request far above the budget" },
+    { "id": "x3", "type": "attempt", "reason": "destination_not_allowed", "to": "outsider",          "amountXLM": "0.1", "contribution": "Real, funded account that the person did not list" },
+    { "id": "x4", "type": "attempt", "reason": "destination_not_allowed", "to": "unlisted-random",   "amountXLM": "0.1", "contribution": "Address nobody listed" },
+    { "id": "x5", "type": "attempt", "reason": "authority_expired", "to": "contributor-ana",   "amountXLM": "0.1", "useStaleConcession": true, "contribution": "Valid destination and amount, but the authority has expired" },
+    { "id": "x6", "type": "attempt", "reason": "authority_expired", "to": "contributor-bruno", "amountXLM": "0.2", "useStaleConcession": true, "contribution": "Same, second destination" },
+    { "id": "x7", "type": "attempt", "reason": "asset_not_granted", "to": "contributor-ana",   "amountXLM": "0.1", "asset": "USDC", "contribution": "An asset the person never granted" },
+    { "id": "p7", "type": "pay", "to": "contributor-ana",   "amountXLM": "0.5", "contribution": "Final catalogue entries, 40 records (the role resumes inside its limits)" }
+  ]
+}
