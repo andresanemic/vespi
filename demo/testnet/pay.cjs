@@ -5,7 +5,7 @@
 //   npm ci && node pay.cjs            pago en testnet con la puerta humana (pregunta y/N)
 //   node pay.cjs --yes | --no         responde la puerta sin teclado (solo testnet)
 //   node pay.cjs --amount=2.5         otro monto en XLM de testnet
-//   node pay.cjs --verify-mainnet     re-verifica, en solo lectura, las dos tx reales de mainnet (sin npm ci)
+//   node pay.cjs --verify-mainnet     re-verifica, en solo lectura, las tres transacciones reales de mainnet (dos pagos y un anclaje de recibo; sin npm ci)
 //   node pay.cjs --network=mainnet    pago real en mainnet con una cuenta propia: la llave secreta se lee
 //                                     de STELLAR_SECRET o se pide sin eco; monto por defecto 0.0001 XLM,
 //                                     tope 0.01 XLM; destino por defecto la wallet Pollar del 25 oct
