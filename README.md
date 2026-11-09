@@ -26,6 +26,10 @@
 
 **What the orchestrator is.** One opportunity of three steps between two apps, under limits a person sets once, with a chain of receipts whose digests go in the transaction memo and a verifier that recomputes the whole chain.
 
+**Status, plainly.** Today there is a proof of concept with one payer and one simulated role, not the orchestrator. The orchestrator is what the sprint builds. The kernel is unchanged at `v0.1.8-kernel`. CI runs the sandbox tests and the offline verifier on every push: [Actions](https://github.com/andresanemic/vespi/actions).
+
+**Transactions of the proof of concept** (Stellar testnet, each with the digest of its receipt in the memo): [`bf7a3496`](https://stellar.expert/explorer/testnet/tx/bf7a3496fb319cdf1f09917a814931a308d45a00b0ac0ff9d0c14523e088fc92), [`d7acab46`](https://stellar.expert/explorer/testnet/tx/d7acab46b26f590a08a911f3e6aa5eb34cd367ef96274429c3653317fcdfd504), [`87d534b6`](https://stellar.expert/explorer/testnet/tx/87d534b63d6d32a0e8a94689c2337e547e444f244ac8e626660a8d295bb94ed0), [`ef1c8b8d`](https://stellar.expert/explorer/testnet/tx/ef1c8b8d73e6017f18943d6b9e5574749ef9e9196217b17d36762148364cc575), [`3f4d9f00`](https://stellar.expert/explorer/testnet/tx/3f4d9f00c1c7f84336f1075f6d30abe721fd8b24659be7f193190ba48e63c14d), [`03e0aa56`](https://stellar.expert/explorer/testnet/tx/03e0aa5648a9d96a084ee27e6872303845ee3e75a1d43c752372a6d01730ad17), [`c534f4a7`](https://stellar.expert/explorer/testnet/tx/c534f4a7e87378b96d747ed16c20ce5c5d164617e0a1a995caca3efc3eec9c26).
+
 **What exists today.** A proof of concept in [`demo/sandbox`](./demo/sandbox): 7 payments on Stellar testnet, 7 blocked attempts, the verifier answers VERIFIED, 9 offline tests. Commands, from [`demo/sandbox/README.md`](./demo/sandbox/README.md) (Node 24; the repository tests fail on Node 26):
 
 ```sh

@@ -30,3 +30,9 @@ jobs:
       - name: kernel suite (no network, no wallet)
         shell: bash
         run: node --test test/*.test.js
+      - name: instawards sandbox (install, tests, offline verifier)
+        shell: bash
+        run: |
+          npm --prefix demo/sandbox ci
+          node --test demo/sandbox/sandbox.test.cjs
+          node demo/sandbox/verify.cjs --offline
