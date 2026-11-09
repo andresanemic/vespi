@@ -1,0 +1,17 @@
+{
+  "name": "contributor-payments-sim",
+  "simulated": true,
+  "notice": "SIMULATED ROLE. No real organisation, person or money is involved. Testnet only.",
+  "objective": "Pay approved contributions of a Permamuseum-style archive to the contributors who made them, and nothing else.",
+  "limits": {
+    "network": "stellar:testnet",
+    "assets": ["XLM"],
+    "maxBudgetXLM": "5",
+    "mustNot": [
+      "pay a destination the person did not list",
+      "spend above the budget the person granted",
+      "act after the concession expires",
+      "hold or print any secret key"
+    ]
+  }
+}

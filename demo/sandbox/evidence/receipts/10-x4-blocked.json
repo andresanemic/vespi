@@ -1,0 +1,56 @@
+{
+  "status": "needs_human_decision",
+  "operation": {
+    "id": "op-mw9ojg9r-9",
+    "goal": "[SIMULATED ROLE contributor-payments-sim] pay 0.1 XLM to unlisted-random for: Address nobody listed"
+  },
+  "action": "sim-pay-contribution",
+  "capability": "sandbox-contribution-payment",
+  "authority": {
+    "grants": [
+      {
+        "asset": "XLM",
+        "maxAmount": "6000000",
+        "to": "GBEYGOQJ5WWOR3YKGISC2OC4VRXBJ6I6O2HQZFKZAERKZP3VQ7ZWHP2Q",
+        "network": "stellar:testnet",
+        "expiresAt": "2026-11-09T20:53:50.554Z"
+      },
+      {
+        "asset": "XLM",
+        "maxAmount": "6000000",
+        "to": "GDKZ7UYBF6Z2WAET5O3VMWIPMIVQ7UOLILTFSVY63RMUNOJFEZLUM3VR",
+        "network": "stellar:testnet",
+        "expiresAt": "2026-11-09T20:53:50.554Z"
+      }
+    ],
+    "exercised": [],
+    "approval": "human_gate_rejected"
+  },
+  "outcome": "needs_human_decision",
+  "evidence": null,
+  "verification": null,
+  "coverage": [],
+  "notCovered": [
+    "external anchor"
+  ],
+  "anchor": {
+    "status": "pending",
+    "network": "stellar:testnet"
+  },
+  "detail": "no grant for asset XLM to GAAWYKB5S4G4BHORVWVQROYTSEVGQVC5XHGA2YYSCUCXWTSC4U5WN2PC",
+  "exit": "return to the person: change the agreement or cancel",
+  "at": "2026-11-09T19:54:18.784Z",
+  "context": {
+    "manifestDigest": "aadda05d4d7ddb48659f61ab8ea541c4dfa882d7ebbdfc74fd27a131c9fe35fd",
+    "scope": "SIMULATED ROLE contributor-payments-sim; one concession by person-simulated-curator; budget 3.0000000 XLM; expires 2026-11-09T20:53:50.554Z; stellar:testnet",
+    "sources": [
+      {
+        "ref": "role:contributor-payments-sim",
+        "owner": "person-simulated-curator",
+        "revision": "0d3fb49947fe7843a67252dd7a0c5852d6bed5d9ac6b16cfa1a5e61feed6c6e6",
+        "state": "approved"
+      }
+    ]
+  },
+  "digest": "2b655fc8a7cd1ef209f094b9587bb9b89c69d2763b8616b711f82b0630330300"
+}

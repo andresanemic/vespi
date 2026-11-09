@@ -1,0 +1,298 @@
+{
+  "verifiedAt": "2026-11-09T19:55:01.280Z",
+  "mode": "live",
+  "network": "stellar:testnet",
+  "horizon": "https://horizon-testnet.stellar.org",
+  "payer": "GCEN56HHTIPR34AN4FK7QO4NN7UMEETIEGPVOOKMPKH5TEN32GYO4H3H",
+  "ok": true,
+  "global": {
+    "ledgerPaymentsEqualPaidReceipts": true,
+    "everyLedgerDestinationAllowed": true,
+    "totalWithinBudget": true,
+    "ledgerPaymentCount": 7,
+    "paidReceiptCount": 7,
+    "paidTotalStroops": "29000000"
+  },
+  "results": [
+    {
+      "id": "p1",
+      "outcome": "paid",
+      "attemptReason": null,
+      "txHash": "bf7a3496fb319cdf1f09917a814931a308d45a00b0ac0ff9d0c14523e088fc92",
+      "digest": "0722211fa560da20d517a520d70fd75da5da31bdf2115614b7a03253e1ce4648",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "anchorBound": true,
+        "txFound": true,
+        "txSuccessful": true,
+        "memoIsReceiptDigest": true,
+        "sourceIsPayer": true,
+        "singlePayment": true,
+        "paymentMatchesReceipt": true,
+        "destinationInConcession": true
+      },
+      "ok": true
+    },
+    {
+      "id": "p2",
+      "outcome": "paid",
+      "attemptReason": null,
+      "txHash": "d7acab46b26f590a08a911f3e6aa5eb34cd367ef96274429c3653317fcdfd504",
+      "digest": "dc64006b8b6ffc598c621a566e5812b0a18a6cb01d39c5ccbe2730cd81751866",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "anchorBound": true,
+        "txFound": true,
+        "txSuccessful": true,
+        "memoIsReceiptDigest": true,
+        "sourceIsPayer": true,
+        "singlePayment": true,
+        "paymentMatchesReceipt": true,
+        "destinationInConcession": true
+      },
+      "ok": true
+    },
+    {
+      "id": "p3",
+      "outcome": "paid",
+      "attemptReason": null,
+      "txHash": "87d534b63d6d32a0e8a94689c2337e547e444f244ac8e626660a8d295bb94ed0",
+      "digest": "47bada76ea4707a530d7409d137f4ae86fcc951d70be052d5a21b30eb115339b",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "anchorBound": true,
+        "txFound": true,
+        "txSuccessful": true,
+        "memoIsReceiptDigest": true,
+        "sourceIsPayer": true,
+        "singlePayment": true,
+        "paymentMatchesReceipt": true,
+        "destinationInConcession": true
+      },
+      "ok": true
+    },
+    {
+      "id": "p4",
+      "outcome": "paid",
+      "attemptReason": null,
+      "txHash": "ef1c8b8d73e6017f18943d6b9e5574749ef9e9196217b17d36762148364cc575",
+      "digest": "05463fbb49507b54d195d655842b03666afed0c59689c1aba14bfbab215d7d83",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "anchorBound": true,
+        "txFound": true,
+        "txSuccessful": true,
+        "memoIsReceiptDigest": true,
+        "sourceIsPayer": true,
+        "singlePayment": true,
+        "paymentMatchesReceipt": true,
+        "destinationInConcession": true
+      },
+      "ok": true
+    },
+    {
+      "id": "p5",
+      "outcome": "paid",
+      "attemptReason": null,
+      "txHash": "3f4d9f00c1c7f84336f1075f6d30abe721fd8b24659be7f193190ba48e63c14d",
+      "digest": "6a42be1cce5ba762d99479bc9adeac8d23f6ffd5571eefd3c88937a3e6ab4943",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "anchorBound": true,
+        "txFound": true,
+        "txSuccessful": true,
+        "memoIsReceiptDigest": true,
+        "sourceIsPayer": true,
+        "singlePayment": true,
+        "paymentMatchesReceipt": true,
+        "destinationInConcession": true
+      },
+      "ok": true
+    },
+    {
+      "id": "p6",
+      "outcome": "paid",
+      "attemptReason": null,
+      "txHash": "03e0aa5648a9d96a084ee27e6872303845ee3e75a1d43c752372a6d01730ad17",
+      "digest": "c56f13af197aa18ced9c8cc439d18b738c6ffd9003e4d2e1e138abc32bdb6dd7",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "anchorBound": true,
+        "txFound": true,
+        "txSuccessful": true,
+        "memoIsReceiptDigest": true,
+        "sourceIsPayer": true,
+        "singlePayment": true,
+        "paymentMatchesReceipt": true,
+        "destinationInConcession": true
+      },
+      "ok": true
+    },
+    {
+      "id": "x1",
+      "outcome": "blocked",
+      "attemptReason": "over_budget_cumulative",
+      "txHash": null,
+      "digest": "b70dd700504bfb23aedc684981bd0b83c369cccef40c9503c6bee8eff0ef85da",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "notVerifiedStatus": true,
+        "noTransaction": true
+      },
+      "ok": true
+    },
+    {
+      "id": "x2",
+      "outcome": "blocked",
+      "attemptReason": "over_budget_single",
+      "txHash": null,
+      "digest": "ab7038143c9885937f077a2cca25cb770ac846ba1402243903e084eb74039dec",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "notVerifiedStatus": true,
+        "noTransaction": true
+      },
+      "ok": true
+    },
+    {
+      "id": "x3",
+      "outcome": "blocked",
+      "attemptReason": "destination_not_allowed",
+      "txHash": null,
+      "digest": "fed875a5831c8bc2983f26a6941e9f1cae73d713616cfcab83570be37d1d3eb9",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "notVerifiedStatus": true,
+        "noTransaction": true
+      },
+      "ok": true
+    },
+    {
+      "id": "x4",
+      "outcome": "blocked",
+      "attemptReason": "destination_not_allowed",
+      "txHash": null,
+      "digest": "2b655fc8a7cd1ef209f094b9587bb9b89c69d2763b8616b711f82b0630330300",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "notVerifiedStatus": true,
+        "noTransaction": true
+      },
+      "ok": true
+    },
+    {
+      "id": "x5",
+      "outcome": "blocked",
+      "attemptReason": "authority_expired",
+      "txHash": null,
+      "digest": "384aa83cd46381d0c417f5770e9cffe501456564977beb63f6b8a5749ce361d5",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "notVerifiedStatus": true,
+        "noTransaction": true
+      },
+      "ok": true
+    },
+    {
+      "id": "x6",
+      "outcome": "blocked",
+      "attemptReason": "authority_expired",
+      "txHash": null,
+      "digest": "a43be33da22ce2029ae4c6dfdd1343a0e47dee59f5a58adb282a56d72e47e825",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "notVerifiedStatus": true,
+        "noTransaction": true
+      },
+      "ok": true
+    },
+    {
+      "id": "x7",
+      "outcome": "blocked",
+      "attemptReason": "asset_not_granted",
+      "txHash": null,
+      "digest": "14494ccbf4da8deb9fc9792cd22de3fee1ad0bdaa4490a6da16c258d1ed64490",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "notVerifiedStatus": true,
+        "noTransaction": true
+      },
+      "ok": true
+    },
+    {
+      "id": "p7",
+      "outcome": "paid",
+      "attemptReason": null,
+      "txHash": "c534f4a7e87378b96d747ed16c20ce5c5d164617e0a1a995caca3efc3eec9c26",
+      "digest": "619375a3421c9567f136941182e6163f2801a48e5bee1d0ca656f998435aba8f",
+      "checks": {
+        "receiptReadable": true,
+        "digestRecomputes": true,
+        "receiptIntact": true,
+        "matchesRunIndex": true,
+        "markedSimulated": true,
+        "anchorBound": true,
+        "txFound": true,
+        "txSuccessful": true,
+        "memoIsReceiptDigest": true,
+        "sourceIsPayer": true,
+        "singlePayment": true,
+        "paymentMatchesReceipt": true,
+        "destinationInConcession": true
+      },
+      "ok": true
+    }
+  ]
+}
