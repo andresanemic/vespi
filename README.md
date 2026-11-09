@@ -7,7 +7,7 @@
 <p align="center">
   <a href="./docs/RELEASE_0.1.8_KERNEL.md"><img src="https://img.shields.io/badge/version-v0.1.8-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.8"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
-  <a href="./docs/SUITE_RESULT_0.1.8.txt"><img src="https://img.shields.io/badge/suite-1319_pass-E0C170?style=for-the-badge&labelColor=07111A" alt="Release suite: 1,319 passed, 0 failed"></a>
+  <a href="./docs/SUITE_RESULT_0.1.8.txt"><img src="https://img.shields.io/badge/suite-1319_pass-E0C170?style=for-the-badge&labelColor=07111A" alt="v0.1.8 release suite: 1,319 passed, 0 failed (frozen result of 25 October 2026)"></a>
   <a href="#the-projects"><img src="https://img.shields.io/badge/projects-11_public_repos-D7B698?style=for-the-badge&labelColor=07111A" alt="11 functional project repositories"></a>
   <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet-50_readbacks_%C2%B7_5_semantic-E0C170?style=for-the-badge&labelColor=07111A" alt="50 testnet readbacks; 5 cases semantically verified"></a>
   <a href="./demo/x402/"><img src="https://img.shields.io/badge/demo-x402_%C2%B7_Stellar_SDK-E0C170?style=for-the-badge&labelColor=07111A" alt="Opt-in x402 demo using the Stellar SDK"></a>
@@ -26,7 +26,7 @@
 
 ## Clone and run
 
-The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package. The commands below pin `meridian-2026-10-26`, including the event payment demo. The original library release remains at `v0.1.8-kernel`.
+The kernel runs on Node.js 24 or later and has no runtime dependencies. This repository is a source checkout, not a root-level npm package. The commands below pin `meridian-2026-10-26`, including the event payment demo. The original library release remains at `v0.1.8-kernel`. Test counts: 1,319 is the frozen root suite of v0.1.8 ([result](./docs/SUITE_RESULT_0.1.8.txt)); the `meridian-2026-10-26` release counts 1,327 because it adds the 8 offline cases of the payment demo ([breakdown](./docs/JUDGE_IN_3_MINUTES.md)).
 
 ```sh
 git clone --branch meridian-2026-10-26 --depth 1 https://github.com/andresanemic/vespi.git
@@ -95,7 +95,7 @@ Start with one operation and keep the proof. Every line says how far it has been
 
 ## The projects
 
-One person built these eleven projects with Vespi in about a week (29 September – 3 October 2026); ten run the Vespi kernel. Each explores what you can build this way, with its problem, its evidence and its limits. Their code is public in each repository since 10 October 2026, under a review-only license.
+One person built these eleven projects with Vespi in about a week (29 September – 3 October 2026); ten run the Vespi kernel (TEMIS is the one that does not). Each explores what you can build this way, with its problem, its evidence and its limits. Their code is public in each repository since 10 October 2026, under a review-only license.
 
 - [Queen](https://github.com/andresanemic/queen) — a budget proposal is often unclear: who asked, who could answer, what the price covers
 - [Permamuseum](https://github.com/andresanemic/permamuseum) — in a museum, "verified" mixes claim, evidence and permission
@@ -242,7 +242,7 @@ Empieza con una operación y guarda la prueba. Cada línea dice hasta dónde est
 
 ## Los proyectos
 
-Una persona construyó estos once proyectos con Vespi en una semana (29 de septiembre – 3 de octubre de 2026); diez corren el kernel de Vespi. Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Su código es público en cada repositorio desde el 10 de octubre de 2026, con licencia de solo revisión.
+Una persona construyó estos once proyectos con Vespi en una semana (29 de septiembre – 3 de octubre de 2026); diez corren el kernel de Vespi (TEMIS es el que no lo corre). Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Su código es público en cada repositorio desde el 10 de octubre de 2026, con licencia de solo revisión.
 
 - [Queen](https://github.com/andresanemic/queen) — una propuesta de presupuesto suele ser confusa: quién pidió, quién podía responder, qué cubre el precio
 - [Permamuseum](https://github.com/andresanemic/permamuseum) — en un museo, «verificado» mezcla afirmación, evidencia y permiso
@@ -288,7 +288,7 @@ El kernel 0.1.8 es una biblioteca fuente JavaScript sin dependencias. La aprobac
 
 ## Empieza con una operación
 
-Los comandos siguientes fijan `meridian-2026-10-26`, con la demo de pago del evento. El release original de la biblioteca conserva `v0.1.8-kernel`.
+Los comandos siguientes fijan `meridian-2026-10-26`, con la demo de pago del evento. El release original de la biblioteca conserva `v0.1.8-kernel`. Cifras de pruebas: 1.319 es la suite raíz congelada de v0.1.8 ([resultado](./docs/SUITE_RESULT_0.1.8.txt)); el release `meridian-2026-10-26` cuenta 1.327 porque suma los 8 casos offline de la demo de pago ([desglose](./docs/JUDGE_IN_3_MINUTES.md)).
 
 Desde una copia de código de este repositorio, con Node.js 24 disponible, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con tu nombre seguido de `: approve` y revisa `status`, `coverage` y `notCovered` del recibo:
 
