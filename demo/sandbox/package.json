@@ -6,7 +6,7 @@
   "type": "commonjs",
   "engines": { "node": ">=24" },
   "scripts": {
-    "test": "node --test",
+    "test": "node --test sandbox.test.cjs",
     "run-scenario": "node run.cjs",
     "verify": "node verify.cjs"
   },
