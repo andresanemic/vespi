@@ -9,7 +9,7 @@ What is simulated, said plainly: the **role** (`role/contributor-payments-sim`, 
 Needs Node 24 (the repository tests fail on Node 26).
 
 ```sh
-git clone --branch poc/instawards-sandbox https://github.com/andresanemic/vespi.git   # or the local clone
+git clone https://github.com/andresanemic/vespi.git
 cd vespi
 npm --prefix demo/sandbox ci
 node --test demo/sandbox/sandbox.test.cjs        # offline, 9 tests, no network
