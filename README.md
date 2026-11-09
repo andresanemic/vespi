@@ -14,7 +14,7 @@
   <a href="./data/traffic/clones.json"><img src="https://img.shields.io/badge/Vespi-1743_clones_in_40_days-E0C170?style=for-the-badge&labelColor=07111A" alt="1,743 clones of this repository, Sep 27 to Nov 5, 2026 (UTC) (GitHub traffic, recorded daily; clones, not unique people)"></a>
 </p>
 
-<p align="center"><b>The engine for building apps with AI on Stellar. You drive.</b><br>You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>And it lets you verify what AI agents do on Stellar: a payment approved by a person before it happens and checked against the public ledger after, proven on mainnet with a real Pollar payment ([evidence](./demo/pollar)).<br>We want Vespi to be the kernel for building apps on Stellar.</p>
+<p align="center"><b>Vespi: the kernel for orchestrating opportunities on Stellar</b><br><b>You drive.</b> You talk to the AI, it builds, and you decide what matters. What you learn stays for next time.<br>And it lets you verify what AI agents do on Stellar: a payment approved by a person before it happens and checked against the public ledger after, proven on mainnet with a real Pollar payment ([evidence](./demo/pollar)).</p>
 
 <p align="center"><a href="https://vespi.xyz"><b>Website</b></a> · <a href="https://www.youtube.com/watch?v=bmTqxHv0VGU"><b>Watch the demo</b></a> · <a href="./docs/JUDGE_IN_3_MINUTES.md"><b>Judge in 3 minutes</b></a> · <a href="#clone-and-run">Clone and run</a> · <a href="./docs/FOR_JUDGES.md">For judges</a> · <a href="./docs/TESTNET_EVIDENCE.md">Testnet evidence</a> · <a href="https://vespi.xyz/pollar"><b>Pollar evidence</b></a> · <a href="./demo/testnet/"><b>Pay on testnet yourself</b></a></p>
 <p align="center">Pitch deck: <a href="https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing">EN</a> · <a href="https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing">ES</a> &nbsp;|&nbsp; One pager: <a href="https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link">EN</a> · <a href="https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing">ES</a> &nbsp;|&nbsp; <a href="https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing">Letters of intent</a></p>
@@ -22,7 +22,26 @@
 
 ---
 
-**Where this is going.** Today you run Vespi from a terminal. **Hive**, a creation studio for building apps with agents, is planned; it is not installable yet. An interactive proof of concept, with fictional data, is on [vespi.xyz](https://vespi.xyz). A Linux distribution remains a distant possibility.
+## Instawards sprint
+
+**What the orchestrator is.** One opportunity of three steps between two apps, under limits a person sets once, with a chain of receipts whose digests go in the transaction memo and a verifier that recomputes the whole chain.
+
+**What exists today.** A proof of concept in [`demo/sandbox`](./demo/sandbox): 7 payments on Stellar testnet, 7 blocked attempts, the verifier answers VERIFIED, 9 offline tests. Commands, from [`demo/sandbox/README.md`](./demo/sandbox/README.md) (Node 24; the repository tests fail on Node 26):
+
+```sh
+npm --prefix demo/sandbox ci
+node --test demo/sandbox/sandbox.test.cjs        # offline, 9 tests, no network
+node demo/sandbox/verify.cjs --offline           # re-checks the committed run from its saved Horizon snapshot
+node demo/sandbox/verify.cjs                     # re-reads Horizon testnet NOW (fails if testnet was reset)
+node demo/sandbox/run.cjs --out=/tmp/my-run      # a NEW run: fresh accounts, ~80 s, 7 payments + 7 blocked
+node demo/sandbox/verify.cjs --evidence=/tmp/my-run
+```
+
+**What the 30-day sprint builds** (starts 30 November 2026): the orchestrator for the three-step opportunity between two apps, on the kernel in `src/`. Nothing in this paragraph exists yet.
+
+**Honest limits.** Testnet only, no value. The role is simulated and so is the person who grants authority (a config file, not a signature). The receipt is an authorization receipt, not a settlement receipt: settlement is proven by the verifier against the ledger. More in [`demo/sandbox/README.md`](./demo/sandbox/README.md#limits-read-these).
+
+**Where this is going.** The direction is the orchestrator described above. An interactive proof of concept, with fictional data, is on [vespi.xyz](https://vespi.xyz).
 
 ## Clone and run
 
@@ -202,6 +221,27 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 <summary><b>Leer en español</b></summary>
 
 <a id="espanol"></a>
+
+**Vespi: el kernel para orquestar oportunidades en Stellar.** *Tú manejas.*
+
+## Sprint de Instawards
+
+**Qué es el orquestador.** Una oportunidad de tres pasos entre dos apps, bajo límites que una persona fija una vez, con una cadena de recibos cuyas huellas van en el memo de la transacción y un verificador que recalcula toda la cadena.
+
+**Qué existe hoy.** Una prueba de concepto en [`demo/sandbox`](./demo/sandbox): 7 pagos en testnet de Stellar, 7 intentos bloqueados, el verificador responde VERIFIED, 9 pruebas offline. Comandos, de [`demo/sandbox/README.md`](./demo/sandbox/README.md) (Node 24; las pruebas del repositorio fallan en Node 26):
+
+```sh
+npm --prefix demo/sandbox ci
+node --test demo/sandbox/sandbox.test.cjs        # offline, 9 tests, no network
+node demo/sandbox/verify.cjs --offline           # re-checks the committed run from its saved Horizon snapshot
+node demo/sandbox/verify.cjs                     # re-reads Horizon testnet NOW (fails if testnet was reset)
+node demo/sandbox/run.cjs --out=/tmp/my-run      # a NEW run: fresh accounts, ~80 s, 7 payments + 7 blocked
+node demo/sandbox/verify.cjs --evidence=/tmp/my-run
+```
+
+**Qué se construye en el sprint de 30 días** (empieza el 30 de noviembre de 2026): el orquestador de la oportunidad de tres pasos entre dos apps, sobre el kernel de `src/`. Nada de este párrafo existe todavía.
+
+**Límites honestos.** Solo testnet, sin valor. El rol es simulado y la persona que concede la autoridad también (un archivo de configuración, no una firma). El recibo es de autorización, no de liquidación: la liquidación la prueba el verificador contra el ledger. Más en [`demo/sandbox/README.md`](./demo/sandbox/README.md#limits-read-these).
 
 ## Lo que puedes hacer rápido con Vespi
 
