@@ -7,14 +7,9 @@
 **Good work should not disappear into a chat.** Vespi Contributions proposes a shared record of what one person requested, another contributed and the requester accepted, each step signed on Stellar by the person who took it.
 
 <p align="center">
-  <a href="./docs/RELEASE_0.1.8_KERNEL.md"><img src="https://img.shields.io/badge/version-v0.1.8-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.8"></a>
+  <a href="./docs/RELEASE_0.1.8_KERNEL.md"><img src="https://img.shields.io/badge/kernel-v0.1.8-D7B698?style=for-the-badge&labelColor=07111A" alt="Kernel v0.1.8"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
-  <a href="./docs/SUITE_RESULT_0.1.8.txt"><img src="https://img.shields.io/badge/suite-1319_pass-E0C170?style=for-the-badge&labelColor=07111A" alt="v0.1.8 release suite: 1,319 passed, 0 failed (frozen result of 25 October 2026)"></a>
-  <a href="#proof-on-testnet"><img src="https://img.shields.io/badge/sandbox-9%2F9_%C2%B7_VERIFIED-E0C170?style=for-the-badge&labelColor=07111A" alt="Testnet sandbox: 9 of 9 tests and VERIFIED offline, one payer and simulated roles"></a>
-  <a href="#the-projects"><img src="https://img.shields.io/badge/projects-11_public_repos-D7B698?style=for-the-badge&labelColor=07111A" alt="11 functional project repositories"></a>
-  <a href="./docs/TESTNET_EVIDENCE.md"><img src="https://img.shields.io/badge/testnet-50_readbacks_%C2%B7_5_semantic-E0C170?style=for-the-badge&labelColor=07111A" alt="50 testnet readbacks; 5 cases semantically verified"></a>
-  <a href="./demo/x402/"><img src="https://img.shields.io/badge/demo-x402_%C2%B7_Stellar_SDK-E0C170?style=for-the-badge&labelColor=07111A" alt="Opt-in x402 demo using the Stellar SDK"></a>
-  <a href="./data/traffic/clones.json"><img src="https://img.shields.io/badge/Vespi-1821_clones_in_44_days-E0C170?style=for-the-badge&labelColor=07111A" alt="1,821 clones of this repository, Sep 27 to Nov 9, 2026 (UTC) (GitHub traffic, recorded daily; clones, not unique people)"></a>
+  <a href="#proof-on-testnet"><img src="https://img.shields.io/badge/Stellar-testnet_sandbox-D7B698?style=for-the-badge&labelColor=07111A" alt="Stellar testnet sandbox"></a>
 </p>
 
 ---
