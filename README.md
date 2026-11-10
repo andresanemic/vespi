@@ -4,44 +4,91 @@
 
 <h1 align="center">Vespi</h1>
 
+**Ask, contribute, accept: a shared record proposed for Stellar.**
+
 <p align="center">
-  <a href="./docs/RELEASE_0.1.8_KERNEL.md"><img src="https://img.shields.io/badge/version-v0.1.8-D7B698?style=for-the-badge&labelColor=07111A" alt="Version: v0.1.8"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?style=for-the-badge&labelColor=07111A" alt="License: Apache 2.0"></a>
+  <a href="./docs/RELEASE_0.1.8_KERNEL.md"><img src="https://img.shields.io/badge/kernel-v0.1.8-D7B698?labelColor=07111A" alt="Kernel v0.1.8"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-D7B698?labelColor=07111A" alt="License: Apache 2.0"></a>
+  <a href="#proof-on-testnet"><img src="https://img.shields.io/badge/Stellar-testnet_sandbox-D7B698?labelColor=07111A" alt="Stellar testnet sandbox"></a>
 </p>
+
+---
 
 <a id="english"></a>
 
 **Vespi does not establish the truth or quality of work, or supply an autonomous runtime.** It is open infrastructure for operations with bounded authority and verifiable receipts: keep the permission, checked result and next agreed action together when work changes hands. You decide what matters; the host carries out and stores the operation.
 
-[Website](https://vespi.xyz) · [Kernel / docs](#kernel--docs) · [History](#history)
+> **Status.** Proposed pilot submitted to Stellar Chile Instawards; result pending. No funds awarded, no pilot running.
 
-## Contributions
+> **⚠ Testnet only.** The existing sandbox uses one payer and simulated roles; it does not prove two people signing.
 
-A useful community contribution can disappear in a chat. Someone requests feedback, another person delivers it, and an organizer accepts it; later, a reviewer cannot easily recover who asked for what or who acknowledged the result. **Vespi Contributions proposes a portable record of those acknowledgments.**
+## Where to read next
 
-### Proposed workflow
+| If you are… | Start with |
+|---|---|
+| A judge or evaluator | [Proof on testnet](#proof-on-testnet) and [proposed sprint](#proposed-sprint) |
+| A developer reproducing the evidence | [5-minute check](#5-minute-check) |
+| Integrating the kernel | [Kernel / docs](#kernel--docs) and [host callback contract](./docs/HOST_CALLBACKS.md) |
+| Looking for Find Your Way and HackMeridian | [History](#history) |
 
-1. **REQUEST.** The organizer describes the expected contribution and links public context, signing the step through their own Stellar account.
-2. **CONTRIBUTE.** The contributor records what they delivered and its supporting evidence, signing through their own account.
-3. **ACCEPT.** The organizer reviews the contribution and signs acceptance through their own account. A sequence missing this final step remains incomplete.
+[Website](https://vespi.xyz) · [Leer en español](#espanol)
+
+## The problem
+
+- **Useful work disappears in chat.** A request, a contribution and its acknowledgment are hard to recover later.
+- **A payment does not record acceptance.** A reviewer needs to see who requested what, who delivered it and who acknowledged the result.
+
+## The idea
+
+**Vespi Contributions proposes a portable record of those acknowledgments**, signed by each participant's own Stellar account.
+
+**Proposed flow · not implemented yet**
+
+```mermaid
+sequenceDiagram
+    actor Organizer
+    actor Contributor
+    participant Stellar
+    participant Verifier
+    Organizer->>Stellar: REQUEST signed by organizer (expected contribution, public context)
+    Contributor->>Stellar: CONTRIBUTE signed by contributor (delivery, evidence)
+    Organizer->>Stellar: ACCEPT signed by organizer (reviewed contribution)
+    Verifier->>Stellar: Read transactions and ordered receipt hash links
+    Stellar-->>Verifier: Signing accounts and anchored digests
+```
+
+**Signing account and sponsoring account are separate.** The participant's account must authorize their step. An account sponsoring reserves or paying transaction fees cannot replace that signature. The proposal includes participant-controlled keys, wallet connection and sponsored onboarding without requiring newcomers to buy XLM; Vespi would not retain participant secret keys. Only contributions and supporting evidence consented for public disclosure would enter the pilot.
 
 The proposed result is a shareable page with the full receipts, participating accounts, public evidence references and transactions. Each canonical JSON receipt would include the previous receipt's hash; its SHA-256 digest would go in Stellar's MEMO_HASH. Transaction identifiers and signing evidence would be indexed separately, outside the already-hashed payload. This lets another person inspect the record without depending solely on Vespi's server.
 
-**Actor and sponsor are separate.** The participant's account must authorize their step. An account sponsoring reserves or paying transaction fees cannot replace that signature. The proposal includes participant-controlled keys, wallet connection and sponsored onboarding without requiring newcomers to buy XLM; Vespi would not retain participant secret keys. Only contributions and supporting evidence consented for public disclosure would enter the pilot.
+A sequence without ACCEPT remains incomplete. The planned verifier would check transaction success, receipt integrity, ordered hash links, account authorization, expected roles and the complete workflow. It would verify what accounts acknowledged, not judge whether the underlying work was true, useful or good. Native Stellar transactions are proposed; no new Soroban contract, reputation score or badge system is part of this sprint.
 
-The planned verifier would check transaction success, receipt integrity, ordered hash links, account authorization, expected roles and the complete workflow. It would verify what accounts acknowledged, not judge whether the underlying work was true, useful or good. Native Stellar transactions are proposed; no new Soroban contract, reputation score or badge system is part of this sprint.
+## Proof on testnet
 
-### Existing proof and its limits
+The existing [sandbox](./demo/sandbox/) has no monetary value. Its authority-granting person is a configuration file, not an authenticated signature.
 
-The [sandbox](./demo/sandbox/) is a different, existing proof: **one payer, simulated roles, Stellar testnet only, no monetary value**. The authority-granting person is a configuration file, not an authenticated signature. It does not demonstrate the participant-signed contribution workflow above.
+A clean-checkout reproduction at evidence commit `9624922`, using Node v24.22.2, passed **9/9 tests** and the offline verifier returned **VERIFIED**: `Ledger: 7 payments from the payer, 7 paid receipts, total 29000000 stroops`. The committed run also records 7 blocked attempts.
 
-A clean-checkout reproduction at evidence commit `9624922`, using Node v24.22.2, passed all **9 tests** and the offline verifier returned **VERIFIED**: `Ledger: 7 payments from the payer, 7 paid receipts, total 29000000 stroops`. The committed run also records 7 blocked attempts. See the [run index](./demo/sandbox/evidence/run.json), [receipts](./demo/sandbox/evidence/receipts/) and [saved Horizon snapshot](./demo/sandbox/evidence/horizon-snapshot.json).
+| Evidence | Open it |
+|---|---|
+| Run index | [run.json](./demo/sandbox/evidence/run.json) |
+| Authorization receipts | [Saved receipts](./demo/sandbox/evidence/receipts/) |
+| Saved Horizon responses | [horizon-snapshot.json](./demo/sandbox/evidence/horizon-snapshot.json) |
+| Testnet payments from the run | [p1](https://stellar.expert/explorer/testnet/tx/bf7a3496fb319cdf1f09917a814931a308d45a00b0ac0ff9d0c14523e088fc92) · [p2](https://stellar.expert/explorer/testnet/tx/d7acab46b26f590a08a911f3e6aa5eb34cd367ef96274429c3653317fcdfd504) |
+| Historical mainnet anchor — anchor proof, not the pilot | [Receipt digest anchor](https://stellar.expert/explorer/public/tx/2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7) |
 
-That result rechecks the saved responses; it is **not a fresh ledger query**. The receipt records authorization; settlement is checked by the verifier against the snapshot or Horizon, depending on mode. The runner tracks the budget across destinations; kernel ceilings are per operation. An unkeyed digest is not proof of authorship: someone controlling the files and key could construct a consistent set. The [sandbox limits](./demo/sandbox/README.md#limits-read-these) own the detailed boundary.
+That result rechecks the saved responses; it is **not a fresh ledger query**. The receipt records authorization; settlement is checked by the verifier against the snapshot or Horizon, depending on mode. The runner tracks the budget across destinations; kernel ceilings are per operation. An unkeyed digest is not proof of authorship: someone controlling the files and key could construct a consistent set. The [sandbox limits](./demo/sandbox/README.md#limits-read-these) own the detailed boundary. The mainnet anchor records one receipt digest, not a Contributions chain. No new ledger query was made for this README revision.
 
-### Reproduce the saved proof
+<a id="reproduce-the-saved-proof"></a>
+
+## 5-minute check
 
 Use **Node 24**. The commands below clone and pin evidence commit `9624922` (the original kernel release tag predates this sandbox). If you already have this checkout, start at the install command. The Spanish section links here so each command has one home. Installation downloads the sandbox dependencies; the tests and verification below run offline.
+
+1. Clone and check out the pinned commit — you should be at `962492230d3540ca4ce5a38990a5525838ef6535`.
+2. Install sandbox dependencies — `npm ci` should finish without an error.
+3. Run the sandbox tests — you should see `ℹ pass 9` (or `# pass 9` with TAP output).
+4. Run the offline verifier — the last line reads `VERIFIED`, with the ledger totals listed in [Proof on testnet](#proof-on-testnet).
 
 ```sh
 git clone https://github.com/andresanemic/vespi.git
@@ -52,13 +99,13 @@ node --test demo/sandbox/sandbox.test.cjs
 node demo/sandbox/verify.cjs --offline
 ```
 
-The expected output is the result described above. For an **optional live query**, run `node demo/sandbox/verify.cjs`: it reads Horizon testnet now and saves its responses locally. A testnet reset can make that historical run unavailable. This is distinct from reproducing the committed snapshot. Creating a new funded testnet run is documented in the [sandbox guide](./demo/sandbox/README.md#reproduce-from-a-clean-clone), including its overwrite warning.
+For an **optional live query**, run `node demo/sandbox/verify.cjs`: it reads Horizon testnet now and saves its responses locally. A testnet reset can make that historical run unavailable. This is distinct from reproducing the committed snapshot. Creating a new funded testnet run is documented in the [sandbox guide](./demo/sandbox/README.md#reproduce-from-a-clean-clone), including its overwrite warning.
 
-### Proposed sprint · application submitted, result pending
+## Proposed sprint
 
-The Instawards application has been submitted. **Funding has not been awarded and the pilot is not under way.** It proposes a 30-day sprint, with a suggested start of 30 November 2026, to build the workflow above, receipt pages, independent verifier, sponsored onboarding and an open Stellar community pilot.
+The application proposes a 30-day sprint, with a suggested start of 30 November 2026, to build the workflow above, receipt pages, independent verifier, sponsored onboarding and an open Stellar community pilot.
 
-The proposed acceptance criteria include three completed organizer–contributor pairs beyond the team's separate reference run, at least ten rejected manipulation cases, an outside organizer's assessment, independent reproduction by someone outside the team and Tellus, cross-platform CI, and a public release with bilingual guides. These are targets, not usage or completion evidence. The pilot would recruit openly and allow remote participation; it does not depend on a partner application or event. A payment is not the contribution use case.
+The proposed acceptance criteria include three completed organizer–contributor pairs beyond the team's separate reference run, at least ten rejected manipulation cases, an outside organizer's assessment, independent reproduction by someone outside the team and Tellus, cross-platform CI, and a public release with bilingual guides. These are targets, not usage or completion evidence. The pilot would recruit openly and allow remote participation; it does not depend on a partner application or event.
 
 ## Kernel / docs
 
@@ -99,9 +146,23 @@ Kernel 0.1.8 binds an approved context to its approval and receipt, and rechecks
 [The evidence file](./docs/testnet-evidence.json) records 50 successful testnet transactions read back from Horizon, with 5 cases semantically verified and 45 partially verified, and 0 discrepancies. Expectations come from local execution records rather than Horizon; partial checks do not fill in missing facts. [The evidence guide](./docs/TESTNET_EVIDENCE.md) owns the transaction links, field coverage and historical payment details, including the 0.1.3 adapter's saved x402 receipt. That history is historical evidence for the earlier adapter only. The offline command above checks file shape; the guide owns the comparison against saved responses and the optional network refresh.
 
 
+## History
+
+These dated guides preserve their original evidence and scope. They are not the Contributions quickstart:
+
+- **Find Your Way · October 2026:** [For judges](./docs/FOR_JUDGES.md), with version-pinned reproduction instructions; [earlier judge findings](./docs/JUDGES_FINDINGS_0.1.4.md).
+- **HackMeridian · 26 October 2026:** [Judge in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md), pinned to `meridian-2026-10-26`; [payment demo](./demo/testnet/) and [Pollar demo](./demo/pollar), outside the kernel library. The event guide distinguishes its combined suite from the frozen kernel suite.
+- [Historical demo video](https://www.youtube.com/watch?v=bmTqxHv0VGU), [Pollar evidence page](https://vespi.xyz/pollar); pitch deck [EN](https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing) / [ES](https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing), one pager [EN](https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link) / [ES](https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing), and [letters of intent](https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing). These assets do not establish the proposed pilot's completion.
+
+The [payment evidence](./demo/testnet/) separately documents the Pollar payment and the payment signed after hash approval; those demonstrations do not establish community acceptance of a contribution.
+
+For the historical payment example, the event guide owns installation, testnet execution and read-only mainnet verification. Its signing capability signs only the transaction hash approved at the kernel gate. Pollar's browser SDK and Horizon readback belong to the separate [Pollar integration](./demo/pollar/); they are not required for the proposed Contributions workflow. The [x402 demo](./demo/x402/) likewise remains outside the kernel: it demonstrates a paid-service adapter on testnet, while its real-SDK bridge inside the kernel is deferred. The capability catalog distinguishes reference zero-knowledge verification from future applications; the Meridian batch-registration idea remains a plan until its transaction exists.
+
+[GitHub traffic records](./data/traffic/clones.json) are distribution signals: clone events are not unique people, active installations or receipt adoption. They do not establish users of Contributions.
+
 <a id="the-functional-projects"></a>
 
-## The projects
+### The projects
 
 One person built these eleven projects with Vespi in about a week (29 September – 3 October 2026); ten run the Vespi kernel (TEMIS is the one that does not). Each explores what you can build this way, with its problem, its evidence and its limits. Their code is public in each repository since 10 October 2026, under a review-only license.
 
@@ -125,7 +186,7 @@ All with fictional data and no real money: most run as local walkthroughs, and S
 
 The agreement keeps its order. Its purpose is to preserve your agency and avoid repeated decisions; its method coordinates bounded authority, a human gate and receipts; each operation's concrete result must be checked. The [verification record](./docs/VERIFICATION.md), [judge findings from the earlier cut](./docs/JUDGES_FINDINGS_0.1.4.md), [prior-art notes](./docs/PRIOR_ART.md) and [experiments](./experiments/) retain construction history. Model reviews independent of the builders are not an external security audit. The method credits [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar and the Lore/LUS work belong to the construction narrative, not proof that the whole product operates autonomously.
 
-### Where the pieces fit
+#### Where the pieces fit
 
 | Project | Its focus | Lore Plugin + Vespi today |
 |---|---|---|
@@ -136,29 +197,16 @@ The agreement keeps its order. Its purpose is to preserve your agency and avoid 
 
 This compares current scope, not head-to-head results. The complete end-to-end path remains to be demonstrated.
 
+## Team
 
-## History
-
-These dated guides preserve their original evidence and scope. They are not the Contributions quickstart:
-
-- **Find Your Way · October 2026:** [For judges](./docs/FOR_JUDGES.md), with version-pinned reproduction instructions; [earlier judge findings](./docs/JUDGES_FINDINGS_0.1.4.md).
-- **HackMeridian · 26 October 2026:** [Judge in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md), pinned to `meridian-2026-10-26`; [payment demo](./demo/testnet/) and [Pollar demo](./demo/pollar), outside the kernel library. The event guide distinguishes its combined suite from the frozen kernel suite.
-- [Historical demo video](https://www.youtube.com/watch?v=bmTqxHv0VGU), [Pollar evidence page](https://vespi.xyz/pollar); pitch deck [EN](https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing) / [ES](https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing), one pager [EN](https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link) / [ES](https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing), and [letters of intent](https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing). These assets do not establish the proposed pilot's completion.
-
-**Historical mainnet anchor:** [transaction `2ff744c6…09d7`](https://stellar.expert/explorer/public/tx/2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7) anchors one receipt digest. It is not a Contributions chain or pilot. The [payment evidence](./demo/testnet/) separately documents the Pollar payment and the payment signed after hash approval; those demonstrations do not establish community acceptance of a contribution. No new ledger query was made for this README revision.
-
-For the historical payment example, the event guide owns installation, testnet execution and read-only mainnet verification. Its signing capability signs only the transaction hash approved at the kernel gate. Pollar's browser SDK and Horizon readback belong to the separate [Pollar integration](./demo/pollar/); they are not required for the proposed Contributions workflow. The [x402 demo](./demo/x402/) likewise remains outside the kernel: it demonstrates a paid-service adapter on testnet, while its real-SDK bridge inside the kernel is deferred. The capability catalog distinguishes reference zero-knowledge verification from future applications; the Meridian batch-registration idea remains a plan until its transaction exists.
-
-[GitHub traffic records](./data/traffic/clones.json) are distribution signals: clone events are not unique people, active installations or receipt adoption. They do not establish users of Contributions.
-
-### Team
-
-- **Andrés Peña** creates Vespi and Lore Plugin. In the proposed sprint he leads engineering, signing, the verifier and the release.
-- **Francisco Toro** is a sociologist and RUC-D researcher, and a founding member of the Blockchain Lab at Universidad Adolfo Ibáñez. In the proposed sprint he leads the pilot and its outside evaluation.
+- **Francisco Toro Fierro** — sociologist with 18 years of practice. He formulated the RUC-D framework and works on social economy and community value. Finalist at the Blockchain Summit Latam Bankaton (2024). In the proposed sprint he leads the pilot and its outside evaluation. [Contact: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
+- **Andrés Peña Mellado** — journalist and teacher, author of LUS, Lore Plugin and Vespi. He has worked in communication across the blockchain ecosystem and works with Tellus, the team behind Stellar Chile, on editorial and community; he built Vespi through Find Your Way and HackMeridian. Winner of the Stacks hackathon in Argentina. In the proposed sprint he leads engineering, signing, the verifier and the release. [Telegram @andresanemic](https://t.me/andresanemic).
 
 Together they develop RUC-D, Vespi's research observatory, and build Vespi Contributions.
 
-### Author and license
+<a id="author-and-license"></a>
+
+## License
 
 Andrés Peña Mellado, Digital Art Director & Creative Developer.
 
@@ -176,43 +224,85 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 **Vespi no establece la verdad ni la calidad de un trabajo ni proporciona un runtime autónomo.** Es infraestructura abierta para operaciones con autoridad acotada y recibos verificables: conserva juntos el permiso, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Tú decides lo importante; el host ejecuta y guarda la operación.
 
-[Sitio](https://vespi.xyz) · [Kernel / docs](#kernel-docs-es) · [Historial](#historial)
+> **Estado.** Piloto propuesto y presentado a Stellar Chile Instawards; resultado pendiente. Sin fondos adjudicados ni piloto en marcha.
 
-## Contributions · español
+> **⚠ Solo testnet.** El sandbox existente usa un pagador y roles simulados; no demuestra a dos personas firmando.
 
-Un aporte útil a la comunidad puede perderse en el chat. Alguien pide feedback, otra persona lo entrega y una organizadora lo acepta; después, a quien revisa le cuesta recuperar quién pidió qué o quién reconoció el resultado. **Vespi Contributions propone un registro portable de esos reconocimientos.**
+## Dónde seguir leyendo
 
-### Flujo propuesto
+| Si eres… | Empieza por |
+|---|---|
+| Jurado o evaluador | [Prueba en testnet](#prueba-en-testnet) y [sprint propuesto](#sprint-propuesto) |
+| Desarrollador que quiere reproducir la evidencia | [Comprobación en 5 minutos](#comprobación-en-5-minutos) |
+| Quien integra el kernel | [Kernel / documentación](#kernel-docs-es) y [contrato de callbacks del host](./docs/HOST_CALLBACKS.md) |
+| Quien busca Find Your Way y HackMeridian | [Historial](#historial) |
 
-1. **REQUEST · solicitar.** La organizadora describe el aporte esperado y enlaza contexto público; firma el paso con su propia cuenta de Stellar.
-2. **CONTRIBUTE · aportar.** La persona registra lo que entregó y su evidencia; firma con su propia cuenta.
-3. **ACCEPT · aceptar.** La organizadora revisa el aporte y firma su aceptación con su propia cuenta. Una secuencia sin este último paso queda incompleta.
+[Sitio](https://vespi.xyz) · [English](#english)
+
+## El problema
+
+- **El trabajo útil se pierde en el chat.** Cuesta recuperar una solicitud, un aporte y su reconocimiento.
+- **Un pago no registra aceptación.** Quien revisa necesita saber quién pidió qué, quién lo entregó y quién reconoció el resultado.
+
+## La idea
+
+**Vespi Contributions propone un registro portable de esos reconocimientos**, firmado con la cuenta propia de Stellar de cada participante.
+
+**Flujo propuesto · todavía no implementado**
+
+```mermaid
+sequenceDiagram
+    actor Organizer as Organizadora
+    actor Contributor as Contribuyente
+    participant Stellar
+    participant Verifier as Verificador
+    Organizer->>Stellar: REQUEST firmado por la organizadora (aporte esperado, contexto público)
+    Contributor->>Stellar: CONTRIBUTE firmado por quien aporta (entrega, evidencia)
+    Organizer->>Stellar: ACCEPT firmado por la organizadora (aporte revisado)
+    Verifier->>Stellar: Leer transacciones y enlaces ordenados entre hashes de recibos
+    Stellar-->>Verifier: Cuentas firmantes y digests anclados
+```
+
+**La cuenta que firma y la que patrocina son distintas.** La cuenta participante debe autorizar su paso. Una cuenta que patrocina reservas o paga comisiones no reemplaza esa firma. La propuesta incluye claves controladas por cada participante, conexión de wallets y entrada patrocinada sin exigir que quien llega compre XLM; Vespi no guardaría claves secretas de participantes. Solo entrarían al piloto aportes y evidencias cuya publicación se haya consentido.
 
 El resultado propuesto es una página compartible con los recibos completos, las cuentas participantes, las referencias públicas de evidencia y las transacciones. Cada recibo JSON canónico incluiría el hash del recibo anterior; su digest SHA-256 iría en MEMO_HASH de Stellar. Los identificadores de transacción y la evidencia de firma se indexarían por separado, fuera del contenido ya hasheado. Así, otra persona podría revisar el registro sin depender solo del servidor de Vespi.
 
-**Actor y patrocinador son distintos.** La cuenta participante debe autorizar su paso. Una cuenta que patrocina reservas o paga comisiones no reemplaza esa firma. La propuesta incluye claves controladas por cada participante, conexión de wallets y entrada patrocinada sin exigir que quien llega compre XLM; Vespi no guardaría claves secretas de participantes. Solo entrarían al piloto aportes y evidencias cuya publicación se haya consentido.
+Sin ACCEPT la secuencia queda incompleta. El verificador propuesto comprobaría éxito de las transacciones, integridad de recibos, enlaces de hashes en orden, autorización de cuentas, roles esperados y flujo completo. Verificaría qué reconocieron las cuentas, sin juzgar si el trabajo original fue verdadero, útil o bueno. Se proponen transacciones nativas de Stellar; un contrato Soroban nuevo, puntajes de reputación y un sistema de insignias quedan fuera del sprint.
 
-El verificador propuesto comprobaría éxito de las transacciones, integridad de recibos, enlaces de hashes en orden, autorización de cuentas, roles esperados y flujo completo. Verificaría qué reconocieron las cuentas, sin juzgar si el trabajo original fue verdadero, útil o bueno. Se proponen transacciones nativas de Stellar; un contrato Soroban nuevo, puntajes de reputación y un sistema de insignias quedan fuera del sprint.
+## Prueba en testnet
 
-### Prueba existente y límites
+El [sandbox](./demo/sandbox/) existente no tiene valor monetario. La persona que concede autoridad es un archivo de configuración, no una firma autenticada.
 
-El [sandbox](./demo/sandbox/) es otra prueba, ya existente: **un pagador, roles simulados, solo testnet de Stellar, sin valor monetario**. La persona que concede autoridad es un archivo de configuración, no una firma autenticada. No demuestra el flujo de aportes firmado por participantes descrito arriba.
+En una reproducción desde checkout limpio del commit de evidencia `9624922`, con Node v24.22.2, pasaron **9/9 pruebas** y el verificador offline devolvió **VERIFIED**: `Ledger: 7 payments from the payer, 7 paid receipts, total 29000000 stroops`. La ejecución guardada también registra 7 intentos bloqueados.
 
-En una reproducción desde checkout limpio del commit de evidencia `9624922`, con Node v24.22.2, pasaron las **9 pruebas** y el verificador offline devolvió **VERIFIED**: `Ledger: 7 payments from the payer, 7 paid receipts, total 29000000 stroops`. La ejecución guardada también registra 7 intentos bloqueados. Consulta el [índice](./demo/sandbox/evidence/run.json), los [recibos](./demo/sandbox/evidence/receipts/) y el [snapshot guardado de Horizon](./demo/sandbox/evidence/horizon-snapshot.json).
+| Evidencia | Enlace |
+|---|---|
+| Índice de ejecución | [run.json](./demo/sandbox/evidence/run.json) |
+| Recibos de autorización | [Recibos guardados](./demo/sandbox/evidence/receipts/) |
+| Respuestas guardadas de Horizon | [horizon-snapshot.json](./demo/sandbox/evidence/horizon-snapshot.json) |
+| Pagos testnet de esa ejecución | [p1](https://stellar.expert/explorer/testnet/tx/bf7a3496fb319cdf1f09917a814931a308d45a00b0ac0ff9d0c14523e088fc92) · [p2](https://stellar.expert/explorer/testnet/tx/d7acab46b26f590a08a911f3e6aa5eb34cd367ef96274429c3653317fcdfd504) |
+| Anclaje histórico en mainnet — prueba de anclaje, no del piloto | [Anclaje del digest de un recibo](https://stellar.expert/explorer/public/tx/2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7) |
 
-Ese resultado vuelve a comprobar respuestas guardadas; **no es una consulta nueva al ledger**. El recibo registra autorización; el verificador comprueba la liquidación contra el snapshot o Horizon según el modo. El runner lleva el presupuesto entre destinos; los techos del kernel son por operación. Un digest sin clave no prueba autoría: quien controla archivos y clave podría construir un conjunto consistente. Los [límites del sandbox](./demo/sandbox/README.md#limits-read-these) detallan esa frontera.
+Ese resultado vuelve a comprobar respuestas guardadas; **no es una consulta nueva al ledger**. El recibo registra autorización; el verificador comprueba la liquidación contra el snapshot o Horizon según el modo. El runner lleva el presupuesto entre destinos; los techos del kernel son por operación. Un digest sin clave no prueba autoría: quien controla archivos y clave podría construir un conjunto consistente. Los [límites del sandbox](./demo/sandbox/README.md#limits-read-these) detallan esa frontera. El anclaje mainnet registra el digest de un recibo, no una cadena de Contributions. No se hizo una consulta nueva al ledger para esta revisión del README.
 
-### Reproducir la prueba guardada
+<a id="reproducir-la-prueba-guardada"></a>
 
-Desde un checkout que contenga el commit de evidencia `9624922` (el tag original del kernel es anterior al sandbox), usa **Node 24**. Ejecuta el [bloque único de comandos del sandbox](#reproduce-the-saved-proof). La instalación descarga sus dependencias; las pruebas y la verificación indicada corren offline. La salida esperada es el resultado descrito arriba.
+## Comprobación en 5 minutos
 
-La **consulta opcional en vivo** está en ese mismo bloque: lee Horizon testnet en ese momento y guarda las respuestas localmente. Un reinicio de testnet puede hacer que la ejecución histórica ya no esté disponible. Eso se distingue de reproducir el snapshot del repo. La [guía del sandbox](./demo/sandbox/README.md#reproduce-from-a-clean-clone) explica cómo crear una nueva ejecución financiada en testnet e incluye la advertencia de sobrescritura.
+Desde un checkout que contenga el commit de evidencia `9624922` (el tag original del kernel es anterior al sandbox), usa **Node 24**. Ejecuta el [bloque único de comandos del sandbox](#reproduce-the-saved-proof). La instalación descarga sus dependencias; las pruebas y la verificación indicada corren offline.
 
-### Sprint propuesto · postulación enviada, resultado pendiente
+1. Clona y sitúate en el commit fijado — debes quedar en `962492230d3540ca4ce5a38990a5525838ef6535`.
+2. Instala las dependencias del sandbox — `npm ci` debe terminar sin errores.
+3. Ejecuta las pruebas — debes ver `ℹ pass 9` (o `# pass 9` con salida TAP).
+4. Ejecuta el verificador offline — la última línea dice `VERIFIED`, con los totales indicados en [Prueba en testnet](#prueba-en-testnet).
 
-La postulación a Instawards fue enviada. **No hay fondos adjudicados ni piloto en marcha.** Propone un sprint de 30 días, con inicio sugerido el 30 de noviembre de 2026, para construir el flujo anterior, las páginas de recibos, el verificador independiente, la entrada patrocinada y un piloto abierto en la comunidad Stellar.
+La **consulta opcional en vivo** se describe junto a ese bloque: lee Horizon testnet en ese momento y guarda las respuestas localmente. Un reinicio de testnet puede hacer que la ejecución histórica ya no esté disponible. Eso se distingue de reproducir el snapshot del repo. La [guía del sandbox](./demo/sandbox/README.md#reproduce-from-a-clean-clone) explica cómo crear una nueva ejecución financiada en testnet e incluye la advertencia de sobrescritura.
 
-Los criterios de aceptación propuestos incluyen tres parejas organizadora–contribuyente completas, además de la ejecución de referencia separada del equipo; al menos diez casos de manipulación rechazados; la evaluación de una organizadora externa; reproducción independiente por alguien ajeno al equipo y a Tellus; CI en tres sistemas; y un release público con guías bilingües. Son metas, no evidencia de uso ni de cumplimiento. El piloto reclutaría mediante convocatoria abierta y admitiría participación remota; no depende de una app asociada ni de un evento. El caso de aporte no es un pago.
+## Sprint propuesto
+
+La postulación propone un sprint de 30 días, con inicio sugerido el 30 de noviembre de 2026, para construir el flujo anterior, las páginas de recibos, el verificador independiente, la entrada patrocinada y un piloto abierto en la comunidad Stellar.
+
+Los criterios de aceptación propuestos incluyen tres parejas organizadora–contribuyente completas, además de la ejecución de referencia separada del equipo; al menos diez casos de manipulación rechazados; la evaluación de una organizadora externa; reproducción independiente por alguien ajeno al equipo y a Tellus; CI en tres sistemas; y un release público con guías bilingües. Son metas, no evidencia de uso ni de cumplimiento. El piloto reclutaría mediante convocatoria abierta y admitiría participación remota; no depende de una app asociada ni de un evento.
 
 <a id="kernel-docs-es"></a>
 
@@ -222,7 +312,7 @@ Los criterios de aceptación propuestos incluyen tres parejas organizadora–con
 
 El release vigente del kernel sigue siendo **[v0.1.8-kernel](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel)** (Latest). Es una biblioteca fuente JavaScript sin dependencias, no un paquete npm en la raíz. El host aporta ejecución, identidades confiables, reloj y almacenamiento. Su [resultado congelado de la suite raíz](./docs/SUITE_RESULT_0.1.8.txt) registra 1.319 pruebas aprobadas; ese resultado histórico está separado de la evidencia del sandbox. El cambio de CI añade instalación, pruebas y verificador offline del sandbox a la matriz existente de Node 24 en Linux/macOS/Windows, sin cambiar la suite del kernel.
 
-## Empieza con una operación
+### Empieza con una operación
 
 Desde este checkout, con Node 24, corre el [recorrido local](./docs/WALKTHROUGH.md), responde a la terminal con `Ada: approve` y revisa `status`, `coverage` y `notCovered` del recibo. El [ejemplo de rechazo](./examples/refusal.js) muestra una operación fuera del techo rechazada antes de un efecto y luego otra autorizada.
 
@@ -230,7 +320,7 @@ Los [comandos del kernel](#kernel-commands) se mantienen en un solo lugar: el wa
 
 [La prueba del recorrido](./test/walkthrough.test.js) comprueba un efecto local observado y la selección de la siguiente acción en otro proceso, pero el recibo se pasa explícitamente a ese proceso: no demuestra transporte automático, almacenamiento durable ni identidad humana autenticada. El código actual incluye [el mantenimiento del corte 0.1.7](./docs/TODO_RESOLUTION.md). El resultado guardado de la suite enlazado arriba registra el comando, los conteos exactos, la versión de Node y la base Git de esta versión. Las guías fechadas para jueces están en [Historial](#historial).
 
-## Autoridad, puerta humana y recibos
+### Autoridad, puerta humana y recibos
 
 El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus requisitos; la operación comprueba autoridad antes de `perform`, consulta la puerta humana cuando corresponde y recibe una verificación separada. [Las pruebas de autoridad](./test/k2.test.js) cubren activo, techo, destino, vencimiento y aprobaciones con nombres distintos, pero los nombres de aprobación ordinaria son etiquetas y no firmas autenticadas, y los presupuestos de dinero no se acumulan entre operaciones. El host controla herramientas, identidades, reloj y almacenamiento.
 
@@ -240,14 +330,28 @@ El kernel es JavaScript sin dependencias de runtime. Una capacidad declara sus r
 
 El kernel 0.1.8 conserva el contexto aprobado en la aprobación y el recibo, y lo vuelve a comprobar antes de un efecto. Los checkpoints conservan autoridad acotada al retomar; el host aporta almacenamiento auténtico y una generación mínima aceptada. Esta versión cambia el contrato del receptor de los callbacks del host. Consulta el [contrato y la migración de callbacks](./docs/HOST_CALLBACKS.md) antes de adaptar un host 0.1.7 que use `this`, y la [evidencia y los límites de adopción de 0.1.8](./docs/RELEASE_0.1.8_KERNEL.md).
 
-## Evidencia que puedes abrir
+### Evidencia que puedes abrir
 
 [El archivo de evidencia](./docs/testnet-evidence.json) registra 50 transacciones exitosas en testnet leídas de Horizon, con 5 casos verificados semánticamente, 45 parcialmente verificados y 0 discrepancias. Las expectativas vienen de registros locales de ejecución y no de Horizon; las comprobaciones parciales no completan hechos ausentes. [La guía de evidencia](./docs/TESTNET_EVIDENCE.md) contiene los enlaces de transacciones, la cobertura por campos y los detalles de pagos históricos, incluido el recibo x402 del adaptador de 0.1.3. Esa historia es evidencia histórica de aquel adaptador. El comando offline del kernel comprueba la forma del archivo; la guía contiene la comparación de respuestas guardadas y la consulta opcional a la red.
 
 
+## Historial
+
+Estas guías fechadas conservan su evidencia y alcance originales. No son la entrada para reproducir Contributions:
+
+- **Find Your Way · octubre de 2026:** [Para jueces](./docs/FOR_JUDGES.md), con instrucciones fijadas a una versión; [hallazgos anteriores](./docs/JUDGES_FINDINGS_0.1.4.md).
+- **HackMeridian · 26 de octubre de 2026:** [Judge in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md), fijada a `meridian-2026-10-26`; [demo de pago](./demo/testnet/) y [demo de Pollar](./demo/pollar), fuera de la biblioteca del kernel. La guía del evento distingue su suite combinada de la suite congelada del kernel.
+- [Video histórico de la demo](https://www.youtube.com/watch?v=bmTqxHv0VGU), [página de evidencia de Pollar](https://vespi.xyz/pollar); pitch deck [EN](https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing) / [ES](https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing), one pager [EN](https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link) / [ES](https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing), y [cartas de intención](https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing). Esos archivos no acreditan cumplimiento del piloto propuesto.
+
+La [evidencia de pagos](./demo/testnet/) documenta por separado el pago con Pollar y el pago firmado tras aprobar su hash; esas demos no acreditan aceptación comunitaria de un aporte.
+
+Para el ejemplo histórico de pago, la guía del evento contiene instalación, ejecución en testnet y verificación de mainnet de solo lectura. Su capacidad de firma firma solo el hash de transacción aprobado en la puerta del kernel. El SDK de Pollar en el navegador y la relectura de Horizon pertenecen a la [integración separada de Pollar](./demo/pollar/); no son necesarios para Contributions. La [demo x402](./demo/x402/) también sigue fuera del kernel: demuestra un adaptador de servicio pagado en testnet, mientras el puente SDK real dentro del kernel está diferido. El catálogo distingue la verificación de referencia de conocimiento cero de las apps futuras; el registro por lotes de Meridian sigue como plan hasta que exista su transacción.
+
+Los [registros de tráfico de GitHub](./data/traffic/clones.json) son señales de distribución: los eventos de clonación no son personas únicas, instalaciones activas ni adopción de recibos. No acreditan usuarios de Contributions.
+
 <a id="los-proyectos-funcionales"></a>
 
-## Los proyectos
+### Los proyectos
 
 Una persona construyó estos once proyectos con Vespi en una semana (29 de septiembre – 3 de octubre de 2026); diez corren el kernel de Vespi (TEMIS es el que no lo corre). Once proyectos exploran qué puedes construir así, cada uno con su problema, su evidencia y sus límites. Su código es público en cada repositorio desde el 10 de octubre de 2026, con licencia de solo revisión.
 
@@ -266,13 +370,13 @@ Una persona construyó estos once proyectos con Vespi en una semana (29 de septi
 Todos con datos ficticios y sin dinero real: la mayoría corre como recorrido local, y la evidencia en la testnet de Stellar pertenece solo a los proyectos que la declaran (TEMIS y Permamuseum), no a los once. Reejecutadas desde clones frescos el 25 de octubre de 2026: 399 pruebas pasan en los once repositorios ([registro](./docs/PROJECT_SUITES_2026-10-25.md)).
 
 
-## Lore Plugin y el método de construcción
+### Lore Plugin y el método de construcción
 
 [Lore Plugin](https://github.com/andresanemic/lore-plugin) aporta el criterio y el flujo del coordinador; Vespi aporta la semántica de autoridad y recibos alrededor de una operación. [El método](./docs/METHOD.md) describe ciclos, pruebas primero, especificaciones, delegación acotada, lectura ciega y verificación separada; es un flujo de trabajo para herramientas del host, no un kernel que genere apps o imágenes por sí solo. Lore Plugin lleva una copia fija del kernel, por lo que este corte de código no actualiza automáticamente un kit instalado.
 
 El acuerdo conserva su orden. La finalidad es cuidar tu agencia y evitar decisiones repetidas; el método coordina autoridad acotada, puerta humana y recibos; el resultado concreto debe comprobarse en cada operación. [El registro de verificación](./docs/VERIFICATION.md), [los hallazgos de jueces del corte anterior](./docs/JUDGES_FINDINGS_0.1.4.md), [las notas de arte previo](./docs/PRIOR_ART.md) y [los experimentos](./experiments/) conservan la historia de construcción. Las revisiones por modelos independientes de sus constructores no son una auditoría de seguridad externa. El método acredita [The Fable Method](https://github.com/Sahir619/fable-method); Raven MCP, Stellar y el trabajo de Lore/LUS pertenecen al relato de construcción, no prueban que el producto completo opere de forma autónoma.
 
-### Cómo encajan las piezas
+#### Cómo encajan las piezas
 
 | Proyecto | Su foco | Lore Plugin + Vespi hoy |
 |---|---|---|
@@ -283,29 +387,16 @@ El acuerdo conserva su orden. La finalidad es cuidar tu agencia y evitar decisio
 
 La tabla compara alcances actuales, no resultados de una prueba cara a cara. Falta demostrar el recorrido completo de punta a punta.
 
-
-## Historial
-
-Estas guías fechadas conservan su evidencia y alcance originales. No son la entrada para reproducir Contributions:
-
-- **Find Your Way · octubre de 2026:** [Para jueces](./docs/FOR_JUDGES.md), con instrucciones fijadas a una versión; [hallazgos anteriores](./docs/JUDGES_FINDINGS_0.1.4.md).
-- **HackMeridian · 26 de octubre de 2026:** [Judge in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md), fijada a `meridian-2026-10-26`; [demo de pago](./demo/testnet/) y [demo de Pollar](./demo/pollar), fuera de la biblioteca del kernel. La guía del evento distingue su suite combinada de la suite congelada del kernel.
-- [Video histórico de la demo](https://www.youtube.com/watch?v=bmTqxHv0VGU), [página de evidencia de Pollar](https://vespi.xyz/pollar); pitch deck [EN](https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing) / [ES](https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing), one pager [EN](https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link) / [ES](https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing), y [cartas de intención](https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing). Esos archivos no acreditan cumplimiento del piloto propuesto.
-
-**Anclaje histórico en mainnet:** la [transacción `2ff744c6…09d7`](https://stellar.expert/explorer/public/tx/2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7) ancla el digest de un recibo. No es una cadena de Contributions ni el piloto. La [evidencia de pagos](./demo/testnet/) documenta por separado el pago con Pollar y el pago firmado tras aprobar su hash; esas demos no acreditan aceptación comunitaria de un aporte. No se hizo una consulta nueva al ledger para esta revisión del README.
-
-Para el ejemplo histórico de pago, la guía del evento contiene instalación, ejecución en testnet y verificación de mainnet de solo lectura. Su capacidad de firma firma solo el hash de transacción aprobado en la puerta del kernel. El SDK de Pollar en el navegador y la relectura de Horizon pertenecen a la [integración separada de Pollar](./demo/pollar/); no son necesarios para Contributions. La [demo x402](./demo/x402/) también sigue fuera del kernel: demuestra un adaptador de servicio pagado en testnet, mientras el puente SDK real dentro del kernel está diferido. El catálogo distingue la verificación de referencia de conocimiento cero de las apps futuras; el registro por lotes de Meridian sigue como plan hasta que exista su transacción.
-
-Los [registros de tráfico de GitHub](./data/traffic/clones.json) son señales de distribución: los eventos de clonación no son personas únicas, instalaciones activas ni adopción de recibos. No acreditan usuarios de Contributions.
-
 ## Equipo
 
-- **Andrés Peña** crea Vespi y Lore Plugin. En el sprint propuesto lidera la ingeniería, la firma, el verificador y la publicación.
-- **Francisco Toro** es sociólogo e investigador de RUC-D, y miembro fundador del Blockchain Lab de la Universidad Adolfo Ibáñez. En el sprint propuesto lidera el piloto y su evaluación externa.
+- **Francisco Toro Fierro** — sociólogo con 18 años de ejercicio. Formuló el marco RUC-D y trabaja en economía social y valor comunitario. Finalista de la Bankaton de Blockchain Summit Latam (2024). En el sprint propuesto lidera el piloto y su evaluación externa. [Contacto: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
+- **Andrés Peña Mellado** — periodista y profesor, autor de LUS, Lore Plugin y Vespi. Ha trabajado en comunicación en el ecosistema blockchain y trabaja con Tellus, el equipo detrás de Stellar Chile, en editorial y comunidad; construyó Vespi a través de Find Your Way y HackMeridian. Ganador del hackathon de Stacks en Argentina. En el sprint propuesto lidera la ingeniería, la firma, el verificador y la publicación. [Telegram @andresanemic](https://t.me/andresanemic).
 
 Juntos desarrollan RUC-D, el observatorio de investigación de Vespi, y construyen Vespi Contributions.
 
-## Autor y licencia
+<a id="autor-y-licencia"></a>
+
+## Licencia
 
 Andrés Peña Mellado, Digital Art Director & Creative Developer.
 
