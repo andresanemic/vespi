@@ -209,8 +209,8 @@ This compares current scope, not head-to-head results. The complete end-to-end p
 
 ## Team
 
-- **Francisco Toro Fierro** — sociologist with 18 years of practice. He formulated the RUC-D framework and works on social economy and community value. Finalist at the Blockchain Summit Latam Bankaton (2024). In the proposed sprint he leads the pilot and its outside evaluation. [Contact: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
 - **Andrés Peña Mellado** — journalist and teacher, author of LUS, Lore Plugin and Vespi. He has worked in communication across the blockchain ecosystem and works with Tellus, the team behind Stellar Chile, on editorial and community; he built Vespi through Find Your Way and HackMeridian. Winner of the Stacks hackathon in Argentina. In the proposed sprint he leads engineering, signing, the verifier and the release. [Telegram @andresanemic](https://t.me/andresanemic).
+- **Francisco Toro Fierro** — sociologist with 18 years of practice. He formulated the RUC-D framework and works on social economy and community value. Finalist at the Blockchain Summit Latam Bankaton (2024). In the proposed sprint he leads the pilot and its outside evaluation. [Contact: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
 
 Together they develop RUC-D, Vespi's research observatory, and build Vespi Contributions.
 
@@ -411,8 +411,8 @@ La tabla compara alcances actuales, no resultados de una prueba cara a cara. Fal
 
 ## Equipo
 
-- **Francisco Toro Fierro** — sociólogo con 18 años de ejercicio. Formuló el marco RUC-D y trabaja en economía social y valor comunitario. Finalista de la Bankaton de Blockchain Summit Latam (2024). En el sprint propuesto lidera el piloto y su evaluación externa. [Contacto: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
 - **Andrés Peña Mellado** — periodista y profesor, autor de LUS, Lore Plugin y Vespi. Ha trabajado en comunicación en el ecosistema blockchain y trabaja con Tellus, el equipo detrás de Stellar Chile, en editorial y comunidad; construyó Vespi a través de Find Your Way y HackMeridian. Ganador del hackathon de Stacks en Argentina. En el sprint propuesto lidera la ingeniería, la firma, el verificador y la publicación. [Telegram @andresanemic](https://t.me/andresanemic).
+- **Francisco Toro Fierro** — sociólogo con 18 años de ejercicio. Formuló el marco RUC-D y trabaja en economía social y valor comunitario. Finalista de la Bankaton de Blockchain Summit Latam (2024). En el sprint propuesto lidera el piloto y su evaluación externa. [Contacto: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
 
 Juntos desarrollan RUC-D, el observatorio de investigación de Vespi, y construyen Vespi Contributions.
 
