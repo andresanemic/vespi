@@ -151,6 +151,13 @@ For the historical payment example, the event guide owns installation, testnet e
 
 [GitHub traffic records](./data/traffic/clones.json) are distribution signals: clone events are not unique people, active installations or receipt adoption. They do not establish users of Contributions.
 
+### Team
+
+- **Andrés Peña** creates Vespi and Lore Plugin. In the proposed sprint he leads engineering, signing, the verifier and the release.
+- **Francisco Toro** is a sociologist and RUC-D researcher, and a founding member of the Blockchain Lab at Universidad Adolfo Ibáñez. In the proposed sprint he leads the pilot and its outside evaluation.
+
+Together they develop RUC-D, Vespi's research observatory, and build Vespi Contributions.
+
 ### Author and license
 
 Andrés Peña Mellado, Digital Art Director & Creative Developer.
@@ -290,6 +297,13 @@ Estas guías fechadas conservan su evidencia y alcance originales. No son la ent
 Para el ejemplo histórico de pago, la guía del evento contiene instalación, ejecución en testnet y verificación de mainnet de solo lectura. Su capacidad de firma firma solo el hash de transacción aprobado en la puerta del kernel. El SDK de Pollar en el navegador y la relectura de Horizon pertenecen a la [integración separada de Pollar](./demo/pollar/); no son necesarios para Contributions. La [demo x402](./demo/x402/) también sigue fuera del kernel: demuestra un adaptador de servicio pagado en testnet, mientras el puente SDK real dentro del kernel está diferido. El catálogo distingue la verificación de referencia de conocimiento cero de las apps futuras; el registro por lotes de Meridian sigue como plan hasta que exista su transacción.
 
 Los [registros de tráfico de GitHub](./data/traffic/clones.json) son señales de distribución: los eventos de clonación no son personas únicas, instalaciones activas ni adopción de recibos. No acreditan usuarios de Contributions.
+
+## Equipo
+
+- **Andrés Peña** crea Vespi y Lore Plugin. En el sprint propuesto lidera la ingeniería, la firma, el verificador y la publicación.
+- **Francisco Toro** es sociólogo e investigador de RUC-D, y miembro fundador del Blockchain Lab de la Universidad Adolfo Ibáñez. En el sprint propuesto lidera el piloto y su evaluación externa.
+
+Juntos desarrollan RUC-D, el observatorio de investigación de Vespi, y construyen Vespi Contributions.
 
 ## Autor y licencia
 
