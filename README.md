@@ -4,7 +4,7 @@
 
 <h1 align="center">Vespi</h1>
 
-**Ask, contribute, accept: a shared record proposed for Stellar.**
+**Good work should not disappear into a chat.** Vespi Contributions proposes a shared record of what one person requested, another contributed and the requester accepted, each step signed on Stellar by the person who took it.
 
 <p align="center">
   <a href="./docs/RELEASE_0.1.8_KERNEL.md"><img src="https://img.shields.io/badge/kernel-v0.1.8-D7B698?labelColor=07111A" alt="Kernel v0.1.8"></a>
@@ -21,6 +21,16 @@
 > **Status.** Proposed pilot submitted to Stellar Chile Instawards; result pending. No funds awarded, no pilot running.
 
 > **⚠ Testnet only.** The existing sandbox uses one payer and simulated roles; it does not prove two people signing.
+
+## What exists today, what is proposed
+
+| State | What it covers |
+|---|---|
+| **Exists today** | Kernel [v0.1.8](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel) with 1,319 passing tests in its frozen suite · a [testnet sandbox](./demo/sandbox/) with one payer and simulated roles: 7 recorded payments, 7 blocked out-of-policy attempts, 9 offline tests and a verifier that returns `VERIFIED` · one earlier [mainnet receipt-digest anchor](https://stellar.expert/explorer/public/tx/2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7) (25 October 2026), not a Contributions chain · 7,410 recorded repository clone events of Vespi and Lore Plugin through 5 November 2026 ([details](#history)), not unique users |
+| **Proposed for 30 days** | REQUEST, CONTRIBUTE and ACCEPT signed by each participant's own Stellar key · sponsored reserves and fee bump · canonical public JSON receipts and a shareable receipt page · a one-command independent verifier and ten or more rejected tampering cases · a team reference chain on mainnet, then three real requester–contributor pairs, an outside organizer's assessment and an independent reproduction |
+| **Out of scope or future** | Reputation scores, badges or tokens · judging the quality or truth of a contribution · a new Soroban contract · integrations with other apps or programs, including Attest or Stellar Passport |
+
+The record verifies acknowledgment and its integrity, not the quality of the work. More on the pilot: [vespi.xyz/contributions](https://vespi.xyz/contributions).
 
 ## Where to read next
 
@@ -40,19 +50,19 @@
 
 ## The idea
 
-**Vespi Contributions proposes a portable record of those acknowledgments**, signed by each participant's own Stellar account.
+**Vespi Contributions proposes a portable record of those acknowledgments**, signed by each participant's own Stellar account. The requester (called the organizer in the application) can be a builder, a mentor, a chapter member or an event organizer; the context never adds a signer.
 
 **Proposed flow · not implemented yet**
 
 ```mermaid
 sequenceDiagram
-    actor Organizer
+    actor Requester
     actor Contributor
     participant Stellar
     participant Verifier
-    Organizer->>Stellar: REQUEST signed by organizer (expected contribution, public context)
+    Requester->>Stellar: REQUEST signed by requester (expected contribution, public context)
     Contributor->>Stellar: CONTRIBUTE signed by contributor (delivery, evidence)
-    Organizer->>Stellar: ACCEPT signed by organizer (reviewed contribution)
+    Requester->>Stellar: ACCEPT signed by requester (reviewed contribution)
     Verifier->>Stellar: Read transactions and ordered receipt hash links
     Stellar-->>Verifier: Signing accounts and anchored digests
 ```
@@ -105,7 +115,7 @@ For an **optional live query**, run `node demo/sandbox/verify.cjs`: it reads Hor
 
 The application proposes a 30-day sprint, with a suggested start of 30 November 2026, to build the workflow above, receipt pages, independent verifier, sponsored onboarding and an open Stellar community pilot.
 
-The proposed acceptance criteria include three completed organizer–contributor pairs beyond the team's separate reference run, at least ten rejected manipulation cases, an outside organizer's assessment, independent reproduction by someone outside the team and Tellus, cross-platform CI, and a public release with bilingual guides. These are targets, not usage or completion evidence. The pilot would recruit openly and allow remote participation; it does not depend on a partner application or event.
+The proposed acceptance criteria include three completed requester–contributor pairs (organizer–contributor in the application) beyond the team's separate reference run, at least ten rejected manipulation cases, an outside organizer's assessment, independent reproduction by someone outside the team and Tellus, cross-platform CI, and a public release with bilingual guides. These are targets, not usage or completion evidence. The pilot would recruit openly and allow remote participation; it does not depend on a partner application or event.
 
 ## Kernel / docs
 
@@ -158,7 +168,7 @@ The [payment evidence](./demo/testnet/) separately documents the Pollar payment 
 
 For the historical payment example, the event guide owns installation, testnet execution and read-only mainnet verification. Its signing capability signs only the transaction hash approved at the kernel gate. Pollar's browser SDK and Horizon readback belong to the separate [Pollar integration](./demo/pollar/); they are not required for the proposed Contributions workflow. The [x402 demo](./demo/x402/) likewise remains outside the kernel: it demonstrates a paid-service adapter on testnet, while its real-SDK bridge inside the kernel is deferred. The capability catalog distinguishes reference zero-knowledge verification from future applications; the Meridian batch-registration idea remains a plan until its transaction exists.
 
-Recorded through 2026-11-08: **1,791 clone events of Vespi in 43 days** and **5,809 of [Lore Plugin](https://github.com/andresanemic/lore-plugin) in 127 days**. These [GitHub traffic records](./data/traffic/clones.json) are distribution signals: clone events are not unique people, active installations or receipt adoption. They do not establish users of Contributions.
+Recorded through 2026-11-05, the cut cited in the application: **1,743 clone events of Vespi in 40 days** and **5,667 of [Lore Plugin](https://github.com/andresanemic/lore-plugin) in 124 days**, 7,410 in total. Vespi's own record continues to 2026-11-08 (1,791 in 43 days); Lore Plugin's [published record](https://github.com/andresanemic/lore-plugin/blob/main/data/traffic/clones.json) ends on 2026-11-05. These [GitHub traffic records](./data/traffic/clones.json) are distribution signals: clone events are not unique people, active installations or receipt adoption. They do not establish users of Contributions.
 
 <a id="the-functional-projects"></a>
 
@@ -228,6 +238,18 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 > **⚠ Solo testnet.** El sandbox existente usa un pagador y roles simulados; no demuestra a dos personas firmando.
 
+**Un buen aporte no debería perderse en un chat.** Vespi Contributions propone un registro compartido de lo que una persona solicitó, otra aportó y la primera aceptó, con cada paso firmado en Stellar por quien lo dio.
+
+## Lo que existe hoy y lo que se propone
+
+| Estado | Qué cubre |
+|---|---|
+| **Existe hoy** | Kernel [v0.1.8](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel) con 1.319 pruebas aprobadas en su suite congelada · un [sandbox en testnet](./demo/sandbox/) con un pagador y roles simulados: 7 pagos registrados, 7 intentos fuera de política bloqueados, 9 pruebas offline y un verificador que devuelve `VERIFIED` · un [anclaje anterior en mainnet](https://stellar.expert/explorer/public/tx/2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7) de la huella de un recibo (25 de octubre de 2026), que no es una cadena de Contributions · 7.410 clonaciones registradas de Vespi y Lore Plugin hasta el 5 de noviembre de 2026 ([detalle](#historial)), que no son usuarios únicos |
+| **Propuesto para 30 días** | SOLICITAR, APORTAR y ACEPTAR firmados con la clave propia de Stellar de cada participante · reservas patrocinadas y fee bump · recibos JSON públicos y canónicos y una página de recibo compartible · un verificador independiente de un comando y diez o más casos de manipulación rechazados · una cadena de referencia del equipo en mainnet y luego tres parejas reales de solicitante y quien aporta, la evaluación de una organizadora externa y una reproducción independiente |
+| **Fuera de alcance o futuro** | Puntajes de reputación, insignias o tokens · juzgar la calidad o la verdad de un aporte · un contrato Soroban nuevo · integraciones con otras apps o programas, incluidos Attest y Stellar Passport |
+
+El registro comprueba el reconocimiento y su integridad, no la calidad del trabajo. Más sobre el piloto: [vespi.xyz/contributions/es](https://vespi.xyz/contributions/es).
+
 ## Dónde seguir leyendo
 
 | Si eres… | Empieza por |
@@ -246,19 +268,19 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 ## La idea
 
-**Vespi Contributions propone un registro portable de esos reconocimientos**, firmado con la cuenta propia de Stellar de cada participante.
+**Vespi Contributions propone un registro portable de esos reconocimientos**, firmado con la cuenta propia de Stellar de cada participante. Quien solicita (la organizadora, en la postulación) puede ser un builder, una mentora, alguien de un capítulo o quien organiza un evento; el contexto nunca agrega un firmante.
 
 **Flujo propuesto · todavía no implementado**
 
 ```mermaid
 sequenceDiagram
-    actor Organizer as Organizadora
-    actor Contributor as Contribuyente
+    actor Requester as Solicitante
+    actor Contributor as Quien aporta
     participant Stellar
     participant Verifier as Verificador
-    Organizer->>Stellar: REQUEST firmado por la organizadora (aporte esperado, contexto público)
+    Requester->>Stellar: REQUEST firmado por quien solicita (aporte esperado, contexto público)
     Contributor->>Stellar: CONTRIBUTE firmado por quien aporta (entrega, evidencia)
-    Organizer->>Stellar: ACCEPT firmado por la organizadora (aporte revisado)
+    Requester->>Stellar: ACCEPT firmado por quien solicitó (aporte revisado)
     Verifier->>Stellar: Leer transacciones y enlaces ordenados entre hashes de recibos
     Stellar-->>Verifier: Cuentas firmantes y digests anclados
 ```
@@ -302,7 +324,7 @@ La **consulta opcional en vivo** se describe junto a ese bloque: lee Horizon tes
 
 La postulación propone un sprint de 30 días, con inicio sugerido el 30 de noviembre de 2026, para construir el flujo anterior, las páginas de recibos, el verificador independiente, la entrada patrocinada y un piloto abierto en la comunidad Stellar.
 
-Los criterios de aceptación propuestos incluyen tres parejas organizadora–contribuyente completas, además de la ejecución de referencia separada del equipo; al menos diez casos de manipulación rechazados; la evaluación de una organizadora externa; reproducción independiente por alguien ajeno al equipo y a Tellus; CI en tres sistemas; y un release público con guías bilingües. Son metas, no evidencia de uso ni de cumplimiento. El piloto reclutaría mediante convocatoria abierta y admitiría participación remota; no depende de una app asociada ni de un evento.
+Los criterios de aceptación propuestos incluyen tres parejas completas de solicitante y quien aporta (organizadora y contribuyente, en la postulación), además de la ejecución de referencia separada del equipo; al menos diez casos de manipulación rechazados; la evaluación de una organizadora externa; reproducción independiente por alguien ajeno al equipo y a Tellus; CI en tres sistemas; y un release público con guías bilingües. Son metas, no evidencia de uso ni de cumplimiento. El piloto reclutaría mediante convocatoria abierta y admitiría participación remota; no depende de una app asociada ni de un evento.
 
 <a id="kernel-docs-es"></a>
 
@@ -347,7 +369,7 @@ La [evidencia de pagos](./demo/testnet/) documenta por separado el pago con Poll
 
 Para el ejemplo histórico de pago, la guía del evento contiene instalación, ejecución en testnet y verificación de mainnet de solo lectura. Su capacidad de firma firma solo el hash de transacción aprobado en la puerta del kernel. El SDK de Pollar en el navegador y la relectura de Horizon pertenecen a la [integración separada de Pollar](./demo/pollar/); no son necesarios para Contributions. La [demo x402](./demo/x402/) también sigue fuera del kernel: demuestra un adaptador de servicio pagado en testnet, mientras el puente SDK real dentro del kernel está diferido. El catálogo distingue la verificación de referencia de conocimiento cero de las apps futuras; el registro por lotes de Meridian sigue como plan hasta que exista su transacción.
 
-Registro hasta el 2026-11-08: **1.791 clonaciones de Vespi en 43 días** y **5.809 de [Lore Plugin](https://github.com/andresanemic/lore-plugin) en 127 días**. Estos [registros de tráfico de GitHub](./data/traffic/clones.json) son señales de distribución: los eventos de clonación no son personas únicas, instalaciones activas ni adopción de recibos. No acreditan usuarios de Contributions.
+Registro hasta el 2026-11-05, el corte citado en la postulación: **1.743 clonaciones de Vespi en 40 días** y **5.667 de [Lore Plugin](https://github.com/andresanemic/lore-plugin) en 124 días**, 7.410 en total. El registro propio de Vespi sigue hasta el 2026-11-08 (1.791 en 43 días); el [registro publicado de Lore Plugin](https://github.com/andresanemic/lore-plugin/blob/main/data/traffic/clones.json) termina el 2026-11-05. Estos [registros de tráfico de GitHub](./data/traffic/clones.json) son señales de distribución: los eventos de clonación no son personas únicas, instalaciones activas ni adopción de recibos. No acreditan usuarios de Contributions.
 
 <a id="los-proyectos-funcionales"></a>
 
