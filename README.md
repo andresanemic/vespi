@@ -158,7 +158,7 @@ The [payment evidence](./demo/testnet/) separately documents the Pollar payment 
 
 For the historical payment example, the event guide owns installation, testnet execution and read-only mainnet verification. Its signing capability signs only the transaction hash approved at the kernel gate. Pollar's browser SDK and Horizon readback belong to the separate [Pollar integration](./demo/pollar/); they are not required for the proposed Contributions workflow. The [x402 demo](./demo/x402/) likewise remains outside the kernel: it demonstrates a paid-service adapter on testnet, while its real-SDK bridge inside the kernel is deferred. The capability catalog distinguishes reference zero-knowledge verification from future applications; the Meridian batch-registration idea remains a plan until its transaction exists.
 
-[GitHub traffic records](./data/traffic/clones.json) are distribution signals: clone events are not unique people, active installations or receipt adoption. They do not establish users of Contributions.
+Recorded through 2026-11-08: **1,791 clone events of Vespi in 43 days** and **5,809 of [Lore Plugin](https://github.com/andresanemic/lore-plugin) in 127 days**. These [GitHub traffic records](./data/traffic/clones.json) are distribution signals: clone events are not unique people, active installations or receipt adoption. They do not establish users of Contributions.
 
 <a id="the-functional-projects"></a>
 
@@ -347,7 +347,7 @@ La [evidencia de pagos](./demo/testnet/) documenta por separado el pago con Poll
 
 Para el ejemplo histórico de pago, la guía del evento contiene instalación, ejecución en testnet y verificación de mainnet de solo lectura. Su capacidad de firma firma solo el hash de transacción aprobado en la puerta del kernel. El SDK de Pollar en el navegador y la relectura de Horizon pertenecen a la [integración separada de Pollar](./demo/pollar/); no son necesarios para Contributions. La [demo x402](./demo/x402/) también sigue fuera del kernel: demuestra un adaptador de servicio pagado en testnet, mientras el puente SDK real dentro del kernel está diferido. El catálogo distingue la verificación de referencia de conocimiento cero de las apps futuras; el registro por lotes de Meridian sigue como plan hasta que exista su transacción.
 
-Los [registros de tráfico de GitHub](./data/traffic/clones.json) son señales de distribución: los eventos de clonación no son personas únicas, instalaciones activas ni adopción de recibos. No acreditan usuarios de Contributions.
+Registro hasta el 2026-11-08: **1.791 clonaciones de Vespi en 43 días** y **5.809 de [Lore Plugin](https://github.com/andresanemic/lore-plugin) en 127 días**. Estos [registros de tráfico de GitHub](./data/traffic/clones.json) son señales de distribución: los eventos de clonación no son personas únicas, instalaciones activas ni adopción de recibos. No acreditan usuarios de Contributions.
 
 <a id="los-proyectos-funcionales"></a>
 
