@@ -41,7 +41,7 @@ The record verifies acknowledgment and its integrity, not the quality of the wor
 | Integrating the kernel | [Kernel / docs](#kernel--docs) and [host callback contract](./docs/HOST_CALLBACKS.md) |
 | Looking for Find Your Way and HackMeridian | [History](#history) |
 
-[Website](https://vespi.xyz) · [Leer en español](#espanol)
+[Website](https://vespi.xyz/contributions) · [Video](https://www.youtube.com/watch?v=eRV_evhc2u0) · [Pitch deck](https://drive.google.com/file/d/1be8oVS8xLg_wuCsyw27IEkkf89GEC0Kq/view?usp=sharing) · [Leer en español](#espanol)
 
 ## The problem
 
@@ -259,7 +259,7 @@ El registro comprueba el reconocimiento y su integridad, no la calidad del traba
 | Quien integra el kernel | [Kernel / documentación](#kernel-docs-es) y [contrato de callbacks del host](./docs/HOST_CALLBACKS.md) |
 | Quien busca Find Your Way y HackMeridian | [Historial](#historial) |
 
-[Sitio](https://vespi.xyz) · [English](#english)
+[Sitio](https://vespi.xyz/contributions/es) · [Video](https://www.youtube.com/watch?v=eRV_evhc2u0) · [Pitch deck](https://drive.google.com/file/d/12jYOwr-SK69FeBXlCzHLaz6y2wQDKpyx/view?usp=sharing) · [English](#english)
 
 ## El problema
 
