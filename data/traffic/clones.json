@@ -218,5 +218,30 @@
     "timestamp": "2026-11-09T00:00:00Z",
     "count": 30,
     "uniques": 7
+  },
+  {
+    "timestamp": "2026-11-10T00:00:00Z",
+    "count": 138,
+    "uniques": 44
+  },
+  {
+    "timestamp": "2026-11-11T00:00:00Z",
+    "count": 36,
+    "uniques": 17
+  },
+  {
+    "timestamp": "2026-11-12T00:00:00Z",
+    "count": 24,
+    "uniques": 11
+  },
+  {
+    "timestamp": "2026-11-13T00:00:00Z",
+    "count": 10,
+    "uniques": 8
+  },
+  {
+    "timestamp": "2026-11-14T00:00:00Z",
+    "count": 4,
+    "uniques": 4
   }
 ]
