@@ -1,0 +1,24 @@
+.survey-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: .4rem 0 .65rem;
+  border: 0;
+}
+.survey-form legend { font-weight: 650; }
+.survey-rating { display: grid; grid-template-columns: repeat(5, 1fr); gap: .35rem; }
+.survey-rating label {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: .2rem;
+  min-height: 56px;
+  border: 1px solid var(--line);
+  border-radius: .3rem;
+  cursor: pointer;
+}
+.survey-rating label:focus-within { outline: 2px solid var(--system); }
+.survey-rating label:has(:checked) { border-color: var(--action); background: var(--raised); }
+.survey-rating input { width: 1rem; min-height: 1rem; margin: 0; accent-color: var(--action); }
+.survey-private { width: 100%; border-top: 1px solid var(--line); padding-top: .65rem; }
+.survey-private summary { min-height: 44px; cursor: pointer; }
+.survey-private code { display: block; margin-block: .55rem; }

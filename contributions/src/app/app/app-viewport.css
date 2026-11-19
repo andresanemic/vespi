@@ -1,0 +1,15 @@
+html:has(#meridian-reference) { scrollbar-gutter: auto; }
+
+@media (max-width: 900px) {
+  html:has(#contributions-app),
+  body:has(#contributions-app) {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+    scrollbar-gutter: auto;
+  }
+  #contributions-app {
+    max-inline-size: 100%;
+    overflow-x: clip;
+    touch-action: pan-y pinch-zoom;
+  }
+}

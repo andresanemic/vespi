@@ -1,5 +1,39 @@
 # Changelog
 
+## Instawards Chile · Week 1
+
+November 16–20, 2026 · progress through November 19
+
+Vespi Contributions is live on Stellar testnet. Two people can record a meeting or collaboration, confirm what each person contributed, and share a receipt. We tested this across a desktop browser and an Android phone.
+
+### Added
+
+- A bilingual web app with passkey accounts, a list of recent encounters, and drafts you can resume.
+- Records for one-way and mutual contributions, with invitations for people who already have an account and people who need to create one.
+- Photo evidence, signed receipts, and public receipt verification. Stellar records the receipt digest. Images are stored separately.
+- A page for Yerko Pincheira Sánchez’s talk at Tellus, with slides and a flow for multiple attendees to attest after the speaker signs. The designated speaker account is configured. The speaker signature and attendee attestations are pending.
+- A bilingual Tellus feedback survey. Survey answers are stored separately from the testnet commitment.
+
+### Changed
+
+- The primary flow starts with what already happened: a meeting, a talk, or help someone gave. The encounter shows who is expected to act next.
+- Public release evidence and instructions are collected in the submission repository.
+
+### Fixed
+
+- Tightened the iPhone date field and horizontal layout, and added breathing room between the mobile home sections.
+- Kept the app, talk and survey in the same visual system, with theme and language controls.
+
+### Evidence
+
+The published source passed all 156 Contributions tests and a production build with Node.js 26.13.0.
+
+- [Live app](https://vespi.xyz/app)
+- [Example mutual contribution on testnet](https://vespi.xyz/app?mutual=abf70f4d3339cb1276222e721e83a0516fecdb0f164c9f63846a5789902eed49&return=ab919ba6d40f6deda88180022ed0a394c04a6089bad8830ffa0eadba29a229f9)
+- [Receipt signed on iPhone](https://vespi.xyz/app?receipt=92c08f2b27d4f78b5db522b4aec1aafd8da5a845ffbfc2873043e19dc5392e5f)
+- [Tellus talk page](https://vespi.xyz/app/evento/yerko)
+- [Synthetic survey commitment on Stellar testnet](https://stellar.expert/explorer/testnet/tx/54813dd8f863f49dbf2a02794c5bd069d55328189d7d97e86e6d493ac2c85b12)
+
 ## [v0.1.8-kernel] — 2026-10-23
 
 This version adds checkpoint/continuation handling and closes host-callback return validation before effects. Callback receivers vary by port; see [the callback contract and compatibility limits](./docs/HOST_CALLBACKS.md) and do not rely on a receiver. `runOperation` and x402 reject non-native thenables without subscribing; host-provided functions in emergency and delegation may return thenables, which the kernel subscribes to. `attenuates` rejects an authority with too many grants to verify within its fixed work budget; `MAX_ATTENUATION_WORK` is 1,000,000 units. Two limits stay declared: a checkpoint's generation does not order two checkpoints by itself when the authority already covers the spend, so the host must consume each checkpoint atomically and enforce its own minimum generation (`minGeneration` does not tell such checkpoints apart); and the context is re-read once just before `perform`, so in x402 it can change while `prepare` runs. The source suite passes 1,319/1,319 with zero skipped or TODO tests. [Evidence and adoption limits](./docs/RELEASE_0.1.8_KERNEL.md).

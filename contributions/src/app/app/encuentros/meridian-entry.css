@@ -1,0 +1,17 @@
+#meridian-reference:not([data-ready="true"]) { display: none; }
+.meridian-entry {
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  background: var(--bg);
+}
+#meridian-reference[data-ready="true"] ~ .meridian-entry,
+.meridian-entry-retry { display: none; }
+#meridian-reference[data-ready="error"] ~ .meridian-entry-retry {
+  display: block;
+  position: fixed;
+  top: calc(50% + 4rem);
+  left: 50%;
+  translate: -50% 0;
+  min-height: 44px;
+}

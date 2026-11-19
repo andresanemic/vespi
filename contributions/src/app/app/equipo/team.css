@@ -1,0 +1,18 @@
+.team-cohort {
+  width: 100%;
+  min-height: 48px;
+  padding: .6rem .75rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 48%, var(--line));
+  border-radius: .3rem;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+
+.team-responses { width: 100%; }
+.team-responses ol { margin: .65rem 0 0; padding-inline-start: 1.5rem; }
+.team-responses li { padding: .85rem 0; border-top: 1px solid var(--line); }
+.team-responses time { font-weight: 600; }
+.team-responses dl { margin: .4rem 0 0; }
+.team-responses dt { font-weight: 600; }
+.team-responses dd { margin: 0 0 .4rem; white-space: pre-wrap; }

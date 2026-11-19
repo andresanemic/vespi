@@ -1,0 +1,45 @@
+{
+  "name": "so-lore",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test:contributions": "node --test \"src/lib/contributions/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@gsap/react": "latest",
+    "@phosphor-icons/react": "^2.1.10",
+    "@pollar/core": "^0.12.0",
+    "@pollar/react": "^0.12.0",
+    "@stellar/stellar-sdk": "16.3.0",
+    "@vercel/blob": "2.9.0",
+    "buffer": "6.0.3",
+    "gsap": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "latest",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "latest",
+    "tailwindcss": "latest",
+    "typescript": "^5"
+  },
+  "browserslist": [
+    "chrome >= 109",
+    "edge >= 109",
+    "firefox >= 102",
+    "safari >= 15.4",
+    "ios_saf >= 15.4"
+  ]
+}

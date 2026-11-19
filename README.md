@@ -18,9 +18,9 @@
 
 **Vespi does not establish the truth or quality of work, or supply an autonomous runtime.** It is open infrastructure for operations with bounded authority and verifiable receipts: keep the permission, checked result and next agreed action together when work changes hands. You decide what matters; the host carries out and stores the operation.
 
-> **Status.** Proposed pilot submitted to Stellar Chile Instawards; result pending. No funds awarded, no pilot running.
+> **Instawards Chile pilot.** The Week 1 app is live on Stellar testnet. Record an encounter, invite the other person to confirm it, and share the signed receipt. [Open the app](https://vespi.xyz/app) · [Release notes](https://github.com/andresanemic/vespi/releases/tag/instawards-2026-week-1) · [Source and setup](./contributions/)
 
-> **⚠ Testnet only.** The existing sandbox uses one payer and simulated roles; it does not prove two people signing.
+> **Evidence.** The live app has a recorded two-person testnet trial. The historical sandbox below exercised a single payer with simulated roles.
 
 ## What exists today, what is proposed
 
@@ -36,7 +36,7 @@ The record verifies acknowledgment and its integrity, not the quality of the wor
 
 | If you are… | Start with |
 |---|---|
-| A judge or evaluator | [Proof on testnet](#proof-on-testnet) and [proposed sprint](#proposed-sprint) |
+| A judge or evaluator | [Week 1 changelog](./CHANGELOG.md#instawards-chile--week-1) and [submission plan](#proposed-sprint) |
 | A developer reproducing the evidence | [5-minute check](#5-minute-check) |
 | Integrating the kernel | [Kernel / docs](#kernel--docs) and [host callback contract](./docs/HOST_CALLBACKS.md) |
 | Looking for Find Your Way and HackMeridian | [History](#history) |
@@ -52,7 +52,7 @@ The record verifies acknowledgment and its integrity, not the quality of the wor
 
 **Vespi Contributions proposes a portable record of those acknowledgments**, signed by each participant's own Stellar account. The requester (called the organizer in the application) can be a builder, a mentor, a chapter member or an event organizer; the context never adds a signer.
 
-**Proposed flow · not implemented yet**
+**Reference flow from the Instawards application**
 
 ```mermaid
 sequenceDiagram
@@ -234,9 +234,9 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 **Vespi no establece la verdad ni la calidad de un trabajo ni proporciona un runtime autónomo.** Es infraestructura abierta para operaciones con autoridad acotada y recibos verificables: conserva juntos el permiso, el resultado comprobado y la siguiente acción acordada cuando el trabajo cambia de manos. Tú decides lo importante; el host ejecuta y guarda la operación.
 
-> **Estado.** Piloto propuesto y presentado a Stellar Chile Instawards; resultado pendiente. Sin fondos adjudicados ni piloto en marcha.
+> **Piloto Instawards Chile.** La app de la Semana 1 está disponible en Stellar testnet. Registra un encuentro, invita a la otra persona a confirmarlo y comparte el recibo. [Abrir la app](https://vespi.xyz/app) · [Release de la Semana 1](https://github.com/andresanemic/vespi/releases/tag/instawards-2026-week-1) · [Código e instalación](./contributions/)
 
-> **⚠ Solo testnet.** El sandbox existente usa un pagador y roles simulados; no demuestra a dos personas firmando.
+> **Evidencia.** La app registra un ensayo en testnet entre dos personas. El sandbox histórico de abajo usó un pagador y roles simulados.
 
 **Un buen aporte no debería perderse en un chat.** Vespi Contributions propone un registro compartido de lo que una persona solicitó, otra aportó y la primera aceptó, con cada paso firmado en Stellar por quien lo dio.
 
@@ -254,7 +254,7 @@ El registro comprueba el reconocimiento y su integridad, no la calidad del traba
 
 | Si eres… | Empieza por |
 |---|---|
-| Jurado o evaluador | [Prueba en testnet](#prueba-en-testnet) y [sprint propuesto](#sprint-propuesto) |
+| Jurado o evaluador | [Changelog de la Semana 1](./CHANGELOG.md#instawards-chile--week-1) y [plan de postulación](#sprint-propuesto) |
 | Desarrollador que quiere reproducir la evidencia | [Comprobación en 5 minutos](#comprobación-en-5-minutos) |
 | Quien integra el kernel | [Kernel / documentación](#kernel-docs-es) y [contrato de callbacks del host](./docs/HOST_CALLBACKS.md) |
 | Quien busca Find Your Way y HackMeridian | [Historial](#historial) |
@@ -270,7 +270,7 @@ El registro comprueba el reconocimiento y su integridad, no la calidad del traba
 
 **Vespi Contributions propone un registro portable de esos reconocimientos**, firmado con la cuenta propia de Stellar de cada participante. Quien solicita (la organizadora, en la postulación) puede ser un builder, una mentora, alguien de un capítulo o quien organiza un evento; el contexto nunca agrega un firmante.
 
-**Flujo propuesto · todavía no implementado**
+**Flujo de referencia de la postulación a Instawards**
 
 ```mermaid
 sequenceDiagram

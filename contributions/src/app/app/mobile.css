@@ -1,0 +1,209 @@
+.mobile-contributions {
+  --app-garden: url('/wallpapers/night.webp');
+  min-height: 100svh;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(2rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  background: radial-gradient(ellipse at 80% 0, color-mix(in srgb, var(--action) 9%, transparent), transparent 55%),
+    var(--bg);
+}
+html[data-theme="light"] .mobile-contributions { --app-garden: url('/wallpapers/day-garden.webp'); }
+.mobile-top,
+.mobile-sheet { width: min(100%, 38rem); margin-inline: auto; }
+.mobile-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .25rem .5rem;
+  padding: 6px 10px;
+  margin-bottom: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.mobile-brand, .mobile-settings {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
+.mobile-brand { min-height: 48px; font-weight: 650; }
+.mobile-settings {
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--bg);
+}
+.mobile-settings :is(button,a) {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+}
+.mobile-settings :is(button,a):hover { background: var(--raised); }
+.mobile-settings .theme-switch { padding: 0; }
+.mobile-settings .theme-switch span { display: none; }
+.mobile-sheet {
+  overflow-wrap: anywhere;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+}
+.event-page :is(.mobile-top,.mobile-sheet,.mobile-footer),
+.survey-page :is(.mobile-top,.mobile-sheet,.mobile-footer) { width: min(100%, 68rem); }
+.event-page .mobile-sheet { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); overflow: hidden; }
+.event-page .mobile-content h1 { font-size: clamp(2rem, 7vw, 3.45rem); line-height: .99; }
+.survey-page .mobile-sheet { overflow: hidden; }
+@media (min-width: 741px) {
+  .survey-page .mobile-sheet { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); }
+  .survey-page .mobile-ledger { grid-column: 1 / -1; }
+  .survey-page .mobile-sheet::after {
+    content: "";
+    border-inline-start: 3px solid var(--action);
+    background: linear-gradient(0deg,#17130e55,transparent),
+      var(--app-garden) 67% center / cover;
+  }
+}
+.event-page-art {
+  min-height: 100%;
+  border-inline-start: 3px solid var(--action);
+  background: url('/contributions/tellus-fachada.webp') right 53% / max(174%, 560px) auto no-repeat, #201d19;
+}
+@media (max-width: 640px) {
+  .event-page .mobile-sheet { grid-template-columns: 1fr; }
+  .event-page .mobile-content { gap: .7rem; padding: 1rem; font-size: 1rem; line-height: 1.45; }
+  .event-page .mobile-content > p:first-child { font-size: .82rem; max-width: none; color: var(--muted); }
+  .event-page-art {
+    min-height: 0;
+    aspect-ratio: 1.28;
+    border-inline-start: 0;
+    border-top: 3px solid var(--action);
+    background-size: 100% auto;
+    background-position: center top;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .event-page-art { animation: event-art-in 300ms ease-out both; }
+  .testimony-photo { animation: testimony-photo-in 300ms ease-out; }
+}
+@keyframes event-art-in { from { clip-path: inset(0 86% 0 0); } to { clip-path: inset(0); } }
+@keyframes testimony-photo-in { from { box-shadow: 0 0 0 3px var(--action); } to { box-shadow: 0 0 0 0 transparent; } }
+.testimony-photo { width: min(100%, 20rem); max-height: 14rem; object-fit: contain; border-radius: .35rem; }
+.mobile-ledger {
+  padding: .75rem clamp(1rem, 5vw, 2.25rem);
+  background: var(--raised);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .875rem;
+  font-weight: 600;
+}
+.mobile-content {
+  display: grid;
+  justify-items: start;
+  gap: .9rem;
+  padding: clamp(1.15rem, 5vw, 2.25rem);
+  animation: mobile-sheet-in 220ms ease-out both;
+}
+@keyframes mobile-sheet-in { from { opacity: 0; transform: translateY(5px); } }
+.mobile-content h1 {
+  font: 650 clamp(2.2rem, 9vw, 3.75rem)/1.02 var(--display);
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+.mobile-content h1:focus { outline: none; }
+.mobile-content p { max-width: 37ch; }
+.mobile-actions { display: grid; gap: .6rem; width: 100%; }
+.mobile-actions label { font-weight: 600; }
+.mobile-actions input, .mobile-actions textarea {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid color-mix(in srgb, var(--ink) 48%, var(--line));
+  border-radius: .3rem;
+  background: var(--bg);
+  color: var(--ink);
+  padding: .6rem .75rem;
+  font: inherit;
+}
+.mobile-actions textarea { resize: vertical; }
+.mobile-actions .mobile-action { margin-top: .4rem; }
+.mobile-action, .mobile-secondary, .mobile-text-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  width: 100%;
+  padding: .55rem .85rem;
+  border-radius: .3rem;
+  font-weight: 650;
+  text-align: center;
+  transition: background-color 160ms ease;
+}
+.mobile-action { background: var(--action); color: var(--action-ink); border: 1px solid var(--action); }
+.mobile-action:hover { background: color-mix(in srgb, var(--action) 87%, white); text-decoration: none; }
+.mobile-secondary { border: 1px solid color-mix(in srgb, var(--ink) 48%, var(--line)); background: var(--panel); }
+.mobile-text-action { border: 0; background: transparent; text-decoration: underline; text-underline-offset: .2em; }
+.mobile-secondary:hover, .mobile-text-action:hover, .mobile-settings > button:first-child:hover { background: var(--raised); }
+.mobile-note { color: var(--muted); font-size: .95rem; }
+.mobile-message { border-inline-start: .18rem solid var(--error); padding-inline-start: .75rem; }
+.mobile-content blockquote {
+  width: 100%;
+  margin: 0;
+  padding: .85rem 1rem;
+  border-inline-start: .2rem solid var(--action);
+  background: var(--raised);
+}
+.mobile-details { margin: 0; }
+.mobile-details dt { font-weight: 600; }
+.mobile-details dd { margin: 0 0 .75rem; font-family: var(--mono); font-size: .85rem; }
+.mobile-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .2rem 1rem;
+  width: min(100%,38rem);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font: 500 .78rem/1.35 var(--mono);
+  margin: 1.5rem auto 0;
+}
+.mobile-footer a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: .2em; }
+.mobile-footer :is(.footer-site,.footer-social) { display: flex; flex-wrap: wrap; gap: 0 1rem; }
+@media (prefers-reduced-motion: reduce) {
+  .mobile-content { animation: none; }
+  .mobile-contributions button, .mobile-contributions a { transition: none; }
+}
+.mobile-actions .mobile-consent {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  min-height: 48px;
+  gap: .7rem;
+  cursor: pointer;
+}
+.mobile-actions .mobile-consent input {
+  width: 1.25rem;
+  min-height: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--action);
+}
+.mobile-profile-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: underline;
+  text-underline-offset: .2em;
+}
+
+.share-actions-options { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+.mobile-chain-summary { width: 100%; margin: 0; }
+.mobile-chain-summary dt { font-weight: 700; }
+.mobile-chain-summary dd { margin: 0 0 .85rem; }
+.mobile-chain-summary dd a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: .2em; }
+.mobile-dashboard-intro { display: flex; justify-content: space-between; align-items: center; gap: 1rem; width: 100%; }
+.mobile-counterparty { width: 100%; }
+.mobile-counterparty summary { min-height: 44px; cursor: pointer; }
+.mobile-counterparty p, .mobile-counterparty input { margin-bottom: .55rem; }
