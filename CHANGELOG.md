@@ -65,8 +65,8 @@ We also plan to add voice input, based on [Voice Ready](https://github.com/mpefa
 
 ### Links
 
-- Video: [pending]
-- X post: [pending]
+- Video: [Week 1 video, posted natively on X](https://x.com/andresanemic/status/2124207336428327045)
+- X post: [https://x.com/andresanemic/status/2124207336428327045](https://x.com/andresanemic/status/2124207336428327045)
 - Research essay: [The value of decentralized micro relationships](./docs/research/the-value-of-decentralized-micro-relationships.md), by Andrés Peña and Francisco Toro
 
 ## [v0.1.8-kernel] — 2026-10-23
