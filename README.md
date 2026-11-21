@@ -4,7 +4,7 @@
 
 <h1 align="center">Vespi</h1>
 
-**Good work should not disappear into a chat.** Vespi Contributions proposes a shared record of what one person requested, another contributed and the requester accepted, each step signed on Stellar by the person who took it.
+**Good work should not disappear into a chat.** Vespi Contributions keeps a shared record of what one person requested, another contributed and the requester accepted, each step signed on Stellar by the person who took it. It currently runs on Stellar testnet, built during the Instawards Chile sprint.
 
 <p align="center">
   <a href="./docs/RELEASE_0.1.8_KERNEL.md"><img src="https://img.shields.io/badge/kernel-v0.1.8-D7B698?style=for-the-badge&labelColor=07111A" alt="Kernel v0.1.8"></a>
@@ -20,14 +20,14 @@
 
 > **Instawards Chile pilot.** The Week 1 app is live on Stellar testnet. Record an encounter, invite the other person to confirm it, and share the signed receipt. [Open the app](https://vespi.xyz/app) · [Release notes](https://github.com/andresanemic/vespi/releases/tag/instawards-2026-week-1) · [Source and setup](./contributions/)
 
-> **Evidence.** The live app has a recorded two-person testnet trial. The historical sandbox below exercised a single payer with simulated roles.
+> **Evidence.** The live app has a recorded two-person testnet trial across a desktop browser and an Android phone. At the Tellus talk on 19 November 2026, eight accounts signed nine records on testnet ([Week 1 changelog](./CHANGELOG.md#at-the-tellus-talk--november-19)). The historical sandbox below exercised a single payer with simulated roles.
 
-## What exists today, what is proposed
+## What exists today, what the sprint adds
 
 | State | What it covers |
 |---|---|
 | **Exists today** | Kernel [v0.1.8](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel) with 1,319 passing tests in its frozen suite · a [testnet sandbox](./demo/sandbox/) with one payer and simulated roles: 7 recorded payments, 7 blocked out-of-policy attempts, 9 offline tests and a verifier that returns `VERIFIED` · one earlier [mainnet receipt-digest anchor](https://stellar.expert/explorer/public/tx/2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7) (25 October 2026), not a Contributions chain · 7,676 recorded repository clone events of Vespi and Lore Plugin through 9 November 2026 ([details](#history)), not unique users |
-| **Proposed for 30 days** | REQUEST, CONTRIBUTE and ACCEPT signed by each participant's own Stellar key · sponsored reserves and fee bump · canonical public JSON receipts and a shareable receipt page · a one-command independent verifier and ten or more rejected tampering cases · a team reference chain on mainnet, then three real requester–contributor pairs, an outside organizer's assessment and an independent reproduction |
+| **Sprint, 16 November to 13 December 2026** | REQUEST, CONTRIBUTE and ACCEPT signed by each participant's own Stellar key · sponsored reserves and fee bump · canonical public JSON receipts and a shareable receipt page · a one-command independent verifier and ten or more rejected tampering cases · a team reference chain on mainnet, then three real requester–contributor pairs, an outside organizer's assessment and an independent reproduction. Week 1 put participant signing with passkeys, sponsored testnet accounts and shareable receipt pages on testnet; the mainnet chain, the independent verifier, the rejected tampering cases, the pairs, the assessment and the reproduction are still ahead |
 | **Out of scope or future** | Reputation scores, badges or tokens · judging the quality or truth of a contribution · a new Soroban contract · integrations with other apps or programs, including Attest or Stellar Passport |
 
 The record verifies acknowledgment and its integrity, not the quality of the work. More on the pilot: [vespi.xyz/contributions](https://vespi.xyz/contributions).
@@ -36,7 +36,7 @@ The record verifies acknowledgment and its integrity, not the quality of the wor
 
 | If you are… | Start with |
 |---|---|
-| A judge or evaluator | [Week 1 changelog](./CHANGELOG.md#instawards-chile--week-1) and [submission plan](#proposed-sprint) |
+| A judge or evaluator | [Week 1 changelog](./CHANGELOG.md#instawards-chile--week-1) and [sprint plan](#the-sprint) |
 | A developer reproducing the evidence | [5-minute check](#5-minute-check) |
 | Integrating the kernel | [Kernel / docs](#kernel--docs) and [host callback contract](./docs/HOST_CALLBACKS.md) |
 | Looking for Find Your Way and HackMeridian | [History](#history) |
@@ -50,7 +50,7 @@ The record verifies acknowledgment and its integrity, not the quality of the wor
 
 ## The idea
 
-**Vespi Contributions proposes a portable record of those acknowledgments**, signed by each participant's own Stellar account. The requester (called the organizer in the application) can be a builder, a mentor, a chapter member or an event organizer; the context never adds a signer.
+**Vespi Contributions is a portable record of those acknowledgments**, signed by each participant's own Stellar account. The requester (called the organizer in the application) can be a builder, a mentor, a chapter member or an event organizer; the context never adds a signer.
 
 **Reference flow from the Instawards application**
 
@@ -111,11 +111,11 @@ node demo/sandbox/verify.cjs --offline
 
 For an **optional live query**, run `node demo/sandbox/verify.cjs`: it reads Horizon testnet now and saves its responses locally. A testnet reset can make that historical run unavailable. This is distinct from reproducing the committed snapshot. Creating a new funded testnet run is documented in the [sandbox guide](./demo/sandbox/README.md#reproduce-from-a-clean-clone), including its overwrite warning.
 
-## Proposed sprint
+## The sprint
 
-The application proposes a 30-day sprint, with a suggested start of 30 November 2026, to build the workflow above, receipt pages, independent verifier, sponsored onboarding and an open Stellar community pilot.
+Instawards Chile accepted the application. The sprint runs from 16 November to 13 December 2026 to build the workflow above, receipt pages, independent verifier, sponsored onboarding and an open Stellar community pilot.
 
-The proposed acceptance criteria include three completed requester–contributor pairs (organizer–contributor in the application) beyond the team's separate reference run, at least ten rejected manipulation cases, an outside organizer's assessment, independent reproduction by someone outside the team and Tellus, cross-platform CI, and a public release with bilingual guides. These are targets, not usage or completion evidence. The pilot would recruit openly and allow remote participation; it does not depend on a partner application or event.
+The acceptance criteria include three completed requester–contributor pairs (organizer–contributor in the application) beyond the team's separate reference run, at least ten rejected manipulation cases, an outside organizer's assessment, independent reproduction by someone outside the team and Tellus, cross-platform CI, and a public release with bilingual guides. These are targets, not usage or completion evidence. The pilot will recruit openly and allow remote participation; it does not depend on a partner application or event.
 
 ## Kernel / docs
 
@@ -162,11 +162,11 @@ These dated guides preserve their original evidence and scope. They are not the 
 
 - **Find Your Way · October 2026:** [For judges](./docs/FOR_JUDGES.md), with version-pinned reproduction instructions; [earlier judge findings](./docs/JUDGES_FINDINGS_0.1.4.md).
 - **HackMeridian · 26 October 2026:** [Judge in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md), pinned to `meridian-2026-10-26`; [payment demo](./demo/testnet/) and [Pollar demo](./demo/pollar), outside the kernel library. The event guide distinguishes its combined suite from the frozen kernel suite.
-- [Historical demo video](https://www.youtube.com/watch?v=bmTqxHv0VGU), [Pollar evidence page](https://vespi.xyz/pollar); pitch deck [EN](https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing) / [ES](https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing), one pager [EN](https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link) / [ES](https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing), and [letters of intent](https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing). These assets do not establish the proposed pilot's completion.
+- [Historical demo video](https://www.youtube.com/watch?v=bmTqxHv0VGU), [Pollar evidence page](https://vespi.xyz/pollar); pitch deck [EN](https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing) / [ES](https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing), one pager [EN](https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link) / [ES](https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing), and [letters of intent](https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing). These assets do not establish the sprint pilot's completion.
 
 The [payment evidence](./demo/testnet/) separately documents the Pollar payment and the payment signed after hash approval; those demonstrations do not establish community acceptance of a contribution.
 
-For the historical payment example, the event guide owns installation, testnet execution and read-only mainnet verification. Its signing capability signs only the transaction hash approved at the kernel gate. Pollar's browser SDK and Horizon readback belong to the separate [Pollar integration](./demo/pollar/); they are not required for the proposed Contributions workflow. The [x402 demo](./demo/x402/) likewise remains outside the kernel: it demonstrates a paid-service adapter on testnet, while its real-SDK bridge inside the kernel is deferred. The capability catalog distinguishes reference zero-knowledge verification from future applications; the Meridian batch-registration idea remains a plan until its transaction exists.
+For the historical payment example, the event guide owns installation, testnet execution and read-only mainnet verification. Its signing capability signs only the transaction hash approved at the kernel gate. Pollar's browser SDK and Horizon readback belong to the separate [Pollar integration](./demo/pollar/); they are not required for the Contributions workflow. The [x402 demo](./demo/x402/) likewise remains outside the kernel: it demonstrates a paid-service adapter on testnet, while its real-SDK bridge inside the kernel is deferred. The capability catalog distinguishes reference zero-knowledge verification from future applications; the Meridian batch-registration idea remains a plan until its transaction exists.
 
 Recorded through 2026-11-09: **1,821 clone events of Vespi in 44 days** and **5,855 of [Lore Plugin](https://github.com/andresanemic/lore-plugin) in 128 days**, 7,676 in total ([Lore Plugin record](https://github.com/andresanemic/lore-plugin/blob/main/data/traffic/clones.json)). The application cited the 2026-11-05 cut: 1,743 + 5,667 = 7,410. These [GitHub traffic records](./data/traffic/clones.json) are distribution signals: clone events are not unique people, active installations or receipt adoption. They do not establish users of Contributions.
 
@@ -209,8 +209,8 @@ This compares current scope, not head-to-head results. The complete end-to-end p
 
 ## Team
 
-- **Andrés Peña Mellado** — journalist and teacher, author of LUS, Lore Plugin and Vespi. He has worked in communication across the blockchain ecosystem and works with Tellus, the team behind Stellar Chile, on editorial and community; he built Vespi through Find Your Way and HackMeridian. Winner of the Stacks hackathon in Argentina. In the proposed sprint he leads engineering, signing, the verifier and the release. [Telegram @andresanemic](https://t.me/andresanemic).
-- **Francisco Toro Fierro** — sociologist with 18 years of practice. He formulated the RUC-D framework and works on social economy and community value. Finalist at the Blockchain Summit Latam Bankaton (2024). In the proposed sprint he leads the pilot and its outside evaluation. [Contact: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
+- **Andrés Peña Mellado** — journalist and teacher, author of LUS, Lore Plugin and Vespi. He has worked in communication across the blockchain ecosystem and works with Tellus, the team behind Stellar Chile, on editorial and community; he built Vespi through Find Your Way and HackMeridian. Winner of the Stacks hackathon in Argentina. In the sprint he leads engineering, signing, the verifier and the release. [Telegram @andresanemic](https://t.me/andresanemic).
+- **Francisco Toro Fierro** — sociologist with 18 years of practice. He formulated the RUC-D framework and works on social economy and community value. Finalist at the Blockchain Summit Latam Bankaton (2024). In the sprint he leads the pilot and its outside evaluation. [Contact: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
 
 Together they develop RUC-D, Vespi's research observatory, and build Vespi Contributions.
 
@@ -236,16 +236,16 @@ Kernel license: [Apache-2.0](./LICENSE), with attribution in [NOTICE](./NOTICE).
 
 > **Piloto Instawards Chile.** La app de la Semana 1 está disponible en Stellar testnet. Registra un encuentro, invita a la otra persona a confirmarlo y comparte el recibo. [Abrir la app](https://vespi.xyz/app) · [Release de la Semana 1](https://github.com/andresanemic/vespi/releases/tag/instawards-2026-week-1) · [Código e instalación](./contributions/)
 
-> **Evidencia.** La app registra un ensayo en testnet entre dos personas. El sandbox histórico de abajo usó un pagador y roles simulados.
+> **Evidencia.** La app registra un ensayo en testnet entre dos personas, entre un navegador de escritorio y un teléfono Android. En la charla de Tellus del 19 de noviembre de 2026, ocho cuentas firmaron nueve registros en testnet ([changelog de la Semana 1](./CHANGELOG.md#at-the-tellus-talk--november-19)). El sandbox histórico de abajo usó un pagador y roles simulados.
 
-**Un buen aporte no debería perderse en un chat.** Vespi Contributions propone un registro compartido de lo que una persona solicitó, otra aportó y la primera aceptó, con cada paso firmado en Stellar por quien lo dio.
+**Un buen aporte no debería perderse en un chat.** Vespi Contributions guarda un registro compartido de lo que una persona solicitó, otra aportó y la primera aceptó, con cada paso firmado en Stellar por quien lo dio. Hoy funciona en Stellar testnet y se construye durante el sprint de Instawards Chile.
 
-## Lo que existe hoy y lo que se propone
+## Lo que existe hoy y lo que suma el sprint
 
 | Estado | Qué cubre |
 |---|---|
 | **Existe hoy** | Kernel [v0.1.8](https://github.com/andresanemic/vespi/releases/tag/v0.1.8-kernel) con 1.319 pruebas aprobadas en su suite congelada · un [sandbox en testnet](./demo/sandbox/) con un pagador y roles simulados: 7 pagos registrados, 7 intentos fuera de política bloqueados, 9 pruebas offline y un verificador que devuelve `VERIFIED` · un [anclaje anterior en mainnet](https://stellar.expert/explorer/public/tx/2ff744c69fc01c0de2016e45c5f157b0434382572f2dfc997e8e1d4e34af09d7) de la huella de un recibo (25 de octubre de 2026), que no es una cadena de Contributions · 7.676 clonaciones registradas de Vespi y Lore Plugin hasta el 9 de noviembre de 2026 ([detalle](#historial)), que no son usuarios únicos |
-| **Propuesto para 30 días** | SOLICITAR, APORTAR y ACEPTAR firmados con la clave propia de Stellar de cada participante · reservas patrocinadas y fee bump · recibos JSON públicos y canónicos y una página de recibo compartible · un verificador independiente de un comando y diez o más casos de manipulación rechazados · una cadena de referencia del equipo en mainnet y luego tres parejas reales de solicitante y quien aporta, la evaluación de una organizadora externa y una reproducción independiente |
+| **Sprint, del 16 de noviembre al 13 de diciembre de 2026** | SOLICITAR, APORTAR y ACEPTAR firmados con la clave propia de Stellar de cada participante · reservas patrocinadas y fee bump · recibos JSON públicos y canónicos y una página de recibo compartible · un verificador independiente de un comando y diez o más casos de manipulación rechazados · una cadena de referencia del equipo en mainnet y luego tres parejas reales de solicitante y quien aporta, la evaluación de una organizadora externa y una reproducción independiente. La Semana 1 dejó en testnet la firma de cada participante con passkeys, las cuentas de testnet patrocinadas y las páginas de recibo compartibles; la cadena en mainnet, el verificador independiente, los casos de manipulación rechazados, las parejas, la evaluación y la reproducción siguen pendientes |
 | **Fuera de alcance o futuro** | Puntajes de reputación, insignias o tokens · juzgar la calidad o la verdad de un aporte · un contrato Soroban nuevo · integraciones con otras apps o programas, incluidos Attest y Stellar Passport |
 
 El registro comprueba el reconocimiento y su integridad, no la calidad del trabajo. Más sobre el piloto: [vespi.xyz/contributions/es](https://vespi.xyz/contributions/es).
@@ -254,7 +254,7 @@ El registro comprueba el reconocimiento y su integridad, no la calidad del traba
 
 | Si eres… | Empieza por |
 |---|---|
-| Jurado o evaluador | [Changelog de la Semana 1](./CHANGELOG.md#instawards-chile--week-1) y [plan de postulación](#sprint-propuesto) |
+| Jurado o evaluador | [Changelog de la Semana 1](./CHANGELOG.md#instawards-chile--week-1) y [plan del sprint](#el-sprint) |
 | Desarrollador que quiere reproducir la evidencia | [Comprobación en 5 minutos](#comprobación-en-5-minutos) |
 | Quien integra el kernel | [Kernel / documentación](#kernel-docs-es) y [contrato de callbacks del host](./docs/HOST_CALLBACKS.md) |
 | Quien busca Find Your Way y HackMeridian | [Historial](#historial) |
@@ -268,7 +268,7 @@ El registro comprueba el reconocimiento y su integridad, no la calidad del traba
 
 ## La idea
 
-**Vespi Contributions propone un registro portable de esos reconocimientos**, firmado con la cuenta propia de Stellar de cada participante. Quien solicita (la organizadora, en la postulación) puede ser un builder, una mentora, alguien de un capítulo o quien organiza un evento; el contexto nunca agrega un firmante.
+**Vespi Contributions es un registro portable de esos reconocimientos**, firmado con la cuenta propia de Stellar de cada participante. Quien solicita (la organizadora, en la postulación) puede ser un builder, una mentora, alguien de un capítulo o quien organiza un evento; el contexto nunca agrega un firmante.
 
 **Flujo de referencia de la postulación a Instawards**
 
@@ -320,11 +320,11 @@ Desde un checkout que contenga el commit de evidencia `9624922` (el tag original
 
 La **consulta opcional en vivo** se describe junto a ese bloque: lee Horizon testnet en ese momento y guarda las respuestas localmente. Un reinicio de testnet puede hacer que la ejecución histórica ya no esté disponible. Eso se distingue de reproducir el snapshot del repo. La [guía del sandbox](./demo/sandbox/README.md#reproduce-from-a-clean-clone) explica cómo crear una nueva ejecución financiada en testnet e incluye la advertencia de sobrescritura.
 
-## Sprint propuesto
+## El sprint
 
-La postulación propone un sprint de 30 días, con inicio sugerido el 30 de noviembre de 2026, para construir el flujo anterior, las páginas de recibos, el verificador independiente, la entrada patrocinada y un piloto abierto en la comunidad Stellar.
+Instawards Chile aceptó la postulación. El sprint va del 16 de noviembre al 13 de diciembre de 2026 para construir el flujo anterior, las páginas de recibos, el verificador independiente, la entrada patrocinada y un piloto abierto en la comunidad Stellar.
 
-Los criterios de aceptación propuestos incluyen tres parejas completas de solicitante y quien aporta (organizadora y contribuyente, en la postulación), además de la ejecución de referencia separada del equipo; al menos diez casos de manipulación rechazados; la evaluación de una organizadora externa; reproducción independiente por alguien ajeno al equipo y a Tellus; CI en tres sistemas; y un release público con guías bilingües. Son metas, no evidencia de uso ni de cumplimiento. El piloto reclutaría mediante convocatoria abierta y admitiría participación remota; no depende de una app asociada ni de un evento.
+Los criterios de aceptación incluyen tres parejas completas de solicitante y quien aporta (organizadora y contribuyente, en la postulación), además de la ejecución de referencia separada del equipo; al menos diez casos de manipulación rechazados; la evaluación de una organizadora externa; reproducción independiente por alguien ajeno al equipo y a Tellus; CI en tres sistemas; y un release público con guías bilingües. Son metas, no evidencia de uso ni de cumplimiento. El piloto reclutará mediante convocatoria abierta y admitirá participación remota; no depende de una app asociada ni de un evento.
 
 <a id="kernel-docs-es"></a>
 
@@ -363,7 +363,7 @@ Estas guías fechadas conservan su evidencia y alcance originales. No son la ent
 
 - **Find Your Way · octubre de 2026:** [Para jueces](./docs/FOR_JUDGES.md), con instrucciones fijadas a una versión; [hallazgos anteriores](./docs/JUDGES_FINDINGS_0.1.4.md).
 - **HackMeridian · 26 de octubre de 2026:** [Judge in 3 minutes](./docs/JUDGE_IN_3_MINUTES.md), fijada a `meridian-2026-10-26`; [demo de pago](./demo/testnet/) y [demo de Pollar](./demo/pollar), fuera de la biblioteca del kernel. La guía del evento distingue su suite combinada de la suite congelada del kernel.
-- [Video histórico de la demo](https://www.youtube.com/watch?v=bmTqxHv0VGU), [página de evidencia de Pollar](https://vespi.xyz/pollar); pitch deck [EN](https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing) / [ES](https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing), one pager [EN](https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link) / [ES](https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing), y [cartas de intención](https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing). Esos archivos no acreditan cumplimiento del piloto propuesto.
+- [Video histórico de la demo](https://www.youtube.com/watch?v=bmTqxHv0VGU), [página de evidencia de Pollar](https://vespi.xyz/pollar); pitch deck [EN](https://drive.google.com/file/d/17QqE47pEcvkdMGAdxhLGhuN3DsQLwdoU/view?usp=sharing) / [ES](https://drive.google.com/file/d/1FQKIuHDerpsy7hDXTIwlC-LdiEcMba1Y/view?usp=sharing), one pager [EN](https://drive.google.com/file/d/1JAQ6Yi8dPNQYTpOJssJo5hNJhCcDDcuA/view?usp=drive_link) / [ES](https://drive.google.com/file/d/1_yfvaRmnWssK3v0c8NH3w5_UK1B3Fb3b/view?usp=sharing), y [cartas de intención](https://drive.google.com/drive/folders/1X_en3D33AC_BSeEBXRyepdfZWDGckRqm?usp=sharing). Esos archivos no acreditan cumplimiento del piloto del sprint.
 
 La [evidencia de pagos](./demo/testnet/) documenta por separado el pago con Pollar y el pago firmado tras aprobar su hash; esas demos no acreditan aceptación comunitaria de un aporte.
 
@@ -411,8 +411,8 @@ La tabla compara alcances actuales, no resultados de una prueba cara a cara. Fal
 
 ## Equipo
 
-- **Andrés Peña Mellado** — periodista y profesor, autor de LUS, Lore Plugin y Vespi. Ha trabajado en comunicación en el ecosistema blockchain y trabaja con Tellus, el equipo detrás de Stellar Chile, en editorial y comunidad; construyó Vespi a través de Find Your Way y HackMeridian. Ganador del hackathon de Stacks en Argentina. En el sprint propuesto lidera la ingeniería, la firma, el verificador y la publicación. [Telegram @andresanemic](https://t.me/andresanemic).
-- **Francisco Toro Fierro** — sociólogo con 18 años de ejercicio. Formuló el marco RUC-D y trabaja en economía social y valor comunitario. Finalista de la Bankaton de Blockchain Summit Latam (2024). En el sprint propuesto lidera el piloto y su evaluación externa. [Contacto: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
+- **Andrés Peña Mellado** — periodista y profesor, autor de LUS, Lore Plugin y Vespi. Ha trabajado en comunicación en el ecosistema blockchain y trabaja con Tellus, el equipo detrás de Stellar Chile, en editorial y comunidad; construyó Vespi a través de Find Your Way y HackMeridian. Ganador del hackathon de Stacks en Argentina. En el sprint lidera la ingeniería, la firma, el verificador y la publicación. [Telegram @andresanemic](https://t.me/andresanemic).
+- **Francisco Toro Fierro** — sociólogo con 18 años de ejercicio. Formuló el marco RUC-D y trabaja en economía social y valor comunitario. Finalista de la Bankaton de Blockchain Summit Latam (2024). En el sprint lidera el piloto y su evaluación externa. [Contacto: ultratorus@gmail.com](mailto:ultratorus@gmail.com).
 
 Juntos desarrollan RUC-D, el observatorio de investigación de Vespi, y construyen Vespi Contributions.
 
