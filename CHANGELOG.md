@@ -67,6 +67,6 @@ We also plan to add voice input, based on [Voice Ready](https://github.com/mpefa
 
 - Video: [Week 1 video, posted natively on X](https://x.com/andresanemic/status/2124207336428327045)
 - X post: [https://x.com/andresanemic/status/2124207336428327045](https://x.com/andresanemic/status/2124207336428327045)
-- Research essay: [The value of decentralized micro relationships](./docs/research/the-value-of-decentralized-micro-relationships.md), by Andrés Peña and Francisco Toro
+- Research essay: [The value of decentralized micro relationships](./docs/research/the-value-of-decentralized-micro-relationships.md), by Francisco Toro and Andrés Peña
 
 Earlier kernel releases (v0.0.1 to v0.1.8) are in [docs/KERNEL_CHANGELOG.md](./docs/KERNEL_CHANGELOG.md).

@@ -2,7 +2,7 @@
 
 A new infrastructure to recognize, connect and distribute the value of human interactions
 
-*Research essay by Andrés Peña and Francisco Toro. It describes the direction behind Vespi beyond the Instawards sprint, not what the sprint delivers.*
+*Research essay by Francisco Toro and Andrés Peña. It describes the direction behind Vespi beyond the Instawards sprint, not what the sprint delivers.*
 
 ## 1. The value we still don't recognize
 
