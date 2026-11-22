@@ -243,5 +243,40 @@
     "timestamp": "2026-11-14T00:00:00Z",
     "count": 4,
     "uniques": 4
+  },
+  {
+    "timestamp": "2026-11-15T00:00:00Z",
+    "count": 13,
+    "uniques": 6
+  },
+  {
+    "timestamp": "2026-11-16T00:00:00Z",
+    "count": 3,
+    "uniques": 3
+  },
+  {
+    "timestamp": "2026-11-17T00:00:00Z",
+    "count": 3,
+    "uniques": 3
+  },
+  {
+    "timestamp": "2026-11-18T00:00:00Z",
+    "count": 2,
+    "uniques": 1
+  },
+  {
+    "timestamp": "2026-11-19T00:00:00Z",
+    "count": 26,
+    "uniques": 14
+  },
+  {
+    "timestamp": "2026-11-20T00:00:00Z",
+    "count": 5,
+    "uniques": 3
+  },
+  {
+    "timestamp": "2026-11-21T00:00:00Z",
+    "count": 30,
+    "uniques": 12
   }
 ]
