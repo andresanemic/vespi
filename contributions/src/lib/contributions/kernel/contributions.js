@@ -1,4 +1,4 @@
-// Kernel commit 005d7b8 (vespi kernel repo).
+// Kernel commit 1f558b8 (vespi kernel repo).
 // Source: src/contributions.js
 // Do not edit: change the source and re-copy.
 'use strict';

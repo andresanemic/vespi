@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const kernelDir = new URL('./kernel/', import.meta.url);
 
-// sha256 of each kernel source at commit 005d7b8 (LF, without the three provenance lines).
+// sha256 of each kernel source at commit 1f558b8 (LF, without the three provenance lines).
 const EXPECTED_SHA256: Record<string, string> = {
   'contributions.js': '879bf44e2682a743448967e67e1c2ac868242a1af69e054f57ebc51d18e1ec21',
   'receipt.js': '88ff11a244ea5b7574a17e8a3c284b47753caf5a498af1a235d86fdfcd82a5c2',
@@ -17,10 +17,10 @@ const EXPECTED_SHA256: Record<string, string> = {
   'authority.js': '6cdf59ff884c5acc51ea00d7dfa946b6cf2058b67f4779e63250edfc0623d946',
 };
 
-// contributionDigest of the fixed REQUEST below, computed with the original kernel at 005d7b8.
+// contributionDigest of the fixed REQUEST below, computed with the original kernel at 1f558b8.
 const REQUEST_DIGEST = 'eb670b1496dd07c1296cf11cf5a08aabc5e08ea3e85bd01bce5d80d657b63e65';
 
-test('vendored files match kernel commit 005d7b8', () => {
+test('vendored files match kernel commit 1f558b8', () => {
   for (const [file, expected] of Object.entries(EXPECTED_SHA256)) {
     const text = readFileSync(new URL(file, kernelDir), 'utf8').replace(/\r\n/g, '\n');
     const lines = text.split('\n');
