@@ -467,6 +467,7 @@ function contextBinding(receipt) {
 
 // Exported so a module that seals extra fields onto a receipt (skill provenance) writes the same
 // digest this file writes, instead of keeping a second copy of the canonicalization that can drift.
+// `canonicalize` is exported for Vespi Contributions to reuse the same canonicalization without a second copy.
 // Nothing here changed: `computeDigest` is the same function `buildReceipt` and `verifyReceipt` have
 // always called.
-module.exports = { buildReceipt, verifyReceipt, anchorReceipt, anchorReceiptAsync, computeDigest, contextBinding };
+module.exports = { buildReceipt, verifyReceipt, anchorReceipt, anchorReceiptAsync, computeDigest, contextBinding, canonicalize };

@@ -2,6 +2,12 @@
 
 Kernel releases from before the Instawards Chile sprint, moved here from `CHANGELOG.md` on 21 November 2026. The root `CHANGELOG.md` now covers the Instawards sprint only.
 
+## [Unreleased]
+
+This change adds `src/contributions.js`, the Vespi Contributions receipt, and exports `canonicalize` from `src/receipt.js` so that the receipt's canonical bytes come from the kernel's single canonicalization; `computeDigest` does not change. The new [Contributions receipt schema v1](./docs/CONTRIBUTIONS_RECEIPT_V1.md) describes the implemented format and its validation limits.
+
+Este cambio agrega `src/contributions.js`, el recibo de Vespi Contributions, y exporta `canonicalize` de `src/receipt.js` para que los bytes canónicos del recibo salgan de la única canonicalización del kernel; `computeDigest` no cambia. El nuevo [esquema v1 del recibo de Contributions](./docs/CONTRIBUTIONS_RECEIPT_V1.md) describe el formato implementado y sus límites de validación.
+
 ## [v0.1.8-kernel] — 2026-10-23
 
 This version adds checkpoint/continuation handling and closes host-callback return validation before effects. Callback receivers vary by port; see [the callback contract and compatibility limits](./HOST_CALLBACKS.md) and do not rely on a receiver. `runOperation` and x402 reject non-native thenables without subscribing; host-provided functions in emergency and delegation may return thenables, which the kernel subscribes to. `attenuates` rejects an authority with too many grants to verify within its fixed work budget; `MAX_ATTENUATION_WORK` is 1,000,000 units. Two limits stay declared: a checkpoint's generation does not order two checkpoints by itself when the authority already covers the spend, so the host must consume each checkpoint atomically and enforce its own minimum generation (`minGeneration` does not tell such checkpoints apart); and the context is re-read once just before `perform`, so in x402 it can change while `prepare` runs. The source suite passes 1,319/1,319 with zero skipped or TODO tests. [Evidence and adoption limits](./RELEASE_0.1.8_KERNEL.md).

@@ -100,9 +100,10 @@ test('K3B.2 the existing public exports keep their names and their arity', () =>
   assert.deepEqual(Object.keys(operation).sort(), ['DEFAULT_EXIT', 'STATES', 'checkpointOperation', 'createOperation', 'pauseOperation', 'restoreOperation', 'resumeOperation', 'runOperation']);
   // The four original names must stay; `computeDigest` was added later (skill provenance and emergency access seal extra
   // fields with the same digest). An addition is compatible, a removal or rename is not.
+  // `canonicalize` was added for Vespi Contributions: one canonicalization, without a second copy.
   const receiptNames = Object.keys(receipt).sort();
   for (const name of ['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt']) assert.ok(receiptNames.includes(name), `receipt export ${name} must stay`);
-  assert.deepEqual(receiptNames.filter((n) => !['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt'].includes(n)), ['computeDigest', 'contextBinding']);
+  assert.deepEqual(receiptNames.filter((n) => !['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt'].includes(n)), ['canonicalize', 'computeDigest', 'contextBinding']);
   assert.deepEqual(Object.keys(authority).sort(), ['attenuates', 'grantSpend', 'sufficient']);
   assert.deepEqual(Object.keys(continuity).sort(), ['resumeFromReceipts']);
   assert.ok(Object.keys(delegation).length > 0);

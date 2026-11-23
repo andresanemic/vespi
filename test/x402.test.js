@@ -1405,9 +1405,10 @@ test('K4-G2 no public export was removed or renamed by the new module', () => {
   assert.deepEqual(Object.keys(authority).sort(), ['attenuates', 'grantSpend', 'sufficient']);
   // The four original names must stay; `computeDigest` was added later (skill provenance and emergency access seal extra
   // fields with the same digest). An addition is compatible, a removal or rename is not.
+  // `canonicalize` was added for Vespi Contributions: one canonicalization, without a second copy.
   const receiptNames = Object.keys(receipt).sort();
   for (const name of ['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt']) assert.ok(receiptNames.includes(name), `receipt export ${name} must stay`);
-  assert.deepEqual(receiptNames.filter((n) => !['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt'].includes(n)), ['computeDigest', 'contextBinding']);
+  assert.deepEqual(receiptNames.filter((n) => !['anchorReceipt', 'anchorReceiptAsync', 'buildReceipt', 'verifyReceipt'].includes(n)), ['canonicalize', 'computeDigest', 'contextBinding']);
   assert.deepEqual(Object.keys(continuity), ['resumeFromReceipts']);
   assert.deepEqual(Object.keys(time), ['parseTime']);
   assert.ok(Object.keys(delegation).length > 0);
