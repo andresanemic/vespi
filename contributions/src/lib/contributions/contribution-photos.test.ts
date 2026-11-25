@@ -4,15 +4,7 @@ import { createHash } from 'node:crypto';
 import { Keypair } from '@stellar/stellar-sdk/base';
 import type { GetBlobResult } from '@vercel/blob';
 
-const { registerHooks } = await import('node:module' as string);
-type Context = { parentURL?: string };
-type Resolve = (specifier: string, context: Context) => { url: string };
-registerHooks({ resolve(specifier: string, context: Context, next: Resolve) {
-  if (specifier === './photo-authorization' && context.parentURL?.endsWith('/contribution-photos.ts')) {
-    return next(new URL('./photo-authorization.ts', import.meta.url).href, context);
-  }
-  return next(specifier, context);
-} });
+import './test-imports.mjs';
 const { createPhotoStore, createPhotoUpload }: typeof import('./contribution-photos') =
   await import(new URL('./contribution-photos.ts', import.meta.url).href);
 const { photoUploadMessage }: typeof import('./photo-authorization') =

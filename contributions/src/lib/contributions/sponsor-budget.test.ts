@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import './test-imports.mjs';
+
 const { createSponsorBudget }: typeof import('./sponsor-budget') = await import(new URL('./sponsor-budget.ts', import.meta.url).href);
 
 const env = {

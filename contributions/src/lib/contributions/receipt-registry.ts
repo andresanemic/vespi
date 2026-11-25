@@ -1,10 +1,13 @@
 import { buildIndexEntry, parseContribution } from './kernel/contributions.js';
+import { isEncounterFingerprint } from './encounters';
+import { contributionNetwork, contributionRedisPrefix, DEFAULT_NETWORK } from './network';
 import { contributionsRedisCredentials } from './redis-credentials.mjs';
 
 export type ReceiptIndex = ReturnType<typeof buildIndexEntry>;
 export type ReceiptIntent = { digest: string; bytes: string; hash: string; deadline: number;
   chain: string | null; prev: string | null; rehearsal?: boolean; photo?: string };
 export type RegisteredReceipt = { intent: ReceiptIntent; index?: ReceiptIndex };
+export class ReceiptIntegrityError extends Error {}
 export type Registry = {
   get(digest: string): Promise<RegisteredReceipt | null>;
   pending(chain: string): Promise<RegisteredReceipt | null>;
@@ -23,8 +26,6 @@ export type ActivityEntry = {
   context: string;
   createdAt: string;
 };
-
-const KEY = 'contributions:testnet:receipts';
 
 // An intent and its chain lock live in one Redis hash. Confirmation advances the head
 // and makes the receipt public in one write; no other sibling can take the same head.
@@ -87,15 +88,19 @@ redis.call('HSET', key, file, '1', 'bytes', bytes + size, 'files', files + 1,
 return 1
 `;
 
-export function createReceiptRegistry(env: Record<string, string | undefined>, request = fetch): Registry & {
+export function createReceiptRegistry(env: Record<string, string | undefined>, request = fetch, network = DEFAULT_NETWORK): Registry & {
   list(cursor: string): Promise<{ cursor: string; entries: ReceiptIndex[] }>;
   activity(account: string, cursor: string): Promise<{ cursor: string; entries: ActivityEntry[] }>;
   head(slot: string): Promise<RegisteredReceipt | null>;
   photoReceipt(sha256: string): Promise<RegisteredReceipt | null>;
   reservePhoto(actor: string, sha256: string, bytes: number): Promise<boolean>;
 } {
+  const prefix = contributionRedisPrefix(network);
+  const key = `${prefix}:receipts`;
+  const networkId = contributionNetwork(network).id;
+
   async function command(args: unknown[]): Promise<unknown> {
-    const { url: raw, token } = contributionsRedisCredentials(env);
+    const { url: raw, token } = contributionsRedisCredentials(env, network);
     if (!raw || !token || new URL(raw).protocol !== 'https:') throw new Error('Receipt store unavailable');
     const response = await request(raw.replace(/\/$/, ''), {
       method: 'POST',
@@ -110,46 +115,50 @@ export function createReceiptRegistry(env: Record<string, string | undefined>, r
   }
 
   function update(action: 'reserve' | 'confirm' | 'release', intent: ReceiptIntent, index?: ReceiptIndex) {
-    return command(['EVAL', UPDATE, 1, KEY, action, intent.digest, intent.hash,
+    return command(['EVAL', UPDATE, 1, key, action, intent.digest, intent.hash,
       intent.chain ?? '', intent.prev ?? '', JSON.stringify({ intent, index }), JSON.stringify(index ?? null), intent.photo ?? '']);
   }
 
   const registry = {
     async get(digest: string): Promise<RegisteredReceipt | null> {
-      const value = await command(['HGET', KEY, `receipt:${digest}`]);
+      const value = await command(['HGET', key, `receipt:${digest}`]);
       if (value === null) return null;
-      if (typeof value !== 'string') throw new Error('Invalid receipt record');
-      const record = JSON.parse(value) as RegisteredReceipt;
-      if (record.intent.digest !== digest || (record.index && buildIndexEntry(record.index).digest !== digest)) {
-        throw new Error('Wrong receipt record');
+      try {
+        if (typeof value !== 'string') throw new Error('Invalid receipt record');
+        const record = JSON.parse(value) as RegisteredReceipt;
+        if (record.intent.digest !== digest || (record.index && (buildIndexEntry(record.index).digest !== digest || record.index.network !== networkId))) {
+          throw new Error('Wrong receipt record');
+        }
+        return record;
+      } catch (cause) {
+        throw new ReceiptIntegrityError('Invalid receipt record', { cause });
       }
-      return record;
     },
     async head(slot: string): Promise<RegisteredReceipt | null> {
-      const digest = await command(['HGET', KEY, `head:${slot}`]);
+      const digest = await command(['HGET', key, `head:${slot}`]);
       if (digest === null) return null;
       if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) throw new Error('Invalid receipt head');
       return registry.get(digest);
     },
     async reservePhoto(actor: string, sha256: string, bytes: number) {
-      return await command(['EVAL', PHOTO_QUOTA, 1, 'contributions:testnet:photo-quota:2026-11-19', actor, sha256, bytes]) === 1;
+      return await command(['EVAL', PHOTO_QUOTA, 1, `${prefix}:photo-quota:2026-11-19`, actor, sha256, bytes]) === 1;
     },
     async photoReceipt(sha256: string): Promise<RegisteredReceipt | null> {
-      const digest = await command(['HGET', KEY, `photo:${sha256}`]);
+      const digest = await command(['HGET', key, `photo:${sha256}`]);
       if (digest === null) return null;
       if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) throw new Error('Invalid photo receipt');
       const record = await registry.get(digest);
       return record?.index && record.intent.photo === sha256 ? record : null;
     },
     async pending(chain: string) {
-      const digest = await command(['HGET', KEY, `lock:${chain}`]);
+      const digest = await command(['HGET', key, `lock:${chain}`]);
       if (digest === null || digest === '') return null;
       if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) throw new Error('Invalid receipt lock');
       const record = await registry.get(digest);
       return record?.intent.chain === chain && !record.index ? record : null;
     },
     async list(cursor: string) {
-      const result = await command(['HSCAN', KEY, cursor, 'MATCH', 'index:*', 'COUNT', 50]);
+      const result = await command(['HSCAN', key, cursor, 'MATCH', 'index:*', 'COUNT', 50]);
       if (!Array.isArray(result) || (typeof result[0] !== 'string' && !Number.isSafeInteger(result[0])) ||
         !/^\d+$/.test(String(result[0])) || !Array.isArray(result[1]) || result[1].length % 2 !== 0) {
         throw new Error('Invalid receipt index page');
@@ -157,21 +166,23 @@ export function createReceiptRegistry(env: Record<string, string | undefined>, r
       const entries: ReceiptIndex[] = [];
       for (let i = 0; i < result[1].length; i += 2) {
         const entry = buildIndexEntry(JSON.parse(result[1][i + 1]));
+        // An entry of the other network is skipped, as activity does; a key that does not match its digest is corruption.
+        if (entry.network !== networkId) continue;
         if (result[1][i] !== `index:${entry.digest}`) throw new Error('Wrong receipt index entry');
         entries.push(entry);
       }
       return { cursor: String(result[0]), entries };
     },
     async activity(account: string, cursor: string) {
-      const result = await command(['HSCAN', KEY, cursor, 'MATCH', 'receipt:*', 'COUNT', 50]);
+      const result = await command(['HSCAN', key, cursor, 'MATCH', 'receipt:*', 'COUNT', 50]);
       if (!Array.isArray(result) || !/^\d+$/.test(String(result[0])) ||
         !Array.isArray(result[1]) || result[1].length % 2 !== 0) throw new Error('Invalid receipt activity page');
       const matching: { root: string; digest: string; action: ActivityEntry['action']; createdAt: string; statement: string }[] = [];
       for (let i = 0; i < result[1].length; i += 2) {
         const record = JSON.parse(result[1][i + 1]) as RegisteredReceipt;
-        if (!record.index || result[1][i] !== 'receipt:' + record.index.digest) continue;
+        if (record.index?.network !== networkId || result[1][i] !== 'receipt:' + record.index.digest) continue;
         const receipt = parseContribution(record.intent.bytes);
-        if (receipt.actor !== account) continue;
+        if (receipt.actor !== account || isEncounterFingerprint(receipt)) continue;
         const action = receipt.kind;
         if (action !== 'REQUEST' && action !== 'CONTRIBUTE' && action !== 'ACCEPT' && action !== 'ATTEST') continue;
         matching.push({ root: receipt.chain ?? record.index.digest, digest: record.index.digest, action, createdAt: receipt.createdAt, statement: receipt.statement });
@@ -185,7 +196,8 @@ export function createReceiptRegistry(env: Record<string, string | undefined>, r
         if (!root?.index || !head?.index) return;
         const state = parseContribution(head.intent.bytes).kind;
         const request = parseContribution(root.intent.bytes);
-        if (request.kind !== 'REQUEST' || (state !== 'REQUEST' && state !== 'CONTRIBUTE' && state !== 'ACCEPT')) return;
+        if (request.kind !== 'REQUEST' || isEncounterFingerprint(request) ||
+          (state !== 'REQUEST' && state !== 'CONTRIBUTE' && state !== 'ACCEPT')) return;
         entries.push({ ...item, head: head.index.digest, state, context: request.statement });
       }));
       return { cursor: String(result[0]), entries };

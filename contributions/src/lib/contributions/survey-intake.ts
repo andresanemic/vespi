@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { StrKey } from '@stellar/stellar-sdk/base';
 import { surveyCommitment } from './kernel/contributions.js';
+import { contributionRedisPrefix, DEFAULT_NETWORK } from './network';
 import { contributionsRedisCredentials } from './redis-credentials.mjs';
 
 const FIELDS = ['usefulness', 'building', 'project', 'ambassadorInterest', 'nextTopic', 'email'];
@@ -79,11 +80,12 @@ export function createSurveyIntake(store: IntakeStore, now = () => new Date(), c
   };
 }
 
-export function createPrivateSurveyStore(env: Record<string, string | undefined>, request = fetch) {
-  const key = 'contributions:testnet:private-survey:v1';
+export function createPrivateSurveyStore(env: Record<string, string | undefined>, request = fetch, network = DEFAULT_NETWORK) {
+  const prefix = contributionRedisPrefix(network);
+  const key = `${prefix}:private-survey:v1`;
 
   async function run(command: unknown[]) {
-    const { url: raw, token } = contributionsRedisCredentials(env);
+    const { url: raw, token } = contributionsRedisCredentials(env, network);
     if (!raw || !token || new URL(raw).protocol !== 'https:') throw new Error('Survey store unavailable');
     const response = await request(raw.replace(/\/$/, ''), {
       method: 'POST',
@@ -107,7 +109,7 @@ export function createPrivateSurveyStore(env: Record<string, string | undefined>
   return {
     get,
     async consumeTeamAuthorization(account: string, nonce: string) {
-      const result = await run(['SET', `contributions:testnet:team-auth:v1:${nonce}`, account, 'NX', 'EX', 120]);
+      const result = await run(['SET', `${prefix}:team-auth:v1:${nonce}`, account, 'NX', 'EX', 120]);
       if (result === 'OK') return true;
       if (result === null) return false;
       throw new Error('Invalid team authorization response');
@@ -127,11 +129,11 @@ export function createPrivateSurveyStore(env: Record<string, string | undefined>
       return [...records.values()];
     },
     async saveReport(digest: string, value: { bytes: string; rehearsal: boolean }) {
-      const written = await run(['HSETNX', 'contributions:testnet:survey-reports:v1', digest, JSON.stringify(value)]);
+      const written = await run(['HSETNX', `${prefix}:survey-reports:v1`, digest, JSON.stringify(value)]);
       if (written !== 0 && written !== 1) throw new Error('Invalid report registration response');
     },
     async getReport(digest: string): Promise<{ bytes: string; rehearsal: boolean } | null> {
-      const value = await run(['HGET', 'contributions:testnet:survey-reports:v1', digest]);
+      const value = await run(['HGET', `${prefix}:survey-reports:v1`, digest]);
       if (value === null) return null;
       if (typeof value !== 'string') throw new Error('Invalid stored report');
       return JSON.parse(value) as { bytes: string; rehearsal: boolean };

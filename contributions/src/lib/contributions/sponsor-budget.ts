@@ -1,3 +1,5 @@
+import { contributionRedisPrefix, DEFAULT_NETWORK } from './network';
+import { sponsorSetting } from './sponsor-policy';
 import { contributionsRedisCredentials } from './redis-credentials.mjs';
 
 type Env = Record<string, string | undefined>;
@@ -25,20 +27,27 @@ redis.call('HSET', key, 'used', string.format('%.0f', used + amount), hash, ARGV
 return 'reserved'
 `;
 
-export function createSponsorBudget(env: Env, request: typeof fetch = fetch): SponsorBudget {
+export function readSponsorBudgetCap(env: Env, network = DEFAULT_NETWORK): number {
+  const raw = sponsorSetting(env, 'CONTRIB_SPONSOR_BUDGET_STROOPS', network) ?? '';
+  const cap = Number(raw);
+  if (!/^\d+$/.test(raw) || !Number.isSafeInteger(cap) || cap <= 0) {
+    throw new Error('Invalid sponsor budget configuration');
+  }
+  return cap;
+}
+
+export function createSponsorBudget(env: Env, request: typeof fetch = fetch, network = DEFAULT_NETWORK): SponsorBudget {
   return async ({ sponsor, hash, txHash, stroops }) => {
-    const raw = env.CONTRIB_SPONSOR_BUDGET_STROOPS ?? '';
-    const cap = Number(raw);
-    const { url, token } = contributionsRedisCredentials(env);
-    if (!/^\d+$/.test(raw) || !Number.isSafeInteger(cap) || cap <= 0 ||
-      !Number.isSafeInteger(stroops) || stroops <= 0 || !DIGEST.test(hash) || !DIGEST.test(txHash) ||
+    const cap = readSponsorBudgetCap(env, network);
+    const { url, token } = contributionsRedisCredentials(env, network);
+    if (!Number.isSafeInteger(stroops) || stroops <= 0 || !DIGEST.test(hash) || !DIGEST.test(txHash) ||
       !url || new URL(url).protocol !== 'https:' || !token) {
       throw new Error('Invalid sponsor budget configuration');
     }
     const response = await request(url.replace(/\/$/, ''), {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(['EVAL', RESERVE, 1, `contributions:testnet:sponsor-budget:${sponsor}`, hash, stroops, cap, txHash]),
+      body: JSON.stringify(['EVAL', RESERVE, 1, `${contributionRedisPrefix(network)}:sponsor-budget:${sponsor}`, hash, stroops, cap, txHash]),
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) throw new Error('Sponsor budget storage rejected the request');

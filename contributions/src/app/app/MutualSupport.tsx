@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Lang } from '@/lib/i18n';
+import type { ContributionNetwork } from '@/lib/contributions/network';
 import { loadChain } from './ChainAction';
-import { contributionLink, getDisplayName } from './client';
+import { contributionLink, getDisplayName, withContributionNetwork } from './client';
 import ShareActions from './ShareActions';
 
 const copies = {
@@ -33,7 +34,7 @@ export function confirmedDelivery(chain: Chain) {
   return chain.acceptedDelivery ?? (chain.head.receipt.kind === 'CONTRIBUTE' ? chain.head : undefined);
 }
 
-export default function MutualSupport({ lang, first, second }: { lang: Lang; first: string; second: string }) {
+export default function MutualSupport({ lang, first, second, network }: { lang: Lang; first: string; second: string; network: ContributionNetwork }) {
   const t = copies[lang];
   const [pair, setPair] = useState<{ first: Chain; second: Chain; people: Record<string, string> }>();
   const [error, setError] = useState<'unavailable' | 'mismatched'>();
@@ -41,7 +42,7 @@ export default function MutualSupport({ lang, first, second }: { lang: Lang; fir
 
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([loadChain(first, controller.signal), loadChain(second, controller.signal)]).then(([initial, returning]) => {
+    Promise.all([loadChain(first, controller.signal, network), loadChain(second, controller.signal, network)]).then(([initial, returning]) => {
       if (controller.signal.aborted) return;
       const a = initial.request.receipt.actor;
       const b = returning.request.receipt.actor;
@@ -53,14 +54,14 @@ export default function MutualSupport({ lang, first, second }: { lang: Lang; fir
         return;
       }
       setPair({ first: initial, second: returning, people: {} });
-      setShareUrl(location.origin + '/app?mutual=' + first + '&return=' + second);
+      setShareUrl(location.origin + withContributionNetwork('/app?mutual=' + first + '&return=' + second, network));
       void Promise.all([getDisplayName(a).catch(() => null), getDisplayName(b).catch(() => null)]).then(([aName, bName]) => {
         if (!controller.signal.aborted) setPair({ first: initial, second: returning,
           people: { ...(aName && { [a]: aName }), ...(bName && { [b]: bName }) } });
       });
     }).catch(() => { if (!controller.signal.aborted) setError('unavailable'); });
     return () => controller.abort();
-  }, [first, second]);
+  }, [first, second, network]);
 
   if (error) return <p role="alert">{t[error]}</p>;
   if (!pair) return <p role="status">{t.loading}</p>;
@@ -81,8 +82,8 @@ export default function MutualSupport({ lang, first, second }: { lang: Lang; fir
               {delivery && chain.head.receipt.kind !== 'ACCEPT' && <p>{name(to)} {t.needs}</p>}
               <p>{delivery?.receipt.statement ?? chain.request.receipt.statement}</p>
               {delivery && chain.head.receipt.kind !== 'ACCEPT' && <Link className="mobile-secondary"
-                href={contributionLink('continue', delivery.index.digest, chain === pair.second ? first : undefined)}>{t.review}</Link>}
-              <Link href={contributionLink('receipt', chain.head.index.digest, chain === pair.second ? first : undefined)}>{t.receipt}</Link>
+                href={contributionLink('continue', delivery.index.digest, chain === pair.second ? first : undefined, network)}>{t.review}</Link>}
+              <Link href={contributionLink('receipt', chain.head.index.digest, chain === pair.second ? first : undefined, network)}>{t.receipt}</Link>
             </dd>
           </div>;
         })}

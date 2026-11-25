@@ -3,12 +3,16 @@
 // reconcile by hash before any retry. Never resend blindly.
 import { randomInt } from 'node:crypto';
 import {
-  type Account, type FeeBumpTransaction, BASE_FEE, Keypair, Networks, StrKey, Transaction, TransactionBuilder,
+  type Account, type FeeBumpTransaction, BASE_FEE, Keypair, StrKey, Transaction, TransactionBuilder,
 } from '@stellar/stellar-sdk/base';
-import { checkOnboarding, checkParticipantTx, ONBOARDING_RESERVE_STROOPS, readSponsorConfig } from './sponsor-policy';
+import { checkOnboarding, checkParticipantTx, ONBOARDING_RESERVE_STROOPS, readSponsorConfig, sponsorSetting } from './sponsor-policy';
 import type { SponsorBudget } from './sponsor-budget';
 import { buildFeeBump, buildOnboardingTx, isBadSequence, onboardingToken, verifyOnboardingToken } from './stellar-server';
-import type { RateLimiter } from './rate-limit';
+import { mainnetContributionLimiter, type RateLimiter } from './rate-limit';
+import { contributionNetwork, DEFAULT_NETWORK, type ContributionNetwork } from './network';
+import { readContributionNetwork } from './network-request';
+import { contributionsTokenKey, tokenKeyHasMinimumBytes } from './redis-credentials.mjs';
+import type { SharedChannelLeases } from './channel-leases';
 
 export type Deps = {
   loadAccount(id: string): Promise<Account>;
@@ -17,10 +21,14 @@ export type Deps = {
   // null when Horizon does not know the hash; throws when Horizon cannot answer.
   getTransaction(hash: string): Promise<{ successful: boolean; ledger: number } | null>;
   submit(tx: Transaction | FeeBumpTransaction): Promise<{ hash: string; ledger: number }>;
+  // Recent per-operation fee the network charged (Horizon fee_stats p90); absent keeps the participant's fee.
+  networkFee?(): Promise<number>;
   env: Record<string, string | undefined>;
+  network?: ContributionNetwork;
   reserveSponsorBudget: SponsorBudget;
   now(): Date;
   leases?: ChannelLeases;
+  sharedLeases?: SharedChannelLeases;
   // Explicit open leases per IP (CONTRIB_LEASES_PER_IP, read by the route); otherwise leasesPerIp derives it.
   leasesPerIp?: number;
 };
@@ -70,18 +78,23 @@ function isPublicKey(value: unknown): value is string {
   return typeof value === 'string' && StrKey.isValidEd25519PublicKey(value);
 }
 
-function readFeeConfig(env: Deps['env']) {
+function readFeeConfig(env: Deps['env'], network: ContributionNetwork) {
+  const policy = readSponsorConfig(env, network);
+  // Defense in depth: the routes already require the mainnet allowlist, and the handlers never pay without it.
+  if (network === 'mainnet' && !policy.allowedAccounts?.size) throw new Error('contributions: mainnet needs its allowlist');
   return {
-    sponsor: Keypair.fromSecret(env.CONTRIB_SPONSOR_SECRET ?? ''),
-    policy: readSponsorConfig(env),
+    sponsor: Keypair.fromSecret(sponsorSetting(env, 'CONTRIB_SPONSOR_SECRET', network) ?? ''),
+    policy,
   };
 }
 
-function readAccountConfig(env: Deps['env']) {
-  const config = readFeeConfig(env);
-  const channels = (env.CONTRIB_CHANNEL_SECRETS ?? '').split(',').map(secret => Keypair.fromSecret(secret.trim()));
-  const tokenKey = Buffer.from(env.CONTRIB_TOKEN_KEY ?? '', 'utf8');
-  if (tokenKey.length < 32) throw new Error('invalid token key');
+function readAccountConfig(env: Deps['env'], network: ContributionNetwork) {
+  const config = readFeeConfig(env, network);
+  const channels = (sponsorSetting(env, 'CONTRIB_CHANNEL_SECRETS', network) ?? '').split(',')
+    .map(secret => Keypair.fromSecret(secret.trim()));
+  const key = contributionsTokenKey(env, network);
+  if (!tokenKeyHasMinimumBytes(key)) throw new Error('invalid token key');
+  const tokenKey = Buffer.from(key ?? '', 'utf8');
   return { ...config, channels, tokenKey };
 }
 
@@ -133,13 +146,17 @@ async function reserveBudget(deps: Pick<Deps, 'reserveSponsorBudget'>, claim: Pa
 }
 
 export function createAccountHandlers(deps: Deps) {
+  const network = deps.network ?? DEFAULT_NETWORK;
+  const { passphrase } = contributionNetwork(network);
   const leases = deps.leases ?? instanceLeases;
+  const shared = deps.sharedLeases;
   return {
     async prepare(body: unknown, ip: string): Promise<Prepared | Failure> {
       if (!isObject(body) || !isPublicKey(body.publicKey)) return { ok: false, reason: 'invalid-public-key' };
       let config;
-      try { config = readAccountConfig(deps.env); }
+      try { config = readAccountConfig(deps.env, network); }
       catch { return { ok: false, reason: 'config-error' }; }
+      if (network === 'mainnet' && !shared) return { ok: false, reason: 'channel-unavailable' };
       const now = deps.now();
       const checked = checkOnboarding(body.publicKey, config.policy, now);
       if (!checked.ok) return checked;
@@ -154,7 +171,7 @@ export function createAccountHandlers(deps: Deps) {
         });
       };
       // A cheap check first, so a full venue does not cost a Horizon lookup per waiting client.
-      if (freeChannels(Math.floor(now.getTime() / 1000)).length === 0) return { ok: false, reason: 'busy' };
+      if (!shared && freeChannels(Math.floor(now.getTime() / 1000)).length === 0) return { ok: false, reason: 'busy' };
       // Look the account up before building anything: an onboarded participant needs no channel.
       let existing;
       try { existing = await deps.findAccount(body.publicKey); }
@@ -163,26 +180,44 @@ export function createAccountHandlers(deps: Deps) {
         return { ok: false, reason: existing.sponsor === config.sponsor.publicKey() ? 'already-onboarded' : 'account-exists' };
       }
       const nowSeconds = Math.floor(deps.now().getTime() / 1000);
-      // No await from here to the lease, so concurrent prepares see each other's reservations.
-      const free = freeChannels(nowSeconds);
-      if (free.length === 0) return { ok: false, reason: 'busy' };
-      const channel = free[randomInt(free.length)];
       const lease = { hash: '', until: nowSeconds + LEASE_SECONDS, ip };
-      leases.set(channel, lease);
+      let channel: string;
+      let leaseId: string | undefined;
+      if (shared) {
+        const channels = config.channels.map(key => key.publicKey());
+        const start = randomInt(channels.length);
+        try {
+          const claimed = await shared.acquire([...channels.slice(start), ...channels.slice(0, start)],
+            ip, cap, nowSeconds, lease.until + CLOCK_MARGIN_SECONDS);
+          if (!claimed) return { ok: false, reason: 'busy' };
+          ({ channel, leaseId } = claimed);
+        } catch { return { ok: false, reason: 'channel-unavailable' }; }
+      } else {
+        // In memory, checking and taking a lease must be synchronous.
+        const free = freeChannels(nowSeconds);
+        if (free.length === 0) return { ok: false, reason: 'busy' };
+        channel = free[randomInt(free.length)];
+        leases.set(channel, lease);
+      }
       try {
         const tx = buildOnboardingTx({
           channel: await deps.loadAccount(channel), sponsor: config.sponsor.publicKey(),
           newAccount: body.publicKey, baseFee: BASE_FEE, timeoutSeconds: 0,
-        });
+        }, network);
         // The shared builder uses wall time; bind the deadline to the injected clock instead.
         const bounded = TransactionBuilder.cloneFrom(tx, {
           timebounds: { minTime: 0, maxTime: lease.until },
         }).build();
         lease.hash = bounded.hash().toString('hex');
         const xdr = bounded.toXDR();
-        return { ok: true, xdr, token: onboardingToken(xdr, config.tokenKey), channel };
+        if (shared && leaseId) {
+          const bound = await shared.bind(channel, leaseId, lease.hash, Math.floor(deps.now().getTime() / 1000)).catch(() => false);
+          if (!bound) return { ok: false, reason: 'channel-unavailable' };
+        }
+        return { ok: true, xdr, token: onboardingToken(xdr, config.tokenKey, network), channel };
       } catch {
-        if (leases.get(channel) === lease) leases.delete(channel);
+        if (shared && leaseId) await shared.release(channel, leaseId).catch(() => {});
+        else if (leases.get(channel) === lease) leases.delete(channel);
         return { ok: false, reason: 'horizon-error' };
       }
     },
@@ -192,10 +227,11 @@ export function createAccountHandlers(deps: Deps) {
         return { ok: false, reason: 'invalid-body' };
       }
       let config;
-      try { config = readAccountConfig(deps.env); }
+      try { config = readAccountConfig(deps.env, network); }
       catch { return { ok: false, reason: 'config-error' }; }
-      if (!verifyOnboardingToken(body.xdr, body.token, config.tokenKey)) return { ok: false, reason: 'bad-token' };
-      const tx = new Transaction(body.xdr, Networks.TESTNET);
+      if (network === 'mainnet' && !shared) return { ok: false, reason: 'channel-unavailable' };
+      if (!verifyOnboardingToken(body.xdr, body.token, config.tokenKey, network)) return { ok: false, reason: 'bad-token' };
+      const tx = new Transaction(body.xdr, passphrase);
       const [begin, create, end] = tx.operations;
       const sponsor = config.sponsor.publicKey();
       const channel = config.channels.find(key => key.publicKey() === tx.source);
@@ -208,7 +244,8 @@ export function createAccountHandlers(deps: Deps) {
       }
       // Signatures do not change the hash, so this matches the lease taken by the prepare that built it.
       const hash = tx.hash().toString('hex');
-      let keepLease = false;
+      // Mainnet holds an uncertain lease until its deadline unless Horizon confirms the outcome.
+      let keepLease = Boolean(shared);
       try {
         const now = deps.now();
         if (BigInt(tx.timeBounds.maxTime) < BigInt(Math.floor(now.getTime() / 1000) + CLOCK_MARGIN_SECONDS)) {
@@ -237,42 +274,76 @@ export function createAccountHandlers(deps: Deps) {
         catch { return { ok: false, reason: 'horizon-error' }; }
         try {
           const submitted = await deps.submit(tx);
+          keepLease = false;
           return { ok: true, hash: submitted.hash, ledger: submitted.ledger };
         } catch (error) {
           // Changing the channel changes the signed hash; only the participant can sign a retry.
-          if (isBadSequence(error) || !isSubmissionTimeout(error)) return submissionFailure(error);
+          // A definite rejection leaves no transaction in flight, so the channel is free again.
+          if (isBadSequence(error) || !isSubmissionTimeout(error)) { keepLease = false; return submissionFailure(error); }
           const reconciled = await reconcile(deps, hash, begin.sponsoredId, sponsor);
           keepLease = reconciled.keepLease;
           return reconciled.result;
         }
       } finally {
-        if (!keepLease && leases.get(tx.source)?.hash === hash) leases.delete(tx.source);
+        if (!keepLease) {
+          if (shared) await shared.release(tx.source, hash).catch(() => {});
+          else if (leases.get(tx.source)?.hash === hash) leases.delete(tx.source);
+        }
       }
     },
   };
 }
 
-export type FeeBumpDeps = Pick<Deps, 'env' | 'now' | 'reserveSponsorBudget' | 'getTransaction' | 'submit'>;
+export type FeeBumpDeps = Pick<Deps, 'env' | 'now' | 'reserveSponsorBudget' | 'getTransaction' | 'submit' | 'networkFee' | 'network'>;
+
+// Under surge pricing the sponsor raises its outer bid to what the network recently charged, never above
+// the cap: the fee bump pays per operation for the inner one plus itself, so the rate is at most half of it.
+// A failed or absurd reading keeps the participant's own fee, which the policy already accepted.
+export async function outerBaseFee(networkFee: Deps['networkFee'], innerFee: string, maxFeeStroops: string): Promise<string> {
+  const inner = BigInt(innerFee);
+  if (!networkFee) return innerFee;
+  let network: bigint;
+  try {
+    const reading = await networkFee();
+    if (!Number.isSafeInteger(reading) || reading <= 0) return innerFee;
+    network = BigInt(reading);
+  } catch { return innerFee; }
+  const ceiling = BigInt(maxFeeStroops) / BigInt(2);
+  const rate = network > inner ? network : inner;
+  return (rate > ceiling ? (ceiling > inner ? ceiling : inner) : rate).toString();
+}
 
 export function createFeeBumpHandler(deps: FeeBumpDeps) {
-  return async (body: unknown): Promise<Submitted | Failure> => {
+  const network = deps.network ?? DEFAULT_NETWORK;
+  const { passphrase } = contributionNetwork(network);
+  // Receipt anchoring passes the envelope whose hash it stored. The fee remains bounded by policy.
+  return async (body: unknown, chosenBaseFee?: string, preparedOuter?: FeeBumpTransaction): Promise<Submitted | Failure> => {
     if (!isObject(body) || typeof body.xdr !== 'string' || typeof body.participant !== 'string') {
       return { ok: false, reason: 'invalid-body' };
     }
     if (!isPublicKey(body.participant)) return { ok: false, reason: 'invalid-public-key' };
     let tx;
-    try { tx = new Transaction(body.xdr, Networks.TESTNET); }
+    try { tx = new Transaction(body.xdr, passphrase); }
     catch { return { ok: false, reason: 'invalid-xdr' }; }
     let config;
-    try { config = readFeeConfig(deps.env); }
+    try { config = readFeeConfig(deps.env, network); }
     catch { return { ok: false, reason: 'config-error' }; }
     const checked = checkParticipantTx(tx, body.participant, config.policy, deps.now());
     if (!checked.ok) return checked;
     if (!hasParticipantSignature(tx, body.participant)) return { ok: false, reason: 'missing-participant-signature' };
+    if (chosenBaseFee !== undefined && (!/^\d+$/.test(chosenBaseFee) || BigInt(chosenBaseFee) < BigInt(checked.baseFee) ||
+      BigInt(2) * BigInt(chosenBaseFee) > BigInt(config.policy.maxFeeStroops))) {
+      return { ok: false, reason: 'fee-over-limit' };
+    }
+    const baseFee = chosenBaseFee ?? await outerBaseFee(deps.networkFee, checked.baseFee, config.policy.maxFeeStroops);
     let outer;
-    try { outer = buildFeeBump(tx, config.sponsor, checked.baseFee); }
+    try { outer = preparedOuter ?? buildFeeBump(tx, config.sponsor, baseFee); }
     catch (error) { return submissionFailure(error); }
-    if (BigInt(outer.fee) !== BigInt(2) * BigInt(checked.baseFee)) return { ok: false, reason: 'fee-over-limit' };
+    if (preparedOuter && (outer.networkPassphrase !== passphrase || outer.feeSource !== config.sponsor.publicKey() ||
+      outer.innerTransaction.toXDR() !== tx.toXDR())) return { ok: false, reason: 'config-error' };
+    if (BigInt(outer.fee) !== BigInt(2) * BigInt(baseFee) || BigInt(outer.fee) > BigInt(config.policy.maxFeeStroops)) {
+      return { ok: false, reason: 'fee-over-limit' };
+    }
     const budget = await reserveBudget(deps, {
       sponsor: config.sponsor.publicKey(), hash: tx.hash().toString('hex'),
       txHash: outer.hash().toString('hex'), stroops: Number(outer.fee),
@@ -323,27 +394,31 @@ export async function readContributionBody(request: Request, maxBytes = 16 * 102
 const STATUS: Record<string, number> = {
   rate_limited: 429, too_large: 413, 'config-error': 503, busy: 503, 'horizon-error': 502, retry: 409,
   'already-onboarded': 409, 'account-exists': 409, expired: 410, 'inner-failed': 422,
-  'budget-exhausted': 409, 'budget-unavailable': 503,
+  'budget-exhausted': 409, 'budget-unavailable': 503, 'account-not-allowed': 403, 'channel-unavailable': 503,
 };
 
 // The participant key a call spends quota on: publicKey in prepare, the onboarded account of the XDR in
 // complete, participant in the fee bump. Null when the body names none.
-function limitKey(kind: 'account' | 'feebump', body: Record<string, unknown>): string | null {
+function limitKey(kind: 'account' | 'feebump', body: Record<string, unknown>, network: ContributionNetwork): string | null {
   if (kind === 'feebump') return isPublicKey(body.participant) ? body.participant : null;
   if (body.action === 'prepare') return isPublicKey(body.publicKey) ? body.publicKey : null;
   if (body.action !== 'complete' || typeof body.xdr !== 'string') return null;
   try {
-    const [begin] = new Transaction(body.xdr, Networks.TESTNET).operations;
+    const [begin] = new Transaction(body.xdr, contributionNetwork(network).passphrase).operations;
     return begin?.type === 'beginSponsoringFutureReserves' && isPublicKey(begin.sponsoredId) ? begin.sponsoredId : null;
   } catch { return null; }
 }
 
 // The whole POST of a contribution route, so the route files only wire Horizon in.
-export function contributionRoute(kind: 'account' | 'feebump', makeDeps: () => Deps, limiter: RateLimiter) {
+export function contributionRoute(kind: 'account' | 'feebump', makeDeps: (network: ContributionNetwork, env: Deps['env']) => Deps, limiter: RateLimiter, env = process.env) {
   return async (request: Request): Promise<Response> => {
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const parsed = await readContributionBody(request);
-    const hit = limiter.take(ip, parsed.ok ? limitKey(kind, parsed.body) : null);
+    const selected = readContributionNetwork(request, parsed.ok ? parsed.body : undefined, env);
+    if (!selected.ok) return selected.response;
+    const { network } = selected;
+    const hit = (network === 'mainnet' ? mainnetContributionLimiter : limiter)
+      .take(ip, parsed.ok ? limitKey(kind, parsed.body, network) : null);
     if (!hit.ok) {
       return Response.json({ ok: false, reason: 'rate_limited' }, {
         status: 429, headers: { 'Retry-After': String(hit.retryAfter) },
@@ -352,9 +427,9 @@ export function contributionRoute(kind: 'account' | 'feebump', makeDeps: () => D
     if (!parsed.ok) return Response.json(parsed, { status: STATUS[parsed.reason] ?? 400 });
     const { body } = parsed;
     let result: Submitted | Prepared | Failure;
-    if (kind === 'feebump') result = await createFeeBumpHandler(makeDeps())(body);
-    else if (body.action === 'prepare') result = await createAccountHandlers(makeDeps()).prepare(body, ip);
-    else if (body.action === 'complete') result = await createAccountHandlers(makeDeps()).complete(body);
+    if (kind === 'feebump') result = await createFeeBumpHandler(makeDeps(network, selected.env))(body);
+    else if (body.action === 'prepare') result = await createAccountHandlers(makeDeps(network, selected.env)).prepare(body, ip);
+    else if (body.action === 'complete') result = await createAccountHandlers(makeDeps(network, selected.env)).complete(body);
     else result = { ok: false, reason: 'invalid-action' };
     if (result.ok) return Response.json(result, { status: 200 });
     if (result.reason === 'busy') {

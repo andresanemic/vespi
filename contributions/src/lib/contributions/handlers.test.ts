@@ -827,3 +827,109 @@ test('a repeat with a reserved hash reconciles instead of submitting twice', asy
     { ok: true, hash: submittedHash, ledger: 123, reconciled: true });
   assert.equal(submitted.length, 1);
 });
+
+// The allowlist (CONTRIB_ALLOWED_ACCOUNTS) closes every path that spends sponsor funds before any spend.
+function listed(accounts: string) {
+  const reserved: unknown[] = [];
+  const setup = fixture({ CONTRIB_ALLOWED_ACCOUNTS: accounts } as Partial<typeof env>);
+  setup.deps.reserveSponsorBudget = async (claim: unknown) => { reserved.push(claim); return { state: 'reserved' }; };
+  return { ...setup, reserved };
+}
+
+test('prepare refuses an account off the allowlist before any lookup, channel or lease', async () => {
+  const { deps, found, loaded } = listed(other.publicKey());
+  const result = await createAccountHandlers(deps).prepare({ publicKey: participant.publicKey() }, ip);
+  assert.deepEqual(result, { ok: false, reason: 'account-not-allowed' });
+  assert.deepEqual(found, []);
+  assert.deepEqual(loaded, []);
+  assert.equal(deps.leases?.size ?? 0, 0);
+});
+
+test('prepare accepts an account on the allowlist', async () => {
+  const { deps } = listed(`${other.publicKey()}, ${participant.publicKey()}`);
+  await prepared(deps);
+});
+
+test('complete refuses an account off the allowlist without reserving budget or submitting', async () => {
+  const open = fixture();
+  const signed = await signedOnboarding(open.deps);
+  const { deps, reserved, submitted } = listed(other.publicKey());
+  deps.leases = open.deps.leases;
+  const result = await createAccountHandlers(deps).complete(signed);
+  assert.deepEqual(result, { ok: false, reason: 'account-not-allowed' });
+  assert.deepEqual(reserved, []);
+  assert.deepEqual(submitted, []);
+});
+
+test('the fee bump refuses a participant off the allowlist without reserving budget or submitting', async () => {
+  const { deps, reserved, submitted } = listed(other.publicKey());
+  const tx = participantTx();
+  tx.sign(participant);
+  const result = await createFeeBumpHandler(deps)({ xdr: tx.toXDR(), participant: participant.publicKey() });
+  assert.deepEqual(result, { ok: false, reason: 'account-not-allowed' });
+  assert.deepEqual(reserved, []);
+  assert.deepEqual(submitted, []);
+});
+
+test('a malformed allowlist fails closed on every spending path', async () => {
+  const { deps, reserved, submitted } = listed('not-a-key');
+  assert.deepEqual(await createAccountHandlers(deps).prepare({ publicKey: participant.publicKey() }, ip),
+    { ok: false, reason: 'config-error' });
+  const tx = participantTx();
+  tx.sign(participant);
+  assert.deepEqual(await createFeeBumpHandler(deps)({ xdr: tx.toXDR(), participant: participant.publicKey() }),
+    { ok: false, reason: 'config-error' });
+  assert.deepEqual(reserved, []);
+  assert.deepEqual(submitted, []);
+});
+
+test('profiles and photos accept only allowlisted accounts, without a Horizon lookup for the rest', async () => {
+  const { enabledAccountExists } = await import(new URL('./fee-bump-runtime.ts', import.meta.url).href);
+  const previous = process.env.CONTRIB_ALLOWED_ACCOUNTS;
+  process.env.CONTRIB_ALLOWED_ACCOUNTS = other.publicKey();
+  try {
+    assert.equal(await enabledAccountExists(participant.publicKey()), false);
+    process.env.CONTRIB_ALLOWED_ACCOUNTS = 'not-a-key';
+    await assert.rejects(enabledAccountExists(participant.publicKey()));
+  } finally {
+    if (previous === undefined) delete process.env.CONTRIB_ALLOWED_ACCOUNTS;
+    else process.env.CONTRIB_ALLOWED_ACCOUNTS = previous;
+  }
+});
+
+test('a list of only separators fails closed and loudly instead of denying everyone silently', async () => {
+  const { deps, reserved } = listed(' , ,, ');
+  assert.deepEqual(await createAccountHandlers(deps).prepare({ publicKey: participant.publicKey() }, ip),
+    { ok: false, reason: 'config-error' });
+  assert.deepEqual(reserved, []);
+});
+
+// Surge pricing: the outer bid follows the network's recent fee, bounded by the participant's fee and the cap.
+async function bumpedFee(reading: (() => Promise<number>) | undefined, chosen?: string) {
+  const { deps, submitted } = fixture({ CONTRIB_SPONSOR_MAX_FEE: '1000' });
+  deps.networkFee = reading;
+  const tx = participantTx();
+  tx.sign(participant);
+  const result = await createFeeBumpHandler(deps)({ xdr: tx.toXDR(), participant: participant.publicKey() }, chosen);
+  return { result, fee: (submitted[0] as FeeBumpTransaction | undefined)?.fee };
+}
+
+test('the fee bump raises its bid under surge pricing and never passes the cap', async () => {
+  assert.equal((await bumpedFee(undefined)).fee, '300');
+  assert.equal((await bumpedFee(async () => 50)).fee, '300');
+  assert.equal((await bumpedFee(async () => 400)).fee, '800');
+  assert.equal((await bumpedFee(async () => 90_000)).fee, '1000');
+  assert.equal((await bumpedFee(async () => { throw new Error('fee_stats down'); })).fee, '300');
+  assert.equal((await bumpedFee(async () => Number.NaN)).fee, '300');
+});
+
+test('a fee chosen by receipt anchoring is kept only between the participant fee and the cap', async () => {
+  assert.equal((await bumpedFee(async () => 400, '200')).fee, '400');
+  assert.deepEqual((await bumpedFee(undefined, '149')).result, { ok: false, reason: 'fee-over-limit' });
+  assert.deepEqual((await bumpedFee(undefined, '501')).result, { ok: false, reason: 'fee-over-limit' });
+  assert.deepEqual((await bumpedFee(undefined, '1e3')).result, { ok: false, reason: 'fee-over-limit' });
+});
+
+test('a chosen fee beyond int64 is refused as over the limit before building anything', async () => {
+  assert.deepEqual((await bumpedFee(undefined, '99999999999999999999')).result, { ok: false, reason: 'fee-over-limit' });
+});

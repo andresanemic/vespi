@@ -1,5 +1,78 @@
 # Changelog
 
+## Instawards Chile · Week 2
+
+November 23–25, 2026
+
+Andrés Peña and Francisco Toro completed the team reference chain on Stellar mainnet: Andrés requested a contribution, Francisco delivered it and Andrés accepted it, each signing from their own account. People can now record help they gave or received, and the record becomes public only after both of them sign it.
+
+### Added
+
+- Stellar mainnet for the three-step flow (request, contribution, acceptance), limited to accounts we enable during the sprint. Each network keeps its own storage, keys and sponsor limits.
+- One way to record a contribution: “I helped someone” or “Someone helped me”. The text and the two names appear on both profiles after both people sign. Vespi serves the text and both signatures; Stellar holds the fingerprint. Older records stay private.
+- Voice notes of up to two minutes that draft a record for the person to review and edit before signing. Open to everyone with a published name on testnet, with a daily limit; on mainnet, to enabled accounts. It builds on [Voice Ready](https://github.com/mpefaur/voice-ready), shared by Martín Pefaur.
+- A shareable result page for each chain, and an exporter that checks every receipt and transaction before writing the public evidence package.
+- An attendance page for the November 25 focus group on testnet: people who were there can sign that they attended.
+
+### Changed
+
+- One passkey sign-in on testnet lasts up to twelve hours. On mainnet the app still asks for the passkey when signing.
+- A shorter composer: what happened, with whom, review, sign.
+
+### Fixed
+
+- Sign-out sends its request right away and cannot end a newer session.
+- The full text that will become public, including links, is shown before signing.
+
+### Team reference chain on mainnet
+
+- Request: “Francisco, te pido que conduzcas conmigo el focus group "Aportar en Stellar" del 25 de noviembre y prepares una síntesis de lo conversado, sin nombres de participantes.” Signed November 24 from `GDQM65PI4KNF77PBPQAWY77CPHD67O5KJ235BMKZR4FZ33SETRCVFYXY`. [Transaction](https://stellar.expert/explorer/public/tx/9ab8eb6aa543876fee3c98ff0ccfbfb0573facee60e4003fd07fd0658bfb3638)
+- Contribution: “Hola, ya se hizo el focus, ya procesamos los audios, ya hicimos la síntesis de los contenidos y estamos trabajando en la extracción de información crítica para mejorar nuestro proyecto.” Signed November 25 from `GC3657FJKWW4F25CHSLALHQVGZGFPXRVQCM57YA5IB254DA652PX7VAI`. [Transaction](https://stellar.expert/explorer/public/tx/1445ac09388e0cf6c5998e03f78ca61735e2fe903630ce2294bf40cd1757264b)
+- Acceptance: “Acepto este aporte.” Signed November 25 by Andrés. [Transaction](https://stellar.expert/explorer/public/tx/9625a477e8bbfd4c2a7d60bbc70754b11a342a80dbec793c569bfc42b6f1669c)
+- [Result page](https://vespi.xyz/app/cadena/994fb550c6fa11280b2d30228a956e8d75bd836c9ead3d77973caa71b6fa6886?network=mainnet) · Evidence package: [`contributions/receipts/mainnet`](contributions/receipts/mainnet/994fb550c6fa11280b2d30228a956e8d75bd836c9ead3d77973caa71b6fa6886)
+
+We ran the full flow on testnet first, marked as a rehearsal. [Result page](https://vespi.xyz/app/cadena/c4ec25e012d738f21ef1aeff923fd48999c373278cfbc79c316b432267208d22) · [Request](https://stellar.expert/explorer/testnet/tx/676540930f7df90aca6018379733d8b137fe2276b9a76e31794ea2e20be967f2) · [Contribution](https://stellar.expert/explorer/testnet/tx/9a36bba6ac54b18a977b8f1f4a9380adca57860e576d769743f74afc97d2a7c1) · [Acceptance](https://stellar.expert/explorer/testnet/tx/82ae098bce99dd12222c2bf4eb07dbcc44fd86c7a1d30d76ebcada9069a17565)
+
+### Use cases on testnet
+
+These are real uses of the app. They do not count toward the three mainnet pilot pairs planned for Week 4.
+
+- Martín Pefaur and Andrés Peña both signed a public record of Martín’s contribution of the Voice Ready code. [Record](https://vespi.xyz/app/aporte/21d481cecbb54c8a97fc7536b1e5ae1c)
+- November 25 focus group: by the evening of November 25, two people had signed that they attended, each from their own account. One of them was Francisco, who ran it with Andrés. [1](https://stellar.expert/explorer/testnet/tx/de33ad766110ab858eb16f1549ea73d0a7c969f9f1288d03c5179d633c57f7e2) · [2](https://stellar.expert/explorer/testnet/tx/481640acf36f8dfb6548d083953e4a6cbaf2c617592538ebbe216d144fac366d) Signing stays open until November 26, 20:00 Chile time.
+
+### Progress vs previous week
+
+| Area | Week 1 | Week 2 |
+| --- | --- | --- |
+| Network | Testnet | Testnet, and mainnet for enabled accounts |
+| Team chain | Planned | Request, contribution and acceptance on mainnet |
+| Recording | Encounters and contributions as separate options | One record that both people sign before it becomes public |
+| Input | Typing | Typing or a voice note, reviewed before signing |
+
+### Evidence
+
+The [published source](contributions/) passed all 398 Contributions tests and a production build with Node.js 26.13.0. We checked the mainnet evidence package against Horizon.
+
+### Blockers and lessons
+
+- We kept trying to make the app simpler. We had several ways to record almost the same thing. People think “I helped” or “someone helped me”, so we merged them.
+- Asking for a passkey at every step was tiring. On testnet, one sign-in now covers the session; on mainnet the app asks when signing.
+- Mainnet and testnet share the same code, so we had to make sure nothing crosses between them. Each network has its own storage, keys and limits, and the server refuses mainnet if its settings are missing or reuse testnet’s storage.
+- Our review before release found that a person could sign a title or a link destination that the screen did not show. We fixed it before publishing: the full public text is visible and the server rejects anything else.
+
+### Next week
+
+- The independent verifier: one command that checks the team reference chain from a clean checkout.
+- At least ten invalid scenarios it must reject, with sponsor-policy checks, and CI on Linux, macOS and Windows.
+- A public GitHub issue with the steps, so someone outside the team can try to reproduce it.
+- Stellar Wallets Kit, so people who already have a wallet can sign with it. This week we tested that it is viable on testnet.
+- What we learned at the focus group, without participants’ names.
+- We will also invite people to form the three organizer–contributor pairs for the Week 4 mainnet pilot.
+
+### Links
+
+- Focus group: https://luma.com/mt0nzpct
+
 ## Instawards Chile · Week 1
 
 November 16–20, 2026 · updated November 21 with the results of the November 19 talk

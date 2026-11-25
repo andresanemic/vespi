@@ -10,7 +10,7 @@ import { canonicalBytes } from '../src/lib/contributions/kernel/contributions.js
 const browser = await chromium.launch({ executablePath: process.env.VESPI_CHROMIUM });
 const origin = process.env.VESPI_APP_URL ?? 'http://localhost:3217';
 const server = 'https://horizon-testnet.stellar.org';
-const context = await browser.newContext({viewport:{width:375,height:629},isMobile:true,hasTouch:true,colorScheme:'light'});
+const context = await browser.newContext({viewport:{width:375,height:629},isMobile:true,hasTouch:true,colorScheme:'light',locale:'es-CL'});
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
@@ -36,6 +36,9 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const json = (route, data, status=200) => route.fulfill({json:data,status,headers:{'Access-Control-Allow-Origin':'*'}});
 await context.route('**/api/contributions/**', async route => {
   const path = new URL(route.request().url()).pathname;
+  if (path.endsWith('/voice')) return json(route, { voice: false });
+  if (path.endsWith('/network')) return json(route, { mainnet: false });
+  if (path.endsWith('/encounters')) return json(route, { ok: true, cursor: '0', entries: [] });
   if (path.includes('/activity/')) return route.fulfill({ json: { cursor: '0', entries: [] } });
   if (path.endsWith('/account')) {
     const body = route.request().postDataJSON();
@@ -109,7 +112,7 @@ await context.route(server + '/**', route => {
   return json(route,{successful:true,hash:result.txHash,ledger:result.ledger,envelope_xdr:result.xdr});
 });
 await page.goto(origin+'/app?vista=aportes',{timeout:60_000});
-await page.getByRole('heading',{name:'Registra una solicitud'}).waitFor();
+await page.getByRole('heading',{name:'Mis aportes'}).waitFor();
 await page.getByRole('button',{name:'Crear una passkey'}).click();
 await page.getByLabel('Nombre para tu passkey').fill('Ensayo');
 await page.getByRole('button',{name:'Crear una passkey'}).click();
@@ -133,34 +136,32 @@ await publishName.click();
 await page.getByRole('heading',{name:'Mis aportes',exact:true}).waitFor();
 assert.equal(profilePosts, 2);
 await page.getByText('Participante Vespi',{exact:true}).waitFor();
-await page.getByRole('button',{name:'Registrar algo que pasó'}).click();
-await page.getByRole('button',{name:'Pedir un aporte'}).click();
+await page.getByRole('link',{name:'¿Necesitas ayuda? Pide un aporte',exact:true}).click();
 await page.getByLabel('Escribe tu solicitud').fill('Feedback para la demo');
+await page.getByText('Más detalles', { exact: true }).click();
 await page.getByLabel('Comentario opcional').fill('Revisar el flujo de alta');
-await page.getByRole('button',{name:'Revisar solicitud'}).click();
-await page.getByRole('button',{name:'Firmar y publicar'}).click();
+await page.getByRole('button',{name:'Continuar'}).click();
+await page.getByRole('button',{name:'Firmar'}).click();
 await page.getByRole('alert').getByText('El contenido no coincide con la firma esperada.').waitFor();
 assert.equal(submitted,0);
 mutate=false;
 for (let i = 0; i < 2; i++) {
-  await page.getByRole('button',{name:'Firmar y publicar'}).click();
+  await page.getByRole('button',{name:'Firmar'}).click();
   await page.getByRole('alert').getByText('Este intento terminó sin registrar la solicitud.').waitFor();
-  await page.getByRole('button',{name:'Editar solicitud'}).waitFor();
+  await page.getByRole('button',{name:'Editar'}).waitFor();
 }
-await page.getByRole('button',{name:'Firmar y publicar'}).click();
+await page.getByRole('button',{name:'Firmar'}).click();
 await page.getByRole('alert').getByText('No pudimos registrar o comprobar el recibo.').waitFor();
-await page.getByRole('button',{name:'Editar solicitud'}).waitFor({state:'hidden'});
+await page.getByRole('button',{name:'Editar'}).waitFor({state:'hidden'});
 const pendingKey = 'vespi-contributions:pending:' + firstAccount;
 assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)), pendingKey),
   { ...priorAttempt, digest: hash(priorAttempt.bytes) });
 await page.reload();
-await page.getByRole('button',{name:'Registrar algo que pasó'}).click();
-await page.getByRole('button',{name:'Desbloquear para firmar'}).click();
-await page.getByRole('heading',{name:'Así se verá tu solicitud'}).waitFor();
+await page.getByRole('heading',{name:'Revisa tu solicitud'}).waitFor();
 await page.getByRole('link',{name:'Enlace de esta solicitud'}).waitFor();
 await page.getByRole('button',{name:'Comprobar de nuevo'}).click();
 await page.getByRole('alert').getByText('La firma todavía está pendiente de confirmación.').waitFor();
-await page.getByRole('button',{name:'Editar solicitud'}).waitFor({state:'hidden'});
+await page.getByRole('button',{name:'Editar'}).waitFor({state:'hidden'});
 await page.getByRole('button',{name:'Comprobar de nuevo'}).click();
 const openReceipt = page.getByRole('link',{name:'Abrir recibo público'});
 await openReceipt.waitFor();
@@ -176,7 +177,7 @@ await page.getByRole('heading',{name:'Signature and receipt verified'}).waitFor(
 await page.setViewportSize({width:390,height:844});
 assert.equal(await page.evaluate(() => document.documentElement.scrollWidth),390);
 const anonymous = await context.newPage();
-await anonymous.goto(origin+'/app?receipt='+result.digest);
+await anonymous.goto(origin+'/app?receipt='+result.digest+'&lang=es');
 await anonymous.getByRole('heading',{name:'Firma y recibo verificados'}).waitFor();
 addBom = true;
 await anonymous.reload();

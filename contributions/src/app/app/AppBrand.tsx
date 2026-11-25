@@ -1,5 +1,3 @@
-import './app-brand.css';
-
 export default function AppBrand() {
   // A full navigation lets the app initialize its shadow stylesheet before revealing its controls.
   // eslint-disable-next-line @next/next/no-html-link-for-pages

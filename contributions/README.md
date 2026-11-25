@@ -1,8 +1,8 @@
 # Vespi Contributions
 
-Record a meeting, a talk, or help someone gave. Add what each person contributed, send an invitation, and share a receipt after they confirm. The November 2026 pilot runs on Stellar testnet. [Open the live app](https://vespi.xyz/app).
+Record a meeting, a talk, or help someone gave. Add what each person contributed, send an invitation, and share a receipt after they confirm. It runs on Stellar testnet, and on mainnet for accounts enabled during the sprint. [Open the live app](https://vespi.xyz/app).
 
-This directory is the Week 1 snapshot of the deployed Contributions app, including the browser interface, API routes, and receipt verification code. The root layout and redirects let this snapshot run independently of the Vespi public site. The public site serves the original event slides.
+This directory is the Week 2 snapshot of the deployed Contributions app, including the browser interface, API routes, and receipt verification code. The root layout and redirects let this snapshot run independently of the Vespi public site. The public site serves the original event slides.
 
 ## Run locally
 
@@ -25,7 +25,9 @@ Open `http://localhost:3000/app`. The interface and tests run without production
 | Photo attachments | `BLOB_READ_WRITE_TOKEN` for a private Vercel Blob store |
 | Tellus speaker and attendance | `CONTRIB_YERKO_ROOT` (the organizer's signed request digest), `CONTRIB_YERKO_ACCOUNT` (the designated speaker's public Stellar testnet account), and optional `CONTRIB_YERKO_CLOSED` |
 | Tellus survey and team reporting | Optional controls in `src/lib/contributions/survey-intake.ts` and `src/lib/contributions/team-survey.ts` |
+| Stellar mainnet | The `_MAINNET` sponsor, channel, token and account variables, with separate `CONTRIB_KV_MAINNET` storage. See `src/lib/contributions/network.ts` |
+| Voice notes | Vercel AI Gateway access, `CONTRIB_VOICE_ACCOUNTS`, and the limits in `src/lib/contributions/voice/access.ts` |
 
-Keep the signing and storage credentials server-side. A passkey authorizes signing in the participant's browser. Sponsorship covers testnet reserves and fees. Stellar anchors a digest so someone can check the receipt and its signing account. The receipt records what the signer attested.
+Keep the signing and storage credentials server-side. A passkey authorizes signing in the participant's browser. Sponsorship covers account reserves and fees. Stellar anchors a digest so someone can check the receipt and its signing account. The receipt records what the signer attested.
 
-The kernel copy has [pinned provenance](src/lib/contributions/kernel/SOURCE.md). [Week 1 changelog](../CHANGELOG.md#instawards-chile--week-1) · [Week 1 release](https://github.com/andresanemic/vespi/releases/tag/instawards-2026-week-1)
+The kernel copy has [pinned provenance](src/lib/contributions/kernel/SOURCE.md). [Mainnet evidence](receipts/mainnet/994fb550c6fa11280b2d30228a956e8d75bd836c9ead3d77973caa71b6fa6886) · [Week 2 changelog](../CHANGELOG.md#instawards-chile--week-2) · [Week 1 changelog](../CHANGELOG.md#instawards-chile--week-1) · [Week 1 release](https://github.com/andresanemic/vespi/releases/tag/instawards-2026-week-1)

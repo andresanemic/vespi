@@ -1,4 +1,5 @@
 import { StrKey } from '@stellar/stellar-sdk/base';
+import { contributionNetwork, DEFAULT_NETWORK, type ContributionNetwork } from './network';
 
 export type Person = { account: string; displayName: string };
 export type EncounterDraft = {
@@ -13,19 +14,27 @@ export type EncounterDraft = {
   revisionOf?: string;
   inviteMode?: 'link';
   role?: 'asistente' | 'ponente' | 'organizador';
+  visibility?: 'public';
 };
 export type Decision = 'confirm' | 'correction' | 'declined';
+export const encounterFingerprintStatement = 'Huella de un registro de Vespi Contributions';
+
+export function isEncounterFingerprint(receipt: { kind: string; statement?: string; comment?: string | null }) {
+  return receipt.kind === 'REQUEST' && receipt.statement === encounterFingerprintStatement &&
+    /^vespi:encuentro:[a-f0-9]{64}$/.test(receipt.comment ?? '');
+}
 
 export function encounterAccess(draft: EncounterDraft, reviewed: boolean, account: string | null,
-  invitation?: { valid: boolean; respondent?: string }) {
+  invitation?: { valid: boolean; respondent?: string }, network: ContributionNetwork = DEFAULT_NETWORK) {
   if (draft.inviteMode === 'link') {
     if (account && (account === draft.a.account || account === invitation?.respondent)) return 'allowed';
     if (reviewed || !invitation?.valid) return 'wrong-account';
     return account ? 'allowed' : 'claim-sign-in';
   }
-  if (!draft.b || (!draft.b.account && reviewed)) return 'allowed';
+  // Early testnet records without a bound counterpart stay readable by link once answered; mainnet has none.
+  if (network === 'testnet' && draft.b && !draft.b.account && reviewed) return 'allowed';
   if (!account) return 'sign-in';
-  return account === draft.a.account || account === draft.b.account ? 'allowed' : 'wrong-account';
+  return [draft.a.account, draft.b?.account, invitation?.respondent].includes(account) ? 'allowed' : 'wrong-account';
 }
 export type Encounter = EncounterDraft & {
   id: string;
@@ -46,10 +55,25 @@ export function isEncounterId(value: unknown): value is string {
 }
 
 function field(input: unknown, max: number) {
-  if (typeof input !== 'string' || input.length > max || /[\p{Cf}\u0000-\u0008\u000b-\u001f\u007f]/u.test(input)) {
+  if (typeof input !== 'string' || input.length > max || hasUnsupportedEncounterCharacters(input)) {
     throw new Error('invalid-field');
   }
   return input.trim().normalize('NFC');
+}
+
+export function hasUnsupportedEncounterCharacters(text: string) {
+  return /[\p{Cf}\u0000-\u0008\u000b-\u001f\u007f]/u.test(text);
+}
+
+export function isEncounterDate(date: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date)) &&
+    new Date(date).toISOString().slice(0, 10) === date;
+}
+
+export function deriveRecordTitle(firstText: string) {
+  const text = firstText.trim().normalize('NFC').replace(/\s+/g, ' ');
+  const prefix = text.slice(0, 140).replace(/[\uD800-\uDBFF]$/u, '');
+  return text.length > 140 && prefix.includes(' ') ? prefix.slice(0, prefix.lastIndexOf(' ')) : prefix;
 }
 
 function person(input: unknown, allowUnassigned = false): Person {
@@ -71,8 +95,7 @@ export function parseEncounterDraft(input: unknown): EncounterDraft {
   const date = field(value.date, 10);
   const where = field(value.where, 200);
   const summary = field(value.summary, 1000);
-  if (!title || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) ||
-    new Date(date).toISOString().slice(0, 10) !== date || !Array.isArray(value.contributions) ||
+  if (!title || !isEncounterDate(date) || !Array.isArray(value.contributions) ||
     !value.contributions.length || value.contributions.length > 12) throw new Error('invalid-encounter');
   const contributions: EncounterDraft['contributions'] = value.contributions.map(entry => {
     if (!entry || (entry.from !== 'a' && (entry.from !== 'b' || !b))) throw new Error('invalid-author');
@@ -87,19 +110,27 @@ export function parseEncounterDraft(input: unknown): EncounterDraft {
   if (revisionOf !== undefined && !isEncounterId(revisionOf)) throw new Error('invalid-revision');
   const inviteMode = value.inviteMode;
   if (inviteMode !== undefined && (inviteMode !== 'link' || !b || b.account || revisionOf)) throw new Error('invalid-invitation');
+  const visibility = value.visibility;
+  if (visibility !== undefined &&
+    (visibility !== 'public' || type !== 'ayuda' || !b || (!b.account && inviteMode !== 'link') || role)) {
+    throw new Error('invalid-visibility');
+  }
   return { type, title, date, where, summary, a, b, contributions, ...(role && { role }), ...(revisionOf && { revisionOf }),
-    ...(inviteMode && { inviteMode }) };
+    ...(inviteMode && { inviteMode }), ...(visibility && { visibility }) };
 }
 
 const bytes = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
-const domain = 'vespi:encuentro:v1:stellar:testnet';
-export function proposalMessage(id: string, draft: EncounterDraft) {
-  return bytes([domain, 'proposal', id, parseEncounterDraft(draft)]);
+const domain = (network: ContributionNetwork) => `vespi:encuentro:v1:${contributionNetwork(network).id}`;
+export function proposalMessage(id: string, draft: EncounterDraft, network = DEFAULT_NETWORK) {
+  return bytes([domain(network), 'proposal', id, parseEncounterDraft(draft)]);
 }
-export function decisionMessage(id: string, proposalSignature: string, choice: Decision, note: string) {
-  return bytes([domain, 'decision', id, proposalSignature, choice, note]);
+export function decisionMessage(id: string, proposalSignature: string, choice: Decision, note: string, network = DEFAULT_NETWORK) {
+  return bytes([domain(network), 'decision', id, proposalSignature, choice, note]);
 }
-export function sessionMessage(account: string, expires: number) {
-  return bytes([domain, 'list', account, expires]);
+export function sessionMessage(account: string, expires: number, network = DEFAULT_NETWORK, sessionId?: string) {
+  return bytes([domain(network), 'list', account, expires, ...(sessionId ? [sessionId] : [])]);
+}
+export function encounterAnchorMessage(id: string, proposal: string, decision: string | null, network = DEFAULT_NETWORK) {
+  return bytes([`vespi:encuentro:anchor:v1:${contributionNetwork(network).id}`, id, proposal, decision]);
 }
 export function parseDecisionNote(value: unknown) { return field(value, 500); }

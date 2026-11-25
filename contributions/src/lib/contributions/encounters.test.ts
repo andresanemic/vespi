@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Keypair } from '@stellar/stellar-sdk/base';
 
+import './test-imports.mjs';
+
 const { decisionMessage, encounterAccess, parseEncounterDraft, proposalMessage }: typeof import('./encounters') =
   await import(new URL('./encounters.ts', import.meta.url).href);
 
@@ -35,6 +37,15 @@ test('directed encounters stay private, including after signing, and legacy conf
   assert.equal(encounterAccess(directed, false, guest.publicKey()), 'allowed');
   assert.equal(encounterAccess(draft, false, stranger), 'wrong-account');
   assert.equal(encounterAccess(draft, true, null), 'allowed');
+  assert.equal(encounterAccess(draft, true, null, undefined, 'mainnet'), 'sign-in');
+  const personal = { ...draft, b: null };
+  for (const network of ['testnet', 'mainnet'] as const) {
+    for (const reviewed of [false, true]) {
+      assert.equal(encounterAccess(personal, reviewed, null, undefined, network), 'sign-in');
+      assert.equal(encounterAccess(personal, reviewed, stranger, undefined, network), 'wrong-account');
+      assert.equal(encounterAccess(personal, reviewed, creator.publicKey(), undefined, network), 'allowed');
+    }
+  }
 });
 
 test('both signatures bind their exact proposal, version and response', () => {

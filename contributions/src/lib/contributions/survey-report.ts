@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Keypair, StrKey } from '@stellar/stellar-sdk/base';
 import { canonicalBytes, parseContribution, surveyCommitment } from './kernel/contributions.js';
+import { contributionNetwork, DEFAULT_NETWORK } from './network';
 import type { RegisteredReceipt } from './receipt-registry';
 import { readSurveyAnswer, surveySigningDeadline, type SurveyRecord } from './survey-intake';
 
@@ -14,9 +15,9 @@ export function surveySlot(actor: string, rehearsal: boolean) {
   return `survey:${SURVEY_EVENT}:${rehearsal ? 'rehearsal' : 'event'}:${actor}`;
 }
 
-export function reportRequestMessage(createdAt: string, rehearsal: boolean, fallback: unknown) {
+export function reportRequestMessage(createdAt: string, rehearsal: boolean, fallback: unknown, network = DEFAULT_NETWORK) {
   return new TextEncoder().encode(JSON.stringify(
-    ['vespi:survey-report:v1:stellar:testnet', SURVEY_EVENT, createdAt, rehearsal, fallback],
+    [`vespi:survey-report:v1:${contributionNetwork(network).id}`, SURVEY_EVENT, createdAt, rehearsal, fallback],
   ));
 }
 
@@ -38,7 +39,7 @@ type ReportPorts = {
   save(digest: string, snapshot: ReportSnapshot): Promise<void>;
 };
 
-export function createSurveyReport(ports: ReportPorts) {
+export function createSurveyReport(ports: ReportPorts, network = DEFAULT_NETWORK) {
   return async (body: Record<string, unknown>) => {
     const { rehearsal, createdAt, signature } = body;
     const fallback = body.fallback;
@@ -59,7 +60,7 @@ export function createSurveyReport(ports: ReportPorts) {
         deadline <= cutoff + 300_000 || time < deadline || now < deadline))) {
       return { ok: false, reason: 'invalid-report-time' } as const;
     }
-    if (!Keypair.fromPublicKey(organizer).verify(Buffer.from(reportRequestMessage(createdAt, rehearsal, fallback)),
+    if (!Keypair.fromPublicKey(organizer).verify(Buffer.from(reportRequestMessage(createdAt, rehearsal, fallback, network)),
       Buffer.from(signature, 'hex'))) {
       return { ok: false, reason: 'organizer-required' } as const;
     }

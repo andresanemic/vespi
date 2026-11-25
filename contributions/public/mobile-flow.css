@@ -1,0 +1,80 @@
+.mobile-network { padding: 0 clamp(1rem, 5vw, 2.25rem); margin-block: .35rem; }
+.mobile-network-label {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  min-height: 44px;
+  min-width: 44px;
+  padding-inline: .65rem;
+  border: 0;
+  border-radius: .65rem;
+  background: transparent;
+  color: var(--muted);
+  font-size: .875rem;
+  font-weight: 650;
+}
+.mobile-network-label:is(button, a):hover:not(:disabled) { background: var(--raised); }
+.mobile-network[data-mainnet] .mobile-network-label { background: var(--ink); color: var(--bg); }
+.mobile-network-dot { width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; }
+.mobile-bottom-sheet {
+  position: fixed;
+  inset: auto 0 0;
+  width: min(100%, 38rem);
+  max-width: none;
+  max-height: calc(100% - 1rem);
+  margin: 0 auto;
+  padding: 1.25rem max(1.25rem, env(safe-area-inset-right))
+    max(1.25rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+  border: 1px solid var(--line-hover);
+  border-radius: 1.25rem 1.25rem 0 0;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 -8px 40px #0003;
+}
+.mobile-bottom-sheet[open] { display: grid; gap: .75rem; }
+.mobile-bottom-sheet::backdrop { background: #0008; }
+.mobile-bottom-sheet h2 { font: 650 1.4rem/1.2 var(--display); }
+.mobile-bottom-sheet form { display: grid; gap: .5rem; }
+.mobile-network-options {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: .85rem;
+  background: var(--panel);
+}
+.mobile-network-options label {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 52px;
+  padding: .5rem .9rem;
+  cursor: pointer;
+}
+.mobile-network-options label + label { border-top: 1px solid var(--line); }
+.mobile-network-options label:has(:checked) { background: var(--raised); font-weight: 700; }
+.mobile-network-options label:has(:focus-visible) { outline: 2px solid var(--ink); outline-offset: -3px; }
+.mobile-network-options input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.mobile-network-options label:not(:has(:checked)) svg { visibility: hidden; }
+.mobile-mainnet-notice {
+  display: grid;
+  width: 100%;
+  gap: .65rem;
+  padding: .9rem;
+  border: 1px solid var(--line-hover);
+  border-radius: .7rem;
+  background: var(--raised);
+  color: var(--ink);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}

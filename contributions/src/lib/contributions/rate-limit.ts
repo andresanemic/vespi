@@ -58,3 +58,4 @@ export function createRateLimiter({ perIp = PER_IP, perKey = PER_KEY, windowMs =
 export type RateLimiter = ReturnType<typeof createRateLimiter>;
 
 export const contributionLimiter = createRateLimiter();
+export const mainnetContributionLimiter = createRateLimiter();

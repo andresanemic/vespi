@@ -1,5 +1,7 @@
-export function photoUploadMessage(actor: string, sha256: string, expiresAt: number): Uint8Array {
+import { contributionNetwork, DEFAULT_NETWORK } from './network';
+
+export function photoUploadMessage(actor: string, sha256: string, expiresAt: number, network = DEFAULT_NETWORK): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(
-    ['vespi:contribution-photo:v1:stellar:testnet', actor, sha256, expiresAt],
+    [`vespi:contribution-photo:v1:${contributionNetwork(network).id}`, actor, sha256, expiresAt],
   ));
 }

@@ -6,6 +6,7 @@ import type { Signer } from '@/lib/contributions/keys';
 import type { Lang } from '@/lib/i18n';
 import { anchorAttempt, FlowError, makeObservation, prepareRequest, readObservationTarget, uploadContributionPhoto, verifyPrepared, type Attempt } from './client';
 import { yerkoSpeaker, yerkoTitle } from './evento/yerko/event';
+import { focusAttendance, focusEvent, type focusPhase as getFocusPhase } from '@/lib/contributions/focus-event';
 
 const copy = {
   es: {
@@ -21,6 +22,10 @@ const copy = {
     photoPublic: 'La foto también se podrá ver en el recibo.', photoError: 'No se pudo preparar o subir la foto. Prueba de nuevo o quítala para continuar.',
     photoReady: 'Foto lista para firmar', photoLoading: 'Preparando la foto…',
     closed: 'El registro de testimonios está cerrado.', signer: 'Firmarás como',
+    focusConsent: 'Firmar es opcional. Tu nombre y tu cuenta quedarán públicos como asistente y no se podrán borrar; lo que digas en la conversación no se publica aquí.',
+    focusEarly: 'Podrás firmar tu asistencia cuando empiece.', focusClosed: 'El registro de asistencia está cerrado.',
+    alreadySigned: 'Tu cuenta ya firmó la asistencia. Puedes ver la firma en tu perfil.',
+    focusIneligible: 'La cuenta que registró el evento no puede firmar como asistente.',
   },
   en: {
     delivered: 'Observed delivery', statement: 'I observed the contribution described in this receipt.',
@@ -35,6 +40,10 @@ const copy = {
     photoPublic: 'The photo will also be visible on the receipt.', photoError: 'We could not prepare or upload the photo. Try again or remove it to continue.',
     photoReady: 'Photo ready to sign', photoLoading: 'Preparing the photo…',
     closed: 'Testimonies are closed.', signer: 'You will sign as',
+    focusConsent: 'Signing is optional. Your name and account will be public as an attendee and cannot be deleted. What you say in the conversation will not be published here.',
+    focusEarly: 'You can sign your attendance once the event starts.', focusClosed: 'Attendance signing is closed.',
+    alreadySigned: 'Your account has already signed attendance. You can see the signature on your profile.',
+    focusIneligible: 'The account that registered the event cannot sign as an attendee.',
   },
 };
 
@@ -60,25 +69,27 @@ async function preparePhoto(file: File) {
   }
 }
 
-export default function ObservationAction({ lang, subject, signer, name, yerko }: {
-  lang: Lang; subject: string; signer: Signer; name?: string; yerko?: { root: string; account: string; closed: boolean };
+export default function ObservationAction({ lang, subject, account, getSigner, name, yerko, focusPhase }: {
+  lang: Lang; subject: string; account: string; getSigner(): Promise<Signer>; name?: string; yerko?: { root: string; account: string; closed: boolean };
+  focusPhase?: ReturnType<typeof getFocusPhase> | null;
 }) {
   const t = copy[lang];
   const [target, setTarget] = useState<Target>();
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<'pending' | 'fresh' | 'photoError' | 'closed'>();
+  const [problem, setProblem] = useState<'pending' | 'fresh' | 'photoError' | 'closed' | 'focusEarly' | 'focusClosed' | 'alreadySigned'>();
   const [comment, setComment] = useState('');
   const [photo, setPhoto] = useState<{ file: Blob; preview: string }>();
   const [photoBusy, setPhotoBusy] = useState(false);
   const [signed, setSigned] = useState<Signed>();
   const [done, setDone] = useState('');
-  const key = 'vespi-contributions:observation:' + signer.publicKey + ':' + subject;
-  const ineligible = target && [target.request.receipt.actor, target.delivery.receipt.actor].includes(signer.publicKey);
-  const event = yerko && target?.request.index.digest === yerko.root && target.delivery.receipt.actor === yerko.account;
-  const closed = event && yerko?.closed;
-  const statement = event ? lang === 'es' ? `Asistí a la charla «${yerkoTitle}» de ${yerkoSpeaker}.`
+  const key = 'vespi-contributions:observation:' + account + ':' + subject;
+  const ineligible = target && [target.request.receipt.actor, target.delivery?.receipt.actor].includes(account);
+  const event = yerko && target?.request.index.digest === yerko.root && target.delivery?.receipt.actor === yerko.account;
+  const focus = focusPhase !== undefined;
+  const closed = focus ? focusPhase !== 'open' : event && yerko?.closed;
+  const statement = focus ? focusAttendance[lang] : event ? lang === 'es' ? `Asistí a la charla «${yerkoTitle}» de ${yerkoSpeaker}.`
     : `I attended “${yerkoTitle}” by ${yerkoSpeaker}.` : t.statement;
   useEffect(() => () => { if (photo) URL.revokeObjectURL(photo.preview); }, [photo]);
 
@@ -88,8 +99,9 @@ export default function ObservationAction({ lang, subject, signer, name, yerko }
       if (controller.signal.aborted) return;
       try {
         const saved: Signed | null = JSON.parse(localStorage.getItem(key) ?? 'null');
-        if (saved && saved.draft.kind === 'ATTEST' && saved.draft.actor === signer.publicKey &&
-          saved.draft.chain === linked.request.index.digest && saved.draft.subject === subject) {
+        if (saved && saved.draft.kind === 'ATTEST' && saved.draft.actor === account &&
+          saved.draft.chain === linked.request.index.digest && saved.draft.subject === subject &&
+          (linked.delivery || saved.draft.comment === null && saved.draft.evidence === null && Object.values(focusAttendance).includes(saved.draft.statement))) {
           await verifyPrepared(saved.attempt.bytes, saved.attempt.digest, saved.draft);
           if (!controller.signal.aborted) setSigned(saved);
         }
@@ -99,7 +111,7 @@ export default function ObservationAction({ lang, subject, signer, name, yerko }
       if (!controller.signal.aborted) setLoading(false);
     });
     return () => controller.abort();
-  }, [key, reload, signer.publicKey, subject]);
+  }, [key, reload, account, subject]);
 
   async function publish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,17 +122,17 @@ export default function ObservationAction({ lang, subject, signer, name, yerko }
     try {
       if (!pending) {
         let evidence = null;
-        if (photo) {
+        if (!focus && photo) {
           try {
-            evidence = await uploadContributionPhoto(photo.file, signer);
+            evidence = await uploadContributionPhoto(photo.file, await getSigner());
           } catch {
             setProblem('photoError');
             return;
           }
         }
-        const draft = makeObservation(signer.publicKey, target.request.index.digest, subject, statement,
-          comment.trim().normalize('NFC') || null, evidence);
-        pending = { draft, attempt: await prepareRequest(draft, signer) };
+        const draft = makeObservation(account, target.request.index.digest, subject, statement,
+          focus ? null : comment.trim().normalize('NFC') || null, evidence);
+        pending = { draft, attempt: await prepareRequest(draft, await getSigner()) };
         setSigned(pending);
         try { localStorage.setItem(key, JSON.stringify(pending)); } catch {}
       }
@@ -134,6 +146,10 @@ export default function ObservationAction({ lang, subject, signer, name, yerko }
         try { localStorage.removeItem(key); } catch {}
         if (pending) setComment(pending.draft.comment ?? '');
         setProblem('fresh');
+      } else if (focus && ['event-not-open', 'event-closed', 'attendance-already-signed'].includes(reason)) {
+        setProblem(reason === 'attendance-already-signed' ? 'alreadySigned' : reason === 'event-closed' ? 'focusClosed' : 'focusEarly');
+        setSigned(undefined);
+        try { localStorage.removeItem(key); } catch {}
       } else setProblem(reason === 'event-closed' ? 'closed' : 'pending');
     } finally {
       setBusy(false);
@@ -142,7 +158,7 @@ export default function ObservationAction({ lang, subject, signer, name, yerko }
 
   if (done) return <>
     <p role="status">{t.verified}</p>
-    <Link className="mobile-action" href={'/app?receipt=' + done}>{t.receipt}</Link>
+    <Link className="mobile-action" href={'/app?receipt=' + done + (focus ? '&lang=' + lang : '')}>{t.receipt}</Link>
   </>;
   if (loading) return <p role="status">{t.loading}</p>;
   if (!target) return <>
@@ -150,16 +166,17 @@ export default function ObservationAction({ lang, subject, signer, name, yerko }
     <button className="mobile-action" type="button" onClick={() => { setLoading(true); setReload(reload + 1); }}>{t.retryRead}</button>
   </>;
   return <>
-    <p><strong>{t.delivered}</strong></p>
-    <blockquote>{target.delivery.receipt.statement}</blockquote>
-    {ineligible ? <p>{t.ineligible}</p> : closed && !signed ? <p>{t.closed}</p> : <form className="mobile-actions" onSubmit={publish}>
+    {!focus && <><p><strong>{t.delivered}</strong></p><blockquote>{target.delivery?.receipt.statement}</blockquote></>}
+    {ineligible ? <p>{focus ? t.focusIneligible : t.ineligible}</p> : closed && !signed ? <p>{focus ? focusPhase === 'closed' ? t.focusClosed : t.focusEarly : t.closed}</p>
+      : problem === 'alreadySigned' ? <Link className="mobile-secondary" href={'/app/perfil/' + account + '?lang=' + lang}>{lang === 'es' ? 'Ver mi perfil' : 'View my profile'}</Link>
+      : <form className="mobile-actions" onSubmit={publish}>
       <blockquote>{signed?.draft.statement ?? statement}</blockquote>
-      {signed ? signed.draft.comment && <p>{signed.draft.comment}</p> : <>
+      {!focus && (signed ? signed.draft.comment && <p>{signed.draft.comment}</p> : <>
         <label htmlFor="observation-comment">{t.comment}</label>
         <input id="observation-comment" autoComplete="off" maxLength={280} value={comment}
           onChange={event => setComment(event.target.value)} disabled={busy} />
-      </>}
-      {!signed && <>
+      </>)}
+      {!focus && !signed && <>
         <label htmlFor="testimony-photo">{event ? t.talkPhoto : t.photo}</label>
         <input id="testimony-photo" type="file" accept="image/*" disabled={busy || photoBusy} onChange={async event => {
           const file = event.currentTarget.files?.[0];
@@ -185,9 +202,9 @@ export default function ObservationAction({ lang, subject, signer, name, yerko }
         </>}
       </>}
       {name && <p><strong>{t.signer} {name}</strong></p>}
-      <p className="mobile-note">{t.consent}</p>
+      <p className="mobile-note">{focus ? t.focusConsent : t.consent}</p>
       {(photo || signed?.draft.evidence) && <p className="mobile-note">{t.photoPublic}</p>}
-      <button className="mobile-action" type="submit" disabled={busy || photoBusy}>{signed ? t.retry : t.sign}</button>
+      <button className="mobile-action" type="submit" disabled={busy || photoBusy}>{signed ? t.retry : focus ? focusEvent.copy[lang].attend : t.sign}</button>
     </form>}
     {busy && <p role="status">{t.signing}</p>}
     {problem && <p className="mobile-message" role="alert">{t[problem]}</p>}

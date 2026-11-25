@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Account, Keypair, Memo, Networks, Operation, TransactionBuilder } from '@stellar/stellar-sdk';
 
+import './test-imports.mjs';
+
 const { readSponsorConfig, sponsorAuthority, checkSponsorSpend, checkParticipantTx, checkOnboarding } =
   await import(new URL('./sponsor-policy.ts', import.meta.url).href);
 

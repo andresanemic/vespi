@@ -1,23 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import { Keypair } from '@stellar/stellar-sdk/base';
 
-const { registerHooks } = await import('node:module' as string);
-type Context = { parentURL?: string };
-type Resolve = (specifier: string, context: Context) => { url: string };
-registerHooks({ resolve(specifier: string, context: Context, next: Resolve) {
-  if (specifier.startsWith('@/lib/contributions/')) {
-    const path = specifier.endsWith('.js') ? specifier : `${specifier}.ts`;
-    return next(new URL(`../../${path.slice(2)}`, import.meta.url).href, context);
-  }
-  if (specifier.startsWith('./') && context.parentURL === new URL('handlers.ts', import.meta.url).href) {
-    const candidate = new URL(`${specifier}.ts`, context.parentURL);
-    if (existsSync(candidate)) return next(candidate.href, context);
-  }
-  return next(specifier, context);
-} });
+import './test-imports.mjs';
 
 const { POST } = await import(new URL('../../app/api/contributions/receipts/prepare/route.ts', import.meta.url).href);
 const actor = Keypair.fromRawEd25519Seed(Buffer.alloc(32, 1)).publicKey();

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { Account, Keypair, Memo, Networks, Operation, Transaction, TransactionBuilder } from '@stellar/stellar-sdk/base';
+import { Account, FeeBumpTransaction, Keypair, Memo, Networks, Operation, Transaction, TransactionBuilder } from '@stellar/stellar-sdk/base';
 import { canonicalBytes } from './kernel/contributions.js';
 import type { RegisteredReceipt, Registry } from './receipt-registry';
 
@@ -81,9 +81,9 @@ function fixture() {
   };
   const ports: Parameters<typeof createReceiptAnchor>[0] = {
     registry, now: () => new Date(now), sponsor: () => sponsor,
-    async send(xdr) {
+    async send(xdr, _actor, baseFee) {
       const inner = new Transaction(xdr, Networks.TESTNET);
-      const outer = TransactionBuilder.buildFeeBumpTransaction(sponsor, inner.fee, inner, Networks.TESTNET);
+      const outer = TransactionBuilder.buildFeeBumpTransaction(sponsor, baseFee, inner, Networks.TESTNET);
       outer.sign(sponsor);
       const hash = outer.hash().toString('hex');
       submitted.push(hash);
@@ -120,6 +120,67 @@ test('the configured speaker alone can deliver the talk, and two attendees can a
   f.ports.yerko.closed = true;
   assert.deepEqual(await f.run(signedReceipt(testimony, Keypair.random())), { ok: false, reason: 'event-closed' });
   assert.ok((await f.run(one)).ok);
+});
+
+test('focus attendance signs only the configured request, once per independent account and within the server window', async () => {
+  const f = fixture();
+  const root = signedReceipt();
+  const unrelated = signedReceipt({ statement: 'Another request' });
+  assert.ok((await f.run(root)).ok);
+  assert.ok((await f.run(unrelated)).ok);
+  const opens = Date.parse('2026-11-25T19:00:00Z');
+  const closes = Date.parse('2026-11-26T23:00:00Z');
+  const statement = 'Asistí al focus group «Aportar en Stellar: ¿se ve, se valora, se recompensa?».'.normalize('NFC');
+  const sign = (now: number, signer = contributor, target = root.digest, fields = {}) => signedReceipt({
+    kind: 'ATTEST', role: 'observer', chain: target, subject: target, statement, ...fields,
+  }, signer, undefined, signer, Math.floor(now / 1000) + 60);
+  const at = (now: number) => f.advance(now, Math.floor(now / 1000));
+  const rejected = (reason: string) => ({ ok: false, reason });
+  at(opens);
+  assert.deepEqual(await f.run(sign(opens)), rejected('invalid-chain-link'));
+  f.ports.focusRoot = root.digest;
+  at(opens - 1);
+  assert.deepEqual(await f.run(sign(opens - 1)), rejected('event-not-open'));
+  at(opens);
+  assert.deepEqual(await f.run(sign(opens, contributor, unrelated.digest)), rejected('invalid-chain-link'));
+  assert.deepEqual(await f.run(sign(opens, requester)), rejected('invalid-chain-link'));
+  assert.deepEqual(await f.run(sign(opens, contributor, root.digest, { comment: 'Private conversation' })), rejected('invalid-focus-attendance'));
+  assert.deepEqual(await f.run(signedReceipt({ kind: 'CONTRIBUTE', role: 'contributor', chain: root.digest, prev: root.digest }, contributor,
+    undefined, contributor, opens / 1000 + 60)), rejected('invalid-chain-link'));
+  assert.deepEqual(await createReceiptAnchor(f.ports, 'mainnet')(sign(opens)), rejected('mainnet-not-supported'));
+  const first = sign(opens);
+  assert.ok((await f.run(first)).ok);
+  assert.ok((await f.run(first)).ok, 'same digest is an idempotent retry');
+  assert.deepEqual(await f.run(sign(opens, contributor, root.digest, { createdAt: new Date(opens).toISOString() })), rejected('attendance-already-signed'));
+  at(closes - 1);
+  const competing = await Promise.all([f.run(sign(closes - 1, other)), f.run(sign(closes - 1, other, root.digest, { createdAt: new Date(closes - 1).toISOString() }))]);
+  assert.equal(competing.filter(result => result.ok).length, 1);
+  assert.ok(competing.some(result => !result.ok && result.reason === 'attendance-already-signed'));
+  at(closes);
+  assert.deepEqual(await f.run(sign(closes, Keypair.random())), rejected('event-closed'));
+  at(closes + 60_000);
+  assert.deepEqual(await f.run(sign(closes + 60_000, Keypair.random())), rejected('event-closed'));
+  assert.equal(f.submitted.length, 4);
+
+  const { buildEvidencePackage } = await import('../../../scripts/contributions-export.mjs');
+  const bundle = await buildEvidencePackage({ origin: 'https://app.invalid', root: root.digest, attendance: first.digest,
+    registeredFocusRoot: root.digest, network: 'testnet', async request(input) {
+      const url = new URL(input instanceof Request ? input.url : input);
+      const id = url.pathname.split('/').at(-1)!;
+      if (url.hostname === 'horizon-testnet.stellar.org') {
+        const entry = f.observations.get(id)!;
+        const outer = new FeeBumpTransaction(entry.envelopeXdr, Networks.TESTNET);
+        return Response.json({ hash: id, ledger: entry.ledger, envelope_xdr: entry.envelopeXdr, successful: true,
+          source_account: outer.innerTransaction.source, fee_account: outer.feeSource, created_at: entry.closedAt });
+      }
+      const entry = f.records.get(id)!;
+      return url.searchParams.has('format') ? Response.json(entry.index) : new Response(entry.intent.bytes);
+    } });
+  assert.equal(bundle.index.purpose, 'focus-attendance');
+  assert.deepEqual(bundle.index.receipts.map(row => row.kind), ['REQUEST', 'ATTEST']);
+  assert.equal(bundle.index.receipts[1].chain, root.digest);
+  assert.equal(bundle.index.receipts[1].subject, root.digest);
+  assert.equal(bundle.index.receipts[1].prev, null);
 });
 
 test('altered bytes, memo or signature stop before reservation or submission', async () => {
@@ -191,8 +252,8 @@ test('an unknown submission is retained until Horizon passes the bound and still
 test('an observed hash whose envelope differs is never indexed', async () => {
   const f = fixture();
   const send = f.ports.send;
-  f.ports.send = async (xdr, actor) => {
-    const response = await send(xdr, actor);
+  f.ports.send = async (...args) => {
+    const response = await send(...args);
     const hash = f.submitted[0];
     const observation = f.observations.get(hash);
     assert.ok(observation);
@@ -434,4 +495,31 @@ test('account activity recovers prior signatures and the current step only for t
   assert.equal(author.entries[0]?.statement, 'Shared a design reference');
   assert.equal(author.entries[0]?.context, 'Request review');
   assert.equal((await registry.activity(other.publicKey(), '0')).entries.length, 0);
+});
+
+test('an actor off the allowlist stops before the registry, Horizon or submission', async () => {
+  const f = fixture();
+  let lookups = 0;
+  const lookup = f.ports.lookup;
+  f.ports.lookup = async hash => { lookups += 1; return lookup(hash); };
+  f.ports.accountAllowed = actor => actor === other.publicKey();
+  const run = createReceiptAnchor(f.ports);
+  assert.deepEqual(await run(signedReceipt()), { ok: false, reason: 'account-not-allowed' });
+  f.ports.accountAllowed = () => { throw new Error('malformed list'); };
+  assert.deepEqual(await createReceiptAnchor(f.ports)(signedReceipt()), { ok: false, reason: 'config-error' });
+  assert.equal(f.records.size, 0);
+  assert.equal(f.submitted.length, 0);
+  assert.equal(lookups, 0);
+  f.ports.accountAllowed = actor => actor === requester.publicKey();
+  assert.ok((await createReceiptAnchor(f.ports)(signedReceipt())).ok);
+});
+
+test('a raised outer fee is the one anchored, so the stored hash finds its own transaction', async () => {
+  const f = fixture();
+  f.ports.outerFee = async () => '400';
+  const result = await createReceiptAnchor(f.ports)(signedReceipt());
+  assert.ok(result.ok);
+  const outer = new FeeBumpTransaction(f.observations.get(f.submitted[0])!.envelopeXdr, Networks.TESTNET);
+  assert.equal(outer.fee, '800');
+  assert.equal(result.index.txHash, f.submitted[0]);
 });

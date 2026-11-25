@@ -1,5 +1,6 @@
 import { Keypair, StrKey } from '@stellar/stellar-sdk/base';
 import type { SurveyRecord } from './survey-intake';
+import { DEFAULT_NETWORK } from './network';
 import { teamSurveyRequestMessage } from './team-survey-authorization';
 
 export { teamSurveyRequestMessage } from './team-survey-authorization';
@@ -21,7 +22,7 @@ export function createTeamSurveyQuery(deps: {
   teamAccounts: string[];
   consumeNonce(account: string, nonce: string): Promise<boolean>;
   list(): Promise<SurveyRecord[]>;
-}, now = () => Date.now()) {
+}, now = () => Date.now(), network = DEFAULT_NETWORK) {
   const allowlist = new Set(deps.teamAccounts.filter(StrKey.isValidEd25519PublicKey));
   return async (body: Record<string, unknown>) => {
     const { account, action, cohort, expiresAt, nonce, signature } = body;
@@ -33,7 +34,7 @@ export function createTeamSurveyQuery(deps: {
       typeof signature !== 'string' || !/^[a-f0-9]{128}$/.test(signature)) {
       return { ok: false, reason: 'team-auth-required' } as const;
     }
-    if (!Keypair.fromPublicKey(account).verify(Buffer.from(teamSurveyRequestMessage(account, action, cohort, expiresAt, nonce)),
+    if (!Keypair.fromPublicKey(account).verify(Buffer.from(teamSurveyRequestMessage(account, action, cohort, expiresAt, nonce, network)),
       Buffer.from(signature, 'hex'))) return { ok: false, reason: 'team-auth-required' } as const;
     if (expiresAt <= Math.floor(now() / 1000)) return { ok: false, reason: 'team-auth-expired' } as const;
     if (!await deps.consumeNonce(account, nonce)) return { ok: false, reason: 'team-auth-replayed' } as const;

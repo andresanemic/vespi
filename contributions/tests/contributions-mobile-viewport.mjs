@@ -25,14 +25,15 @@ try {
     const options = { ...phone, viewport: { width, height: 629 }, locale: 'es-CL', colorScheme: 'dark' };
     const page = await browser.newPage(options);
     await page.goto(origin + '/app', { waitUntil: 'domcontentloaded' });
-    const newEncounter = page.getByRole('button', { name: 'Nuevo encuentro' });
-    await newEncounter.click();
-    const date = page.getByLabel('¿Cuándo fue?', { exact: true });
-    const kind = page.getByLabel('¿Qué ocurrió?', { exact: true });
-    const title = page.getByLabel('Dale un nombre al encuentro');
+    await page.getByRole('button', { name: 'Registrar un aporte', exact: true }).click();
+    await page.getByRole('button', { name: 'Ayudé a alguien' }).click();
+    await page.getByText('Más detalles', { exact: true }).click();
+    const date = page.getByLabel('Fecha', { exact: true });
+    const place = page.getByLabel('Lugar', { exact: true });
+    const link = page.getByLabel('Enlace del aporte', { exact: true });
     const field = page.locator('.date-field');
-    const [dateBounds, fieldBounds, kindBounds, titleBounds] = await Promise.all([date, field, kind, title].map(control => control.boundingBox()));
-    for (const box of [kindBounds, titleBounds]) {
+    const [dateBounds, fieldBounds, placeBounds, linkBounds] = await Promise.all([date, field, place, link].map(control => control.boundingBox()));
+    for (const box of [placeBounds, linkBounds]) {
       assert.ok(Math.abs(box.x - fieldBounds.x) <= 1 && Math.abs(box.width - fieldBounds.width) <= 1,
         JSON.stringify({ name, width, fieldBounds, box }));
     }
@@ -48,7 +49,8 @@ try {
     assert.ok(scroll.y > 0, 'Vertical scrolling remains available');
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.getByRole('button', { name: 'Continuar borrador' }).click();
+    await page.getByText('Más detalles', { exact: true }).click();
+    await date.waitFor();
     assert.equal(await date.inputValue(), '2026-02-11');
     await page.close();
 

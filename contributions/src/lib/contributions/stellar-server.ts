@@ -1,8 +1,9 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import {
   type Account, type FeeBumpTransaction, type Keypair,
-  Networks, Operation, Transaction, TransactionBuilder,
+  Operation, Transaction, TransactionBuilder,
 } from '@stellar/stellar-sdk/base';
+import { contributionNetwork, DEFAULT_NETWORK } from './network';
 
 export function buildOnboardingTx({ channel, sponsor, newAccount, baseFee, timeoutSeconds }: {
   channel: Account;
@@ -10,8 +11,8 @@ export function buildOnboardingTx({ channel, sponsor, newAccount, baseFee, timeo
   newAccount: string;
   baseFee: string;
   timeoutSeconds: number;
-}): Transaction {
-  return new TransactionBuilder(channel, { fee: baseFee, networkPassphrase: Networks.TESTNET })
+}, network = DEFAULT_NETWORK): Transaction {
+  return new TransactionBuilder(channel, { fee: baseFee, networkPassphrase: contributionNetwork(network).passphrase })
     .addOperation(Operation.beginSponsoringFutureReserves({ source: sponsor, sponsoredId: newAccount }))
     .addOperation(Operation.createAccount({ source: sponsor, destination: newAccount, startingBalance: '0' }))
     .addOperation(Operation.endSponsoringFutureReserves({ source: newAccount }))
@@ -20,7 +21,7 @@ export function buildOnboardingTx({ channel, sponsor, newAccount, baseFee, timeo
 }
 
 export function buildFeeBump(inner: Transaction, sponsor: Keypair, baseFee: string): FeeBumpTransaction {
-  return TransactionBuilder.buildFeeBumpTransaction(sponsor, baseFee, inner, Networks.TESTNET);
+  return TransactionBuilder.buildFeeBumpTransaction(sponsor, baseFee, inner, inner.networkPassphrase);
 }
 
 export function wrapFeeBump(inner: Transaction, sponsor: Keypair, baseFee: string): FeeBumpTransaction {
@@ -29,17 +30,19 @@ export function wrapFeeBump(inner: Transaction, sponsor: Keypair, baseFee: strin
   return tx;
 }
 
-export function onboardingToken(xdr: string, key: Uint8Array): string {
-  const tx = new Transaction(xdr, Networks.TESTNET);
+export function onboardingToken(xdr: string, key: Uint8Array, network = DEFAULT_NETWORK): string {
+  const tx = new Transaction(xdr, contributionNetwork(network).passphrase);
   // The participant adds a signature between prepare and complete; authenticate the unsigned envelope.
   tx.signatures.length = 0;
-  return createHmac('sha256', key).update(tx.toXDR()).digest('hex');
+  const hmac = createHmac('sha256', key);
+  if (network === 'mainnet') hmac.update(contributionNetwork(network).id + '\0');
+  return hmac.update(tx.toXDR()).digest('hex');
 }
 
-export function verifyOnboardingToken(xdr: string, token: string, key: Uint8Array): boolean {
+export function verifyOnboardingToken(xdr: string, token: string, key: Uint8Array, network = DEFAULT_NETWORK): boolean {
   if (!/^[0-9a-f]{64}$/i.test(token)) return false;
   try {
-    return timingSafeEqual(Buffer.from(onboardingToken(xdr, key), 'hex'), Buffer.from(token, 'hex'));
+    return timingSafeEqual(Buffer.from(onboardingToken(xdr, key, network), 'hex'), Buffer.from(token, 'hex'));
   } catch {
     return false;
   }

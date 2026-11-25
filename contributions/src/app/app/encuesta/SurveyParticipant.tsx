@@ -66,9 +66,10 @@ const copies = {
   },
 };
 
-export default function SurveyParticipant({ lang, signer, cohort, deadline }: {
+export default function SurveyParticipant({ lang, signer, getSigner, cohort, deadline }: {
   lang: Lang;
   signer?: Signer;
+  getSigner?(): Promise<Signer>;
   cohort: Cohort;
   deadline?: number | null;
 }) {
@@ -133,7 +134,7 @@ export default function SurveyParticipant({ lang, signer, cohort, deadline }: {
     try {
       if (attempt) await verifyPrepared(attempt.bytes, attempt.digest, state.draft);
       else {
-        attempt = await prepareRequest(state.draft, signer, deadline);
+        attempt = await prepareRequest(state.draft, getSigner ? await getSigner() : signer, deadline);
         update({ ...state, attempt });
       }
       const index = await anchorAttempt(attempt, state.id);

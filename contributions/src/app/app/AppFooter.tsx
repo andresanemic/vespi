@@ -1,10 +1,9 @@
 import type { Lang } from '@/lib/i18n';
 
 export const vespiSocialLinks = [
-  ['GitHub', 'https://github.com/andresanemic'],
-  ['X', 'https://x.com/andresanemic'],
-  ['LinkedIn', 'https://www.linkedin.com/in/andresanemic/'],
-  ['Telegram', 'https://t.me/andresanemic'],
+  ['GitHub', 'https://github.com/andresanemic/vespi'],
+  ['X', 'https://x.com/vespi_xyz'],
+  ['LinkedIn', 'https://www.linkedin.com/company/vespi-kernel/'],
 ] as const;
 
 export default function AppFooter({ lang }: { lang: Lang }) {

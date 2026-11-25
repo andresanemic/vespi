@@ -21,8 +21,8 @@ let corruptDelivery;
 let photoAttempts = 0;
 let photoEvidence;
 
-async function setup(who) {
-  const context = await browser.newContext({ viewport: { width: 375, height: 629 }, isMobile: true, hasTouch: true });
+async function setup(who, withAccount = true) {
+  const context = await browser.newContext({ viewport: { width: 375, height: 629 }, isMobile: true, hasTouch: true, locale: 'es-CL' });
   const page = await context.newPage();
   await context.addInitScript(() => {
     Object.defineProperty(navigator, 'share', { value: async payload => { window.lastVespiShare = payload; } });
@@ -34,6 +34,9 @@ async function setup(who) {
     automaticPresenceSimulation: true, hasPrf: true } });
   await context.route('**/api/contributions/**', async route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/voice')) return json(route, { voice: false });
+    if (path.endsWith('/network')) return json(route, { mainnet: false });
+    if (path.endsWith('/encounters')) return json(route, { ok: true, cursor: '0', entries: [] });
     if (path.includes('/activity/')) {
       const account = path.split('/').at(-1);
       const entries = [...receipts.values()].filter(item => item.draft.actor === account && item.draft.kind === 'REQUEST')
@@ -138,35 +141,79 @@ async function setup(who) {
     const data = [...receipts.values()].find(item => route.request().url().endsWith(item.txHash));
     return json(route, { successful: true, hash: data.txHash, ledger: data.ledger, envelope_xdr: data.xdr });
   });
-  await page.goto(origin + '/app?vista=aportes', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Crear una passkey' }).click();
-  await page.getByRole('textbox', { name: 'Nombre para tu passkey' }).fill(who);
-  await page.getByRole('button', { name: 'Crear una passkey' }).click();
-  await page.getByRole('heading', { name: 'Mis aportes', exact: true }).waitFor();
+  if (withAccount) {
+    await page.goto(origin + '/app?vista=aportes', { waitUntil: 'networkidle' });
+    await createAccount(page, who);
+    await page.getByRole('heading', { name: 'Mis aportes', exact: true }).waitFor();
+  }
   return page;
 }
 
+async function createAccount(page, who) {
+  await page.getByRole('button', { name: 'Crear una passkey' }).click();
+  await page.getByRole('textbox', { name: 'Nombre para tu passkey' }).fill(who);
+  await page.getByRole('button', { name: 'Crear una passkey' }).click();
+}
+
 try {
-  const [a, b, observer] = await Promise.all([setup('Solicitante'), setup('Aportante'), setup('Observadora')]);
-  assert.notEqual(accounts.get('Solicitante'), accounts.get('Aportante'));
+  const [a, b, observer] = await Promise.all([setup('Solicitante'), setup('Aportante', false), setup('Observadora')]);
   assert.equal(await a.getByRole('link', { name: 'Mi perfil' }).getAttribute('href'),
     '/app/perfil/' + accounts.get('Solicitante'));
-  await a.getByRole('button', { name: 'Registrar algo que pasó' }).click();
+  await a.getByRole('link', { name: '¿Necesitas ayuda? Pide un aporte', exact: true }).click();
   await a.getByRole('textbox', { name: 'Escribe tu solicitud' }).fill('Feedback recibido después de la charla');
-  await a.getByRole('button', { name: 'Revisar solicitud' }).click();
-  await a.getByRole('button', { name: 'Firmar y publicar' }).click();
+  await a.getByRole('button', { name: 'Continuar' }).click();
+  await a.getByRole('button', { name: 'Firmar' }).click();
   const inviteNext = a.getByRole('button', { name: 'Invita a quien entrega' });
   await inviteNext.waitFor();
   const request = head.digest;
+  await a.getByRole('button', { name: 'Compartir solicitud' }).click();
+  const unsignedLink = await a.evaluate(() => window.lastVespiShare.url);
+  assert.equal(unsignedLink, origin + '/app?continue=' + request);
+  assert.equal(accounts.has('Aportante'), false);
+  await b.goto(unsignedLink, { waitUntil: 'domcontentloaded' });
+  await b.getByText('Si ya tienes una cuenta, entra con ella.', { exact: true }).waitFor();
+  await b.getByRole('button', { name: 'Entrar con passkey' }).waitFor();
+  await createAccount(b, 'Aportante');
+  await b.getByRole('heading', { name: 'Falta la autorización de Solicitante' }).waitFor();
+  await b.getByRole('button', { name: 'Compartir mi cuenta con Solicitante' }).click();
+  const newAccount = accounts.get('Aportante');
+  const accountMessage = await b.evaluate(() => window.lastVespiShare.text);
+  const accountEnding = newAccount.slice(-4);
+  assert.ok(accountMessage.includes(`terminada en ${accountEnding}.`));
+  assert.ok(accountMessage.endsWith(newAccount));
+  const accountWhatsApp = await b.getByRole('link', { name: 'WhatsApp' }).getAttribute('href');
+  assert.equal(new URL(accountWhatsApp).searchParams.get('text'), accountMessage);
+  assert.notEqual(newAccount, accounts.get('Solicitante'));
   await inviteNext.click();
   assert.equal(await a.getByRole('button', { name: 'Entrar con passkey' }).count(), 0);
+  const accountField = a.getByLabel('Cuenta de quien entrega (G…)');
+  const confirmation = a.getByRole('heading', { name: 'Confirma la cuenta' });
+  const signAuthorization = a.getByRole('button', { name: 'Firmar autorización de entrega' });
+  const assertConfirmationVisible = async () => {
+    await confirmation.waitFor();
+    await a.waitForFunction(() => document.activeElement?.textContent === 'Confirma la cuenta');
+    const bounds = await signAuthorization.boundingBox();
+    assert.ok(bounds && bounds.y >= 0 && bounds.y + bounds.height <= a.viewportSize().height,
+      'Signing button is fully within the viewport after confirmation receives focus');
+    await a.getByText(`Cuenta terminada en ${accountEnding}`, { exact: false }).waitFor();
+  };
+  await accountField.fill(newAccount);
+  await a.getByRole('button', { name: 'Comprobar cuenta' }).click();
+  await assertConfirmationVisible();
+  await accountField.press('End');
+  await accountField.press('Backspace');
+  assert.ok(await accountField.evaluate(field => field === document.activeElement), 'Editing keeps focus in the account field');
+  assert.equal(await accountField.inputValue(), newAccount.slice(0, -1));
+  assert.equal(await confirmation.count(), 0);
+  assert.equal(await signAuthorization.count(), 0);
   await a.getByRole('button', { name: 'Buscar por nombre' }).click();
   await a.getByRole('button', { name: 'Cargar más nombres' }).click();
   await a.getByRole('textbox', { name: 'Nombre o cuenta G' }).fill('Aportante');
   await a.getByRole('button', { name: /Aportante · G/ }).click();
+  await assertConfirmationVisible();
   await a.getByText('Aportante', { exact: true }).waitFor();
   await a.getByText(accounts.get('Aportante'), { exact: true }).waitFor();
-  await a.getByRole('button', { name: 'Firmar autorización de entrega' }).click();
+  await signAuthorization.click();
   await a.getByText('Invitación lista para Aportante', { exact: true }).waitFor();
   await a.getByRole('button', { name: 'Invitar a entregar' }).click();
   const deliveryLink = await a.evaluate(() => window.lastVespiShare.url);
@@ -188,21 +235,25 @@ try {
   await a.getByRole('button', { name: 'Copiar enlace', exact: true }).click();
   assert.equal(await a.getByLabel('Enlace para compartir').inputValue(), deliveryLink);
 
+  await b.evaluate(hash => { location.hash = hash; }, new URL(deliveryLink).hash);
+  await b.getByRole('textbox', { name: 'Describe el aporte que entregas' }).waitFor();
   await b.goto(deliveryLink, { waitUntil: 'networkidle' });
-  await b.getByText('te pide un aporte.', { exact: false }).waitFor();
+  await b.reload({ waitUntil: 'domcontentloaded' });
+  assert.equal(b.url(), deliveryLink);
+  await b.getByRole('textbox', { name: 'Describe el aporte que entregas' }).waitFor();
   await b.evaluate(() => {
     Object.defineProperty(navigator, 'userAgent', { configurable: true, value: 'WhatsApp' });
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
       writeText: async value => { window.vespiCopied = value; },
     } });
   });
-  await b.getByRole('button', { name: 'Entrar con passkey' }).click();
+  const deliveryText = b.getByRole('textbox', { name: 'Describe el aporte que entregas' });
+  await deliveryText.fill('Propuse definir el siguiente paso al terminar');
+  await b.getByRole('button', { name: 'Continuar' }).click();
+  await b.getByRole('button', { name: 'Firmar entrega' }).click();
   await b.getByRole('button', { name: 'Copiar enlace para abrir en el navegador' }).click();
   assert.equal(await b.evaluate(() => window.vespiCopied), deliveryLink);
   await b.evaluate(() => { delete navigator.userAgent; delete navigator.clipboard; });
-  await b.getByRole('button', { name: 'Entrar con passkey' }).click();
-  await b.getByRole('textbox', { name: 'Describe el aporte que entregas' }).fill('Propuse definir el siguiente paso al terminar');
-  await b.getByRole('button', { name: 'Revisar entrega' }).click();
   await b.getByRole('button', { name: 'Firmar entrega' }).click();
   await b.getByRole('link', { name: 'Abrir recibo' }).click();
   const delivery = head.digest;
@@ -245,11 +296,10 @@ try {
   await b.goto(origin + '/app?receipt=' + delivery, { waitUntil: 'networkidle' });
   await b.getByText('Aporte entregado. Está pendiente de aceptación.').waitFor();
   await b.getByRole('link', { name: 'Revisar este aporte' }).click();
-  await b.getByRole('button', { name: 'Entrar con passkey' }).click();
   await b.getByText('Corrige tu entrega.', { exact: false }).waitFor();
   assert.equal(await b.getByRole('button', { name: 'Aceptar y firmar' }).count(), 0);
   await b.getByRole('textbox', { name: 'Describe el aporte que entregas' }).fill('Propuse revisarlo el viernes');
-  await b.getByRole('button', { name: 'Revisar entrega' }).click();
+  await b.getByRole('button', { name: 'Continuar' }).click();
   await b.getByRole('button', { name: 'Firmar entrega' }).click();
   await b.getByRole('link', { name: 'Abrir recibo' }).waitFor();
   const corrected = head.digest;
@@ -262,8 +312,6 @@ try {
   assert.equal(await b.getByRole('button', { name: 'Entrar con passkey' }).count(), 0);
   assert.equal(new URL(b.url()).searchParams.get('back'), request);
   await a.goto(reviewLink, { waitUntil: 'networkidle' });
-  await a.getByText('pidió este aporte y le toca revisarlo.', { exact: false }).waitFor();
-  await a.getByRole('button', { name: 'Entrar con passkey' }).click();
   await a.getByText('Propuse revisarlo el viernes').waitFor();
   await a.getByRole('button', { name: 'Aceptar y firmar' }).click();
   await a.getByRole('link', { name: 'Abrir recibo' }).click();
@@ -279,7 +327,6 @@ try {
   const accepted = b.getByRole('link', { name: 'Ver la versión aceptada' });
   assert.equal(await accepted.getAttribute('href'), '/app?receipt=' + corrected);
   await b.goto(origin + '/app?continue=' + delivery, { waitUntil: 'networkidle' });
-  await b.getByRole('button', { name: 'Entrar con passkey' }).click();
   await b.getByText('Se aceptó otra versión de este aporte.').waitFor();
   assert.equal(await b.getByRole('link', { name: 'Ver la versión aceptada' }).getAttribute('href'),
     '/app?receipt=' + corrected);
@@ -287,11 +334,10 @@ try {
 
   await b.goto(origin + '/app?receipt=' + request, { waitUntil: 'networkidle' });
   await b.getByRole('link', { name: 'Registrar el apoyo de vuelta' }).click();
-  await b.getByRole('button', { name: 'Entrar con passkey' }).click();
   await b.getByRole('heading', { name: 'Registrar el apoyo de vuelta' }).waitFor();
   await b.getByRole('textbox', { name: 'Escribe tu solicitud' }).fill('Apoyo recibido para el diseño móvil');
-  await b.getByRole('button', { name: 'Revisar solicitud' }).click();
-  await b.getByRole('button', { name: 'Firmar y publicar' }).click();
+  await b.getByRole('button', { name: 'Continuar' }).click();
+  await b.getByRole('button', { name: 'Firmar' }).click();
   await b.getByRole('button', { name: 'Invita a quien entrega' }).waitFor();
   const returning = head.digest;
   assert.equal(head.draft.actor, accounts.get('Aportante'));
@@ -302,19 +348,17 @@ try {
   assert.equal(new URL(b.url()).searchParams.get('continue'), returning);
   assert.equal(new URL(b.url()).searchParams.get('mutual'), request);
   await b.reload({ waitUntil: 'networkidle' });
-  await b.getByRole('button', { name: 'Entrar con passkey' }).click();
   await b.waitForFunction(account => document.querySelector('#delivery-account')?.value === account,
     accounts.get('Solicitante'));
   await b.getByRole('button', { name: 'Comprobar cuenta' }).click();
   await b.getByRole('button', { name: 'Firmar autorización de entrega' }).click();
   await b.getByRole('button', { name: 'Invitar a entregar' }).click();
   const reverseInvite = await b.evaluate(() => window.lastVespiShare.url);
-  assert.ok(reverseInvite.startsWith(origin + '/app?continue=' + returning + '&mutual=' + request + '#assignment='));
+  assert.ok(reverseInvite.startsWith(origin + '/app?continue=' + returning + '&mutual=' + request + '&permiso=entrega#assignment='));
 
   await a.goto(reverseInvite, { waitUntil: 'networkidle' });
-  await a.getByRole('button', { name: 'Entrar con passkey' }).click();
   await a.getByRole('textbox', { name: 'Describe el aporte que entregas' }).fill('Compartí una referencia de interfaz');
-  await a.getByRole('button', { name: 'Revisar entrega' }).click();
+  await a.getByRole('button', { name: 'Continuar' }).click();
   await a.getByRole('button', { name: 'Firmar entrega' }).click();
   await a.getByRole('button', { name: 'Enviar para revisión' }).click();
   const reverseReview = await a.evaluate(() => window.lastVespiShare.url);
@@ -326,7 +370,6 @@ try {
   assert.equal(new URL(pendingReview, origin).toString(), reverseReview);
 
   await b.goto(reverseReview, { waitUntil: 'networkidle' });
-  await b.getByRole('button', { name: 'Entrar con passkey' }).click();
   await b.getByRole('button', { name: 'Aceptar y firmar' }).click();
   await b.getByRole('link', { name: 'Ver ambos aportes' }).click();
   await b.getByText('2 de 2 aportes aceptados', { exact: true }).waitFor();

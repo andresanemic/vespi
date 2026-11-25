@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { surveyCommitment } from './kernel/contributions.js';
 import type { SurveyRecord } from './survey-intake';
 
+import './test-imports.mjs';
+
 const { createSurveyIntake, createPrivateSurveyStore, surveySigningDeadline }: typeof import('./survey-intake') =
   await import(new URL('./survey-intake.ts', import.meta.url).href);
 

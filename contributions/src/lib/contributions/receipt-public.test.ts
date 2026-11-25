@@ -2,16 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { canonicalBytes } from './kernel/contributions.js';
 
-const { registerHooks } = await import('node:module' as string);
-type Context = { parentURL?: string };
-type Resolve = (specifier: string, context: Context) => { url: string };
-registerHooks({ resolve(specifier: string, context: Context, next: Resolve) {
-  if (specifier.startsWith('@/')) {
-    const path = specifier.slice(2);
-    return next(new URL(`../../${path.endsWith('.js') ? path : path + '.ts'}`, import.meta.url).href, context);
-  }
-  return next(specifier, context);
-} });
+import './test-imports.mjs';
 
 const receiptRoute: typeof import('../../app/api/contributions/receipts/[digest]/route') =
   await import(new URL('../../app/api/contributions/receipts/[digest]/route.ts', import.meta.url).href);

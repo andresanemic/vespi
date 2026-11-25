@@ -1,10 +1,19 @@
+// Run npm run build first, then node tests/contributions-profile-mobile.mjs --built.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+import { stat } from 'node:fs/promises';
 import { Keypair } from '@stellar/stellar-sdk/base';
 import { chromium } from 'playwright';
 import next from 'next';
 import { expect } from '@playwright/test';
+
+assert.ok(process.argv.includes('--built'), 'Run npm run build first, then pass --built.');
+const build = await stat(new URL('../.next/BUILD_ID', import.meta.url));
+for (const source of ['page.tsx', 'ProfileView.tsx']) {
+  const file = await stat(new URL('../src/app/app/perfil/[account]/' + source, import.meta.url));
+  assert.ok(build.mtimeMs >= file.mtimeMs, 'The profile changed after npm run build. Build again before running this test.');
+}
 
 const account = Keypair.random().publicKey();
 const missing = Keypair.random().publicKey();
@@ -19,11 +28,12 @@ const fetchNetwork = globalThis.fetch;
 globalThis.fetch = async (input, options) => {
   if (String(input) !== registry) return fetchNetwork(input, options);
   const [command, , key] = JSON.parse(options.body);
+  if (command === 'ZRANGEBYLEX') return Response.json({ result: [] });
   assert.equal(command, 'HGET');
   return unavailable ? new Response(null, { status: 503 }) : Response.json({ result: key === account ? alias : null });
 };
 
-const app = next({ dev: true, webpack: true });
+const app = next({ dev: false });
 const server = createServer(app.getRequestHandler());
 let browser;
 try {
@@ -39,6 +49,7 @@ try {
   const page = await context.newPage();
   assert.equal((await page.goto(origin + profilePath)).status(), 200);
   await page.getByRole('heading', { name: alias }).waitFor();
+  await page.getByText('Todavía no hay aportes públicos confirmados.', { exact: true }).waitFor();
   await page.getByText(account, { exact: true }).waitFor();
   await expect(async () => {
     const toggle = page.getByRole('button', { name: 'Read in English' });
@@ -47,7 +58,7 @@ try {
   }).toPass({ timeout: 8000 });
   await page.getByRole('button', { name: 'Copy profile link' }).click();
   await page.getByRole('status').filter({ hasText: 'Link copied.' }).waitFor();
-  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), origin + profilePath);
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), origin + profilePath + '?lang=en');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 
   assert.equal((await page.goto(origin + '/app/perfil/' + missing)).status(), 404);

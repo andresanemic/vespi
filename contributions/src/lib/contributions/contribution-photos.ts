@@ -1,18 +1,20 @@
 import { createHash } from 'node:crypto';
 import { get, put } from '@vercel/blob';
 import { Keypair, StrKey } from '@stellar/stellar-sdk/base';
+import { contributionNetwork, DEFAULT_NETWORK } from './network';
 import { photoUploadMessage } from './photo-authorization';
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const DIGEST = /^[a-f0-9]{64}$/;
 const EVENT_ORIGIN = 'https://vespi.xyz';
 
-export function photoUri(digest: string) {
-  return `${EVENT_ORIGIN}/api/contributions/photos/${digest}`;
+export function photoUri(digest: string, network = DEFAULT_NETWORK) {
+  const segment = contributionNetwork(network).segment;
+  return `${EVENT_ORIGIN}/api/contributions/photos/${digest}${network === DEFAULT_NETWORK ? '' : `?network=${segment}`}`;
 }
 
-function photoPath(actor: string, digest: string) {
-  return `contributions/testnet/photos/${actor}/${digest}`;
+export function photoPath(actor: string, digest: string, network = DEFAULT_NETWORK) {
+  return `contributions/${contributionNetwork(network).segment}/photos/${actor}/${digest}`;
 }
 
 function digestOf(bytes: Buffer) {
@@ -27,10 +29,10 @@ function imageType(bytes: Buffer) {
   return null;
 }
 
-export function createPhotoStore({ fetchBlob = get, putBlob = put } = {}) {
+export function createPhotoStore({ fetchBlob = get, putBlob = put } = {}, network = DEFAULT_NETWORK) {
   async function read(actor: string, digest: string) {
     if (!StrKey.isValidEd25519PublicKey(actor) || !DIGEST.test(digest)) return null;
-    const result = await fetchBlob(photoPath(actor, digest), {
+    const result = await fetchBlob(photoPath(actor, digest, network), {
       access: 'private', useCache: false, abortSignal: AbortSignal.timeout(8000),
     });
     if (result?.statusCode !== 200) return null;
@@ -50,7 +52,7 @@ export function createPhotoStore({ fetchBlob = get, putBlob = put } = {}) {
     read,
     async save(actor: string, digest: string, bytes: Buffer, contentType: string) {
       try {
-        await putBlob(photoPath(actor, digest), bytes, {
+        await putBlob(photoPath(actor, digest, network), bytes, {
           access: 'private', contentType, allowOverwrite: false, abortSignal: AbortSignal.timeout(8000),
         });
       } catch (error) {
@@ -64,7 +66,7 @@ export function createPhotoUpload(ports: {
   save: ReturnType<typeof createPhotoStore>['save'];
   reserve(actor: string, digest: string, bytes: number): Promise<boolean>;
   accountExists(actor: string): Promise<boolean>;
-}, now = () => Date.now()) {
+}, now = () => Date.now(), network = DEFAULT_NETWORK) {
   return async (body: Record<string, unknown>) => {
     const { actor, sha256, expiresAt, signature, base64 } = body;
     const seconds = Math.floor(now() / 1000);
@@ -75,7 +77,7 @@ export function createPhotoUpload(ports: {
       base64.length > Math.ceil(MAX_BYTES / 3) * 4) {
       return { ok: false, reason: 'invalid-photo' } as const;
     }
-    if (!Keypair.fromPublicKey(actor).verify(Buffer.from(photoUploadMessage(actor, sha256, expiresAt)),
+    if (!Keypair.fromPublicKey(actor).verify(Buffer.from(photoUploadMessage(actor, sha256, expiresAt, network)),
       Buffer.from(signature, 'hex'))) return { ok: false, reason: 'photo-signature-required' } as const;
     const bytes = Buffer.from(base64, 'base64');
     const contentType = imageType(bytes);
@@ -87,7 +89,7 @@ export function createPhotoUpload(ports: {
       if (!await ports.accountExists(actor)) return { ok: false, reason: 'photo-account-required' } as const;
       if (!await ports.reserve(actor, sha256, bytes.length)) return { ok: false, reason: 'photo-quota' } as const;
       await ports.save(actor, sha256, bytes, contentType);
-      return { ok: true, evidence: { uri: photoUri(sha256), sha256 } } as const;
+      return { ok: true, evidence: { uri: photoUri(sha256, network), sha256 } } as const;
     } catch {
       return { ok: false, reason: 'photo-unavailable' } as const;
     }

@@ -1,14 +1,18 @@
 import { createHash } from 'node:crypto';
-import { FeeBumpTransaction, Keypair, Networks, Transaction } from '@stellar/stellar-sdk/base';
+import { FeeBumpTransaction, Keypair, Transaction } from '@stellar/stellar-sdk/base';
 import { hasParticipantSignature } from './handlers';
 import { assignmentMessage } from './contribution-assignment';
+import { isEncounterFingerprint } from './encounters';
 import { photoUri } from './contribution-photos';
 import { buildIndexEntry, parseContribution } from './kernel/contributions.js';
 import { buildFeeBump } from './stellar-server';
 import { isSurveyId, surveySigningDeadline, type SurveyRecord } from './survey-intake';
 import type { ReceiptIndex, ReceiptIntent, Registry } from './receipt-registry';
 import { SURVEY_EVENT, surveySlot } from './survey-report';
+import { contributionNetwork, DEFAULT_NETWORK, type ContributionNetwork } from './network';
+import { mainnetReceiptSupported } from './network-request';
 import { yerkoSlidesReference } from './yerko-event';
+import { focusAttendance, focusAttendanceSlot, focusPhase, focusRoot } from './focus-event';
 
 type Parsed = ReturnType<typeof parseContribution>;
 type LedgerReceipt = { successful: boolean; ledger: number; envelopeXdr: string; closedAt: string };
@@ -16,16 +20,22 @@ type AnchorPorts = {
   registry: Registry;
   now(): Date;
   sponsor(): Keypair;
-  send(xdr: string, actor: string): Promise<{ ok: true } | { ok: false; reason: string }>;
+  send(xdr: string, actor: string, baseFee: string, outer: FeeBumpTransaction): Promise<{ ok: true } | { ok: false; reason: string }>;
+  // The outer per-operation fee for this inner fee; absent keeps the inner fee. The hash depends on it.
+  // Runs the Lore clue in desarrollo-web/proyectos/vespi/lore/proyecto.md: whoever stores a hash fixes the bytes.
+  outerFee?(innerFee: string): Promise<string>;
   lookup(hash: string): Promise<LedgerReceipt | null>;
   latestLedgerTime(): Promise<number>;
   getSurvey(id: string): Promise<SurveyRecord | null>;
   getReport(digest: string): Promise<{ bytes: string; rehearsal: boolean } | null>;
   photoExists?(actor: string, digest: string): Promise<boolean>;
+  // Throws when the allowlist is malformed; absent means every account is open.
+  accountAllowed?(actor: string): boolean;
   organizer?: string;
   cutoff?: string;
   surveyClosesAt?: string;
   yerko?: { root: string; account: string; closed: boolean };
+  focusRoot?: string | null;
 };
 type AnchorResult = { ok: true; index: ReceiptIndex } | { ok: false; reason: string };
 
@@ -43,11 +53,12 @@ async function readConfirmed(registry: Registry, digest: string) {
   return record?.index ? parseContribution(record.intent.bytes) : null;
 }
 
-async function isLinkedReceipt(receipt: Parsed, registry: Registry, assignment: unknown) {
+async function isLinkedReceipt(receipt: Parsed, registry: Registry, assignment: unknown, network: ContributionNetwork, attendance: boolean) {
   const root = await readConfirmed(registry, receipt.chain);
-  if (!root || root.kind !== 'REQUEST') return false;
+  if (!root || root.kind !== 'REQUEST' || (network === 'mainnet' && isEncounterFingerprint(root))) return false;
 
   if (receipt.kind === 'ATTEST') {
+    if (attendance) return receipt.subject === receipt.chain && receipt.actor !== root.actor;
     const subject = await readConfirmed(registry, receipt.subject);
     return subject?.kind === 'CONTRIBUTE' && subject.chain === receipt.chain &&
       receipt.actor !== root.actor && receipt.actor !== subject.actor;
@@ -59,7 +70,7 @@ async function isLinkedReceipt(receipt: Parsed, registry: Registry, assignment: 
     if (prior.kind === 'CONTRIBUTE') return prior.actor === receipt.actor;
     return prior.kind === 'REQUEST' && receipt.prev === receipt.chain &&
       typeof assignment === 'string' && /^[a-f0-9]{128}$/.test(assignment) &&
-      Keypair.fromPublicKey(root.actor).verify(Buffer.from(assignmentMessage(receipt.chain, receipt.actor)),
+      Keypair.fromPublicKey(root.actor).verify(Buffer.from(assignmentMessage(receipt.chain, receipt.actor, network)),
         Buffer.from(assignment, 'hex'));
   }
   if (receipt.actor !== root.actor || prior.kind !== 'CONTRIBUTE') return false;
@@ -67,7 +78,8 @@ async function isLinkedReceipt(receipt: Parsed, registry: Registry, assignment: 
   return subject?.kind === 'CONTRIBUTE' && subject.chain === receipt.chain;
 }
 
-export function createReceiptAnchor(ports: AnchorPorts) {
+export function createReceiptAnchor(ports: AnchorPorts, network = DEFAULT_NETWORK) {
+  const { id: networkId, passphrase } = contributionNetwork(network);
   async function reconcile(intent: ReceiptIntent, receipt: Parsed, allowRelease: boolean): Promise<AnchorResult> {
     let observed = await ports.lookup(intent.hash);
     if (!observed && allowRelease && ports.now().getTime() / 1000 > intent.deadline &&
@@ -80,7 +92,7 @@ export function createReceiptAnchor(ports: AnchorPorts) {
       }
     }
     if (!observed) return fail('anchor-pending');
-    const outer = new FeeBumpTransaction(observed.envelopeXdr, Networks.TESTNET);
+    const outer = new FeeBumpTransaction(observed.envelopeXdr, passphrase);
     const closed = Date.parse(observed.closedAt);
     if (outer.hash().toString('hex') !== intent.hash || !matchesCommitment(outer.innerTransaction, receipt, intent.digest)
       || !Number.isFinite(closed)) return fail('anchor-mismatch');
@@ -92,7 +104,7 @@ export function createReceiptAnchor(ports: AnchorPorts) {
 
     const cutoff = Date.parse(ports.cutoff ?? '');
     const index = buildIndexEntry({
-      digest: intent.digest, network: 'stellar:testnet', txHash: intent.hash, ledger: observed.ledger,
+      digest: intent.digest, network: networkId, txHash: intent.hash, ledger: observed.ledger,
       envelopeXdr: observed.envelopeXdr, rehearsal: intent.rehearsal ?? (!Number.isFinite(cutoff) || closed < cutoff),
     });
     return await ports.registry.confirm(intent, index) ? { ok: true, index } : fail('anchor-pending');
@@ -101,21 +113,39 @@ export function createReceiptAnchor(ports: AnchorPorts) {
   async function anchor(body: Record<string, unknown>): Promise<AnchorResult> {
     if (typeof body.bytes !== 'string' || typeof body.xdr !== 'string') return fail('invalid-body');
     let receipt, tx;
-    try {
-      receipt = parseContribution(body.bytes);
-      tx = new Transaction(body.xdr, Networks.TESTNET);
-    } catch { return fail('invalid-receipt-or-xdr'); }
+    try { receipt = parseContribution(body.bytes); }
+    catch { return fail('invalid-receipt-or-xdr'); }
+    if (network === 'mainnet' && !mainnetReceiptSupported(receipt)) return fail('mainnet-not-supported');
+    try { tx = new Transaction(body.xdr, passphrase); }
+    catch { return fail('invalid-receipt-or-xdr'); }
     if (!['REQUEST', 'CONTRIBUTE', 'ACCEPT', 'ATTEST', 'SURVEY', 'REPORT'].includes(receipt.kind)) return fail('unsupported-receipt-kind');
     const digest = createHash('sha256').update(body.bytes, 'utf8').digest('hex');
     try {
       if (!matchesCommitment(tx, receipt, digest)) return fail('commitment-mismatch');
     } catch { return fail('commitment-mismatch'); }
+    if (ports.accountAllowed) {
+      // Before the registry and Horizon: an account off the list leaves no intent and costs no lookup.
+      let allowed;
+      try { allowed = ports.accountAllowed(receipt.actor); }
+      catch { return fail('config-error'); }
+      if (!allowed) return fail('account-not-allowed');
+    }
 
     try {
       if (receipt.kind === 'REPORT' && receipt.actor !== ports.organizer) return fail('organizer-required');
       const existing = await ports.registry.get(digest);
       if (existing?.index) return { ok: true, index: existing.index };
       if (existing) return await reconcile(existing.intent, receipt, true);
+      const focus = network === DEFAULT_NETWORK && receipt.chain === (ports.focusRoot === undefined ? focusRoot : ports.focusRoot) && receipt.chain !== null;
+      const attendance = focus && receipt.kind === 'ATTEST' && receipt.subject === receipt.chain;
+      if (focus && !attendance) return fail('invalid-chain-link');
+      if (attendance) {
+        const phase = focusPhase(ports.now().getTime());
+        if (phase !== 'open') return fail(phase === 'before' ? 'event-not-open' : 'event-closed');
+        if (receipt.comment !== null || receipt.evidence !== null || !Object.values(focusAttendance).includes(receipt.statement)) {
+          return fail('invalid-focus-attendance');
+        }
+      }
       let eventSlot: string | null = null;
       let rehearsal: boolean | undefined;
       let photo: string | undefined;
@@ -139,7 +169,7 @@ export function createReceiptAnchor(ports: AnchorPorts) {
         eventSlot = `report:${SURVEY_EVENT}:${rehearsal ? 'rehearsal' : 'event'}`;
       } else if (receipt.evidence !== null) {
         const { sha256, uri } = receipt.evidence;
-        if (uri !== photoUri(sha256) || !await ports.photoExists?.(receipt.actor, sha256)) {
+        if (uri !== photoUri(sha256, network) || !await ports.photoExists?.(receipt.actor, sha256)) {
           return fail('evidence-unavailable');
         }
         photo = sha256;
@@ -171,12 +201,15 @@ export function createReceiptAnchor(ports: AnchorPorts) {
         return fail('wrong-operation');
       }
       if (['CONTRIBUTE', 'ACCEPT', 'ATTEST'].includes(receipt.kind) &&
-        !await isLinkedReceipt(receipt, ports.registry, body.assignment)) return fail('invalid-chain-link');
+        !await isLinkedReceipt(receipt, ports.registry, body.assignment, network, attendance)) return fail('invalid-chain-link');
 
-      const outer = buildFeeBump(tx, ports.sponsor(), tx.fee);
+      const baseFee = ports.outerFee ? await ports.outerFee(tx.fee) : tx.fee;
+      const outer = buildFeeBump(tx, ports.sponsor(), baseFee);
       const intent = {
         digest, bytes: body.bytes, hash: outer.hash().toString('hex'), deadline,
-        chain: receipt.kind === 'REQUEST' ? digest : receipt.kind === 'ATTEST' ? null : eventSlot ?? receipt.chain,
+        chain: attendance ? focusAttendanceSlot(receipt.chain, receipt.actor)
+          : receipt.kind === 'ATTEST' || (network === 'mainnet' && isEncounterFingerprint(receipt)) ? null
+          : receipt.kind === 'REQUEST' ? digest : eventSlot ?? receipt.chain,
         prev: receipt.prev, rehearsal, photo,
       };
       let result = await ports.registry.reserve(intent);
@@ -186,18 +219,20 @@ export function createReceiptAnchor(ports: AnchorPorts) {
           const recovered = await reconcile(blocked.intent, parseContribution(blocked.intent.bytes), true);
           if (!recovered.ok && ['inner-failed', 'retry-with-fresh-transaction'].includes(recovered.reason)) {
             result = await ports.registry.reserve(intent);
+          } else if (!recovered.ok && attendance) {
+            return recovered;
           }
         }
       }
-      if (result === 'conflict') return fail('chain-conflict');
+      if (result === 'conflict') return fail(attendance ? 'attendance-already-signed' : 'chain-conflict');
       if (result === 'exists') {
         const raced = await ports.registry.get(digest);
         if (!raced) return fail('anchor-pending');
         return raced.index ? { ok: true, index: raced.index } : await reconcile(raced.intent, receipt, true);
       }
-      const submission = await ports.send(body.xdr, receipt.actor);
+      const submission = await ports.send(body.xdr, receipt.actor, baseFee, outer);
       if (!submission.ok && ['budget-exhausted', 'budget-unavailable', 'config-error', 'authority-expired',
-        'fee-over-limit'].includes(submission.reason)) {
+        'fee-over-limit', 'account-not-allowed'].includes(submission.reason)) {
         await ports.registry.release(intent);
         return submission;
       }

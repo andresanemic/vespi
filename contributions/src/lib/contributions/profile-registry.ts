@@ -1,6 +1,6 @@
+import { contributionRedisPrefix, DEFAULT_NETWORK } from './network';
 import { contributionsRedisCredentials } from './redis-credentials.mjs';
 
-const KEY = 'contributions:testnet:profiles';
 const WRITE = `
 local current = redis.call('HGET', KEYS[1], ARGV[1])
 if current then
@@ -13,9 +13,10 @@ return 'created'
 
 export type PublicProfile = { account: string; displayName: string };
 
-export function createProfileRegistry(env: Record<string, string | undefined>, request = fetch) {
+export function createProfileRegistry(env: Record<string, string | undefined>, request = fetch, network = DEFAULT_NETWORK) {
+  const key = `${contributionRedisPrefix(network)}:profiles`;
   async function command(args: unknown[]): Promise<unknown> {
-    const { url, token } = contributionsRedisCredentials(env);
+    const { url, token } = contributionsRedisCredentials(env, network);
     if (!url || !token || new URL(url).protocol !== 'https:') throw new Error('Profile store unavailable');
     const response = await request(url.replace(/\/$/, ''), { method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -27,18 +28,18 @@ export function createProfileRegistry(env: Record<string, string | undefined>, r
   }
   return {
     async get(account: string): Promise<PublicProfile | null> {
-      const value = await command(['HGET', KEY, account]);
+      const value = await command(['HGET', key, account]);
       if (value === null) return null;
       if (typeof value !== 'string' || value.length > 80) throw new Error('Invalid profile record');
       return { account, displayName: value };
     },
     async create(account: string, displayName: string): Promise<'created' | 'same' | 'exists'> {
-      const result = await command(['EVAL', WRITE, 1, KEY, account, displayName]);
+      const result = await command(['EVAL', WRITE, 1, key, account, displayName]);
       if (result === 'created' || result === 'same' || result === 'exists') return result;
       throw new Error('Invalid profile write response');
     },
     async list(cursor: string) {
-      const result = await command(['HSCAN', KEY, cursor, 'COUNT', 50]);
+      const result = await command(['HSCAN', key, cursor, 'COUNT', 50]);
       if (!Array.isArray(result) || !/^\d+$/.test(String(result[0])) || !Array.isArray(result[1]) || result[1].length % 2) {
         throw new Error('Invalid profile page');
       }

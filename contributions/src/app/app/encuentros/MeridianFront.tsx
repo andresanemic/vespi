@@ -2,12 +2,14 @@
 
 import { useEffect, useRef } from 'react';
 import { createMeridianBackend, readMeridianEntry, type MeridianEntry } from './meridian-backend';
+import { mobileIdentityChanged, mobilePageRestored } from '../mobile-identity';
 import { mountMeridian } from './meridian-templates';
 import { setVespiTheme } from '@/components/ThemeSwitch';
+import type { ContributionNetwork } from '@/lib/contributions/network';
 import '../app-brand.css';
 import './meridian-entry.css';
 
-export default function MeridianFront({ entry }: { entry: MeridianEntry }) {
+export default function MeridianFront({ entry, network }: { entry: MeridianEntry; network: ContributionNetwork }) {
   const host = useRef<HTMLDivElement>(null);
   const playedEntrance = useRef(false);
   useEffect(() => {
@@ -22,14 +24,18 @@ export default function MeridianFront({ entry }: { entry: MeridianEntry }) {
     const style = document.createElement('link');
     style.rel = 'stylesheet';
     style.href = '/meridian-front.css';
+    const voiceStyle = style.cloneNode() as HTMLLinkElement;
+    voiceStyle.href = '/voice-draft.css';
+    const flowStyle = style.cloneNode() as HTMLLinkElement;
+    flowStyle.href = '/mobile-flow.css';
     const root = document.createElement('div');
     root.className = 'meridian-body';
     root.hidden = true;
     const surface = document.createElement('div');
     surface.id = 'app';
     root.append(surface);
-    const backend = createMeridianBackend();
-    const update = mountMeridian(root, backend, entry, setVespiTheme);
+    const backend = createMeridianBackend(network);
+    const { update, dispose } = mountMeridian(root, backend, entry, setVespiTheme, network);
     style.onload = () => {
       root.hidden = false;
       element.dataset.ready = 'true';
@@ -41,18 +47,30 @@ export default function MeridianFront({ entry }: { entry: MeridianEntry }) {
       }
     };
     style.onerror = () => { element.dataset.ready = 'error'; };
-    shadow.replaceChildren(style, root);
+    shadow.replaceChildren(style, flowStyle, voiceStyle, root);
     const back = () => update(readMeridianEntry());
     addEventListener('popstate', back);
+    const changeInvitation = () => {
+      const next = readMeridianEntry();
+      if (next.id) update(next);
+    };
+    addEventListener('hashchange', changeInvitation);
+    const otherTab = (event: StorageEvent) => { if (mobileIdentityChanged(event)) location.reload(); };
+    addEventListener('storage', otherTab);
+    addEventListener('pageshow', mobilePageRestored);
     return () => {
+      dispose();
       removeEventListener('popstate', back);
+      removeEventListener('hashchange', changeInvitation);
+      removeEventListener('storage', otherTab);
+      removeEventListener('pageshow', mobilePageRestored);
       window.removeEventListener('vespi-theme-change', syncTheme);
       delete element.dataset.ready;
       style.onload = null;
       style.onerror = null;
       shadow.replaceChildren();
     };
-  }, [entry]);
+  }, [entry, network]);
 
   return <>
     <link rel="preload" as="style" href="/meridian-front.css" />
