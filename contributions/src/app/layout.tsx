@@ -3,6 +3,7 @@ import './globals.css';
 import { lumaExpiryScript } from '@/lib/luma-event';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://vespi.xyz'),
   title: 'Vespi Contributions',
   description: 'Record a collaboration and share it for confirmation on Stellar.',
 };

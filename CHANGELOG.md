@@ -10,13 +10,13 @@ Andrés Peña and Francisco Toro completed the team reference chain on Stellar m
 
 - Stellar mainnet for the three-step flow (request, contribution, acceptance), limited to accounts we enable during the sprint. Each network keeps its own storage, keys and sponsor limits.
 - One way to record a contribution: “I helped someone” or “Someone helped me”. The text and the two names appear on both profiles after both people sign. Vespi serves the text and both signatures; Stellar holds the fingerprint. Older records stay private.
-- Voice notes of up to two minutes that draft a record for the person to review and edit before signing. Open to everyone with a published name on testnet, with a daily limit; on mainnet, to enabled accounts. It builds on [Voice Ready](https://github.com/mpefaur/voice-ready), shared by Martín Pefaur.
+- Voice notes of up to two minutes that draft a record for the person to review and edit before signing. Open to everyone with a published name on testnet, with a daily limit; on mainnet, to enabled accounts. It builds on Voice Ready, shared by Martín Pefaur.
 - A shareable result page for each chain, and an exporter that checks every receipt and transaction before writing the public evidence package.
 - An attendance page for the November 25 focus group on testnet: people who were there can sign that they attended.
 
 ### Changed
 
-- One passkey sign-in on testnet lasts up to twelve hours. On mainnet the app still asks for the passkey when signing.
+- One passkey sign-in on testnet lasts up to twelve hours. On mainnet the app asks for the passkey when signing, except within two minutes of its last use.
 - A shorter composer: what happened, with whom, review, sign.
 
 ### Fixed
@@ -37,7 +37,7 @@ We ran the full flow on testnet first, marked as a rehearsal. [Result page](http
 
 These are real uses of the app. They do not count toward the three mainnet pilot pairs planned for Week 4.
 
-- Martín Pefaur and Andrés Peña both signed a public record of Martín’s contribution of the Voice Ready code. [Record](https://vespi.xyz/app/aporte/21d481cecbb54c8a97fc7536b1e5ae1c)
+- Martín Pefaur and Andrés Peña both signed a public record of Martín’s contribution of the Voice Ready code, which the record calls VoiceNote. [Record](https://vespi.xyz/app/aporte/21d481cecbb54c8a97fc7536b1e5ae1c)
 - November 25 focus group: by the evening of November 25, two people had signed that they attended, each from their own account. One of them was Francisco, who ran it with Andrés. [1](https://stellar.expert/explorer/testnet/tx/de33ad766110ab858eb16f1549ea73d0a7c969f9f1288d03c5179d633c57f7e2) · [2](https://stellar.expert/explorer/testnet/tx/481640acf36f8dfb6548d083953e4a6cbaf2c617592538ebbe216d144fac366d) Signing stays open until November 26, 20:00 Chile time.
 
 ### Progress vs previous week
@@ -56,7 +56,7 @@ The [published source](contributions/) passed all 398 Contributions tests and a 
 ### Blockers and lessons
 
 - We kept trying to make the app simpler. We had several ways to record almost the same thing. People think “I helped” or “someone helped me”, so we merged them.
-- Asking for a passkey at every step was tiring. On testnet, one sign-in now covers the session; on mainnet the app asks when signing.
+- Asking for a passkey at every step was tiring. On testnet, one sign-in now covers the session; on mainnet the app asks again after two minutes.
 - Mainnet and testnet share the same code, so we had to make sure nothing crosses between them. Each network has its own storage, keys and limits, and the server refuses mainnet if its settings are missing or reuse testnet’s storage.
 - Our review before release found that a person could sign a title or a link destination that the screen did not show. We fixed it before publishing: the full public text is visible and the server rejects anything else.
 
