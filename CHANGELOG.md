@@ -38,7 +38,7 @@ We ran the full flow on testnet first, marked as a rehearsal. [Result page](http
 These are real uses of the app. They do not count toward the three mainnet pilot pairs planned for Week 4.
 
 - Martín Pefaur and Andrés Peña both signed a public record of Martín’s contribution of the Voice Ready code, which the record calls VoiceNote. [Record](https://vespi.xyz/app/aporte/21d481cecbb54c8a97fc7536b1e5ae1c)
-- November 25 focus group: by the evening of November 25, two people had signed that they attended, each from their own account. One of them was Francisco, who ran it with Andrés. [1](https://stellar.expert/explorer/testnet/tx/de33ad766110ab858eb16f1549ea73d0a7c969f9f1288d03c5179d633c57f7e2) · [2](https://stellar.expert/explorer/testnet/tx/481640acf36f8dfb6548d083953e4a6cbaf2c617592538ebbe216d144fac366d) Signing stays open until November 26, 20:00 Chile time.
+- November 25 focus group: by November 26, three people had signed that they attended, each from their own account. One of them was Francisco, who ran it with Andrés. [1](https://stellar.expert/explorer/testnet/tx/de33ad766110ab858eb16f1549ea73d0a7c969f9f1288d03c5179d633c57f7e2) · [2](https://stellar.expert/explorer/testnet/tx/481640acf36f8dfb6548d083953e4a6cbaf2c617592538ebbe216d144fac366d) · [3](https://stellar.expert/explorer/testnet/tx/32287e618ee9241e8c1d2a0ee85466702f9c7fe88c4862b5884ded7cdb28f6e3) Signing stays open until November 26, 20:00 Chile time.
 
 ### Progress vs previous week
 
