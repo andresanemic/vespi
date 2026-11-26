@@ -59,6 +59,7 @@ The [published source](contributions/) passed all 398 Contributions tests and a 
 - Asking for a passkey at every step was tiring. On testnet, one sign-in now covers the session; on mainnet the app asks again after two minutes.
 - Mainnet and testnet share the same code, so we had to make sure nothing crosses between them. Each network has its own storage, keys and limits, and the server refuses mainnet if its settings are missing or reuse testnet’s storage.
 - Our review before release found that a person could sign a title or a link destination that the screen did not show. We fixed it before publishing: the full public text is visible and the server rejects anything else.
+- At the focus group we heard two first lessons: the first hurdle is knowing who to ask for help, and recording some favors can make them feel like debts. We'll share the results next week.
 
 ### Next week
 
