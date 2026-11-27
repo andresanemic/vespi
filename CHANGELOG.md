@@ -72,6 +72,8 @@ The [published source](contributions/) passed all 398 Contributions tests and a 
 
 ### Links
 
+- Video: [Week 2 video, posted natively on X](https://x.com/andresanemic/status/2126373624382976401)
+- X post: [https://x.com/andresanemic/status/2126373624382976401](https://x.com/andresanemic/status/2126373624382976401)
 - Focus group: https://luma.com/mt0nzpct
 
 ## Instawards Chile · Week 1
